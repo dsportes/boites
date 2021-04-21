@@ -12,7 +12,7 @@
         />
 
         <q-toolbar-title>
-          Quasar App
+          <span class="font-antonio-r">Quasar App</span>
         </q-toolbar-title>
 
         <div>Quasar v{{ $extconfig.version + ' - ' + $q.version }}</div>
@@ -95,9 +95,9 @@ const linksList = [
   }
 ]
 
-import { defineComponent, ref } from 'vue'
+import { ref } from 'vue'
 
-export default defineComponent({
+export default ({
   name: 'MainLayout',
 
   components: {
@@ -117,3 +117,8 @@ export default defineComponent({
   }
 })
 </script>
+
+<style lang="sass">
+@import '../css/app.sass'
+
+</style>

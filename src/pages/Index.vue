@@ -1,16 +1,16 @@
 <template>
   <q-page class="flex flex-center">
     <img width=256
-      alt="Quasar logo"
+      alt="Anonymous logo"
       src="~assets/logo-full.svg"
     >
   </q-page>
 </template>
 
 <script>
-import { defineComponent } from 'vue'
+// import { defineComponent } from 'vue'
 
-export default defineComponent({
+export default /* defineComponent */ ({
   name: 'PageIndex'
 })
 </script>
