@@ -12,10 +12,10 @@
         />
 
         <q-toolbar-title>
-          <span class="font-antonio-r">Quasar App</span>
+          <span class="font-antonio-l">Quasar App</span>
         </q-toolbar-title>
 
-        <div>Quasar v{{ $extconfig.version + ' - ' + $q.version }}</div>
+        <div>Quasar v{{ $cfg.app.version + ' - ' + $q.version }}</div>
       </q-toolbar>
     </q-header>
 
