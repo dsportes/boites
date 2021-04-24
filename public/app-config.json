@@ -1,5 +1,6 @@
 {
     "prop1" : 1,
     "version" : "0.0.1",
-    "orgs" : [ "doda", "super" ]
+    "orgs" : [ "doda", "super" ],
+    "urlserveur": "https://test.sportes.fr:8443"
 }
