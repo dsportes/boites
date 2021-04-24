@@ -2,9 +2,13 @@
   <router-view />
 </template>
 <script>
-// import { defineComponent } from 'vue'
+import { getCurrentInstance } from 'vue'
+import { setgp } from './app/util'
 
 export default ({
-  name: 'App'
+  name: 'App',
+  setup () {
+    setgp(getCurrentInstance().appContext.config.globalProperties)
+  }
 })
 </script>
