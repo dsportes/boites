@@ -14,9 +14,21 @@ export function majtextestatus (state, texte) {
 
 export function seterreur (state, err) {
   state.erreur = err
+  state.derniereerreur = err
 }
 
 export function reseterreur (state) {
-  state.derniereerreur = state.erreur
   state.erreur = null
+}
+
+export function setstatusreseau (state, val) {
+  state.statusreseau = val
+}
+
+export function setstatuslocal (state, val) {
+  state.statuslocal = val
+}
+
+export function setcfgorg (state, val) {
+  state.cfgorg = val
 }

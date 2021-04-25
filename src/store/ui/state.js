@@ -1,8 +1,11 @@
 export default function () {
   return {
-    textestatus: '',
+    textestatus: 'Bonjour !',
     erreur: null,
     derniereerreur: null,
-    reqencours: false
+    reqencours: false,
+    statusreseau: 1,
+    statuslocal: true,
+    cfgorg: { code: 'anonyme', nom: 'Organisation inconnue' }
   }
 }

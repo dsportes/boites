@@ -1,7 +1,7 @@
 <template>
   <q-page class="column align-start items-center">
     <h2 class="col-auto">Org : {{ $route.params.org }}</h2>
-    <div  class="col-auto" v-if="cfgorg == null">
+    <div  class="col-auto" v-if="cfgorg.code == 'anonyme'">
       <img width=64 alt="Anonymous logo" src="~assets/logo-full.svg">
     </div>
     <div  class="col-auto" v-else>
@@ -12,28 +12,20 @@
 </template>
 
 <script>
-import { getCurrentInstance, ref } from 'vue'
+import { computed } from 'vue'
+import { useStore } from 'vuex'
 
-export default /* defineComponent */ ({
+export default ({
   name: 'Index',
 
-  data () {
-    return {
-    }
-  },
-
-  watch: {
-    // changement d'organisation
-    '$route.params.org': function (org, orgold) {
-      this.cfgorg = this.$cfg[org]
-      console.log('>>> quit ' + orgold)
-    }
-  },
-
   setup () {
-    const gp = getCurrentInstance().appContext.config.globalProperties
-    const cfgorg = ref(gp.$cfg[gp.$route.params.org])
-    return { cfgorg }
+    const $store = useStore()
+    const cfgorg = computed({
+      get: () => $store.state.ui.cfgorg
+    })
+    return {
+      cfgorg
+    }
   }
 
 })
