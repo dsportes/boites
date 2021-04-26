@@ -2,18 +2,29 @@
   <q-layout view="hHh lpR fFf">
     <q-header reveal elevated>
       <q-toolbar>
-        <q-btn flat dense round icon="menu" aria-label="Menu" @click="toggleLeftDrawer"/>
-        <q-btn flat dense round icon="check" aria-label="Test" @click="test3"/>
+        <q-btn flat dense round icon="menu" aria-label="Menu" @click="menuouvert = !menuouvert"/>
+        <q-btn flat dense round icon="check" aria-label="Test" @click="test1"/>
 
         <q-toolbar-title>
-          <span class="font-antonio-l">{{ cfgorg.code }}</span>
+          <span class="font-antonio-l">{{ org }}</span>
         </q-toolbar-title>
+
+        <q-btn v-if="$store.getters['ui/enligne']" flat dense round icon="cloud" aria-label="Accès serveur"
+          @click="inforeseau = true"
+          :class="$store.getters['ui/reseauok'] ? 'vert' : 'rouge'"
+        />
+        <div v-if="$store.getters['ui/modeincognito']" @click="infomode = true">
+          <img class="imgstd" src="~assets/incognito.svg">
+        </div>
+        <q-icon  v-else class="iconstd" @click="infomode = true"
+        :name="['info','sync_alt','info','airplanemode_active'][$store.state.ui.mode]" />
+
       </q-toolbar>
     </q-header>
 
-    <q-drawer v-model="leftDrawerOpen" side="left" overlay elevated class="bg-grey-1" >
+    <q-drawer v-model="menuouvert" side="left" overlay elevated class="bg-grey-1" >
       <q-list>
-        <q-item-label>Quasar v{{ $cfg.app.version + ' - ' + $q.version }}</q-item-label>
+        <q-item-label>Build {{ $cfg.build }}</q-item-label>
         <q-item-label header class="text-grey-8" >Essential Links </q-item-label>
         <EssentialLink v-for="link in essentialLinks" :key="link.title" v-bind="link" />
       </q-list>
@@ -23,63 +34,55 @@
       <router-view />
     </q-page-container>
 
-    <q-footer reveal elevated class="bg-grey-8 text-white">
-      <q-toolbar>
-        <q-btn flat dense round icon="folder" aria-label="Stockage local" @click="infolocal = true" :class="$store.state.ui.statuslocal ? 'colorA1': 'colorA0'"/>
-        <q-btn flat dense round icon="cloud" aria-label="Accès serveur" @click="inforeseau = true" :class="'colorB' + $store.state.ui.statusreseau"/>
+    <dialogue-erreur></dialogue-erreur>
 
-        <q-toolbar-title>
-          <span class="text-body2">{{ $store.state.ui.textestatus }}</span>
-        </q-toolbar-title>
-
-      </q-toolbar>
-    </q-footer>
-
-    <q-dialog v-model="infolocal">
+    <q-dialog v-model="infomode">
       <q-card>
         <q-card-section>
-          <div class="text-h6">Stockage local</div>
+          <div class="text-h6">Les modes inconnu, synchronisé, incognito, avion</div>
         </q-card-section>
-        <q-card-section v-if="$store.state.ui.statuslocal" class="q-pt-none">
-          Le stockge local est activé sur cet appareil.
-          Vos informations y sont conservées cryptées et sont utilisables en l'absence de réseau.
+        <q-card-section :class="'q-pt-none' + ($store.getters['ui/modeinconnu'] ? 'text-body-1 text-weight-bold' : 'text-body-2 text-weight-regular')">
+          <q-icon class="iconstd" name="info"/><span class="text-h6 q-px-sm">Inconnu :</span>
+          Le mode n'est connu qu'après la connexion, ou au moins lorsque la demande a été faite.
+        </q-card-section>
+        <q-card-section :class="'q-pt-none' + ($store.getters['ui/modesync'] ? 'text-body-1 text-weight-bold' : 'text-body-2 text-weight-regular')">
+          <q-icon class="iconstd" name="sync_alt"/><span class="text-h6 q-px-sm">Synchronisé :</span>
+          L'application accède au serveur central pour obtenir les données et les synchronise sur un stockage local crypté.
+        </q-card-section>
+        <q-card-section :class="'q-pt-none' + ($store.getters['ui/modeincognito'] ? 'text-body-1 text-weight-bold' : 'text-body-2 text-weight-regular')">
+          <img class="imgstd" src="~assets/incognito.svg"><span class="text-h6 q-px-sm">Incognito :</span>
+          L'application accède au serveur central pour obtenir les données mais n'accède pas au stockage local et n'y laisse pas de trace d'exécution.
+        </q-card-section>
+        <q-card-section :class="'q-pt-none' + ($store.getters['ui/modeavion'] ? 'text-body-1 text-weight-bold' : 'text-body-2 text-weight-regular')">
+          <q-icon class="iconstd" name="airplanemode_active"/><span class="text-h6 q-px-sm">Avion :</span>
+          L'application n'accède pas au réseau, il obtient les données depuis le stockage local crypté où elles ont été mises à jour lors de la dernière session en mode synchronisé.
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat label="J'ai lu" color="primary" v-close-popup />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <q-dialog v-model="inforeseau">
+      <q-card>
+        <q-card-section>
+          <div class="text-h6">Etat d'accès au réseau (mode synchronisé et incognito)</div>
+        </q-card-section>
+        <q-card-section v-if="$store.getters['ui/reseauok']" class="q-pt-none">
+          L'application accède par le réseau aux données sur le serveur, la dernière requête s'est terminée normalment.
         </q-card-section>
         <q-card-section v-else class="q-pt-none">
-          Le stockage local est n'est pas activé sur cet appareil.
-          Aucune de vos informations n'y sont enregistrées.
-          L'accès au réseau est requis.
+          L'application accède par le réseau aux données sur le serveur, toutefois la dernière requête a rencontré un incident.
         </q-card-section>
         <q-card-actions align="right">
+          <q-btn flat label="Tester l'accès au serveur" color="accent" v-close-popup @click="ping"/>
+          <q-btn v-if="$store.getters['ui/aeuuneerreur']" flat label="Voir la dernière erreur" color="accent" v-close-popup @click="voirderniereerreur"/>
           <q-btn flat label="J'ai lu" color="primary" v-close-popup />
         </q-card-actions>
       </q-card>
     </q-dialog>
 
-  <q-dialog v-model="inforeseau">
-      <q-card>
-        <q-card-section>
-          <div class="text-h6">Accès au réseau</div>
-        </q-card-section>
-        <q-card-section v-if="$store.state.ui.statusreseau === 0" class="q-pt-none">
-          L'application fonctionne en local pur sans accéder au réseau.
-          Vos informations ne sont pas toutes visibles, seulement celles que vous avez décidé de synchroniser sur le stockage local.
-          Les mises à jour sont restreintes et ne seront appliquer qu'une fois l'accès au réseau autorisé.
-        </q-card-section>
-        <q-card-section v-if="$store.state.ui.statusreseau === 1" class="q-pt-none">
-          L'application accède par le réseau aux données sur le serveur.
-        </q-card-section>
-        <q-card-section v-if="$store.state.ui.statusreseau === 2" class="q-pt-none">
-          L'application accède par le réseau aux données sur le serveur.
-          Toutefois la dernière requête a rencontré un incident.
-        </q-card-section>
-        <q-card-actions align="right">
-          <q-btn v-if="$store.state.ui.statusreseau === 2" flat label="Voir la dernière erreur" color="accent" v-close-popup @click="voirderniereerreur"/>
-          <q-btn flat label="J'ai lu" color="primary" v-close-popup />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
-
-    <q-dialog v-model="reqencours" seamless position="bottom">
+    <q-dialog v-model="reqencours" seamless position="top">
       <q-card style="width:15rem;height:3rem;overflow:hidden" class="row items-center justify-between no-wrap bg-amber-2 q-pa-sm">
           <div class="text-weight-bold">Annuler la requête</div>
           <q-spinner color="primary" size="2rem" :thickness="3" />
@@ -87,27 +90,10 @@
       </q-card>
     </q-dialog>
 
-    <q-dialog v-model="enerreur">
-      <q-card  style="width:500px;max-width:80vw;">
-        <q-card-section>
-          <div class="text-h6">{{erreur.majeur}}</div>
-        </q-card-section>
-        <q-card-section class="q-pt-none">
-          <div>Code : {{ erreur.code }}</div>
-          <div v-if="erreur.message">{{ erreur.message }}</div>
-          <div v-if="erreur.detail">
-            Détail <q-toggle v-model="errdetail"/>
-            <div v-if="errdetail">{{ erreur.detail }}</div>
-          </div>
-          <div v-if="erreur.stack">
-            Stack <q-toggle v-model="errstack"/>
-            <q-input v-if="errstack" type="textarea" v-model="erreur.stack" style="height:150px;"/>
-          </div>
-        </q-card-section>
-        <q-card-actions align="right">
-          <q-btn flat label="J'ai lu" color="primary" @click="fermererreur" />
-        </q-card-actions>
-      </q-card>
+    <q-dialog v-model="messagevisible" seamless position="bottom">
+      <div :class="'q-pa-sm ' + ($store.state.ui.message.important ? 'msgimp' : 'msgstd')"  @click="$store.commit('ui/razmessage')">
+        {{ $store.state.ui.message.texte }}
+      </div>
     </q-dialog>
 
   </q-layout>
@@ -115,8 +101,9 @@
 
 <script>
 import EssentialLink from 'components/EssentialLink.vue'
-import { gp, cancelRequest, testreq, ping, post } from '../app/util'
-import { ref, computed } from 'vue'
+import DialogueErreur from 'components/DialogueErreur.vue'
+import { cancelRequest, ping, post, affichermessage } from '../app/util'
+import { computed } from 'vue'
 import { useStore } from 'vuex'
 
 const linksList = [
@@ -128,15 +115,15 @@ export default ({
   name: 'MainLayout',
 
   components: {
-    EssentialLink
+    EssentialLink, DialogueErreur
   },
 
   data () {
     return {
-      infolocal: false,
+      menuouvert: false,
+      infomode: false,
       inforeseau: false,
-      errdetail: false,
-      errstack: false
+      n: 1
     }
   },
 
@@ -144,25 +131,20 @@ export default ({
     clicAbort () {
       cancelRequest()
     },
-    fermererreur () {
-      this.errstack = false
-      this.errdetail = false
-      this.$store.commit('ui/reseterreur')
-    },
     voirderniereerreur () {
-      const x = this.derniereerreur
-      this.$store.commit('ui/seterreur', x)
-    },
-    async test1 () {
-      console.log('avant ' + this.$store.state.ui.textestatus)
-      await testreq(4000)
-      console.log('après ' + this.$store.state.ui.textestatus)
+      this.$store.commit('ui/seterreur', this.derniereerreur)
     },
     async ping () {
-      const r = await ping()
-      console.log('ping ' + r)
+      try {
+        await ping()
+      } catch (e) {
+        console.log('Erreur ping ' + JSON.stringify(e))
+      }
     },
-    async test2 () {
+    test0 () {
+      affichermessage('toto est beau ' + this.n++, this.n % 2)
+    },
+    async test1 () {
       try {
         const r = await post('m1', 'echo', { a: 1, b: 'toto' }, 'test2')
         console.log('test2ok ' + JSON.stringify(r))
@@ -170,7 +152,7 @@ export default ({
         console.log('test2ko ' + JSON.stringify(e))
       }
     },
-    async test3 () {
+    async test2 () {
       try {
         const r = await post('m1', 'erreur', { c: 99, m: 'erreur volontaire', d: 'détail ici', s: 'trace back' }, 'test3')
         console.log('test3ok ' + JSON.stringify(r))
@@ -182,40 +164,22 @@ export default ({
 
   setup () {
     const $store = useStore()
-    const leftDrawerOpen = ref(false)
-    const textestatus = computed({
-      get: () => $store.state.ui.textestatus
-    })
-    const org = gp().$route.params.org
-    $store.commit('ui/setcfgorg', gp().$cfg[org])
-    const cfgorg = computed({
-      get: () => $store.state.ui.cfgorg
-    })
-    const reqencours = computed({
-      get: () => $store.state.ui.reqencours
-    })
-    const erreur = computed({
-      get: () => $store.state.ui.erreur
-    })
-    const enerreur = computed({
-      get: () => $store.state.ui.erreur != null
-    })
-    const derniereerreur = computed({
-      get: () => $store.state.ui.derniereerreur
-    })
+
+    const org = computed(() => $store.state.ui.org)
+    const mode = computed(() => $store.state.ui.mode)
+    const reseauok = computed(() => $store.getters['ui/reseauok'])
+    const messagevisible = computed(() => $store.getters['ui/messagevisible'])
+    const reqencours = computed(() => $store.state.ui.reqencours)
+    const derniereerreur = computed(() => $store.state.ui.derniereerreur)
 
     return {
+      org,
+      mode,
+      messagevisible,
       essentialLinks: linksList,
-      leftDrawerOpen,
-      textestatus,
-      cfgorg,
       reqencours,
-      erreur,
-      enerreur,
       derniereerreur,
-      toggleLeftDrawer () {
-        leftDrawerOpen.value = !leftDrawerOpen.value
-      }
+      reseauok
     }
   }
 })
@@ -223,15 +187,34 @@ export default ({
 
 <style lang="sass">
 @import '../css/app.sass'
+.iconstd
+  font-size: $iconsize !important
+  background-color: white
+  color: black
+  border-radius: 12px
+  cursor: pointer
 
-.colorA0
-  color: $grey-5
-.colorA1
+.imgstd
+  width: $iconsize
+  background-color: white
+  color: black
+  border-radius: 12px
+  cursor: pointer
+
+.msgstd
+  background-color: $grey-9
+  color: white
+  cursor: pointer
+
+.msgimp
+  background-color: $grey-2
+  color: $red
+  font-weight: bold
+  cursor: pointer
+  border: 2px solid $red
+
+.vert
   color: $green
-.colorB0
-  color: $grey-5
-.colorB1
-  color: $green
-.colorB2
+.rouge
   color: $red
 </style>

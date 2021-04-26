@@ -1,34 +1,39 @@
-export function debutreq (state, texte) {
+let nummessage = 1
+
+export function debutreq (state) {
   state.reqencours = true
-  state.textestatus = texte || 'requête en cours ...'
 }
 
-export function finreq (state, texte) {
+export function finreq (state) {
   state.reqencours = false
-  state.textestatus = texte || ''
 }
 
-export function majtextestatus (state, texte) {
-  state.textestatus = texte || ''
+export function nouveaumessage (state, { texte, important }) {
+  state.message = { texte: texte, important: important, n: nummessage++ }
 }
 
-export function seterreur (state, err) {
+export function razmessage (state) {
+  state.message = null
+  state.messageto = null
+}
+
+export function majmessageto (state, to) {
+  state.messageto = to
+}
+
+export function majerreur (state, err) {
   state.erreur = err
   state.derniereerreur = err
 }
 
-export function reseterreur (state) {
+export function razerreur (state) {
   state.erreur = null
 }
 
-export function setstatusreseau (state, val) {
-  state.statusreseau = val
+export function majstatushttp (state, status) { // boolean
+  state.statushttp = status
 }
 
-export function setstatuslocal (state, val) {
-  state.statuslocal = val
-}
-
-export function setcfgorg (state, val) {
-  state.cfgorg = val
+export function majorg (state, val) {
+  state.org = val
 }

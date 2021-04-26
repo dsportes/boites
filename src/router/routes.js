@@ -1,14 +1,13 @@
 import MainLayout from 'layouts/MainLayout.vue'
-import Index from 'pages/Index.vue'
-import OrgAbsent from 'pages/OrgAbsent.vue'
+import Accueil from 'src/pages/Accueil.vue'
 
 const routes = [
   {
     path: '/',
     component: MainLayout,
     children: [
-      { path: '', component: OrgAbsent },
-      { path: ':org', component: Index }
+      { path: '', component: Accueil },
+      { path: ':org', component: Accueil }
     ]
   },
 
