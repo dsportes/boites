@@ -3,7 +3,7 @@
     <q-header reveal elevated>
       <q-toolbar>
         <q-btn flat dense round icon="menu" aria-label="Menu" @click="menuouvert = !menuouvert"/>
-        <q-btn flat dense round icon="check" aria-label="Test" @click="test1"/>
+        <q-btn flat dense round icon="check" aria-label="Test" @click="test2"/>
 
         <q-toolbar-title>
           <span class="font-antonio-l">{{ org }}</span>
@@ -23,11 +23,7 @@
     </q-header>
 
     <q-drawer v-model="menuouvert" side="left" overlay elevated class="bg-grey-1" >
-      <q-list>
-        <q-item-label>Build {{ $cfg.build }}</q-item-label>
-        <q-item-label header class="text-grey-8" >Essential Links </q-item-label>
-        <EssentialLink v-for="link in essentialLinks" :key="link.title" v-bind="link" />
-      </q-list>
+      <panel-menu></panel-menu>
     </q-drawer>
 
     <q-page-container>
@@ -69,14 +65,15 @@
           <div class="text-h6">Etat d'accès au réseau (mode synchronisé et incognito)</div>
         </q-card-section>
         <q-card-section v-if="$store.getters['ui/reseauok']" class="q-pt-none">
-          L'application accède par le réseau aux données sur le serveur, la dernière requête s'est terminée normalment.
+          L'application accède par le réseau aux données sur le serveur, la dernière requête s'est terminée normalement.
         </q-card-section>
         <q-card-section v-else class="q-pt-none">
           L'application accède par le réseau aux données sur le serveur, toutefois la dernière requête a rencontré un incident.
         </q-card-section>
         <q-card-actions align="right">
           <q-btn flat label="Tester l'accès au serveur" color="accent" v-close-popup @click="ping"/>
-          <q-btn v-if="$store.getters['ui/aeuuneerreur']" flat label="Voir la dernière erreur" color="accent" v-close-popup @click="voirderniereerreur"/>
+          <q-btn v-if="$store.getters['ui/aeuuneerreur']" flat label="Voir la dernière erreur" color="accent" v-close-popup
+           @click="$store.commit('ui/majerreur', this.derniereerreur)"/>
           <q-btn flat label="J'ai lu" color="primary" v-close-popup />
         </q-card-actions>
       </q-card>
@@ -86,7 +83,7 @@
       <q-card style="width:15rem;height:3rem;overflow:hidden" class="row items-center justify-between no-wrap bg-amber-2 q-pa-sm">
           <div class="text-weight-bold">Annuler la requête</div>
           <q-spinner color="primary" size="2rem" :thickness="3" />
-          <q-btn flat round icon="stop" class="text-red" @click="clicAbort" />
+          <q-btn flat round icon="stop" class="text-red" @click="cancelRequest" />
       </q-card>
     </q-dialog>
 
@@ -100,26 +97,22 @@
 </template>
 
 <script>
-import EssentialLink from 'components/EssentialLink.vue'
+import PanelMenu from 'src/components/PanelMenu.vue'
 import DialogueErreur from 'components/DialogueErreur.vue'
 import { cancelRequest, ping, post, affichermessage } from '../app/util'
 import { computed } from 'vue'
 import { useStore } from 'vuex'
 
-const linksList = [
-  { title: 'Docs', caption: 'quasar.dev', icon: 'school', link: 'https://quasar.dev' },
-  { title: 'Github', caption: 'github.com/quasarframework', icon: 'code', link: 'https://github.com/quasarframework' }
-]
-
 export default ({
   name: 'MainLayout',
 
   components: {
-    EssentialLink, DialogueErreur
+    PanelMenu, DialogueErreur
   },
 
   data () {
     return {
+      cancelRequest,
       menuouvert: false,
       infomode: false,
       inforeseau: false,
@@ -128,12 +121,6 @@ export default ({
   },
 
   methods: {
-    clicAbort () {
-      cancelRequest()
-    },
-    voirderniereerreur () {
-      this.$store.commit('ui/seterreur', this.derniereerreur)
-    },
     async ping () {
       try {
         await ping()
@@ -176,7 +163,6 @@ export default ({
       org,
       mode,
       messagevisible,
-      essentialLinks: linksList,
       reqencours,
       derniereerreur,
       reseauok

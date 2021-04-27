@@ -13,7 +13,7 @@
           </div>
           <div v-if="erreur.stack">
             Stack <q-toggle v-model="errstack"/>
-            <q-input v-if="errstack" type="textarea" v-model="erreur.stack" style="height:150px;"/>
+            <q-input v-if="errstack" type="textarea" v-model="erreur.stack" class="stackclass"/>
           </div>
         </q-card-section>
         <q-card-actions align="right">
@@ -60,5 +60,7 @@ export default ({
 
 <style lang="sass">
 @import '../css/app.sass'
-
+.stackclass
+  height: 150px
+  border: 1px solid black
 </style>
