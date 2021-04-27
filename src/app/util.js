@@ -109,6 +109,25 @@ export async function ping () {
   }
 }
 
+export async function orgicon (org) {
+  try {
+    const u = cfg.urlserveur + '/icon/' + org
+    $store.commit('ui/debutreq')
+    affichermessage('Recherche de l\'icône de ' + org, false)
+    cancelSource = axios.CancelToken.source()
+    const r = await axios({ method: 'get', url: u, responseType: 'text', cancelToken: cancelSource.token })
+    $store.commit('ui/finreq')
+    razmessage()
+    $store.commit('ui/majstatushttp', r.status)
+    return r.data
+  } catch (e) {
+    $store.commit('ui/finreq')
+    razmessage()
+    $store.commit('ui/majstatushttp', 0)
+    await err(e, true)
+  }
+}
+
 async function err (e, isPost) {
   let ex
   if (axios.isCancel(e)) {

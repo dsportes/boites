@@ -3,10 +3,13 @@
     <q-header reveal elevated>
       <q-toolbar>
         <q-btn flat dense round icon="menu" aria-label="Menu" @click="menuouvert = !menuouvert"/>
+        <q-btn flat dense round icon="home" aria-label="Accueil" @click="accueil"/>
         <q-btn flat dense round icon="check" aria-label="Test" @click="test2"/>
 
         <q-toolbar-title>
-          <span class="font-antonio-l">{{ org }}</span>
+          <img v-if="!orgconnue" class="imgstd" src="~assets/anonymous.png">
+          <img v-else class="imgstd" :src="orgicon">
+          <span class="font-antonio-l q-px-sm">{{ org }}</span>
         </q-toolbar-title>
 
         <q-btn v-if="$store.getters['ui/enligne']" flat dense round icon="cloud" aria-label="Accès serveur"
@@ -99,6 +102,7 @@
 <script>
 import PanelMenu from 'src/components/PanelMenu.vue'
 import DialogueErreur from 'components/DialogueErreur.vue'
+import * as CONST from '../store/constantes'
 import { cancelRequest, ping, post, affichermessage } from '../app/util'
 import { computed } from 'vue'
 import { useStore } from 'vuex'
@@ -121,6 +125,9 @@ export default ({
   },
 
   methods: {
+    accueil () {
+      this.$router.replace('/' + this.org)
+    },
     async ping () {
       try {
         await ping()
@@ -153,7 +160,9 @@ export default ({
     const $store = useStore()
 
     const org = computed(() => $store.state.ui.org)
+    const orgicon = computed(() => $store.state.ui.orgicon)
     const mode = computed(() => $store.state.ui.mode)
+    const orgconnue = computed(() => $store.state.ui.statuslogin >= CONST.LOGIN_MODEORGFIXES)
     const reseauok = computed(() => $store.getters['ui/reseauok'])
     const messagevisible = computed(() => $store.getters['ui/messagevisible'])
     const reqencours = computed(() => $store.state.ui.reqencours)
@@ -165,7 +174,9 @@ export default ({
       messagevisible,
       reqencours,
       derniereerreur,
-      reseauok
+      reseauok,
+      orgicon,
+      orgconnue
     }
   }
 })
@@ -184,8 +195,10 @@ export default ({
   width: $iconsize
   background-color: white
   color: black
-  border-radius: 12px
+  border-radius: $iconsize / 2
   cursor: pointer
+  position: relative
+  top: 4px
 
 .msgstd
   background-color: $grey-9

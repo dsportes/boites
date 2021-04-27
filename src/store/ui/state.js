@@ -7,6 +7,8 @@ export default function () {
     statushttp: 200,
     message: null,
     messageto: null,
-    org: 'anonyme'
+    statuslogin: 0, // 0:pas connecté, 1:mode et org fixés, 2:compte inconnu, 3:connecté
+    org: 'anonyme',
+    orgicon: null
   }
 }

@@ -37,3 +37,15 @@ export function majstatushttp (state, status) { // boolean
 export function majorg (state, val) {
   state.org = val
 }
+
+export function majstatuslogin (state, val) {
+  state.statuslogin = val
+}
+
+export function majorgicon (state, val) {
+  state.orgicon = val
+}
+
+export function majmode (state, val) {
+  state.mode = val
+}
