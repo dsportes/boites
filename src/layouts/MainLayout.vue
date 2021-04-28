@@ -107,6 +107,9 @@ import { cancelRequest, ping, post, affichermessage } from '../app/util'
 import { computed } from 'vue'
 import { useStore } from 'vuex'
 
+import { test } from '../app/crypto'
+test()
+
 export default ({
   name: 'MainLayout',
 
