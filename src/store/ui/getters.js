@@ -33,3 +33,9 @@ export function modesync (state) { // boolean
 export function modeinconnu (state) { // boolean
   return state.mode === CONST.MODE_INCONNU
 }
+
+export function labelorg (state) {
+  if (state.org == null) return 'Organisation non saisie'
+  if (state.orgicon != null) return state.org
+  return state.org + (state.mode === CONST.MODE_AVION ? ' : inconnu sur cet appareil' : ' : inconnu du serveur')
+}

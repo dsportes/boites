@@ -7,9 +7,9 @@
         <q-btn flat dense round icon="check" aria-label="Test" @click="test2"/>
 
         <q-toolbar-title>
-          <img v-if="!orgconnue" class="imgstd" src="~assets/anonymous.png">
+          <img v-if="orgicon == null" class="imgstd" src="~assets/anonymous.png">
           <img v-else class="imgstd" :src="orgicon">
-          <span class="font-antonio-l q-px-sm">{{ org }}</span>
+          <span :class="labelorgclass">{{ $store.getters['ui/labelorg'] }}</span>
         </q-toolbar-title>
 
         <q-btn v-if="$store.getters['ui/enligne']" flat dense round icon="cloud" aria-label="Accès serveur"
@@ -42,7 +42,7 @@
         </q-card-section>
         <q-card-section :class="'q-pt-none' + ($store.getters['ui/modeinconnu'] ? 'text-body-1 text-weight-bold' : 'text-body-2 text-weight-regular')">
           <q-icon class="iconstd" name="info"/><span class="text-h6 q-px-sm">Inconnu :</span>
-          Le mode n'est connu qu'après la connexion, ou au moins lorsque la demande a été faite.
+          Le mode n'a pas encore été choisi.
         </q-card-section>
         <q-card-section :class="'q-pt-none' + ($store.getters['ui/modesync'] ? 'text-body-1 text-weight-bold' : 'text-body-2 text-weight-regular')">
           <q-icon class="iconstd" name="sync_alt"/><span class="text-h6 q-px-sm">Synchronisé :</span>
@@ -102,7 +102,7 @@
 <script>
 import PanelMenu from 'src/components/PanelMenu.vue'
 import DialogueErreur from 'components/DialogueErreur.vue'
-import * as CONST from '../store/constantes'
+// import * as CONST from '../store/constantes'
 import { cancelRequest, ping, post, affichermessage } from '../app/util'
 import { computed } from 'vue'
 import { useStore } from 'vuex'
@@ -162,21 +162,21 @@ export default ({
     const org = computed(() => $store.state.ui.org)
     const orgicon = computed(() => $store.state.ui.orgicon)
     const mode = computed(() => $store.state.ui.mode)
-    const orgconnue = computed(() => $store.state.ui.statuslogin >= CONST.LOGIN_MODEORGFIXES)
     const reseauok = computed(() => $store.getters['ui/reseauok'])
     const messagevisible = computed(() => $store.getters['ui/messagevisible'])
     const reqencours = computed(() => $store.state.ui.reqencours)
     const derniereerreur = computed(() => $store.state.ui.derniereerreur)
+    const labelorgclass = computed(() => 'font-antonio-l q-px-sm ' + ($store.state.ui.orgicon == null ? 'labelorg2' : 'labelorg1'))
 
     return {
       org,
+      orgicon,
+      labelorgclass,
       mode,
       messagevisible,
       reqencours,
       derniereerreur,
-      reseauok,
-      orgicon,
-      orgconnue
+      reseauok
     }
   }
 })
@@ -199,6 +199,12 @@ export default ({
   cursor: pointer
   position: relative
   top: 4px
+
+.labelorg1
+  color: white
+
+.labelorg2
+  color: $negative
 
 .msgstd
   background-color: $grey-9

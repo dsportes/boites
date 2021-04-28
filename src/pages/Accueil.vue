@@ -1,59 +1,86 @@
 <template>
   <q-page class="column align-start items-center">
 
-    <q-btn v-if="modeorgfixes" flat color="info" class="q-ma-sm" icon="edit" label="Changer le mode et/ou l'organisation" @click="changermo"/>
-
     <q-btn v-if="connecte" class="q-ma-sm" color="primary" icon-right="logout" label="Se déconnecter" @click="sedeconnecter"/>
 
-    <q-btn v-if="modeorgfixes" size="xl" class="q-ma-sm" color="primary" icon="login" label="Se connecter" @click="seconnecter"/>
-
-    <q-btn class="q-ma-sm" color="warning" icon="fiber_new" label="Créer un compte" @click="creercompte"/>
-
-    <q-dialog v-model="nonconnecte">
-      <q-card>
+    <div v-else class="column align-start items-center">
+      <q-card class="q-ma-sm petitelargeur">
         <q-card-section>
-          <div class="text-h6">Choix du mode et de l'organisation</div>
+          <div class="text-h6">Choix du mode <span v-if="$store.state.ui.mode === 0" class="rouge text-bold" >(requis)</span></div>
         </q-card-section>
-        <q-card-section>
+      <q-card-section>
           <div class="q-gutter-sm">
             <q-radio dense v-model="locmode" :val="1" label="Synchronisé" />
             <q-radio dense v-model="locmode" :val="2" label="Incognito" />
             <q-radio dense v-model="locmode" :val="3" label="Avion" />
           </div>
+      </q-card-section>
+      </q-card>
+
+      <q-card class="q-ma-sm petitelargeur">
+        <q-card-section>
+          <div class="text-h6">{{ 'Code de l\'organisation' + ($store.state.ui.org == null ? '(requis)' : '') }}</div>
         </q-card-section>
         <q-card-section>
-          <q-input outlined v-model="locorg" label="Code de l'organisation" />
+          <q-input dense clearable v-model="locorg" @keydown.enter.prevent="validerorg"
+          hint="Presser la touche 'Entrée' à la fin de la saisie"/>
+        </q-card-section>
+      </q-card>
+
+      <q-card class="q-ma-sm petitelargeur" v-if="!connecte && orgicon != null">
+        <q-card-section>
+          <div class="text-h6">Identification du compte</div>
         </q-card-section>
         <q-card-section>
-          <div class="text-body-2 text-negative">{{ diag }}</div>
+          <q-input dense clearable counter hint="Au moins 16 caractères" v-model="ligne1" :type="isPwd ? 'password' : 'text'" label="Première ligne de la phrase secrète">
+            <template v-slot:append>
+              <q-icon :name="isPwd ? 'visibility_off' : 'visibility'" class="cursor-pointer" @click="isPwd = !isPwd"/>
+            </template>
+          </q-input>
+          <q-input dense clearable counter hint="Au moins 16 caractères" v-model="ligne2" :type="isPwd ? 'password' : 'text'" label="Seconde ligne de la phrase secrète">
+            <template v-slot:append>
+              <q-icon :name="isPwd ? 'visibility_off' : 'visibility'" class="cursor-pointer" @click="isPwd = !isPwd"/>
+            </template>
+          </q-input>
         </q-card-section>
         <q-card-actions align="right">
-          <q-btn flat label="OK" color="primary" @click="fixemodeorg" />
+          <q-btn flat label="OK" :disable="ligne1.length < 16 || ligne2.length < 16" color="primary" @click="seconnecter" />
+        </q-card-actions>
+      </q-card>
+
+      <q-btn v-if="!connecte && orgicon != null" flat class="q-ma-sm" color="accent" icon-right="edit" label="Créer un nouveau compte" @click="creercompte"/>
+    </div>
+
+    <q-dialog v-model="erreurconnexion">
+      <q-card>
+        <q-card-section class="q-pt-none">{{ diag }}</q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat label="J'ai lu" color="primary" v-close-popup @click="diag = null" />
         </q-card-actions>
       </q-card>
     </q-dialog>
+
   </q-page>
 </template>
 
 <script>
 import { computed } from 'vue'
 import { useStore } from 'vuex'
-import { gp, orgicon } from '../app/util'
+import { gp, orgicon, connexion } from '../app/util'
 import * as CONST from '../store/constantes'
-
-const orginc1 = 'Organisation non reconnue par le serveur'
-const orginc2 = 'Organisation inconnue sur cet appareil'
-const modeinc = 'Choisir un mode : synchronisé, incognito ou avion'
 
 export default ({
   name: 'Accueil',
 
   data () {
     return {
-      locmode: 1,
+      locmode: this.mode,
       locorg: this.org,
-      diag: '',
-      orgicon: null
+      ligne1: '',
+      ligne2: '',
+      isPwd: false,
+      erreurconnexion: false,
+      diag: ''
     }
   },
 
@@ -61,59 +88,51 @@ export default ({
     // changement d'organisation
     '$route.params.org': function (neworg) {
       this.$store.commit('ui/majorg', neworg)
+    },
+    locmode: async function (m) {
+      this.$store.commit('ui/majmode', m)
+      await this.validerorg()
     }
   },
 
   methods: {
-    async fixemodeorg () {
+    async validerorg () {
+      if (this.mode === CONST.MODE_INCONNU) return
       let ic
-      if (this.locmode === CONST.MODE_SYNC || this.locmode === CONST.MODE_INCOGNITO) {
+      if (this.mode === CONST.MODE_SYNC || this.mode === CONST.MODE_INCOGNITO) {
         try {
           ic = await orgicon(this.locorg)
           if (ic.length < 4) {
-            this.diag = orginc1
-            return
+            ic = null
           } else {
-            if (this.locmode === CONST.MODE_SYNC) {
+            if (this.mode === CONST.MODE_SYNC) {
               localStorage.setItem(this.locorg, ic)
             }
           }
-        } catch (e) {
-          this.diag = orginc1
-          return
-        }
+        } catch (e) { }
       } else {
         ic = localStorage.getItem(this.locorg)
-        if (!ic) {
-          this.diag = orginc2
-          return
-        }
       }
-      if (this.locmode === CONST.MODE_INCONNU) {
-        this.diag = modeinc
-        return
+      if (ic) {
+        this.$store.commit('ui/majorg', this.locorg)
+        this.$store.commit('ui/majorgicon', ic)
+        this.$router.replace('/' + this.locorg)
+      } else {
+        this.locorg = null
+        this.$store.commit('ui/majorg', null)
+        this.$store.commit('ui/majorgicon', null)
+        this.$router.replace('/')
       }
-      console.log('statuslogin ' + this.$store.state.ui.statuslogin + ' ' + this.modeorgfixes)
-      this.$store.commit('ui/majstatuslogin', CONST.LOGIN_MODEORGFIXES)
-      console.log('statuslogin ' + this.$store.state.ui.statuslogin + ' ' + this.modeorgfixes)
-      this.$store.commit('ui/majorgicon', ic)
-      this.$store.commit('ui/majmode', this.locmode)
-      this.$router.replace('/' + this.locorg)
     },
-    changermo () {
-      this.$store.commit('ui/majstatuslogin', CONST.LOGIN_NONCONNECTE)
-      this.$store.commit('ui/majorgicon', null)
-      this.$store.commit('ui/majmode', CONST.MODE_INCONNU)
-      this.$router.replace('/')
-      this.locorg = this.org
-      this.diag = ''
-      this.locmode = this.$store.state.ui.mode
-      this.orgicon = null
-    },
+
     sedeconnecter () {
     },
-    seconnecter () {
+
+    async seconnecter () {
+      this.diag = await connexion(this.ligne1, this.ligne2)
+      this.erreurconnexion = this.diag != null
     },
+
     creercompte () {
     }
   },
@@ -121,23 +140,38 @@ export default ({
   setup () {
     const $store = useStore()
     const org = computed(() => $store.state.ui.org)
-    const nonconnecte = computed(() => $store.state.ui.statuslogin === CONST.LOGIN_NONCONNECTE)
-    const modeorgfixes = computed(() => $store.state.ui.statuslogin === CONST.LOGIN_MODEORGFIXES)
-    const connecte = computed(() => $store.state.ui.statuslogin === CONST.LOGIN_CONNECTE)
+    const orgicon = computed(() => $store.state.ui.orgicon)
+    const mode = computed(() => $store.state.ui.mode)
+    const connecte = computed(() => $store.state.ui.statuslogin)
+    $store.commit('ui/majorg', gp().$route.params.org || null)
 
-    const x = gp().$route.params.org
-    if (!x) {
-      $store.commit('ui/majorg', 'anonyme')
-    } else {
-      if (x !== 'anonyme') $store.commit('ui/majorg', x)
-    }
     return {
       org,
-      nonconnecte,
-      modeorgfixes,
+      orgicon,
+      mode,
       connecte
     }
   }
 
 })
 </script>
+
+<style lang="sass">
+@import '../css/app.sass'
+.vert
+  color: $green
+.rouge
+  color: $red
+.petitelargeur
+  width: 20rem
+.q-field__native
+  font-size: 1.1rem !important
+  font-family: "Roboto Mono" !important
+  font-weight: bold !important
+  color: $red !important
+.q-field__messages
+  font-size: 0.9rem !important
+  font-weight: bold !important
+.q-card__section
+  padding: 5px
+</style>
