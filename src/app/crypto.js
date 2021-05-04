@@ -1,13 +1,15 @@
-import * as CONST from '../store/constantes'
 const crypto = require('crypto')
 const base64url = require('base64url') // https://www.npmjs.com/package/base64url
+
+const CRYPTO_SALT = '$2b$12$WdYsWBPznbcWrICT2tefEO'
+const IV4 = new Uint8Array([101, 102, 103, 104])
 
 export function sha256 (buffer) {
   return crypto.createHash('sha256').update(buffer).digest()
 }
 
 export function pbkfd (secret) {
-  return crypto.pbkdf2Sync(secret, CONST.CRYPTO_SALT, 10000, 32, 'sha256')
+  return crypto.pbkdf2Sync(secret, CRYPTO_SALT, 10000, 32, 'sha256')
 }
 
 export function random (nbytes) { return crypto.randomBytes(nbytes) }
@@ -44,11 +46,9 @@ export function int2base64 (n) {
   return r
 }
 
-const iv4 = new Uint8Array([101, 102, 103, 104])
-
 export function crypter (cle, buffer, ivfixe) {
   const k = typeof cle === 'string' ? Buffer.from(cle, 'base64') : cle
-  const rnd = ivfixe ? Buffer.from(iv4) : crypto.randomBytes(4)
+  const rnd = ivfixe ? Buffer.from(IV4) : crypto.randomBytes(4)
   const iv = Buffer.concat([rnd, rnd, rnd, rnd])
   const cipher = crypto.createCipheriv('aes-256-cbc', k, iv)
   const x1 = cipher.update(buffer)
