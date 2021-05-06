@@ -4,7 +4,8 @@
       <q-toolbar>
         <q-btn flat dense round icon="menu" aria-label="Menu" @click="menuouvert = !menuouvert"/>
         <q-btn flat dense round icon="home" aria-label="Accueil" @click="accueil"/>
-        <q-btn flat dense round icon="check" aria-label="Test" @click="test2"/>
+        <q-btn flat dense round icon="check" aria-label="Test" @click="testws"/>
+        <q-btn flat dense round icon="check" aria-label="Test" @click="testws2"/>
 
         <q-toolbar-title>
           <img v-if="orgicon == null" class="imgstd" src="~assets/anonymous.png">
@@ -12,6 +13,10 @@
           <span :class="labelorgclass">{{ $store.getters['ui/labelorg'] }}</span>
         </q-toolbar-title>
 
+        <q-btn v-if="$store.getters['ui/modeincognito'] || $store.getters['ui/modesync']" flat dense round icon="autorenew" aria-label="Etat synchronisation"
+          @click="infosync = true"
+          :class="$store.state.ui.session ? 'vert' : ($store.state.ui.sessionerreur ? 'rouge' : 'gris')"
+        />
         <q-btn v-if="$store.getters['ui/enligne']" flat dense round icon="cloud" aria-label="Accès serveur"
           @click="inforeseau = true"
           :class="$store.getters['ui/reseauok'] ? 'vert' : 'rouge'"
@@ -82,6 +87,23 @@
       </q-card>
     </q-dialog>
 
+    <q-dialog v-model="infosync">
+      <q-card>
+        <q-card-section>
+          <div class="text-h6">État courant de la synchronisation (mode synchronisé et incognito)</div>
+        </q-card-section>
+        <q-card-section v-if="!$store.state.ui.statuslogin" class="q-pt-none">
+          La synchronisation n'est activé qu'après s'être connecté.
+        </q-card-section>
+        <q-card-section v-else class="q-pt-none">
+          {{ labelerreursync }}
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat label="J'ai lu" color="primary" v-close-popup />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
     <q-dialog v-model="reqencours" seamless position="top">
       <q-card style="width:15rem;height:3rem;overflow:hidden" class="row items-center justify-between no-wrap bg-amber-2 q-pa-sm">
           <div class="text-weight-bold">Annuler la requête</div>
@@ -106,9 +128,10 @@ import DialogueErreur from 'components/DialogueErreur.vue'
 import { cancelRequest, ping, post, affichermessage } from '../app/util'
 import { computed } from 'vue'
 import { useStore } from 'vuex'
+import { newSession } from '../app/ws'
 
-import { test } from '../app/crypto'
-test()
+// import { test } from '../app/crypto'
+// test()
 
 export default ({
   name: 'MainLayout',
@@ -123,6 +146,7 @@ export default ({
       menuouvert: false,
       infomode: false,
       inforeseau: false,
+      infosync: false,
       n: 1
     }
   },
@@ -156,6 +180,15 @@ export default ({
       } catch (e) {
         console.log('test3ko ' + JSON.stringify(e))
       }
+    },
+    async testws () {
+      this.$store.commit('ui/majstatuslogin', true)
+      const s = await newSession({ fn: 'f1', m: 'toto' })
+      s.send({ fn: 'f2', m: 'bla bla' })
+    },
+    testws2 () {
+      const s = this.$store.state.ui.session
+      s.send({ fn: 'f2', m: 'bluuu bluuu' })
     }
   },
 
@@ -170,7 +203,12 @@ export default ({
     const reqencours = computed(() => $store.state.ui.reqencours)
     const derniereerreur = computed(() => $store.state.ui.derniereerreur)
     const labelorgclass = computed(() => 'font-antonio-l q-px-sm ' + ($store.state.ui.orgicon == null ? 'labelorg2' : 'labelorg1'))
-
+    const lerr = [
+      'La synchronisation fonctionne normalement.',
+      'La liaison avec le serveur n\'a pas pu s\'établir au moment de commencer la synchronisation',
+      'La liaison avec le serveur a été interrompue en cours de synchronisation'
+    ]
+    const labelerreursync = computed(() => lerr[$store.state.ui.sessionerreur])
     return {
       org,
       orgicon,
@@ -179,6 +217,7 @@ export default ({
       messagevisible,
       reqencours,
       derniereerreur,
+      labelerreursync,
       reseauok
     }
   }
@@ -225,4 +264,6 @@ export default ({
   color: $green
 .rouge
   color: $red
+.gris
+  color: $grey-6
 </style>

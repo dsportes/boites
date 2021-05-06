@@ -9,6 +9,8 @@ export default function () {
     messageto: null,
     statuslogin: false,
     org: null,
-    orgicon: null // Non null quand l'organisation est connue localement ou sur le serveur selon le mode
+    orgicon: null, // Non null quand l'organisation est connue localement ou sur le serveur selon le mode
+    session: null,
+    sessionerreur: 0
   }
 }

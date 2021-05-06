@@ -1,18 +1,22 @@
 import axios from 'axios'
 // import * as CONST from '../store/constantes'
 
-let cfg
+let $cfg
 let globalProperties
 let cancelSource
 let $store
 
 export function setup (gp, appconfig) {
-  cfg = appconfig
+  $cfg = appconfig
   globalProperties = gp
 }
 export function setstore (store) {
   $store = store
 }
+
+export function cfg () { return $cfg }
+
+export function store () { return $store }
 
 export function gp () { return globalProperties }
 
@@ -72,7 +76,7 @@ l'erreur a déjà été affichée : le catch dans l'appel sert à différencier 
 export async function post (module, fonction, args, info, blob) {
   try {
     if (!info) info = 'Requête'
-    const u = cfg.urlserveur + '/' + $store.state.ui.org + '/' + module + '/' + fonction
+    const u = $cfg.urlserveur + '/' + $store.state.ui.org + '/' + module + '/' + fonction
     $store.commit('ui/debutreq')
     affichermessage(info + ' - ' + u, false)
     if (!args) args = {}
@@ -92,7 +96,7 @@ export async function post (module, fonction, args, info, blob) {
 
 export async function ping () {
   try {
-    const u = cfg.urlserveur + '/ping'
+    const u = $cfg.urlserveur + '/ping'
     $store.commit('ui/debutreq')
     affichermessage('ping - ' + u, false)
     cancelSource = axios.CancelToken.source()
@@ -111,7 +115,7 @@ export async function ping () {
 
 export async function orgicon (org) {
   try {
-    const u = cfg.urlserveur + '/icon/' + org
+    const u = $cfg.urlserveur + '/icon/' + org
     $store.commit('ui/debutreq')
     affichermessage('Recherche de l\'icône de ' + org, false)
     cancelSource = axios.CancelToken.source()
