@@ -2,7 +2,7 @@
   <q-layout view="hHh lpR fFf">
     <q-header reveal elevated>
       <q-toolbar>
-        <q-btn flat dense round icon="menu" aria-label="Menu" @click="menuouvert = !menuouvert"/>
+        <q-btn flat dense round icon="menu" aria-label="Menu" @click="$store.commit('ui/majmenuouvert', true)"/>
         <q-btn flat dense round icon="home" aria-label="Accueil" @click="accueil"/>
         <q-btn flat dense round icon="check" aria-label="Test" @click="testws"/>
         <q-btn flat dense round icon="check" aria-label="Test" @click="testws2"/>
@@ -38,6 +38,7 @@
       <router-view />
     </q-page-container>
 
+    <dialogue-crypto></dialogue-crypto>
     <dialogue-erreur></dialogue-erreur>
 
     <q-dialog v-model="infomode">
@@ -124,26 +125,23 @@
 <script>
 import PanelMenu from 'src/components/PanelMenu.vue'
 import DialogueErreur from 'components/DialogueErreur.vue'
+import DialogueCrypto from 'components/DialogueCrypto.vue'
 // import * as CONST from '../store/constantes'
 import { cancelRequest, ping, post, affichermessage } from '../app/util'
 import { computed } from 'vue'
 import { useStore } from 'vuex'
 import { newSession } from '../app/ws'
 
-// import { test } from '../app/crypto'
-// test()
-
 export default ({
   name: 'MainLayout',
 
   components: {
-    PanelMenu, DialogueErreur
+    PanelMenu, DialogueErreur, DialogueCrypto
   },
 
   data () {
     return {
       cancelRequest,
-      menuouvert: false,
       infomode: false,
       inforeseau: false,
       infosync: false,
@@ -194,7 +192,10 @@ export default ({
 
   setup () {
     const $store = useStore()
-
+    const menuouvert = computed({
+      get: () => $store.state.ui.menuouvert,
+      set: (val) => $store.commit('ui/majmenuouvert', val)
+    })
     const org = computed(() => $store.state.ui.org)
     const orgicon = computed(() => $store.state.ui.orgicon)
     const mode = computed(() => $store.state.ui.mode)
@@ -210,6 +211,7 @@ export default ({
     ]
     const labelerreursync = computed(() => lerr[$store.state.ui.sessionerreur])
     return {
+      menuouvert,
       org,
       orgicon,
       labelorgclass,

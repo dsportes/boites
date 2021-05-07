@@ -61,3 +61,11 @@ export function fermersession (state) {
 export function majsessionerreur (state, val) {
   state.sessionerreur = val
 }
+
+export function majdialoguecrypto (state, val) {
+  state.dialoguecrypto = val
+}
+
+export function majmenuouvert (state, val) {
+  state.menuouvert = val
+}

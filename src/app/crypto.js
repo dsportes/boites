@@ -9,7 +9,7 @@ export function sha256 (buffer) {
 }
 
 export function pbkfd (secret) {
-  return crypto.pbkdf2Sync(secret, CRYPTO_SALT, 10000, 32, 'sha256')
+  return crypto.pbkdf2Sync(secret, CRYPTO_SALT, 5000, 32, 'sha256')
 }
 
 export function random (nbytes) { return crypto.randomBytes(nbytes) }
@@ -35,12 +35,12 @@ export function hash53 (str, seed = 0) {
   return int2base64(4294967296 * (2097151 & h2) + (h1 >>> 0))
 }
 
-const c60 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_'
+const c64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_'
 export function int2base64 (n) {
   let r = ''
   let x = n
   while (x) {
-    r += c60.charAt(x % 64)
+    r += c64.charAt(x % 64)
     x = Math.floor(x / 64)
   }
   return r

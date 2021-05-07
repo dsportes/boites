@@ -4,7 +4,7 @@
     <q-btn v-if="connecte" class="q-ma-sm" color="primary" icon-right="logout" label="Se déconnecter" @click="sedeconnecter"/>
 
     <div v-else class="column align-start items-center">
-      <q-card class="q-ma-sm petitelargeur">
+      <q-card flat class="q-ma-xs bg-grey-1 petitelargeur">
         <q-card-section>
           <div class="text-h6">Choix du mode <span v-if="$store.state.ui.mode === 0" class="rouge text-bold" >(requis)</span></div>
         </q-card-section>
@@ -17,38 +17,22 @@
       </q-card-section>
       </q-card>
 
-      <q-card class="q-ma-sm petitelargeur">
+      <q-card flat v-if="mode !== 0" class="q-ma-xs bg-grey-4 petitelargeur">
         <q-card-section>
           <div class="text-h6">{{ 'Code de l\'organisation' + ($store.state.ui.org == null ? '(requis)' : '') }}</div>
         </q-card-section>
         <q-card-section>
-          <q-input dense clearable v-model="locorg" @keydown.enter.prevent="validerorg"
+          <q-input class="moninput" dense clearable v-model="locorg" @keydown.enter.prevent="validerorg"
           hint="Presser la touche 'Entrée' à la fin de la saisie"/>
         </q-card-section>
       </q-card>
 
-      <q-card class="q-ma-sm petitelargeur" v-if="!connecte && orgicon != null">
+      <q-card flat v-if="orgicon != null" class="q-ma-xs bg-grey-5 petitelargeur">
         <q-card-section>
-          <div class="text-h6">Identification du compte</div>
+          <div class="text-h6">Phrase secrète</div>
         </q-card-section>
-        <q-card-section>
-          <q-input dense clearable counter hint="Au moins 16 caractères" v-model="ligne1" :type="isPwd ? 'password' : 'text'" label="Première ligne de la phrase secrète">
-            <template v-slot:append>
-              <q-icon :name="isPwd ? 'visibility_off' : 'visibility'" class="cursor-pointer" @click="isPwd = !isPwd"/>
-            </template>
-          </q-input>
-          <q-input dense clearable counter hint="Au moins 16 caractères" v-model="ligne2" :type="isPwd ? 'password' : 'text'" label="Seconde ligne de la phrase secrète">
-            <template v-slot:append>
-              <q-icon :name="isPwd ? 'visibility_off' : 'visibility'" class="cursor-pointer" @click="isPwd = !isPwd"/>
-            </template>
-          </q-input>
-        </q-card-section>
-        <q-card-actions align="right">
-          <q-btn flat label="OK" :disable="ligne1.length < 16 || ligne2.length < 16" color="primary" @click="seconnecter" />
-        </q-card-actions>
+        <phrase-secrete v-on:ok-ps="connecteroucreer"></phrase-secrete>
       </q-card>
-
-      <q-btn v-if="!connecte && orgicon != null" flat class="q-ma-sm" color="accent" icon-right="edit" label="Créer un nouveau compte" @click="creercompte"/>
     </div>
 
     <q-dialog v-model="erreurconnexion">
@@ -66,12 +50,14 @@
 <script>
 import { computed } from 'vue'
 import { useStore } from 'vuex'
-import { gp, orgicon, connexion } from '../app/util'
+import { gp, orgicon } from '../app/util'
+import { connexion } from '../app/db'
 import * as CONST from '../store/constantes'
+import PhraseSecrete from '../components/PhraseSecrete.vue'
 
 export default ({
   name: 'Accueil',
-
+  components: { PhraseSecrete },
   data () {
     return {
       locmode: this.mode,
@@ -128,13 +114,11 @@ export default ({
     sedeconnecter () {
     },
 
-    async seconnecter () {
-      this.diag = await connexion(this.ligne1, this.ligne2)
+    async connecteroucreer (lignes) {
+      this.diag = await connexion(lignes[0], lignes[1])
       this.erreurconnexion = this.diag != null
-    },
-
-    creercompte () {
     }
+
   },
 
   setup () {
@@ -163,15 +147,18 @@ export default ({
 .rouge
   color: $red
 .petitelargeur
-  width: 20rem
-.q-field__native
-  font-size: 1.1rem !important
-  font-family: "Roboto Mono" !important
-  font-weight: bold !important
-  color: $red !important
-.q-field__messages
-  font-size: 0.9rem !important
-  font-weight: bold !important
-.q-card__section
-  padding: 5px
+  width: 25rem
+</style>
+<style scoped>
+>>> .q-card__section { padding: 2px; }
+>>> .q-field__native {
+  font-size: 1.1rem;
+  font-family: "Roboto Mono";
+  font-weight: bold;
+  color: red !important;
+}
+>>> .q-field__messages {
+  font-size: 0.9rem;
+  font-weight: bold;
+}
 </style>

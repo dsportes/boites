@@ -154,10 +154,3 @@ async function err (e, isPost) {
   $store.commit('ui/majerreur', ex)
   throw ex
 }
-
-const errcompte = 'Cette phrase ne correspond à aucun compte enregistré'
-export async function connexion (ligne1, ligne2) {
-  console.log('Phrase : ' + ligne1 + '\n' + ligne2)
-  if (ligne1.startsWith('*')) return errcompte
-  $store.commit('ui/majstatuslogin', true)
-}
