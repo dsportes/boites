@@ -13,6 +13,8 @@ export default function () {
     org: null,
     orgicon: null, // Non null quand l'organisation est connue localement ou sur le serveur selon le mode
     session: null,
-    sessionerreur: 0
+    sessionerreur: 0,
+    compte: {},
+    avatars: {}
   }
 }

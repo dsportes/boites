@@ -1,5 +1,6 @@
 import MainLayout from 'layouts/MainLayout.vue'
 import Accueil from 'src/pages/Accueil.vue'
+import Compte from 'src/pages/Compte.vue'
 
 const routes = [
   {
@@ -7,7 +8,8 @@ const routes = [
     component: MainLayout,
     children: [
       { path: '', component: Accueil },
-      { path: ':org', component: Accueil }
+      { path: ':org', component: Accueil },
+      { path: ':org/compte', component: Compte }
     ]
   },
 
