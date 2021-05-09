@@ -37,7 +37,7 @@
 
     <q-dialog v-model="erreurconnexion">
       <q-card>
-        <q-card-section class="q-pt-none">{{ diag }}</q-card-section>
+        <q-card-section class="q-pt-none"><div raw-html="diag"></div></q-card-section>
         <q-card-actions align="right">
           <q-btn flat label="J'ai lu" color="primary" v-close-popup @click="diag = null" />
         </q-card-actions>
@@ -54,6 +54,8 @@ import { gp, orgicon } from '../app/util'
 import { connexion } from '../app/db'
 import * as CONST from '../store/constantes'
 import PhraseSecrete from '../components/PhraseSecrete.vue'
+import { pbkfd, hash53, sha256 } from '../app/crypto'
+const base64url = require('base64url')
 
 export default ({
   name: 'Accueil',
@@ -115,8 +117,55 @@ export default ({
     },
 
     async connecteroucreer (lignes) {
-      this.diag = await connexion(lignes[0], lignes[1])
-      this.erreurconnexion = this.diag != null
+      const dpb = base64url(pbkfd(lignes[0]))
+      const dpbh = hash53(dpb)
+      const clex = pbkfd(lignes[0] + '\n' + lignes[1])
+      const args = { dpbh, clex, pcbs: base64url(sha256(clex)) }
+      const ret = await connexion(args)
+      console.log(JSON.stringify(ret))
+      if (ret.status === -1) {
+        this.diag = 'Erreur technique, tenter à nouveau l\'opération'
+        this.erreurconnexion = true
+        return
+      }
+      if (ret.status === 0) {
+        if (this.mode !== CONST.MODE_AVION) {
+          this.diag = 'Aucun compte n\'est enregistré sur cet appareil avec cette phrase secréte'
+        } else {
+          this.diag = 'a) Aucun compte n\'est enregistré avec cette phrase secréte<br>' +
+            'b) Aucun parrainage pour création de compte n\'est enregistré avec cette prase de rencontre<br>' +
+            'c) Cette phrase ne permet pas non plus de créer un compte privilégié'
+        }
+        this.erreurconnexion = true
+      } else {
+        switch (ret.status) {
+          case 1: {
+            this.compteouvert(ret)
+            break
+          }
+          case 2: {
+            this.creationpriv(ret)
+            break
+          }
+          case 3: {
+            this.creationstd(ret)
+            break
+          }
+        }
+      }
+    },
+
+    compteouvert () { // ret, args
+      this.$store.commit('ui/nouveaumessage', { texte: 'Compte en cours d\'ouverture' })
+      this.$store().commit('ui/majstatuslogin', true)
+    },
+
+    creationpriv () { // ret, args
+      this.$store.commit('ui/nouveaumessage', { texte: 'Création d\'un nouveau compte privilégié' })
+    },
+
+    creationstd () { // ret, args
+      this.$store.commit('ui/nouveaumessage', { texte: 'Création d\'un nouveau compte parrainé' })
     }
 
   },

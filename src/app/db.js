@@ -1,5 +1,6 @@
 import Dexie from 'dexie'
-import { store } from './util'
+import { store, post } from './util'
+import * as CONST from '../store/constantes'
 
 const STORES = {
   compte: 'id, data',
@@ -24,11 +25,27 @@ export function close () {
   }
 }
 
-const errcompte = 'Cette phrase ne correspond à aucun compte enregistré'
-export async function connexion (ligne1, ligne2) {
-  console.log('Phrase : ' + ligne1 + '\n' + ligne2)
-  if (ligne1.startsWith('*')) return errcompte
-  store().commit('ui/majstatuslogin', true)
+/*
+Détermine si une connexion ou création est possible avec cette phrase secrète
+args = { dpbh, clex, pcbs: base64url(sha256(clex)) }
+Retours = status ...
+0: phrase secrète non reconnue
+1: compte identifié. { status:1, id:id du compte, k:clé k, avatars:[noms longs des avatars] }
+2: création de compte privilégié possible. { status:2 }
+3: création de compte standard possible. { status:3, cext:cext du parrain }
+*/
+export async function connexion (args) {
+  const mode = store().state.ui.mode
+  try {
+    if (mode === CONST.MODE_AVION) {
+      console.log('connexion locale')
+      return { status: 0 }
+    } else {
+      return await post('m1', 'testconnexion', args, 'Connexion ...')
+    }
+  } catch (e) {
+    return { status: -1 }
+  }
 }
 
 /* état de session */
@@ -57,7 +74,7 @@ export const cachesmembres = { }
 
 /*
 compte
-id pcbh pcbs dma q1 q2 qm1 qm2
+id pcbh pcbs dma q1 q2 qm1 qm2 vdm1 vdm2
 avatars[] : liste des noms longs
 avs[] : liste des codes des avatars ???
 mc{}
