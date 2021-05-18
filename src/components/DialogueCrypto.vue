@@ -26,7 +26,7 @@
 <script>
 import { useStore } from 'vuex'
 import { computed } from 'vue'
-import { test, pbkfd, hash53, sha256 } from '../app/crypto'
+const crypt = require('../app/crypto')
 import PhraseSecrete from '../components/PhraseSecrete.vue'
 const base64url = require('base64url')
 
@@ -48,16 +48,16 @@ export default ({
 
   methods: {
     testcrypto () {
-      test()
+      crypt.test()
     },
     crypter (arg) {
       this.raz('Calcul en cours ...')
       setTimeout(() => {
-        this.dpb = base64url(pbkfd(arg[0]))
-        this.dpbh = hash53(this.dpb)
-        const clex = pbkfd(arg[0] + '\n' + arg[1])
+        this.dpb = base64url(crypt.pbkfd(arg[0]))
+        this.dpbh = crypt.hash(this.dpb, false, true)
+        const clex = crypt.pbkfd(arg[0] + '\n' + arg[1])
         this.pcb = base64url(clex)
-        this.pcbs = base64url(sha256(clex))
+        this.pcbs = base64url(crypt.sha256(clex))
       }, 1)
     },
     raz (m) {

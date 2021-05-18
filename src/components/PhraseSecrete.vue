@@ -58,13 +58,16 @@ export default ({
 })
 </script>
 
-<style scoped>
-.q-card__section { padding: 5px; }
-.q-field__messages { font-size: 0.9rem; font-weight: bold }
->>> .q-field__native {
-  font-size: 1rem;
-  font-family: "Roboto Mono";
-  font-weight: bold;
-  color: rgb(255, 6, 6)
-}
+<style lang="sass" scoped>
+.q-card__section
+  padding: 5px
+::v-deep(.q-field__bottom)
+  font-size: 0.9rem
+  font-weight: bold
+  bottom: 5px !important
+::v-deep(.q-field__native)
+  font-size: 1rem
+  font-family: "Roboto Mono"
+  font-weight: bold
+  color: rgb(255, 6, 6) !important
 </style>

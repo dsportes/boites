@@ -22,8 +22,7 @@
           <div class="text-h6">{{ 'Code de l\'organisation' + ($store.state.ui.org == null ? '(requis)' : '') }}</div>
         </q-card-section>
         <q-card-section>
-          <q-input class="moninput" dense clearable v-model="locorg" @keydown.enter.prevent="validerorg"
-          hint="Presser la touche 'Entrée' à la fin de la saisie"/>
+          <choix-org init-org="{{org}}" v-on:choix-org="choixorg"></choix-org>
         </q-card-section>
       </q-card>
 
@@ -54,16 +53,17 @@ import { gp, orgicon } from '../app/util'
 import { connexion } from '../app/db'
 import * as CONST from '../store/constantes'
 import PhraseSecrete from '../components/PhraseSecrete.vue'
+import ChoixOrg from '../components/ChoixOrg.vue'
 import { pbkfd, hash53, sha256 } from '../app/crypto'
 const base64url = require('base64url')
 
 export default ({
   name: 'Accueil',
-  components: { PhraseSecrete },
+  components: { PhraseSecrete, ChoixOrg },
   data () {
     return {
       locmode: this.mode,
-      locorg: this.org,
+      locorg: '',
       ligne1: '',
       ligne2: '',
       isPwd: false,
@@ -84,7 +84,12 @@ export default ({
   },
 
   methods: {
+    choixorg (org) {
+      this.locorg = org
+      this.validerorg()
+    },
     async validerorg () {
+      if (!this.locorg) return
       if (this.mode === CONST.MODE_INCONNU) return
       let ic
       if (this.mode === CONST.MODE_SYNC || this.mode === CONST.MODE_INCOGNITO) {
@@ -198,16 +203,7 @@ export default ({
 .petitelargeur
   width: 25rem
 </style>
-<style scoped>
->>> .q-card__section { padding: 2px; }
->>> .q-field__native {
-  font-size: 1.1rem;
-  font-family: "Roboto Mono";
-  font-weight: bold;
-  color: red !important;
-}
->>> .q-field__messages {
-  font-size: 0.9rem;
-  font-weight: bold;
-}
+<style lang="sass" scoped>
+::v-deep(.q-card__section)
+  padding: 2px
 </style>
