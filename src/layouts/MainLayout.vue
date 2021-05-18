@@ -4,8 +4,7 @@
       <q-toolbar>
         <q-btn flat dense round icon="menu" aria-label="Menu" @click="$store.commit('ui/majmenuouvert', true)"/>
         <q-btn flat dense round icon="home" aria-label="Accueil" @click="accueil"/>
-        <q-btn flat dense round icon="check" aria-label="Test" @click="testws"/>
-        <q-btn flat dense round icon="check" aria-label="Test" @click="testws2"/>
+        <q-btn flat dense round icon="check" aria-label="Test" @click="testidb"/>
 
         <q-toolbar-title>
           <img v-if="orgicon == null" class="imgstd" src="~assets/anonymous.png">
@@ -131,6 +130,7 @@ import { cancelRequest, ping, post, affichermessage } from '../app/util'
 import { computed } from 'vue'
 import { useStore } from 'vuex'
 import { newSession } from '../app/ws'
+import { testdb } from '../app/db'
 
 export default ({
   name: 'MainLayout',
@@ -187,6 +187,9 @@ export default ({
     testws2 () {
       const s = this.$store.state.ui.session
       s.send({ fn: 'f2', m: 'bluuu bluuu' })
+    },
+    testidb () {
+      testdb()
     }
   },
 

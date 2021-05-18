@@ -54,31 +54,24 @@ function int2base64 (n) {
 }
 exports.int2base64 = int2base64
 
-function int2u8 (n) {
-  let hex = n.toString(16)
-  if (hex.length % 2) { hex = '0' + hex }
-  const len = hex.length / 2
-  const u8 = new Uint8Array(len)
-  let i = 0, j = 0
-  while (i < len) {
-    u8[i] = parseInt(hex.slice(j, j + 2), 16)
-    i += 1
-    j += 2
-  }
-  return u8
+const max32 = BigInt(2 ** 32)
+function big2u8 (n) {
+  if (typeof n === 'number') n = BigInt(n)
+  if (n < 0) n = -n
+  const buf = Buffer.alloc(8)
+  buf.writeUInt32LE(Number(n / max32), 0)
+  buf.writeUInt32LE(Number(n % max32), 4)
+  return buf
 }
-exports.int2u8 = int2u8
+exports.big2u8 = big2u8
 
-function u82int (u8, big = false) {
-  const hex = []
-  u8.forEach(i => {
-    let h = i.toString(16)
-    if (h.length % 2) { h = '0' + h }
-    hex.push(h)
-  })
-  return big ? BigInt('0x' + hex.join('')) : parseInt(hex, 16)
+function u82big (u8, number = false) {
+  const fort = BigInt(u8.readUInt32LE(0))
+  const faible = BigInt(u8.readUInt32LE(4))
+  const r = (fort * max32) + faible
+  return !number ? r : Number(r)
 }
-exports.u82int = u82int
+exports.u82big = u82big
 
 function crypter (cle, buffer, ivfixe) {
   const k = typeof cle === 'string' ? Buffer.from(cle, 'base64') : cle
@@ -135,13 +128,13 @@ function test () {
   console.log(hash(xx, true, true))
   let z = hash(xx, false)
   console.log(z)
-  const b1 = int2u8(z)
+  const b1 = big2u8(z)
   console.log(base64url(b1))
-  console.log(u82int(b1))
+  console.log(u82big(b1))
   z = hash(xx, true)
-  const b2 = int2u8(z)
+  const b2 = big2u8(z)
   console.log(base64url(b2))
-  console.log(u82int(b2, true))
+  console.log(u82big(b2, true))
   console.log(b1.length + ' - ' + b2.length)
 }
 exports.test = test
