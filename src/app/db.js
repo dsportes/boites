@@ -1,54 +1,6 @@
 import Dexie from 'dexie'
 import { store, post } from './util'
 import * as CONST from '../store/constantes'
-const avro = require('avsc')
-const crypt = require('./crypto')
-
-const biType = avro.types.LongType.__with({
-  fromBuffer: buf => crypt.u82big(buf),
-  toBuffer: n => crypt.big2u8(n < 0 ? -n : n),
-  fromJSON: Number,
-  toJSON: Number,
-  isValid: n => typeof n === 'bigint',
-  compare: (n1, n2) => n1 === n2 ? 0 : (n1 < n2 ? -1 : 1)
-})
-
-const bin = Buffer.alloc(0)
-
-const c1 = {
-  dhc: 123,
-  pcbs: bin,
-  k: bin,
-  // idx: 456n,
-  idx: 999007199254740991n,
-  mcs: { f: 'toto' },
-  avatars: { f: 'toto' }
-}
-
-const type = avro.Type.forSchema({
-  name: 'compte',
-  type: 'record',
-  fields: [
-    { name: 'dhc', type: 'int' },
-    { name: 'pcbs', type: 'bytes' },
-    { name: 'k', type: 'bytes' },
-    { name: 'idx', type: biType }
-  ]
-})
-/*
-const types = {
-  compte1: avro.Type.forSchema({
-      name: 'compte',
-      type: 'map',
-      fields: [
-        {name: 'dhc', type: 'int'},
-        {name: 'pcbs', type: 'bytes'},
-        {name: 'k', type: 'bytes'},
-        {name: 'avatars', type: {type: 'array', items: 'string'}},
-      ]
-    })
-}
-*/
 
 const STORES = {
   compte: 'id',
@@ -71,18 +23,6 @@ export function close () {
     db.close()
     db = null
   }
-}
-
-export async function testdb () {
-  const u8 = crypt.big2u8(c1.idx)
-  console.log(u8)
-  c1.k = crypt.random(32)
-  console.log(c1.idx)
-  // console.log(JSON.stringify(c1))
-  const buf = type.toBuffer(c1)
-  const c2 = type.fromBuffer(buf)
-  // console.log(JSON.stringify(c2))
-  console.log(c2.idx)
 }
 
 /*

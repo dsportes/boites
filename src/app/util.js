@@ -1,4 +1,6 @@
 import axios from 'axios'
+const api = require('./api')
+const headers = { 'x-api-version': api.version }
 // import * as CONST from '../store/constantes'
 
 let $cfg
@@ -35,6 +37,7 @@ export function cancelRequest () {
   $store.commit('ui/finreq', '')
 }
 
+/*
 export function blob2b64 (blob, asText) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
@@ -44,19 +47,6 @@ export function blob2b64 (blob, asText) {
     reader.onerror = function (e) { reject(e) }
     if (asText) { reader.readAsText(blob) } else { reader.readAsDataURL(blob) }
   })
-}
-
-/*
-export async function get (u) {
-  try {
-    global.App.setInfo('')
-    cancelSource = axios.CancelToken.source()
-    const r = await axios.get(url(u), { responseType: 'blob', cancelToken: cancelSource.token })
-    global.App.setInfo('Opération OK')
-    return blob2b64(r.data)
-  } catch (e) {
-    await err(e)
-  }
 }
 */
 
@@ -73,24 +63,45 @@ d : détail (fac)
 s : stack (fac)
 l'erreur a déjà été affichée : le catch dans l'appel sert à différencier la suite du traitement.
 */
-export async function post (module, fonction, args, info, blob) {
+export async function post (module, fonction, args, info, bin) {
   try {
     if (!info) info = 'Requête'
+    const type = api.types[fonction]
+    const typeResp = api.types[fonction + 'Resp']
+    let data
+    if (type) {
+      const buf = type.toBuffer(args)
+      data = buf.buffer
+    } else {
+      data = Buffer.from(JSON.stringify(args))
+    }
     const u = $cfg.urlserveur + '/' + $store.state.ui.org + '/' + module + '/' + fonction
     $store.commit('ui/debutreq')
     affichermessage(info + ' - ' + u, false)
     if (!args) args = {}
     cancelSource = axios.CancelToken.source()
-    const r = await axios({ method: 'post', url: u, data: args, responseType: blob ? 'blob' : 'json', cancelToken: cancelSource.token })
+    const r = await axios({
+      method: 'post',
+      url: u,
+      data: data,
+      headers: headers,
+      responseType: 'arraybuffer',
+      cancelToken: cancelSource.token
+    })
     $store.commit('ui/finreq')
     razmessage()
     $store.commit('ui/majstatushttp', r.status)
-    return r.data
+    const buf = Buffer.from(r.data)
+    if (r.status === 200 && typeResp) {
+      return typeResp.fromBuffer(buf)
+    }
+    try {
+      return JSON.parse(buf.toString())
+    } catch (e) {
+      return { code: -1, message: 'Retour de la requête mal formé', detail: 'JSON parse : ' + e.message }
+    }
   } catch (e) {
-    $store.commit('ui/finreq')
-    razmessage()
-    $store.commit('ui/majstatushttp', 0)
-    await err(e, true)
+    err(e, true)
   }
 }
 
@@ -106,10 +117,7 @@ export async function ping () {
     $store.commit('ui/majstatushttp', r.status)
     return r.data
   } catch (e) {
-    $store.commit('ui/finreq')
-    razmessage()
-    $store.commit('ui/majstatushttp', 0)
-    await err(e, true)
+    err(e)
   }
 }
 
@@ -126,31 +134,38 @@ export async function orgicon (org) {
     return r.data
   } catch (e) {
     $store.commit('ui/finreq')
-    razmessage()
-    $store.commit('ui/majstatushttp', 0)
-    await err(e, true)
+    err(e)
   }
 }
 
-async function err (e, isPost) {
+function err (e, isPost) {
+  $store.commit('ui/finreq')
+  razmessage()
+  const status = (e.response && e.response.status) || 0
+  $store.commit('ui/majstatushttp', status)
   let ex
   if (axios.isCancel(e)) {
     ex = { majeur: "Interruption de l'opération", code: 0, message: e.message }
   } else {
-    if (e.response && e.response.status === 400) {
+    if (status === 400 || status === 401) {
       let x
-      if (isPost) {
+      if (!isPost) {
         x = e.response.data
       } else {
-        const err = await blob2b64(e.response.data, true)
-        try { x = JSON.parse(err) } catch (e2) { x = { c: -1, m: err } }
+        try {
+          x = JSON.parse(Buffer.from(e.response.data).toString())
+        } catch (e2) {
+          x = { c: -1, m: 'Retour en erreur de la requête mal formé', d: 'JSON parse : ' + e2.message }
+        }
       }
       x = x.apperror || x
       ex = { majeur: "Echec de l'opération", code: x.c, message: x.m, detail: x.d, stack: x.s }
     } else {
-      ex = { majeur: "Echec de l'opération : BUG ou incident technique", code: 0, message: e.message }
+      ex = { majeur: "Echec de l'opération : BUG ou incident technique", code: 0, message: e.message, stack: e.stack }
     }
   }
-  $store.commit('ui/majerreur', ex)
+  if (status !== 400) {
+    $store.commit('ui/majerreur', ex)
+  }
   throw ex
 }

@@ -4,7 +4,7 @@
       <q-toolbar>
         <q-btn flat dense round icon="menu" aria-label="Menu" @click="$store.commit('ui/majmenuouvert', true)"/>
         <q-btn flat dense round icon="home" aria-label="Accueil" @click="accueil"/>
-        <q-btn flat dense round icon="check" aria-label="Test" @click="testidb"/>
+        <q-btn flat dense round icon="check" aria-label="Test" @click="test2"/>
 
         <q-toolbar-title>
           <img v-if="orgicon == null" class="imgstd" src="~assets/anonymous.png">
@@ -130,7 +130,7 @@ import { cancelRequest, ping, post, affichermessage } from '../app/util'
 import { computed } from 'vue'
 import { useStore } from 'vuex'
 import { newSession } from '../app/ws'
-import { testdb } from '../app/db'
+const testdb = require('../app/api').testdb
 
 export default ({
   name: 'MainLayout',
@@ -165,7 +165,7 @@ export default ({
     },
     async test1 () {
       try {
-        const r = await post('m1', 'echo', { a: 1, b: 'toto' }, 'test2')
+        const r = await post('m1', 'echo', { a: 1, b: 'toto' }, 'test1')
         console.log('test2ok ' + JSON.stringify(r))
       } catch (e) {
         console.log('test2ko ' + JSON.stringify(e))
@@ -173,10 +173,10 @@ export default ({
     },
     async test2 () {
       try {
-        const r = await post('m1', 'erreur', { c: 99, m: 'erreur volontaire', d: 'détail ici', s: 'trace back' }, 'test3')
-        console.log('test3ok ' + JSON.stringify(r))
+        const r = await post('m1', 'erreur', { c: 99, m: 'erreur volontaire', d: 'détail ici', s: 'trace back' }, 'test2')
+        console.log('testok ' + JSON.stringify(r))
       } catch (e) {
-        console.log('test3ko ' + JSON.stringify(e))
+        console.log('testko ' + JSON.stringify(e))
       }
     },
     async testws () {
