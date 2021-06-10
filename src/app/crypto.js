@@ -114,6 +114,7 @@ function intToU8 (n) {
   }
   return u8
 }
+exports.intToU8 = intToU8
 
 function crypter (cle, buffer, ivfixe) {
   const k = typeof cle === 'string' ? Buffer.from(cle, 'base64') : cle
