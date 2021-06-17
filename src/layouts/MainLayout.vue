@@ -4,7 +4,7 @@
       <q-toolbar>
         <q-btn flat dense round icon="menu" aria-label="Menu" @click="$store.commit('ui/majmenuouvert', true)"/>
         <q-btn flat dense round icon="home" aria-label="Accueil" @click="accueil"/>
-        <q-btn flat dense round icon="check" aria-label="Test" @click="testc"/>
+        <q-btn flat dense round icon="check" aria-label="Test" @click="testcpt"/>
 
         <q-toolbar-title>
           <img v-if="orgicon == null" class="imgstd" src="~assets/anonymous.png">
@@ -132,6 +132,7 @@ import { useStore } from 'vuex'
 import { newSession } from '../app/ws'
 const testdb = require('../app/api').testdb
 const crypt = require('../app/crypto')
+import { Compte } from '../app/db'
 
 export default ({
   name: 'MainLayout',
@@ -160,6 +161,9 @@ export default ({
       } catch (e) {
         console.log('Erreur ping ' + JSON.stringify(e))
       }
+    },
+    async testcpt () {
+      await Compte.ex1()
     },
     testc () {
       crypt.test2()

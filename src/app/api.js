@@ -34,35 +34,6 @@ const echoResp = avro.Type.forSchema({
   ]
 })
 
-const idbCompte = avro.Type.forSchema({
-  name: 'idbCompte',
-  type: 'record',
-  fields: [
-    { name: 'id', type: 'int' },
-    { name: 'v', type: 'int' },
-    { name: 'dds', type: 'int' },
-    { name: 'dpbh', type: 'int' },
-    { name: 'pcbs', type: 'bytes' },
-    { name: 'k', type: 'bytes' },
-    { name: 'mcs', type: { type: 'map', values: 'string' } },
-    { name: 'avatars', type: { type: 'array', items: 'string' } }
-  ]
-})
-
-const sqlCompte = avro.Type.forSchema({
-  name: 'idbCompte',
-  type: 'record',
-  fields: [
-    { name: 'id', type: 'int' },
-    { name: 'v', type: 'int' },
-    { name: 'dds', type: 'int' },
-    { name: 'dpbh', type: 'int' },
-    { name: 'pcbsh', type: 'int' },
-    { name: 'kx', type: 'bytes' },
-    { name: 'datak', type: 'bytes' }
-  ]
-})
-
 const idbC = avro.Type.forSchema({
   name: 'idbC',
   type: 'record',
@@ -153,6 +124,73 @@ const conn1Compte = avro.Type.forSchema({
   ]
 })
 
+/*
+_**Tables aussi persistantes sur le client (IDB)**_
+
+`compte` (idc) : authentification et données d'un compte
+`avgrcv` (id) : carte de visite d'un avatar ou groupe
+`avidc1` (ida) : identifications et clés c1 des contacts d'un avatar
+`avcontact` (ida, nc) : données d'un contact d'un avatar
+`avinvit` () (idb) : invitation adressée à B à lier un contact avec A
+`parrain` (dpbh) : offre de parrainage d'un avatar A pour la création d'un compte inconnu
+`rencontre` (dpbh) : communication par A de son identifications complète à un compte inconnu
+`grlmg` (idg) : liste des id + nc + c1 des membres du groupe
+`grmembre` (idg, nm) : données d'un membre du groupe
+`grinvit` () (idm) : invitation à M à devenir membre d'un groupe
+`secret` (ids) : données d'un secret
+`avsecret` (ida, idcs) : aperçu d'un secret pour un avatar (ou référence de son groupe)
+
+*/
+
+/* Compte ___________________________________________________ */
+const avc = avro.Type.forSchema({ // map des avatars du compte
+  name: 'mac',
+  type: 'record',
+  fields: [
+    { name: 'cle', type: 'bytes' },
+    { name: 'pseudo', type: 'string' },
+    { name: 'cpriv', type: 'bytes' }
+  ]
+})
+
+const mavc = avro.Type.forSchema({ // map des avatars du compte
+  type: 'map',
+  values: avc
+})
+
+const mmc = avro.Type.forSchema({ // map des avatars du compte
+  type: 'map',
+  values: 'string'
+})
+
+const idbCompte = avro.Type.forSchema({
+  name: 'idbCompte',
+  type: 'record',
+  fields: [
+    { name: 'id', type: 'long' },
+    { name: 'v', type: 'int' },
+    { name: 'dpbh', type: 'long' },
+    { name: 'pcbsh', type: 'long' },
+    { name: 'k', type: 'bytes' },
+    { name: 'mmc', type: mmc },
+    { name: 'mavc', type: mavc }
+  ]
+})
+
+const sqlCompte = avro.Type.forSchema({
+  name: 'idbCompte',
+  type: 'record',
+  fields: [
+    { name: 'id', type: 'long' },
+    { name: 'v', type: 'int' },
+    { name: 'dpbh', type: 'long' },
+    { name: 'pcbsh', type: 'long' },
+    { name: 'k', type: 'bytes' },
+    { name: 'mmc', type: 'bytes' },
+    { name: 'mavc', type: 'bytes' }
+  ]
+})
+
 const conn1CompteResp = avro.Type.forSchema({
   name: 'conn1CompteResp',
   type: 'record',
@@ -162,7 +200,7 @@ const conn1CompteResp = avro.Type.forSchema({
   ]
 })
 
-const types = { echo, echoResp, idbCompte, sqlCompte, conn1Compte, conn1CompteResp, idbAvatar, sqlAvatar }
+const types = { echo, echoResp, idbCompte, sqlCompte, mmc, mavc, conn1Compte, conn1CompteResp, idbAvatar, sqlAvatar }
 exports.types = types
 
 async function testdb () {

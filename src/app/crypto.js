@@ -44,6 +44,9 @@ function hash (str, big = false, b64 = false, seed = 0) {
   h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909)
   h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909)
   const r = big ? 4294967296n * BigInt(h2) + BigInt(h1) : 4294967296 * (2097151 & h2) + (h1 >>> 0)
+  if (Number.isSafeInteger(r)) {
+    console.log(r)
+  }
   return b64 ? int2base64(r) : r
 }
 exports.hash = hash
@@ -139,6 +142,27 @@ function decrypter (cle, buffer) {
   return Buffer.concat([decipher.update(buffer.slice(1)), decipher.final()])
 }
 exports.decrypter = decrypter
+
+function id2b (id) { // to buffer (u8)
+  if (typeof id === 'string') return base64url.toBuffer(id) // b64 -> buffer
+  if (typeof id === 'number') return intToU8(id) // int / bigint -> buffer
+  return id // déjà en buffer
+}
+exports.id2b = id2b
+
+function id2n (id) { // to number (int / bigint)
+  if (typeof id === 'string') return u8ToInt(base64url.toBuffer(id)) // b64 -> buffer
+  if (typeof id === 'number') return id // déjà en number
+  return u8ToInt(id) // u8 -> number
+}
+exports.id2n = id2n
+
+function id2s (id) { // to string (b64)
+  if (typeof id === 'string') return id // déjà en B64
+  if (typeof id === 'number') return base64url(intToU8(id)) // int -> u8 -> b64
+  return base64url(id) // u8 -> b64
+}
+exports.id2s = id2s
 
 function test () {
   const cle = Buffer.from('toto est beau')

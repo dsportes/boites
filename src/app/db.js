@@ -1,19 +1,19 @@
 import Dexie from 'dexie'
 import { store, post } from './util'
 import * as CONST from '../store/constantes'
+const crypt = require('./crypto')
+const types = require('./api').types
+const base64url = require('base64url')
 
 const STORES = {
-  compte: 'id',
-  avatar: 'id',
-  groupe: 'id',
-  secret: 'id'
+  compte: 'cleidb'
 }
 
 let db = null
 
 export async function open (nom) {
   db = new Dexie(nom, { autoOpen: true })
-  db.versions(1).stores(STORES)
+  db.version(1).stores(STORES)
   await db.open()
   return db
 }
@@ -51,15 +51,24 @@ export async function connexion (args) {
 /* état de session */
 export const session = {
   // non persistant
-  pcb: null, // PBKFD2 de la phrase complète saisie (clé X)
-  dpbh: null, // Hash du PBKDF2 de la ligne 1 de la phrase saisie
-  k: null, // clé k
+  clex: null, // PBKFD2 de la phrase complète saisie (clé X)
+  clek: null, // clé k
 
   // persistant
   idc: null, // id du compte
   dhds: 0, // date-heure de dernière synchronisation persistée
   secavartars: {}, // avatars dont les secrets sont persistants en session : {ida, dhds}
   secgroupes: {} // groupes dont les secrets sont persistants en session : {idg, dhds}
+}
+
+export class Phrase {
+  constructor (debut, fin) {
+    this.debut = debut
+    this.fin = fin
+    this.pcb = crypt.pbkfd(debut + '\n' + fin)
+    this.pcbsh = crypt.hash(base64url(crypt.sha256(this.pcb)))
+    this.dpbh = crypt.hash(base64url(crypt.pbkfd(debut)))
+  }
 }
 
 /* caches des codes existants des avatars en contacts pour déterminer les disparus ???
@@ -72,42 +81,79 @@ export const cachescontacts = { }
 */
 export const cachesmembres = { }
 
-/*
-compte
-id pcbh pcbs dma q1 q2 qm1 qm2 vdm1 vdm2
-avatars[] : liste des noms longs
-avs[] : liste des codes des avatars ???
-mc{}
-*/
+export class Compte {
+  /*
+    { name: 'id', type: 'int' },
+    { name: 'v', type: 'int' },
+    { name: 'dpbh', type: 'int' },
+    { name: 'pcbsh', type: 'int' },
+    { name: 'k', type: 'bytes' },
+    { name: 'mmc', type: 'bytes' },
+    { name: 'mavc', type: 'bytes' }
+  */
 
-/*
-avatar
-id nc cle dma photo info
+  fromSqlCompte (arg) { // arg : JSON sérialisé
+    const sql = types.sqlCompte.fromBuffer(arg)
+    this.id = sql.id
+    this.cleidb = crypt.id2s(this.id)
+    this.v = sql.v
+    this.dpbh = sql.dpbh
+    this.pcbsh = sql.pcbsh
+    this.k = crypt.decrypter(session.clex, sql.k)
+    session.clek = this.k
+    this.mmc = types.mmc.fromBuffer(crypt.decrypter(session.clek, sql.mmc))
+    this.mavc = types.mavc.fromBuffer(crypt.decrypter(session.clek, sql.mavc))
+    return this
+  }
 
-- pour les avatars du compte seulement
-v1 v2 vm1 vm2 qr1 qr2
-contacts: {id ap na nc st}
-membres: {id st q1 q2 info mc} -id: idg du groupe dont l'avatar est membre
-dcte: {} - demandes de contat émises
-dcte: {} - demandes de contat reçues
-invg: {} - invitations aux groupes reçues
-cext: {} - demandes de contacts externes émises
+  toSqlCompte () {
+    const x = {
+      id: this.id,
+      v: this.v,
+      dpbh: this.dpbh,
+      pcbsh: this.pcbsh,
+      k: crypt.crypter(session.clex, this.k),
+      mmc: crypt.crypter(session.clek, types.mmc.toBuffer(this.mmc)),
+      mavc: crypt.crypter(session.clek, types.mavc.toBuffer(this.mavc))
+    }
+    return types.sqlCompte.toBuffer(x)
+  }
 
-- pour les avatars pas du compte seulment. NON PERSISTANT
-avcs: [] - liste des avatars du compte dont l'avatar est contact
-mgrs: [] - liste des groupes auquel l'avatar du compte appartient et dont l'avatar est membre aussi
+  async toIdbCompte () {
+    const buf = types.idbCompte.toBuffer(this)
+    const data = crypt.crypter(session.clek, buf)
+    await db.transaction('rw', db.compte, async () => {
+      await db.compte.put({ cleidb: this.cleidb, data: data })
+      console.log('put cleidb: ' + this.cleidb + ' ' + data.length)
+    })
+  }
 
-*/
+  static async ex1 () {
+    await open('db1')
 
-/*
-groupe
-id v1 v2 q1 q2 nc cle
-membres: {id nc st q1 q2} - membres du groupe
-invg: {} - invitations émises par un membre du groupe
-*/
+    const ph = new Phrase('lessanglotslongs', 'gareaugorille')
+    session.clex = ph.pcb
+    session.clek = crypt.sha256('maclek')
 
-/*
-secret
-id idg perm suppr dhc mc ida vs vp t m r tc
-cc: {id perm mc}
-*/
+    const c = new Compte()
+    c.id = 15151789
+    c.cleidb = crypt.id2s(c.id)
+    c.v = 2
+    c.dpbh = ph.dpbh
+    c.pcbsh = ph.pcbsh
+    c.k = session.clek
+    c.mmc = { 1: 'mot 1', 2: 'mot 2' }
+    const id1 = base64url(crypt.intToU8(999001))
+    const id2 = base64url(crypt.intToU8(999002))
+    c.mavc = { }
+    c.mavc[id1] = { cle: crypt.intToU8(1999001), pseudo: 'pseudo 1', cpriv: crypt.intToU8(2999001) }
+    c.mavc[id2] = { cle: crypt.intToU8(1999002), pseudo: 'pseudo 2', cpriv: crypt.intToU8(2999002) }
+    await c.toIdbCompte()
+    const sqlbuf = c.toSqlCompte()
+    const c2 = new Compte()
+    c2.fromSqlCompte(sqlbuf)
+    console.log(c2.dpbh)
+
+    close()
+  }
+}
