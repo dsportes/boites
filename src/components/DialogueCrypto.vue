@@ -5,19 +5,22 @@
           <div class="text-h6">Crytographie</div>
           <q-btn flat label="Lancer le test de crypto" color="primary" @click="testcrypto" />
         </q-card-section>
-        <phrase-secrete v-on:ok-ps="crypter" bouton-check></phrase-secrete>
+        <phrase-secrete class="q-ma-xs" v-on:ok-ps="okps" bouton-check></phrase-secrete>
+        <mdp-admin class="q-ma-xs" v-on:ok-mdp="okmdp"></mdp-admin>
         <q-card-section>
-          <div class='t1'>PBKFD2 de la ligne 1</div>
-          <div class='t2'>{{ dpb }}</div>
-          <div class='t1'>Son hash</div>
-          <div class='t2'>{{ dpbh }}</div>
-          <div class='t1'>PBKFD2 de la phrase complète (clé X)</div>
-          <div class='t2'>{{ pcb }}</div>
-          <div class='t1'>SHA de la clé X</div>
-          <div class='t2'>{{ pcbs }}</div>
+          <div class='t1'>Hash de la ligne 1</div>
+          <div class='t2'>{{ ps ? ps.dpbh : '?'}}</div>
+          <div class='t1'>SHA de la clé X (PBKFD de la phrase complète)</div>
+          <div class='t2'>{{ ps ? ps.pcbs64 : '?' }}</div>
+          <div class='t1'>Hash du SHA de la clé X</div>
+          <div class='t2'>{{ ps ? ps.pcbsh : '?' }}</div>
+         <div class='t1'>Mot de passe</div>
+          <div class='t2'>{{ mdp ? mdp.mdp64 : '?'}}</div>
+          <div class='t1'>Hash du mot de passe</div>
+          <div class='t2'>{{ mdp ? mdp.mdph : '?' }}</div>
         </q-card-section>
         <q-card-actions align="right">
-          <q-btn flat label="Fermer" icon-right="close" color="primary" @click="raz();$store.commit('ui/majdialoguecrypto',false)" />
+          <q-btn flat label="Fermer" icon-right="close" color="primary" @click="ps=null;$store.commit('ui/majdialoguecrypto',false)" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -28,21 +31,19 @@ import { useStore } from 'vuex'
 import { computed } from 'vue'
 const crypt = require('../app/crypto')
 import PhraseSecrete from '../components/PhraseSecrete.vue'
-const base64url = require('base64url')
+import MdpAdmin from '../components/MdpAdmin.vue'
 
 export default ({
   name: 'DialogueCrypto',
 
   components: {
-    PhraseSecrete
+    PhraseSecrete, MdpAdmin
   },
 
   data () {
     return {
-      dpb: '?',
-      dpbh: '?',
-      pcb: '?',
-      pcbs: '?'
+      ps: null,
+      mdp: null
     }
   },
 
@@ -50,21 +51,11 @@ export default ({
     testcrypto () {
       crypt.test()
     },
-    crypter (arg) {
-      this.raz('Calcul en cours ...')
-      setTimeout(() => {
-        this.dpb = base64url(crypt.pbkfd(arg[0]))
-        this.dpbh = crypt.hash(this.dpb, false, true)
-        const clex = crypt.pbkfd(arg[0] + '\n' + arg[1])
-        this.pcb = base64url(clex)
-        this.pcbs = base64url(crypt.sha256(clex))
-      }, 1)
+    okps (ps) {
+      this.ps = ps
     },
-    raz (m) {
-      this.dpb = m || '?'
-      this.dpbh = '?'
-      this.pcb = '?'
-      this.pcbs = '?'
+    okmdp (mdp) {
+      this.mdp = mdp
     }
   },
 

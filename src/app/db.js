@@ -51,6 +51,7 @@ export async function connexion (args) {
 /* état de session */
 export const session = {
   // non persistant
+  phrase: null,
   clex: null, // PBKFD2 de la phrase complète saisie (clé X)
   clek: null, // clé k
 
@@ -66,8 +67,18 @@ export class Phrase {
     this.debut = debut
     this.fin = fin
     this.pcb = crypt.pbkfd(debut + '\n' + fin)
-    this.pcbsh = crypt.hash(base64url(crypt.sha256(this.pcb)))
-    this.dpbh = crypt.hash(base64url(crypt.pbkfd(debut)))
+    this.pcbs = crypt.sha256(this.pcb)
+    this.pcbs64 = base64url(this.pcbs)
+    this.pcbsh = crypt.hashBin(this.pcbs)
+    this.dpbh = crypt.hashBin(crypt.pbkfd(debut))
+  }
+}
+
+export class MdpAdmin {
+  constructor (mdp) {
+    this.mdp = crypt.pbkfd(mdp)
+    this.mdp64 = base64url(this.mdp)
+    this.mdph = crypt.hashBin(this.mdp)
   }
 }
 
