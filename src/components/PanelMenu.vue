@@ -5,6 +5,9 @@
     </q-item-section>
     <q-item-section>
       <q-item>
+      <q-btn flat label="Mode foncé / clair" color="primary" @click="tgdark" />
+      </q-item>
+      <q-item>
       <q-btn flat label="Panneau cryptographie" color="primary" @click="crypto" />
       </q-item>
     </q-item-section>
@@ -12,7 +15,8 @@
 </template>
 
 <script>
-// import { useStore } from 'vuex'
+import { useQuasar } from 'quasar'
+import { useStore } from 'vuex'
 // import { computed } from 'vue'
 
 export default ({
@@ -31,8 +35,14 @@ export default ({
   },
 
   setup () {
-    // const $store = useStore()
+    const $store = useStore()
+    const $q = useQuasar()
+    function tgdark () {
+      $q.dark.toggle()
+      $store.commit('ui/majmenuouvert', false)
+    }
     return {
+      tgdark
     }
   }
 

@@ -127,6 +127,7 @@ import DialogueErreur from 'components/DialogueErreur.vue'
 import DialogueCrypto from 'components/DialogueCrypto.vue'
 // import * as CONST from '../store/constantes'
 import { cancelRequest, ping, post, affichermessage } from '../app/util'
+import { useQuasar } from 'quasar'
 import { computed } from 'vue'
 import { useStore } from 'vuex'
 import { newSession } from '../app/ws'
@@ -202,6 +203,8 @@ export default ({
   },
 
   setup () {
+    const $q = useQuasar()
+    $q.dark.set(true)
     const $store = useStore()
     const menuouvert = computed({
       get: () => $store.state.ui.menuouvert,

@@ -32,5 +32,5 @@ export default ({
   font-size: 1rem
   font-family: "Roboto Mono"
   font-weight: bold
-  color: indigo !important
+  color: $primary !important
 </style>

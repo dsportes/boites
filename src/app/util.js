@@ -38,22 +38,11 @@ export function cancelRequest () {
 }
 
 /*
-export function blob2b64 (blob, asText) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onloadend = function () {
-      resolve(reader.result)
-    }
-    reader.onerror = function (e) { reject(e) }
-    if (asText) { reader.readAsText(blob) } else { reader.readAsDataURL(blob) }
-  })
-}
-*/
-
-/*
-Envoi une requête POST à odooproxy :
-- u est l'URL de la forme "mod/function" qui est la fonction appelée
-- args est un objet avec les arguments qui seront transmis dans le body de la requête
+Envoi une requête POST :
+- module : module invoqué
+- fonction : code la fonction du module
+- args : objet avec les arguments qui seront transmis dans le body de la requête. Encodé par avro ou JSONStringify
+- info : message d'information affiché
 Retour :
 - OK : l'objet retourné par la fonction demandée
 - KO : un objet ayant une propriété error : {c:..., m:..., d:..., s:...}
@@ -63,11 +52,12 @@ d : détail (fac)
 s : stack (fac)
 l'erreur a déjà été affichée : le catch dans l'appel sert à différencier la suite du traitement.
 */
-export async function post (module, fonction, args, info, bin) {
+export async function post (module, fonction, args, info) {
   try {
     if (!info) info = 'Requête'
-    const type = api.types[fonction]
-    const typeResp = api.types[fonction + 'Resp']
+    const at = api.argTypes[fonction]
+    const type = at ? at[0] : null
+    const typeResp = at ? at[1] : null
     let data
     if (type) {
       const buf = type.toBuffer(args)
@@ -78,7 +68,6 @@ export async function post (module, fonction, args, info, bin) {
     const u = $cfg.urlserveur + '/' + $store.state.ui.org + '/' + module + '/' + fonction
     $store.commit('ui/debutreq')
     affichermessage(info + ' - ' + u, false)
-    if (!args) args = {}
     cancelSource = axios.CancelToken.source()
     const r = await axios({
       method: 'post',

@@ -34,14 +34,15 @@ Retours = status ...
 2: création de compte privilégié possible. { status:2 }
 3: création de compte standard possible. { status:3, cext:cext du parrain }
 */
-export async function connexion (args) {
+export async function connexion (ps) {
   const mode = store().state.ui.mode
+  const args = { dpbh: ps.dpbh, pcbsh: ps.pcbsh }
   try {
     if (mode === CONST.MODE_AVION) {
       console.log('connexion locale')
       return { status: 0 }
     } else {
-      return await post('m1', 'testconnexion', args, 'Connexion ...')
+      return await post('m1', 'testconnexion', args, 'Connexion ...', 'respBase1')
     }
   } catch (e) {
     return { status: -1 }

@@ -4,20 +4,20 @@
     <q-btn v-if="connecte" class="q-ma-sm" color="primary" icon-right="logout" label="Se déconnecter" @click="sedeconnecter"/>
 
     <div v-else class="column align-start items-center">
-      <q-card flat class="q-ma-xs bg-grey-1 petitelargeur">
+      <q-card flat class="q-ma-xs petitelargeur">
         <q-card-section>
           <div class="text-h6">Choix du mode <span v-if="$store.state.ui.mode === 0" class="rouge text-bold" >(requis)</span></div>
         </q-card-section>
       <q-card-section>
           <div class="q-gutter-sm">
-            <q-radio dense v-model="locmode" :val="1" label="Synchronisé" />
-            <q-radio dense v-model="locmode" :val="2" label="Incognito" />
-            <q-radio dense v-model="locmode" :val="3" label="Avion" />
+            <q-radio dark dense v-model="locmode" :val="1" label="Synchronisé" />
+            <q-radio dark dense v-model="locmode" :val="2" label="Incognito" />
+            <q-radio dark dense v-model="locmode" :val="3" label="Avion" />
           </div>
       </q-card-section>
       </q-card>
 
-      <q-card flat v-if="mode !== 0" class="q-ma-xs bg-grey-4 petitelargeur">
+      <q-card flat v-if="mode !== 0" class="q-ma-xs petitelargeur">
         <q-card-section>
           <div class="text-h6">{{ 'Code de l\'organisation' + ($store.state.ui.org == null ? '(requis)' : '') }}</div>
         </q-card-section>
@@ -26,7 +26,7 @@
         </q-card-section>
       </q-card>
 
-      <q-card flat v-if="orgicon != null" class="q-ma-xs bg-grey-5 petitelargeur">
+      <q-card flat v-if="orgicon != null" class="q-ma-xs petitelargeur">
         <q-card-section>
           <div class="text-h6">Phrase secrète</div>
         </q-card-section>
@@ -36,7 +36,7 @@
 
     <q-dialog v-model="erreurconnexion">
       <q-card>
-        <q-card-section class="q-pt-none"><div raw-html="diag"></div></q-card-section>
+        <q-card-section class="q-pa-md diag"><div v-html="diag"></div></q-card-section>
         <q-card-actions align="right">
           <q-btn flat label="J'ai lu" color="primary" v-close-popup @click="diag = null" />
         </q-card-actions>
@@ -54,8 +54,6 @@ import { connexion } from '../app/db'
 import * as CONST from '../store/constantes'
 import PhraseSecrete from '../components/PhraseSecrete.vue'
 import ChoixOrg from '../components/ChoixOrg.vue'
-import { pbkfd, hash53, sha256 } from '../app/crypto'
-const base64url = require('base64url')
 
 export default ({
   name: 'Accueil',
@@ -64,8 +62,7 @@ export default ({
     return {
       locmode: this.mode,
       locorg: '',
-      ligne1: '',
-      ligne2: '',
+      ps: null,
       isPwd: false,
       erreurconnexion: false,
       diag: ''
@@ -121,12 +118,9 @@ export default ({
     sedeconnecter () {
     },
 
-    async connecteroucreer (lignes) {
-      const dpb = base64url(pbkfd(lignes[0]))
-      const dpbh = hash53(dpb)
-      const clex = pbkfd(lignes[0] + '\n' + lignes[1])
-      const args = { dpbh, clex, pcbs: base64url(sha256(clex)) }
-      const ret = await connexion(args)
+    async connecteroucreer (ps) {
+      if (!ps) return
+      const ret = await connexion(ps)
       console.log(JSON.stringify(ret))
       if (ret.status === -1) {
         this.diag = 'Erreur technique, tenter à nouveau l\'opération'
@@ -135,11 +129,11 @@ export default ({
       }
       if (ret.status === 0) {
         if (this.mode !== CONST.MODE_AVION) {
-          this.diag = 'Aucun compte n\'est enregistré sur cet appareil avec cette phrase secréte'
+          this.diag = '<p>Aucun compte n\'est enregistré sur cet appareil avec cette phrase secréte</p>'
         } else {
-          this.diag = 'a) Aucun compte n\'est enregistré avec cette phrase secréte<br>' +
+          this.diag = '<p>a) Aucun compte n\'est enregistré avec cette phrase secréte<br>' +
             'b) Aucun parrainage pour création de compte n\'est enregistré avec cette prase de rencontre<br>' +
-            'c) Cette phrase ne permet pas non plus de créer un compte privilégié'
+            'c) Cette phrase ne permet pas non plus de créer un compte privilégié</p>'
         }
         this.erreurconnexion = true
       } else {
@@ -196,6 +190,9 @@ export default ({
 
 <style lang="sass">
 @import '../css/app.sass'
+.diag
+  font-size: 1.1rem
+  text-align: center
 .vert
   color: $green
 .rouge

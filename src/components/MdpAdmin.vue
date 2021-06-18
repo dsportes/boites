@@ -1,17 +1,13 @@
 <template>
     <q-card-section class="q-pt-none shadow-box shadow-8">
-        <q-input dense clearable v-model="mdp" :type="isPwd ? 'password' : 'text'" label="Mot de passe du grand argentier">
+        <q-input dense clearable v-model="mdp" :type="isPwd ? 'password' : 'text'"
+          @keydown.enter.prevent="ok"
+          label="Mot de passe du grand argentier"
+          :hint="encours ? 'Cryptage en cours ...' : 'Presser la touche \'Entrée\' à la fin de la saisie'">
         <template v-slot:append>
             <q-icon :name="isPwd ? 'visibility_off' : 'visibility'" class="cursor-pointer" @click="isPwd = !isPwd"/>
         </template>
         </q-input>
-        <div class="t3">
-          <div v-if="encours" class="t1">Cryptage en cours ...</div>
-          <div v-else class="row justify-between items-center">
-              <q-btn flat label="RAZ" color="primary" @click="raz" />
-              <q-btn color="primary" flat label="OK" size="md" icon-right="check" @click="ok" />
-          </div>
-        </div>
     </q-card-section>
 </template>
 <script>
@@ -61,8 +57,10 @@ export default ({
 .q-card > div
   box-shadow: inherit !important
 ::v-deep(.q-field__bottom)
-  font-size: 0.9rem
+  font-size: 1.1rem
   font-weight: bold
+  color: red
+  font-style: italic
   bottom: 5px !important
 ::v-deep(.q-field__native)
   font-size: 1rem

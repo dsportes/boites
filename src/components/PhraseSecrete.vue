@@ -72,10 +72,10 @@ export default ({
 
 <style lang="sass" scoped>
 .shadow-box
-  border: 1px solid $grey-5
+  border: 1px solid $grey-5 !important
   border-radius:  5px !important
 .t3
-  height: 1.5rem
+  height: 2rem
   overflow: hidden
 .t1
   font-size: 1.1rem
