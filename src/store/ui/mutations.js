@@ -71,7 +71,7 @@ export function majmenuouvert (state, val) {
 }
 
 export function avatar (state, val) {
-  if (typeof al === 'string') {
+  if (typeof val === 'string') {
     const x = state.avatars
     delete x[val]
     state.avatars = x
@@ -85,7 +85,7 @@ export function avatar (state, val) {
   }
 }
 
-function XY (obj, X, val) { // val : { id, contact }
+function XY (obj, X, val) { // val : { id, val } à insérer / modifier / supprimer dans la proriété X de obj
   const suppr = typeof val.val === 'string'
   if (!obj) return
   const c = obj[X] || {}
@@ -104,7 +104,7 @@ function XY (obj, X, val) { // val : { id, contact }
   return c
 }
 
-export function avatarcontact (state, val) { // val : { id, contact }
+export function avatarcontact (state, val) { // val est un objet de la forme {id, val:{ id, val } }
   const obj = state.avatars[val.id]
   const c = XY(obj, 'contacts', val)
   if (c) state.avatars[val.id] = { ...obj, contacts: c }

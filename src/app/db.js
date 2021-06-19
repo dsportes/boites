@@ -83,6 +83,35 @@ export class MdpAdmin {
   }
 }
 
+export function idc () {
+  const i = crypt.u8ToInt(crypt.random(5))
+  return (Math.floor(i / 4) * 4)
+}
+export function ida () {
+  const i = crypt.u8ToInt(crypt.random(5))
+  return (Math.floor(i / 4) * 4) + 1
+}
+export function idg () {
+  const i = crypt.u8ToInt(crypt.random(5))
+  return (Math.floor(i / 4) * 4) + 2
+}
+export function ids () {
+  const i = crypt.u8ToInt(crypt.random(6))
+  return (Math.floor(i / 4) * 4) + 3
+}
+/*
+console.log(base64url(crypt.intToU8(idc())))
+console.log(base64url(crypt.intToU8(ida())))
+console.log('idc\n')
+for (let i = 0; i < 10; i++) console.log(idc().toString(16))
+console.log('ida\n')
+for (let i = 0; i < 10; i++) console.log(ida().toString(16))
+console.log('idg\n')
+for (let i = 0; i < 10; i++) console.log(idg().toString(16))
+console.log('ids\n')
+for (let i = 0; i < 10; i++) console.log(ids().toString(16))
+*/
+
 /* caches des codes existants des avatars en contacts pour déterminer les disparus ???
 { ida, codes }
 */

@@ -43,8 +43,8 @@ _**Tables aussi persistantes sur le client (IDB)**_
 `avidc1` (ida) : identifications et clés c1 des contacts d'un avatar
 `avcontact` (ida, nc) : données d'un contact d'un avatar
 `avinvit` () (idb) : invitation adressée à B à lier un contact avec A
-`parrain` (dpbh) : offre de parrainage d'un avatar A pour la création d'un compte inconnu
-`rencontre` (dpbh) : communication par A de son identifications complète à un compte inconnu
+`parrain` (dpbh) idp : offre de parrainage d'un avatar A pour la création d'un compte inconnu
+`rencontre` (dpbh) ida : communication par A de son identification complète à un compte inconnu
 `grlmg` (idg) : liste des id + nc + c1 des membres du groupe
 `grmembre` (idg, nm) : données d'un membre du groupe
 `grinvit` () (idm) : invitation à M à devenir membre d'un groupe
