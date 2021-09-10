@@ -38,15 +38,15 @@ export default ({
   methods: {
     nouveau () {
       const x = { id: '11', val: { id: '' + n, pote: 'Jules' + n } }
-      this.$store.commit('ui/avatarcontact', x)
+      this.$store.commit('db/avatarcontact', x)
       n++
     },
     suppr () {
       n--
-      this.$store.commit('ui/avatarcontact', { id: '11', val: '' + n })
+      this.$store.commit('db/avatarcontact', { id: '11', val: '' + n })
     },
     maj () {
-      this.$store.commit('ui/avatarcontact', { id: '11', val: { id: '' + (n - 1), pote: 'Doudou' + (n - 1) } })
+      this.$store.commit('db/avatarcontact', { id: '11', val: { id: '' + (n - 1), pote: 'Doudou' + (n - 1) } })
     }
 
   },
@@ -54,10 +54,10 @@ export default ({
   setup () {
     const $store = useStore()
     liste.forEach(av => {
-      $store.commit('ui/avatar', av)
+      $store.commit('db/avatar', av)
     })
-    const avatars = computed(() => $store.state.ui.avatars)
-    const compte = computed(() => $store.state.ui.compte)
+    const avatars = computed(() => $store.state.db.avatars)
+    const compte = computed(() => $store.state.db.compte)
     const mode = computed(() => $store.state.ui.mode)
 
     return {
