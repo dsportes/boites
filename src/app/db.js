@@ -1,27 +1,94 @@
 import Dexie from 'dexie'
-import { store, post } from './util'
+import { store, post, debug } from './util'
 import * as CONST from '../store/constantes'
+const avro = require('avsc')
 const crypt = require('./crypto')
-const types = require('./api').types
 const base64url = require('base64url')
+const rowTypes = require('rowTypes')
 
-const STORES = {
-  compte: 'cleidb'
-}
+let idb = null // idb courante
 
-let db = null
+export class Idb {
+  static get STORES () {
+    return {
+      compte: 'id',
+      avatar: 'id',
+      invitgr: 'niv+id',
+      contact: 'id+ic',
+      invitct: 'cch, id',
+      parrain: 'pph, id',
+      rencontre: 'prh, id',
+      membre: 'id+im',
+      secret: 'ids, id'
+    }
+  }
 
-export async function open (nom) {
-  db = new Dexie(nom, { autoOpen: true })
-  db.version(1).stores(STORES)
-  await db.open()
-  return db
-}
+  constructor (nom) {
+    this.db = new Dexie(nom, { autoOpen: true })
+    this.db.version(1).stores(this.STORES)
+    this.lmaj = []
+    idb = this
+  }
 
-export function close () {
-  if (db.isOpen()) {
-    db.close()
-    db = null
+  async open () {
+    await this.db.open()
+    return idb
+  }
+
+  close () {
+    if (this.db && this.db.isOpen()) {
+      this.db.close()
+      this.db = null
+    }
+  }
+
+  raz () {
+    this.lmaj.length = 0
+  }
+
+  addPut (rowObj) {
+    this.lmaj.push({ cmd: 1, rowObj: rowObj })
+  }
+
+  addDel (table, sid, sid2) {
+    this.lmaj.push({ cmd: 2, table, sid: sid, sid2: sid2 })
+  }
+
+  async commit () {
+    await this.db.transaction(
+      'rw',
+      this.db.compte,
+      this.db.avatar,
+      this.db.invigr,
+      this.db.contact,
+      this.db.invitct,
+      this.db.parrain,
+      this.db.groupe,
+      this.db.membre,
+      this.db.secret,
+      async () => {
+        for (let i = 0; i < this.lmaj; i++) {
+          const lm = this.lmaj[i]
+          if (lm.cmd === 1) { // put
+            const obj = lm.rowObj
+            const table = obj.table
+            switch (table) {
+              case 'compte' : {
+                await this.db.compte.put({ id: obj.sid, data: obj.row || obj.serial() })
+                if (debug()) console.log('put compte: ' + obj.sid + ' - lg: ' + obj.row.length)
+              }
+            }
+          } else { // del
+            switch (lm.table) {
+              case 'compte' : {
+                await this.db.compte.delete(lm.sid)
+                if (debug()) console.log('del compte: ' + lm.sid)
+              }
+            }
+          }
+        }
+      }
+    )
   }
 }
 
@@ -83,90 +150,58 @@ export class MdpAdmin {
   }
 }
 
-export function idc () {
-  const i = crypt.u8ToInt(crypt.random(5))
-  return (Math.floor(i / 4) * 4)
-}
-export function ida () {
-  const i = crypt.u8ToInt(crypt.random(5))
-  return (Math.floor(i / 4) * 4) + 1
-}
-export function idg () {
-  const i = crypt.u8ToInt(crypt.random(5))
-  return (Math.floor(i / 4) * 4) + 2
-}
-export function ids () {
-  const i = crypt.u8ToInt(crypt.random(6))
-  return (Math.floor(i / 4) * 4) + 3
-}
-/*
-console.log(base64url(crypt.intToU8(idc())))
-console.log(base64url(crypt.intToU8(ida())))
-console.log('idc\n')
-for (let i = 0; i < 10; i++) console.log(idc().toString(16))
-console.log('ida\n')
-for (let i = 0; i < 10; i++) console.log(ida().toString(16))
-console.log('idg\n')
-for (let i = 0; i < 10; i++) console.log(idg().toString(16))
-console.log('ids\n')
-for (let i = 0; i < 10; i++) console.log(ids().toString(16))
-*/
-
-/* caches des codes existants des avatars en contacts pour déterminer les disparus ???
-{ ida, codes }
-*/
-export const cachescontacts = { }
-
-/* caches des codes existants des avatars membres des groupes pour déterminer les disparus ???
-{ idg, codes }
-*/
-export const cachesmembres = { }
-
 export class Compte {
-  /*
-    { name: 'id', type: 'int' },
-    { name: 'v', type: 'int' },
-    { name: 'dpbh', type: 'int' },
-    { name: 'pcbsh', type: 'int' },
-    { name: 'k', type: 'bytes' },
-    { name: 'mmc', type: 'bytes' },
-    { name: 'mavc', type: 'bytes' }
-  */
+  static get table () { return 'compte' }
 
-  fromSqlCompte (arg) { // arg : JSON sérialisé
-    const sql = types.sqlCompte.fromBuffer(arg)
-    this.id = sql.id
-    this.cleidb = crypt.id2s(this.id)
-    this.v = sql.v
-    this.dpbh = sql.dpbh
-    this.pcbsh = sql.pcbsh
-    this.k = crypt.decrypter(session.clex, sql.k)
+  static get mavcType () {
+    return avro.Type.forSchema({ // map des avatars du compte
+      type: 'map',
+      values: avro.Type.forSchema({
+        name: 'avc',
+        type: 'record',
+        fields: [
+          { name: 'nomc', type: 'string' },
+          { name: 'cpriv', type: 'bytes' }
+        ]
+      })
+    })
+  }
+
+  static get mmcType () {
+    return avro.Type.forSchema({ // map des avatars du compte
+      type: 'map',
+      values: 'string'
+    })
+  }
+
+  fromRow (arg) { // arg : JSON sérialisé
+    this.row = rowTypes.compte.fromBuffer(arg)
+    this.id = this.row.id
+    this.sid = crypt.id2s(this.id)
+    this.v = this.row.v
+    this.dds = this.row.dds
+    this.dpbh = this.row.dpbh
+    this.pcbsh = this.row.pcbsh
+    this.k = crypt.decrypter(session.clex, this.row.k)
     session.clek = this.k
-    this.mmc = types.mmc.fromBuffer(crypt.decrypter(session.clek, sql.mmc))
-    this.mavc = types.mavc.fromBuffer(crypt.decrypter(session.clek, sql.mavc))
+    this.mmc = this.mmcType.fromBuffer(crypt.decrypter(session.clek, this.row.mmck))
+    this.mavc = this.mavcType.fromBuffer(crypt.decrypter(session.clek, this.row.mack))
     return this
   }
 
-  toSqlCompte () {
+  serial () {
     const x = {
       id: this.id,
       v: this.v,
+      dds: this.dds,
       dpbh: this.dpbh,
       pcbsh: this.pcbsh,
       k: crypt.crypter(session.clex, this.k),
-      mmc: crypt.crypter(session.clek, types.mmc.toBuffer(this.mmc)),
-      mavc: crypt.crypter(session.clek, types.mavc.toBuffer(this.mavc))
+      mmck: crypt.crypter(session.clek, this.mmcType.toBuffer(this.mmc)),
+      mack: crypt.crypter(session.clek, this.mavc.toBuffer(this.mavc))
     }
-    return types.sqlCompte.toBuffer(x)
-  }
-
-  async toIdbCompte () {
-    const buf = types.idbCompte.toBuffer(this)
-    const data = crypt.crypter(session.clek, buf)
-    await db.transaction('rw', db.compte, async () => {
-      await db.compte.put({ cleidb: this.cleidb, data: data })
-      console.log('put cleidb: ' + this.cleidb + ' ' + data.length)
-    })
+    this.row = rowTypes.compte.toBuffer(x)
+    return this.row
   }
 
   static async ex1 () {

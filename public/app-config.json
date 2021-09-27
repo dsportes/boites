@@ -1,5 +1,6 @@
 {
     "build" : 2,
+    "debug" : 1,
     "urlserveur": "https://test.sportes.fr:8443",
     "phrase1" : ["leszsanglotszLONGSz", "garezauzGORILLEz"],
     "phrase2" : ["auzvillagezSANSz", "jaizmauvaisezREPUTATIONz"]
