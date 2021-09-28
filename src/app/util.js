@@ -18,8 +18,6 @@ export function setstore (store) {
 
 export function cfg () { return $cfg }
 
-export function debug () { return $cfg && $cfg.debug }
-
 export function store () { return $store }
 
 export function gp () { return globalProperties }

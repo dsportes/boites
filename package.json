@@ -10,6 +10,7 @@
     "test": "APP_MODE=d quasar dev"
   },
   "dependencies": {
+    "@quasar/cli": "^1.2.1",
     "@quasar/extras": "^1.0.0",
     "avsc": "^5.7.0",
     "axios": "^0.21.1",

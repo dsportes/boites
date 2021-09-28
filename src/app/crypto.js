@@ -24,7 +24,8 @@ exports.pbkfd = pbkfd
 function random (nbytes) { return crypto.randomBytes(nbytes) }
 exports.random = random
 
-export function rnd5 () { return u8ToInt(random(5)) }
+function rnd5 () { return u8ToInt(random(5)) }
+exports.rnd5 = rnd5
 
 function bytes2Int (byteArray) {
   let value = 0

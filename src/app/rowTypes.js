@@ -64,7 +64,40 @@ const compte = avro.Type.forSchema({
     { name: 'mack', type: 'bytes' }
   ]
 })
+exports.compte = compte
 
-export const rowTypes = {
-  compte
-}
+/* Invitgr ___________________________________________________
+- `niv` : numéro d'invitation.
+- `id` : id du membre invité.
+- `v` :
+- `dlv` :
+- `st` : statut. Si `st` < 0, c'est une suppression.
+  - `x` : 0:annulée, (1:pressenti), 2:invité, 3:ayant accepté, 4:ayant refusé, 5:sans réponse, 8: résilié, 9:disparu.
+  - `y` : 1:lecteur, 2:auteur, 3:administrateur.
+- `datap` : pour une invitation _en cours_, crypté par la clé publique du membre invité, référence dans la liste des membres du groupe `[idg, cleg, im]`.
+  - `idg` : id du groupe.
+  - `cleg` : clé du groupe.
+  - `im` : indice de membre de l'invité dans le groupe.
+- `datak` : crypté par la clé K du compte de l'avatar, après une acceptation :
+  - `idg` : id du groupe.
+  - `im` : numéro de membre de l'invité dans le groupe.
+  - `info` : texte pour le membre à propos du groupe.
+  - `mc` : liste des mots clés de recherche du groupe pour l'avatar.
+- `clegk` : clé du groupe cryptée par la clé K après acceptation. Remise à null lors de la résiliation par un animateur (ou du membre lui-même).
+*/
+
+const invitgr = avro.Type.forSchema({
+  name: 'rowInvitgr',
+  type: 'record',
+  fields: [
+    { name: 'niv', type: 'long' },
+    { name: 'id', type: 'long' },
+    { name: 'v', type: 'int' },
+    { name: 'dlv', type: 'int' },
+    { name: 'st', type: 'int' },
+    { name: 'datap', type: 'bytes' },
+    { name: 'datak', type: 'bytes' },
+    { name: 'clegk', type: 'bytes' }
+  ]
+})
+exports.invitgr = invitgr

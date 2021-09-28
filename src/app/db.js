@@ -1,38 +1,43 @@
 import Dexie from 'dexie'
-import { store, post, debug } from './util'
+import { store, post, cfg } from './util'
+
 import * as CONST from '../store/constantes'
 const avro = require('avsc')
 const crypt = require('./crypto')
 const base64url = require('base64url')
-const rowTypes = require('rowTypes')
-
-let idb = null // idb courante
+const rowTypes = require('./rowTypes')
 
 export class Idb {
   static get STORES () {
     return {
       compte: 'id',
       avatar: 'id',
-      invitgr: 'niv+id',
-      contact: 'id+ic',
-      invitct: 'cch, id',
-      parrain: 'pph, id',
-      rencontre: 'prh, id',
-      membre: 'id+im',
-      secret: 'ids, id'
+      invitgr: 'niv, ida',
+      contact: 'ida+ic',
+      invitct: 'cch, ida',
+      parrain: 'pph, ida',
+      rencontre: 'prh, ida',
+      groupe: 'id',
+      membre: 'ida+im',
+      secret: 'id, idag'
     }
+  }
+
+  static get tables () {
+    const t = []
+    for (const x in this.STORES) t.push(x)
+    return t
   }
 
   constructor (nom) {
     this.db = new Dexie(nom, { autoOpen: true })
-    this.db.version(1).stores(this.STORES)
+    this.db.version(1).stores(this.constructor.STORES)
     this.lmaj = []
-    idb = this
+    this.constructor.idb = this
   }
 
   async open () {
     await this.db.open()
-    return idb
   }
 
   close () {
@@ -42,53 +47,66 @@ export class Idb {
     }
   }
 
-  raz () {
+  razMaj () {
     this.lmaj.length = 0
   }
 
-  addPut (rowObj) {
-    this.lmaj.push({ cmd: 1, rowObj: rowObj })
+  addMaj (rowObj) {
+    this.lmaj.push(rowObj)
   }
 
-  addDel (table, sid, sid2) {
-    this.lmaj.push({ cmd: 2, table, sid: sid, sid2: sid2 })
+  async getCompte () {
+    const r = await this.db.compte.get(1)
+    return new Compte().fromRow(r.data)
+  }
+
+  async getInvitgr (ida) {
+    const r = []
+    await this.db.invitgr.where({ ida: ida }).each(x => {
+      r.push(new Invitgr().fromRow(x.data))
+    })
+    return r
   }
 
   async commit () {
-    await this.db.transaction(
-      'rw',
-      this.db.compte,
-      this.db.avatar,
-      this.db.invigr,
-      this.db.contact,
-      this.db.invitct,
-      this.db.parrain,
-      this.db.groupe,
-      this.db.membre,
-      this.db.secret,
-      async () => {
-        for (let i = 0; i < this.lmaj; i++) {
-          const lm = this.lmaj[i]
-          if (lm.cmd === 1) { // put
-            const obj = lm.rowObj
-            const table = obj.table
-            switch (table) {
-              case 'compte' : {
-                await this.db.compte.put({ id: obj.sid, data: obj.row || obj.serial() })
-                if (debug()) console.log('put compte: ' + obj.sid + ' - lg: ' + obj.row.length)
-              }
+    const lmaj = this.lmaj
+    await this.db.transaction('rw', this.constructor.tables, async () => {
+      for (let i = 0; i < lmaj.length; i++) {
+        const obj = lmaj[i]
+        const table = obj.table
+        const suppr = obj.st && obj.st < 0
+        let id1 = ''
+        let id2 = ''
+        switch (table) {
+          case 'compte' : {
+            id1 = 1
+            await this.db.compte.put({ id: 1, data: obj.row || obj.serial() })
+            break
+          }
+          case 'avatar' : {
+            id1 = obj.sid
+            if (!suppr) {
+              await this.db.avatar.put({ id: id1, data: obj.row || obj.serial() })
+            } else {
+              await this.db.avatar.delete(id1)
             }
-          } else { // del
-            switch (lm.table) {
-              case 'compte' : {
-                await this.db.compte.delete(lm.sid)
-                if (debug()) console.log('del compte: ' + lm.sid)
-              }
+            break
+          }
+          case 'invitgr' : {
+            id1 = obj.sniv
+            id2 = obj.sid
+            if (!suppr) {
+              await this.db.invitgr.put({ niv: id1, ida: id2, data: obj.row || obj.serial() })
+            } else {
+              await this.db.invitgr.delete(id1)
             }
+            break
           }
         }
+        if (cfg().debug) console.log(suppr ? 'del' : 'put' + table + ' - ' + id1 + ' @ ' + id2)
       }
-    )
+    })
+    this.razMaj()
   }
 }
 
@@ -150,29 +168,26 @@ export class MdpAdmin {
   }
 }
 
+/** Compte **********************************/
+const compteMacType = avro.Type.forSchema({ // map des avatars du compte
+  type: 'map',
+  values: avro.Type.forSchema({
+    name: 'mac',
+    type: 'record',
+    fields: [
+      { name: 'nomc', type: 'string' },
+      { name: 'cpriv', type: 'bytes' }
+    ]
+  })
+})
+
+const compteMmcType = avro.Type.forSchema({ // map des avatars du compte
+  type: 'map',
+  values: 'string'
+})
+
 export class Compte {
-  static get table () { return 'compte' }
-
-  static get mavcType () {
-    return avro.Type.forSchema({ // map des avatars du compte
-      type: 'map',
-      values: avro.Type.forSchema({
-        name: 'avc',
-        type: 'record',
-        fields: [
-          { name: 'nomc', type: 'string' },
-          { name: 'cpriv', type: 'bytes' }
-        ]
-      })
-    })
-  }
-
-  static get mmcType () {
-    return avro.Type.forSchema({ // map des avatars du compte
-      type: 'map',
-      values: 'string'
-    })
-  }
+  get table () { return 'compte' }
 
   fromRow (arg) { // arg : JSON sérialisé
     this.row = rowTypes.compte.fromBuffer(arg)
@@ -183,9 +198,8 @@ export class Compte {
     this.dpbh = this.row.dpbh
     this.pcbsh = this.row.pcbsh
     this.k = crypt.decrypter(session.clex, this.row.k)
-    session.clek = this.k
-    this.mmc = this.mmcType.fromBuffer(crypt.decrypter(session.clek, this.row.mmck))
-    this.mavc = this.mavcType.fromBuffer(crypt.decrypter(session.clek, this.row.mack))
+    this.mmc = compteMmcType.fromBuffer(crypt.decrypter(this.k, this.row.mmck))
+    this.mac = compteMacType.fromBuffer(crypt.decrypter(this.k, this.row.mack))
     return this
   }
 
@@ -197,39 +211,89 @@ export class Compte {
       dpbh: this.dpbh,
       pcbsh: this.pcbsh,
       k: crypt.crypter(session.clex, this.k),
-      mmck: crypt.crypter(session.clek, this.mmcType.toBuffer(this.mmc)),
-      mack: crypt.crypter(session.clek, this.mavc.toBuffer(this.mavc))
+      mmck: crypt.crypter(this.k, compteMmcType.toBuffer(this.mmc)),
+      mack: crypt.crypter(this.k, compteMacType.toBuffer(this.mac))
     }
     this.row = rowTypes.compte.toBuffer(x)
     return this.row
   }
 
   static async ex1 () {
-    await open('db1')
+    const idb = new Idb('db1')
+    await idb.open()
 
-    const ph = new Phrase('lessanglotslongs', 'gareaugorille')
+    const ph = new Phrase(cfg().phrase1[0], cfg().phrase1[1])
     session.clex = ph.pcb
-    session.clek = crypt.sha256('maclek')
 
     const c = new Compte()
     c.id = 15151789
-    c.cleidb = crypt.id2s(c.id)
+    c.sid = crypt.id2s(c.id)
     c.v = 2
+    c.dds = 27
     c.dpbh = ph.dpbh
     c.pcbsh = ph.pcbsh
-    c.k = session.clek
+    c.k = crypt.sha256('maclek')
     c.mmc = { 1: 'mot 1', 2: 'mot 2' }
-    const id1 = base64url(crypt.intToU8(999001))
-    const id2 = base64url(crypt.intToU8(999002))
-    c.mavc = { }
-    c.mavc[id1] = { cle: crypt.intToU8(1999001), pseudo: 'pseudo 1', cpriv: crypt.intToU8(2999001) }
-    c.mavc[id2] = { cle: crypt.intToU8(1999002), pseudo: 'pseudo 2', cpriv: crypt.intToU8(2999002) }
-    await c.toIdbCompte()
-    const sqlbuf = c.toSqlCompte()
+    c.mac = { }
+    c.mac[crypt.id2s(999001)] = { nomc: 'pseudo1@toto1', cpriv: crypt.intToU8(2999001) }
+    c.mac[crypt.id2s(999002)] = { nomc: 'pseudo2@toto2', cpriv: crypt.intToU8(2999002) }
+    idb.addMaj(c)
+    await idb.commit()
+
+    session.clek = c.k
     const c2 = new Compte()
-    c2.fromSqlCompte(sqlbuf)
+    c2.fromRow(c.row)
     console.log(c2.dpbh)
 
-    close()
+    idb.close()
+  }
+}
+
+/** Invitgr **********************************/
+const invitgrDatak = avro.Type.forSchema({ // map des avatars du compte
+  type: 'map',
+  values: avro.Type.forSchema({
+    name: 'invitgrDatak',
+    type: 'record',
+    fields: [
+      { name: 'idg', type: 'long' },
+      { name: 'im', type: 'long' },
+      { name: 'info', type: 'string' },
+      { name: 'mc', type: { type: 'array', items: 'int' } }
+    ]
+  })
+})
+
+export class Invitgr {
+  get table () { return 'invitgr' }
+
+  fromRow (arg) { // arg : JSON sérialisé
+    this.row = rowTypes.invitgr.fromBuffer(arg)
+    this.niv = this.row.niv
+    this.sniv = crypt.id2s(this.niv)
+    this.id = this.row.id
+    this.sid = crypt.id2s(this.id)
+    this.v = this.row.v
+    this.dlv = this.row.dlv
+    this.st = this.row.st
+    this.datap = this.row.datap
+    this.datak = this.row.datak ? invitgrDatak.fromBuffer(crypt.decrypter(session.clek, this.row.datak)) : null
+    this.clegk = this.row.clegk ? crypt.decrypter(session.clek, this.row.clegk) : null
+    return this
+  }
+
+  serial () {
+    const x = {
+      niv: this.niv,
+      id: this.id,
+      v: this.v,
+      dlv: this.dlv,
+      st: this.st,
+      datap: this.row.datap,
+      datak: crypt.crypter(session.clek, invitgrDatak.toBuffer(this.datak)),
+      clegk: crypt.crypter(session.clek, this.clegk)
+    }
+    this.row = rowTypes.invitgr.toBuffer(x)
+    return this.row
   }
 }
