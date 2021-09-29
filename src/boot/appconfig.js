@@ -1,6 +1,6 @@
 import { boot } from 'quasar/wrappers'
 import axios from 'axios'
-import { setup, genkeypair } from '../app/util'
+import { setup } from '../app/util'
 const crypt = require('../app/crypto')
 
 export default boot(async ({ app /*, router, store, Vue */ }) => {
@@ -11,6 +11,5 @@ export default boot(async ({ app /*, router, store, Vue */ }) => {
   console.log('Build : ' + cfg.build)
   const salts = (await axios.get('./salts', { responseType: 'arraybuffer' })).data
   crypt.setSalts(salts)
-  crypt.setGenKeyPairFn(genkeypair)
-  // crypt.test()
+  crypt.test()
 })

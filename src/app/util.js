@@ -127,6 +127,8 @@ export async function orgicon (org) {
   }
 }
 
+/*
+// generation de key pair sur le serveur
 export async function genkeypair () {
   try {
     const u = $cfg.urlserveur + '/genkeypair'
@@ -136,6 +138,7 @@ export async function genkeypair () {
     err(e)
   }
 }
+*/
 
 function err (e, isPost) {
   $store.commit('ui/finreq')
