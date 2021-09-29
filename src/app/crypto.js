@@ -11,6 +11,12 @@ function setSalts (a) {
 }
 exports.setSalts = setSalts
 
+const GENKEYPAIRFN = { f: null }
+function setGenKeyPairFn (f) {
+  GENKEYPAIRFN.f = f
+}
+exports.setGenKeyPairFn = setGenKeyPairFn
+
 function sha256 (buffer) {
   return crypto.createHash('sha256').update(buffer).digest()
 }
@@ -26,15 +32,6 @@ exports.random = random
 
 function rnd5 () { return u8ToInt(random(5)) }
 exports.rnd5 = rnd5
-
-function bytes2Int (byteArray) {
-  let value = 0
-  for (let i = byteArray.length - 1; i >= 0; i--) {
-    value = (value * 256) + byteArray[i]
-  }
-  return value
-}
-exports.bytes2Int = bytes2Int
 
 function hash (str, big = false, b64 = false, seed = 0) {
   // https://stackoverflow.com/questions/7616461/generate-a-hash-from-string-in-javascript
@@ -146,6 +143,52 @@ function decrypter (cle, buffer) {
 }
 exports.decrypter = decrypter
 
+/* The `generateKeyPairSync` method accepts two arguments:
+  1. The type ok keys we want, which in this case is "rsa"
+  2. An object with the properties of the key
+  The standard secure default length for RSA keys is 2048 bits
+  return : { publicKey, privateKey }
+*/
+async function genKeyPair () {
+  let kp
+  if (GENKEYPAIRFN.f) {
+    kp = await GENKEYPAIRFN.f()
+  } else {
+    kp = crypto.generateKeyPairSync('rsa',
+      {
+        modulusLength: 2048, // the length of your key in bits
+        publicKeyEncoding: {
+          type: 'spki', // recommended to be 'spki' by the Node.js docs
+          format: 'pem'
+        },
+        privateKeyEncoding: {
+          type: 'pkcs8', // recommended to be 'pkcs8' by the Node.js docs
+          format: 'pem'
+          // cipher: 'aes-256-cbc',   // *optional*
+          // passphrase: 'top secret' // *optional*
+        }
+      })
+  }
+  return kp
+}
+exports.genKeyPair = genKeyPair
+
+/* encryption RSA avec la clé publique
+  data est un Buffer
+*/
+function encrypterRSA (publicKey, data) {
+  return crypto.publicEncrypt({ key: publicKey, padding: crypto.constants.RSA_PKCS1_OAEP_PADDING, oaepHash: 'sha512' }, data)
+}
+exports.encrypterRSA = encrypterRSA
+
+/* decryption RSA avec la clé privée
+  encryptedData est un Buffer
+*/
+function decrypterRSA (privateKey, encryptedData) {
+  return crypto.privateDecrypt({ key: privateKey, padding: crypto.constants.RSA_PKCS1_OAEP_PADDING, oaepHash: 'sha512' }, encryptedData)
+}
+exports.decrypterRSA = decrypterRSA
+
 function id2b (id) { // to buffer (u8)
   if (typeof id === 'string') return base64url.toBuffer(id) // b64 -> buffer
   if (typeof id === 'number') return intToU8(id) // int / bigint -> buffer
@@ -167,7 +210,8 @@ function id2s (id) { // to string (b64)
 }
 exports.id2s = id2s
 
-function test () {
+async function test () {
+  console.log(process.version)
   const cle = Buffer.from('toto est beau')
   const clebin = sha256(cle)
   const cle64 = base64url(clebin)
@@ -178,7 +222,7 @@ function test () {
   x = random(16)
   console.log(base64url(x))
   x = random(6)
-  console.log(bytes2Int(x))
+  console.log(u8ToInt(x))
   const xx = 'https://stackoverflow.com/questions/7616461/generate-a-hash-from-string-in-javascript'
   x = Buffer.from(xx)
   const e1 = crypter(clebin, x)
@@ -194,7 +238,11 @@ function test () {
   console.log(e3.toString('hex'))
   const d3 = decrypter(clebin, e2)
   console.log(d3.toString('utf8'))
-
+  const kp = await genKeyPair()
+  const encRSA = encrypterRSA(kp.publicKey, x)
+  console.log('encypted data RSA : ' + encRSA.toString('base64'))
+  const decRSA = decrypterRSA(kp.privateKey, encRSA)
+  console.log('decypted data RSA : ' + decRSA.toString('utf8'))
   console.log(int2base64(12345678))
   console.log(int2base64(12345678n))
   console.log(hash(xx, false, false))

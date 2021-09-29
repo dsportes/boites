@@ -127,6 +127,16 @@ export async function orgicon (org) {
   }
 }
 
+export async function genkeypair () {
+  try {
+    const u = $cfg.urlserveur + '/genkeypair'
+    const r = await axios({ method: 'get', url: u, responseType: 'json' })
+    return { publicKey: r.data[0], privateKey: r.data[1] }
+  } catch (e) {
+    err(e)
+  }
+}
+
 function err (e, isPost) {
   $store.commit('ui/finreq')
   razmessage()
