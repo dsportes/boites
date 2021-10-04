@@ -1,24 +1,26 @@
 <template>
     <q-card-section class="q-pt-none shadow-box shadow-8">
-        <q-input dense clearable v-model="mdp" :type="isPwd ? 'password' : 'text'"
+        <q-input dense v-model="mdp" :type="isPwd ? 'password' : 'text'"
           @keydown.enter.prevent="ok"
           label="Mot de passe du grand argentier"
           :hint="encours ? 'Cryptage en cours ...' : 'Presser la touche \'Entrée\' à la fin de la saisie'">
         <template v-slot:append>
             <q-icon :name="isPwd ? 'visibility_off' : 'visibility'" class="cursor-pointer" @click="isPwd = !isPwd"/>
+            <span :class="mdp.length === 0 ? 'disabled' : ''"><q-icon name="cancel" class="cursor-pointer"  @click="raz"/></span>
         </template>
         </q-input>
     </q-card-section>
 </template>
 <script>
 import { MdpAdmin } from '../app/db'
+import { cfg } from '../app/util'
 export default ({
   name: 'MdpAdmin',
   data () {
     return {
       encours: false,
       isPwd: false,
-      mdp: ''
+      mdp: this.isDev ? this.$cfg.mdpadmin : ''
     }
   },
 
@@ -33,8 +35,15 @@ export default ({
     },
     raz (noemit) {
       this.encours = false
-      this.mdp = ''
+      this.mdp = /* this.isDev ? this.$cfg.mdpadmin : */ ''
       if (noemit !== true) this.$emit('ok-mdp', null)
+    }
+  },
+
+  setup () {
+    const isDev = cfg().isDev
+    return {
+      isDev
     }
   }
 })

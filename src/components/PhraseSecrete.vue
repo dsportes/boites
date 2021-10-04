@@ -1,26 +1,27 @@
 <template>
     <q-card-section class="q-pt-none shadow-box shadow-8">
-        <q-input dense clearable counter hint="Au moins 16 caractères" v-model="ligne1" :type="isPwd ? 'password' : 'text'" label="Première ligne de la phrase secrète">
+        <q-input dense counter hint="Au moins 16 caractères" v-model="ligne1" :type="isPwd ? 'password' : 'text'" label="Première ligne de la phrase secrète">
         <template v-slot:append>
             <q-icon :name="isPwd ? 'visibility_off' : 'visibility'" class="cursor-pointer" @click="isPwd = !isPwd"/>
+            <span :class="ligne1.length === 0 ? 'disabled' : ''"><q-icon name="cancel" class="cursor-pointer"  @click="ligne1 = ''"/></span>
         </template>
         </q-input>
-        <q-input dense clearable counter hint="Au moins 16 caractères" v-model="ligne2" :type="isPwd ? 'password' : 'text'" label="Seconde ligne de la phrase secrète">
+        <q-input dense counter hint="Au moins 16 caractères" v-model="ligne2" :type="isPwd ? 'password' : 'text'" label="Seconde ligne de la phrase secrète">
         <template v-slot:append>
             <q-icon :name="isPwd ? 'visibility_off' : 'visibility'" class="cursor-pointer" @click="isPwd = !isPwd"/>
+            <span :class="ligne2.length === 0 ? 'disabled' : ''"><q-icon name="cancel" class="cursor-pointer" @click="ligne2 = ''"/></span>
         </template>
         </q-input>
         <div class="t3">
         <div v-if="encours" class="t1">Cryptage en cours ...</div>
         <div v-else class="row justify-between items-center">
-            <div>
-            <q-btn flat label="RAZ" color="primary" @click="raz" />
-            <q-btn v-if="isDev" flat label="P1" color="primary" @click="p1" />
-            <q-btn v-if="isDev" flat label="P2" color="primary" @click="p2" />
+            <div v-if="isDev">
+              <q-btn flat label="P1" color="primary" @click="p1" />
+              <q-btn flat label="P2" color="primary" @click="p2" />
             </div>
             <div>
-            <q-btn v-if="boutonCheck" color="primary" flat label="OK" size="md" icon-right="check" :disable="ligne1.length < 16 || ligne2.length < 16" @click="ok" />
-            <q-btn v-else color="deep-orange" glossy label="OK" size="md" icon-right="send" :disable="ligne1.length < 16 || ligne2.length < 16" @click="ok" />
+              <q-btn v-if="boutonCheck" color="primary" flat label="OK" size="md" icon-right="check" :disable="ligne1.length < 16 || ligne2.length < 16" @click="ok" />
+              <q-btn v-else color="deep-orange" glossy label="OK" size="md" icon-right="send" :disable="ligne1.length < 16 || ligne2.length < 16" @click="ok" />
             </div>
         </div>
         </div>
@@ -28,6 +29,7 @@
 </template>
 <script>
 import { Phrase } from '../app/db'
+import { cfg } from '../app/util'
 export default ({
   name: 'PhraseSecrete',
   props: {
@@ -35,7 +37,6 @@ export default ({
   },
   data () {
     return {
-      isDev: process.env.DEV,
       encours: false,
       isPwd: false,
       ligne1: '',
@@ -65,6 +66,13 @@ export default ({
       this.ligne1 = ''
       this.ligne2 = ''
       if (noemit !== true) this.$emit('ok-ps', null)
+    }
+  },
+
+  setup () {
+    const isDev = cfg().isDev
+    return {
+      isDev: isDev
     }
   }
 })

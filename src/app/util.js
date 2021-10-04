@@ -172,8 +172,8 @@ function err (e, isPost) {
   throw ex
 }
 
-// Volume entier approximatif rendu sur un byte
-export function log10 (v) { return Math.round(Math.log10(v) * 20) }
+// Volume entier approximatif exprimé en Ko rendu sur un byte (max 100Mo)
+export function log10 (v) { return Math.round(Math.log10(v > 100000 ? 100000 : v) * 50) }
 
-// Volume entier retourné depuis un byte
-export function pow10 (v) { return Math.round(Math.pow(10, v / 20)) }
+// Volume entier retourné depuis un byte en Ko
+export function pow10 (v) { return Math.round(Math.pow(10, v / 50)) }
