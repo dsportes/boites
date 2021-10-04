@@ -7,6 +7,7 @@
         </q-card-section>
         <phrase-secrete class="q-ma-xs" v-on:ok-ps="okps" bouton-check></phrase-secrete>
         <mdp-admin class="q-ma-xs" v-on:ok-mdp="okmdp"></mdp-admin>
+        <quotas-volume class="q-ma-xs" v-on:ok-quotas="okq"></quotas-volume>
         <q-card-section>
           <div class='t1'>Hash de la ligne 1</div>
           <div class='t2'>{{ ps ? ps.dpbh : '?'}}</div>
@@ -14,7 +15,7 @@
           <div class='t2'>{{ ps ? ps.pcbs64 : '?' }}</div>
           <div class='t1'>Hash du SHA de la clé X</div>
           <div class='t2'>{{ ps ? ps.pcbsh : '?' }}</div>
-         <div class='t1'>Mot de passe</div>
+          <div class='t1'>Mot de passe</div>
           <div class='t2'>{{ mdp ? mdp.mdp64 : '?'}}</div>
           <div class='t1'>Hash du mot de passe</div>
           <div class='t2'>{{ mdp ? mdp.mdph : '?' }}</div>
@@ -32,12 +33,14 @@ import { computed } from 'vue'
 const crypt = require('../app/crypto')
 import PhraseSecrete from '../components/PhraseSecrete.vue'
 import MdpAdmin from '../components/MdpAdmin.vue'
+import QuotasVolume from '../components/QuotasVolume.vue'
+import { Quotas } from '../app/db'
 
 export default ({
   name: 'DialogueCrypto',
 
   components: {
-    PhraseSecrete, MdpAdmin
+    PhraseSecrete, MdpAdmin, QuotasVolume
   },
 
   data () {
@@ -56,6 +59,9 @@ export default ({
     },
     okmdp (mdp) {
       this.mdp = mdp
+    },
+    okq (q) {
+      console.log('Quotas : ' + JSON.stringify(new Quotas(q)))
     }
   },
 

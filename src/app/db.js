@@ -168,6 +168,23 @@ export class MdpAdmin {
   }
 }
 
+export class Quotas {
+  constructor (src) {
+    this.q1 = src ? src.q1 : 0
+    this.q2 = src ? src.q2 : 0
+    this.qm1 = src ? src.qm1 : 0
+    this.qm2 = src ? src.qm2 : 0
+  }
+
+  raz () {
+    this.q1 = 0
+    this.q2 = 0
+    this.qm1 = 0
+    this.qm2 = 0
+    return this
+  }
+}
+
 /** Compte **********************************/
 const compteMacType = avro.Type.forSchema({ // map des avatars du compte
   type: 'map',
