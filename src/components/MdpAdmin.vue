@@ -56,14 +56,16 @@ export default ({
 .q-card__section
   padding: 5px
 ::v-deep(.q-field__bottom)
-  font-size: 1.1rem
+  font-size: 1rem
   font-weight: bold
-  color: red
+  color: $warning
   font-style: italic
   bottom: 5px !important
 ::v-deep(.q-field__native)
   font-size: 1rem
   font-family: "Roboto Mono"
   font-weight: bold
-  color: rgb(255, 6, 6) !important
+  color: $warning !important
+::v-deep(.q-field--dark .q-field__native)
+  color: $warning-l !important
 </style>

@@ -20,8 +20,11 @@
               <q-btn flat label="P2" color="primary" @click="p2" />
             </div>
             <div>
-              <q-btn v-if="boutonCheck" color="primary" flat label="OK" size="md" icon-right="check" :disable="ligne1.length < 16 || ligne2.length < 16" @click="ok" />
-              <q-btn v-else color="deep-orange" glossy label="OK" size="md" icon-right="send" :disable="ligne1.length < 16 || ligne2.length < 16" @click="ok" />
+              <!--
+              <q-btn v-if="boutonCheck" color="warning" flat label="OK" size="md" icon-right="check" :disable="ligne1.length < 16 || ligne2.length < 16" @click="ok" />
+              <q-btn v-else color="warning" glossy label="OK" size="md" icon-right="send" :disable="ligne1.length < 16 || ligne2.length < 16" @click="ok" />
+              -->
+              <q-btn color="warning" glossy :label="labelValider" size="md" :icon-right="iconValider" :disable="ligne1.length < 16 || ligne2.length < 16" @click="ok" />
             </div>
         </div>
         </div>
@@ -33,7 +36,8 @@ import { cfg } from '../app/util'
 export default ({
   name: 'PhraseSecrete',
   props: {
-    boutonCheck: Boolean
+    iconValider: String,
+    labelValider: String
   },
   data () {
     return {
@@ -102,5 +106,7 @@ export default ({
   font-size: 1rem
   font-family: "Roboto Mono"
   font-weight: bold
-  color: rgb(255, 6, 6) !important
+  color: $warning !important
+::v-deep(.q-field--dark .q-field__native)
+  color: $warning-l !important
 </style>

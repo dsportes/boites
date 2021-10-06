@@ -5,7 +5,7 @@
           <div class="text-h6">Crytographie</div>
           <q-btn flat label="Lancer le test de crypto" color="primary" @click="testcrypto" />
         </q-card-section>
-        <phrase-secrete class="q-ma-xs" v-on:ok-ps="okps" bouton-check></phrase-secrete>
+        <phrase-secrete class="q-ma-xs" v-on:ok-ps="okps" icon-valider="check" label-valider="OK"></phrase-secrete>
         <mdp-admin class="q-ma-xs" v-on:ok-mdp="okmdp"></mdp-admin>
         <quotas-volume class="q-ma-xs" v-on:ok-quotas="okq"></quotas-volume>
         <q-card-section>
