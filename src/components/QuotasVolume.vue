@@ -29,9 +29,12 @@ import { Quotas } from '../app/db'
 
 export default ({
   name: 'QuotasVolume',
+  props: {
+    initVal: Object
+  },
   data () {
     return {
-      q: new Quotas()
+      q: this.initVal ? this.initVal : new Quotas()
     }
   },
 
@@ -52,21 +55,10 @@ export default ({
 </script>
 
 <style lang="sass" scoped>
-@import '../css/app.sass'
+@import '../css/input.sass'
 .shadow-box
   border: 1px solid $grey-5
   border-radius:  5px !important
 .q-card__section
   padding: 5px
-::v-deep(.q-field__bottom)
-  font-size: 0.8rem
-  font-style: italic
-  bottom: 5px !important
-::v-deep(.q-field__native)
-  font-size: 1rem
-  font-family: "Roboto Mono"
-  font-weight: bold
-  color: $warning !important
-::v-deep(.q-field--dark .q-field__native)
-  color: $warning-l !important
 </style>

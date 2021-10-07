@@ -28,9 +28,16 @@
 
       <q-card flat v-if="orgicon != null" class="q-ma-xs petitelargeur">
         <q-card-section>
-          <div class="text-h6">Phrase secrète</div>
+          <div class="text-h6">Phrase secrète de connexion</div>
         </q-card-section>
-        <phrase-secrete v-on:ok-ps="connecteroucreer"></phrase-secrete>
+        <phrase-secrete label-valider="Se connecter" icon-valider="send" v-on:ok-ps="connecteroucreer"></phrase-secrete>
+      </q-card>
+
+      <q-card flat v-if="orgicon != null" class="q-ma-xs petitelargeur">
+        <q-card-section>
+          <q-btn flat color="warning" icon="add_circle" label="Nouveau compte parrainé" />
+          <q-btn flat color="primary" icon="add_circle" label="Nouveau compte (sans parrain)" @click="$store.commit('ui/majdialoguecreationcompte', true)"/>
+        </q-card-section>
       </q-card>
     </div>
 
@@ -43,6 +50,8 @@
       </q-card>
     </q-dialog>
 
+    <dialogue-creation-compte></dialogue-creation-compte>
+
   </q-page>
 </template>
 
@@ -54,10 +63,11 @@ import { connexion } from '../app/db'
 import * as CONST from '../store/constantes'
 import PhraseSecrete from '../components/PhraseSecrete.vue'
 import ChoixOrg from '../components/ChoixOrg.vue'
+import DialogueCreationCompte from '../components/DialogueCreationCompte.vue'
 
 export default ({
   name: 'Accueil',
-  components: { PhraseSecrete, ChoixOrg },
+  components: { PhraseSecrete, ChoixOrg, DialogueCreationCompte },
   data () {
     return {
       locmode: this.mode,
@@ -193,10 +203,8 @@ export default ({
 .diag
   font-size: 1.1rem
   text-align: center
-.vert
-  color: $green
 .rouge
-  color: $red
+  color: $warning
 .petitelargeur
   width: 25rem
 </style>

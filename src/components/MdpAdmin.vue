@@ -16,11 +16,14 @@ import { MdpAdmin } from '../app/db'
 import { cfg } from '../app/util'
 export default ({
   name: 'MdpAdmin',
+  props: {
+    initVal: Object
+  },
   data () {
     return {
       encours: false,
       isPwd: false,
-      mdp: this.isDev ? this.$cfg.mdpadmin : ''
+      mdp: this.initVal ? this.initVal.mdp : (this.isDev ? this.$cfg.mdpadmin : '')
     }
   },
 
@@ -30,13 +33,13 @@ export default ({
       setTimeout(() => {
         const m = new MdpAdmin(this.mdp)
         this.$emit('ok-mdp', m)
-        this.raz(true)
+        this.encours = false
       }, 1)
     },
-    raz (noemit) {
+    raz () {
       this.encours = false
       this.mdp = /* this.isDev ? this.$cfg.mdpadmin : */ ''
-      if (noemit !== true) this.$emit('ok-mdp', null)
+      this.$emit('ok-mdp', null)
     }
   },
 
@@ -50,22 +53,10 @@ export default ({
 </script>
 
 <style lang="sass" scoped>
+@import '../css/input.sass'
 .shadow-box
   border: 1px solid $grey-5
   border-radius:  5px !important
 .q-card__section
   padding: 5px
-::v-deep(.q-field__bottom)
-  font-size: 1rem
-  font-weight: bold
-  color: $warning
-  font-style: italic
-  bottom: 5px !important
-::v-deep(.q-field__native)
-  font-size: 1rem
-  font-family: "Roboto Mono"
-  font-weight: bold
-  color: $warning !important
-::v-deep(.q-field--dark .q-field__native)
-  color: $warning-l !important
 </style>

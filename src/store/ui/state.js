@@ -3,6 +3,7 @@ export default function () {
     erreur: null,
     derniereerreur: null,
     dialoguecrypto: false,
+    dialoguecreationcompte: false,
     menuouvert: false,
     reqencours: false,
     mode: 0, // 0:inconnu, 1:synchronise, 2:incognito, 3:avion

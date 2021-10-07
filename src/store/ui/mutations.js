@@ -66,6 +66,10 @@ export function majdialoguecrypto (state, val) {
   state.dialoguecrypto = val
 }
 
+export function majdialoguecreationcompte (state, val) {
+  state.dialoguecreationcompte = val
+}
+
 export function majmenuouvert (state, val) {
   state.menuouvert = val
 }

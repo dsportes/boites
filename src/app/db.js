@@ -162,9 +162,10 @@ export class Phrase {
 
 export class MdpAdmin {
   constructor (mdp) {
-    this.mdp = crypt.pbkfd(mdp)
-    this.mdp64 = base64url(this.mdp)
-    this.mdph = crypt.hashBin(this.mdp)
+    this.mdp = mdp
+    this.mdpb = crypt.pbkfd(mdp)
+    this.mdp64 = base64url(this.mdpb)
+    this.mdph = crypt.hashBin(this.mdpb)
   }
 }
 
