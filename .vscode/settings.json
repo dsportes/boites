@@ -5,5 +5,8 @@
   
   "vetur.experimental.templateInterpolationService": true,
   "editor.tabSize": 2,
-  "editor.detectIndentation": false
+  "editor.detectIndentation": false,
+  "cSpell.enableFiletypes": [
+    "!sass"
+  ]
 }

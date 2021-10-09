@@ -110,6 +110,32 @@ export async function ping () {
   }
 }
 
+export async function getBinPub (path) {
+  try {
+    return (await axios.get('./' + path, { responseType: 'arraybuffer' })).data
+  } catch (e) {
+    return null
+  }
+}
+
+export async function getJsonPub (path) {
+  try {
+    return (await axios.get('./' + path)).data
+  } catch (e) {
+    return null
+  }
+}
+
+export async function getImagePub (path, type) {
+  try {
+    const x = (await axios.get('./' + path, { responseType: 'arraybuffer' })).data
+    return 'data:image/' + (type || 'png') + ';base64,' + Buffer.from(x).toString('base64')
+  } catch (e) {
+    return null
+  }
+}
+
+/*
 export async function orgicon (org) {
   try {
     const u = $cfg.urlserveur + '/icon/' + org
@@ -126,6 +152,7 @@ export async function orgicon (org) {
     err(e)
   }
 }
+*/
 
 /*
 // generation de key pair sur le serveur
