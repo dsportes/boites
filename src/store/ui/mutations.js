@@ -8,6 +8,14 @@ export function finreq (state) {
   state.reqencours = false
 }
 
+export function majdiagnostic (state, val) {
+  state.diagnostic = val
+}
+
+export function razdiagnostic (state) {
+  state.diagnostic = null
+}
+
 export function nouveaumessage (state, { texte, important }) {
   state.message = { texte: texte, important: important, n: nummessage++ }
 }

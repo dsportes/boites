@@ -1,5 +1,5 @@
 import Dexie from 'dexie'
-import { store, post, cfg } from './util'
+import { store, /* post, */ cfg } from './util'
 
 import * as CONST from '../store/constantes'
 const avro = require('avsc')
@@ -111,26 +111,22 @@ export class Idb {
 }
 
 /*
-Détermine si une connexion ou création est possible avec cette phrase secrète
-args = { dpbh, clex, pcbs: base64url(sha256(clex)) }
-Retours = status ...
-0: phrase secrète non reconnue
-1: compte identifié. { status:1, id:id du compte, k:clé k, avatars:[noms longs des avatars] }
-2: création de compte privilégié possible. { status:2 }
-3: création de compte standard possible. { status:3, cext:cext du parrain }
+Connexion à un compte par sa phrase secrète
+Retour : 0:OK, -1:erreur technique, 1:non authentifié
 */
 export async function connexion (ps) {
   const mode = store().state.ui.mode
-  const args = { dpbh: ps.dpbh, pcbsh: ps.pcbsh }
   try {
     if (mode === CONST.MODE_AVION) {
       console.log('connexion locale')
-      return { status: 0 }
+      return 0
     } else {
-      return await post('m1', 'testconnexion', args, 'Connexion ...', 'respBase1')
+      console.log('connexion distante')
+      return 1
+      // return await post('m1', 'testconnexion', args, 'Connexion ...', 'respBase1')
     }
   } catch (e) {
-    return { status: -1 }
+    return -1
   }
 }
 

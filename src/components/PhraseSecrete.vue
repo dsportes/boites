@@ -1,6 +1,6 @@
 <template>
   <q-card-section class="q-pt-none shadow-box shadow-8">
-    <div class="text-h6">{{msg[phase]}}</div>
+    <div class="titre-3">{{msg[phase]}}</div>
     <q-input dense counter hint="Au moins 16 caractères" v-model="ligne1" :type="isPwd ? 'password' : 'text'" label="Première ligne de la phrase secrète">
     <template v-slot:append>
         <q-icon :name="isPwd ? 'visibility_off' : 'visibility'" class="cursor-pointer" @click="isPwd = !isPwd"/>

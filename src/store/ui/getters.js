@@ -15,6 +15,10 @@ export function messagevisible (state) {
   return state.message != null
 }
 
+export function diagnosticvisible (state) {
+  return state.diagnostic !== null
+}
+
 export function enligne (state) { // boolean
   return state.mode === CONST.MODE_SYNC || state.mode === CONST.MODE_INCOGNITO
 }

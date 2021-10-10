@@ -1,13 +1,12 @@
 <template>
     <q-dialog v-model="dialoguecrypto">
-      <q-card  style="width:500px;max-width:80vw;">
+      <q-card class="q-ma-xs moyennelargeur">
         <q-card-section>
-          <div class="text-h6">Crytographie</div>
+          <div class="titre-2">Crytographie</div>
           <q-btn flat label="Lancer le test de crypto" color="primary" @click="testcrypto" />
         </q-card-section>
         <phrase-secrete class="q-ma-xs" v-on:ok-ps="okps" icon-valider="check" verif label-valider="OK"></phrase-secrete>
         <mdp-admin class="q-ma-xs" v-on:ok-mdp="okmdp"></mdp-admin>
-        <quotas-volume class="q-ma-xs" v-on:ok-quotas="okq"></quotas-volume>
         <q-card-section>
           <div class='t1'>Hash de la ligne 1</div>
           <div class='t2'>{{ ps ? ps.dpbh : '?'}}</div>
@@ -33,14 +32,12 @@ import { computed } from 'vue'
 const crypt = require('../app/crypto')
 import PhraseSecrete from '../components/PhraseSecrete.vue'
 import MdpAdmin from '../components/MdpAdmin.vue'
-import QuotasVolume from '../components/QuotasVolume.vue'
-import { Quotas } from '../app/db'
 
 export default ({
   name: 'DialogueCrypto',
 
   components: {
-    PhraseSecrete, MdpAdmin, QuotasVolume
+    PhraseSecrete, MdpAdmin
   },
 
   data () {
@@ -59,9 +56,6 @@ export default ({
     },
     okmdp (mdp) {
       this.mdp = mdp
-    },
-    okq (q) {
-      console.log('Quotas : ' + JSON.stringify(new Quotas(q)))
     }
   },
 

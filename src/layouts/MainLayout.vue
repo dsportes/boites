@@ -4,7 +4,7 @@
       <q-toolbar>
         <q-btn flat dense round icon="menu" aria-label="Menu" @click="$store.commit('ui/majmenuouvert', true)"/>
         <q-btn flat dense round icon="home" aria-label="Accueil" @click="accueil"/>
-        <q-btn flat dense round icon="check" aria-label="Test" @click="testcpt"/>
+        <q-btn flat dense round icon="check" aria-label="Test" @click="testd"/>
 
         <q-toolbar-title>
           <img v-if="orgicon == null" class="imgstd" src="~assets/anonymous.png">
@@ -118,6 +118,15 @@
       </div>
     </q-dialog>
 
+    <q-dialog v-model="diagnosticvisible">
+      <q-card>
+        <q-card-section class="q-pa-md diag"><div v-html="$store.state.ui.diagnostic"></div></q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat label="J'ai lu" color="primary" v-close-popup @click="$store.commit('ui/razdiagnostic')"/>
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
   </q-layout>
 </template>
 
@@ -126,7 +135,7 @@ import PanelMenu from 'src/components/PanelMenu.vue'
 import DialogueErreur from 'components/DialogueErreur.vue'
 import DialogueCrypto from 'components/DialogueCrypto.vue'
 // import * as CONST from '../store/constantes'
-import { cancelRequest, ping, post, affichermessage } from '../app/util'
+import { cancelRequest, ping, post, affichermessage, afficherdiagnostic } from '../app/util'
 import { useQuasar } from 'quasar'
 import { computed } from 'vue'
 import { useStore } from 'vuex'
@@ -169,8 +178,11 @@ export default ({
     testc () {
       crypt.test2()
     },
-    test0 () {
+    testm () {
       affichermessage('toto est beau ' + this.n++, this.n % 2)
+    },
+    testd () {
+      afficherdiagnostic('mon <b>diagnostic</b>')
     },
     async test1 () {
       try {
@@ -215,6 +227,7 @@ export default ({
     const mode = computed(() => $store.state.ui.mode)
     const reseauok = computed(() => $store.getters['ui/reseauok'])
     const messagevisible = computed(() => $store.getters['ui/messagevisible'])
+    const diagnosticvisible = computed(() => $store.getters['ui/diagnosticvisible'])
     const reqencours = computed(() => $store.state.ui.reqencours)
     const derniereerreur = computed(() => $store.state.ui.derniereerreur)
     const labelorgclass = computed(() => 'font-antonio-l q-px-sm ' + ($store.state.ui.orgicon == null ? 'labelorg2' : 'labelorg1'))
@@ -231,6 +244,7 @@ export default ({
       labelorgclass,
       mode,
       messagevisible,
+      diagnosticvisible,
       reqencours,
       derniereerreur,
       labelerreursync,

@@ -32,6 +32,10 @@ export function razmessage () {
   $store.commit('ui/razmessage')
 }
 
+export function afficherdiagnostic (texte) {
+  $store.commit('ui/majdiagnostic', texte)
+}
+
 export function cancelRequest () {
   if (cancelSource) cancelSource.cancel('Operation interrompue par l\'utilisateur.')
   $store.commit('ui/finreq', '')

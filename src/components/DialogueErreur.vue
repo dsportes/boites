@@ -1,6 +1,6 @@
 <template>
     <q-dialog v-model="enerreur">
-      <q-card  style="width:500px;max-width:80vw;">
+      <q-card class="q-ma-xs moyennelargeur">
         <q-card-section>
           <div class="text-h6">{{erreur.majeur}}</div>
         </q-card-section>

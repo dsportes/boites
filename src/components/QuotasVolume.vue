@@ -1,6 +1,6 @@
 <template>
     <q-card-section class="q-pt-none shadow-box shadow-8">
-      <div style="font-size: 0.9rem">Volume maximal en Mo des secrets permanents ...</div>
+      <div class="titre-4">Volume maximal en Mo des secrets permanents ...</div>
       <div class="row justify-around">
         <q-input dense v-model.number="q.q1" type="number" label="... des textes des secrets" hint="de 0 à 100000" style="max-width:140px"
           :rules="[val => (val >= 0 && val <= 100000) || 'Valeur entre 0 et 100000' ]">
@@ -9,7 +9,7 @@
           :rules="[val => (val >= 0 && val <= 100000) || 'Valeur entre 0 et 100000' ]">
         </q-input>
       </div>
-      <div class="t9">Volume maximal en Ko des secrets créés par mois ...</div>
+      <div class="titre-4">Volume maximal en Ko des secrets créés par mois ...</div>
       <div class="row justify-around">
         <q-input dense v-model.number="q.qm1" type="number" label="... des textes des secrets" hint="de 0 à 100000" style="max-width:140px"
           :rules="[val => (val >= 0 && val <= 100000) || 'Valeur entre 0 et 100000' ]">

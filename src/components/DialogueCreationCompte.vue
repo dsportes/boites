@@ -1,8 +1,8 @@
 <template>
   <q-dialog v-model="dialoguecreationcompte">
-  <q-card style="width:500px;max-width:80vw;">
+  <q-card class="q-ma-xs moyennelargeur">
     <q-card-section>
-      <div class="text-h6">Création d'un compte SANS parrain</div>
+      <div class="titre-2 text-italic">Création d'un compte SANS parrain</div>
       <q-btn flat @click="close" color="primary" label="Renoncer" class="q-ml-sm" />
     </q-card-section>
 
@@ -127,16 +127,18 @@ export default ({
 })
 </script>
 
-<style lang="sass">
+<style lang="sass" scoped>
 @import '../css/app.sass'
-.t1
-  font-size: 0.9rem
-  font-style: italic
-  font-weight: normal
 .sp1
   margin-left: 1rem
   font-size: 0.9rem
   font-weight: bold
   font-style: normal
   font-family: 'Roboto Mono'
+.q-card__section
+  padding: 5px
+.q-stepper--vertical
+  padding: 12px 4px !important
+.q-stepper__step-inner
+  padding: 0px 12px 32px 32px !important
 </style>
