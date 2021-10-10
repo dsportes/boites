@@ -2,7 +2,7 @@
     <q-dialog v-model="enerreur">
       <q-card class="q-ma-xs moyennelargeur">
         <q-card-section>
-          <div class="text-h6">{{erreur.majeur}}</div>
+          <div class="titre-2">{{erreur.majeur}}</div>
         </q-card-section>
         <q-card-section class="q-pt-none">
           <div>Code : {{ erreur.code }}</div>
@@ -58,9 +58,9 @@ export default ({
 })
 </script>
 
-<style lang="sass">
+<style lang="sass" scoped>
 @import '../css/app.sass'
 .stackclass
-  height: 150px
+  height: 15rem
   border: 1px solid black
 </style>

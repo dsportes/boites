@@ -197,7 +197,7 @@ function err (e, isPost) {
       ex = { majeur: "Echec de l'opération : BUG ou incident technique", code: 0, message: e.message, stack: e.stack }
     }
   }
-  if (status !== 400) {
+  if (status !== 400) { // 400 : anomalie fonctionnelle à traiter par l'application
     $store.commit('ui/majerreur', ex)
   }
   throw ex

@@ -4,11 +4,10 @@
       <q-toolbar>
         <q-btn flat dense round icon="menu" aria-label="Menu" @click="$store.commit('ui/majmenuouvert', true)"/>
         <q-btn flat dense round icon="home" aria-label="Accueil" @click="accueil"/>
-        <q-btn flat dense round icon="check" aria-label="Test" @click="testd"/>
+        <q-btn flat dense round icon="check" aria-label="Test" @click="test2"/>
 
         <q-toolbar-title>
-          <img v-if="orgicon == null" class="imgstd" src="~assets/anonymous.png">
-          <img v-else class="imgstd" :src="orgicon">
+          <img class="imgstd" :src="orgicon">
           <span :class="labelorgclass">{{ $store.getters['ui/labelorg'] }}</span>
         </q-toolbar-title>
 
@@ -43,22 +42,22 @@
     <q-dialog v-model="infomode">
       <q-card>
         <q-card-section>
-          <div class="text-h6">Les modes inconnu, synchronisé, incognito, avion</div>
+          <div class="titre-2">Les modes inconnu, synchronisé, incognito, avion</div>
         </q-card-section>
         <q-card-section :class="'q-pt-none' + ($store.getters['ui/modeinconnu'] ? 'text-body-1 text-weight-bold' : 'text-body-2 text-weight-regular')">
-          <q-icon class="iconstd" name="info"/><span class="text-h6 q-px-sm">Inconnu :</span>
+          <q-icon class="iconstd" name="info"/><span class="titre-2 q-px-sm">Inconnu :</span>
           Le mode n'a pas encore été choisi.
         </q-card-section>
         <q-card-section :class="'q-pt-none' + ($store.getters['ui/modesync'] ? 'text-body-1 text-weight-bold' : 'text-body-2 text-weight-regular')">
-          <q-icon class="iconstd" name="sync_alt"/><span class="text-h6 q-px-sm">Synchronisé :</span>
+          <q-icon class="iconstd" name="sync_alt"/><span class="titre-2 q-px-sm">Synchronisé :</span>
           L'application accède au serveur central pour obtenir les données et les synchronise sur un stockage local crypté.
         </q-card-section>
         <q-card-section :class="'q-pt-none' + ($store.getters['ui/modeincognito'] ? 'text-body-1 text-weight-bold' : 'text-body-2 text-weight-regular')">
-          <img class="imgstd" src="~assets/incognito.svg"><span class="text-h6 q-px-sm">Incognito :</span>
+          <img class="imgstd" src="~assets/incognito.svg"><span class="titre-2 q-px-sm">Incognito :</span>
           L'application accède au serveur central pour obtenir les données mais n'accède pas au stockage local et n'y laisse pas de trace d'exécution.
         </q-card-section>
         <q-card-section :class="'q-pt-none' + ($store.getters['ui/modeavion'] ? 'text-body-1 text-weight-bold' : 'text-body-2 text-weight-regular')">
-          <q-icon class="iconstd" name="airplanemode_active"/><span class="text-h6 q-px-sm">Avion :</span>
+          <q-icon class="iconstd" name="airplanemode_active"/><span class="titre-2 q-px-sm">Avion :</span>
           L'application n'accède pas au réseau, il obtient les données depuis le stockage local crypté où elles ont été mises à jour lors de la dernière session en mode synchronisé.
         </q-card-section>
         <q-card-actions align="right">
@@ -70,7 +69,7 @@
     <q-dialog v-model="inforeseau">
       <q-card>
         <q-card-section>
-          <div class="text-h6">Etat d'accès au réseau (mode synchronisé et incognito)</div>
+          <div class="titre-2">Etat d'accès au réseau (mode synchronisé et incognito)</div>
         </q-card-section>
         <q-card-section v-if="$store.getters['ui/reseauok']" class="q-pt-none">
           L'application accède par le réseau aux données sur le serveur, la dernière requête s'est terminée normalement.
@@ -90,7 +89,7 @@
     <q-dialog v-model="infosync">
       <q-card>
         <q-card-section>
-          <div class="text-h6">État courant de la synchronisation (mode synchronisé et incognito)</div>
+          <div class="titre-2">État courant de la synchronisation (mode synchronisé et incognito)</div>
         </q-card-section>
         <q-card-section v-if="!$store.state.ui.statuslogin" class="q-pt-none">
           La synchronisation n'est activé qu'après s'être connecté.
@@ -105,7 +104,7 @@
     </q-dialog>
 
     <q-dialog v-model="reqencours" seamless position="top">
-      <q-card style="width:15rem;height:3rem;overflow:hidden" class="row items-center justify-between no-wrap bg-amber-2 q-pa-sm">
+      <q-card class="reqencours row items-center justify-between no-wrap bg-amber-2 q-pa-sm">
           <div class="text-weight-bold">Annuler la requête</div>
           <q-spinner color="primary" size="2rem" :thickness="3" />
           <q-btn flat round icon="stop" class="text-red" @click="cancelRequest" />
@@ -134,7 +133,6 @@
 import PanelMenu from 'src/components/PanelMenu.vue'
 import DialogueErreur from 'components/DialogueErreur.vue'
 import DialogueCrypto from 'components/DialogueCrypto.vue'
-// import * as CONST from '../store/constantes'
 import { cancelRequest, ping, post, affichermessage, afficherdiagnostic } from '../app/util'
 import { useQuasar } from 'quasar'
 import { computed } from 'vue'
@@ -153,11 +151,7 @@ export default ({
 
   data () {
     return {
-      cancelRequest,
-      infomode: false,
-      inforeseau: false,
-      infosync: false,
-      n: 1
+      cancelRequest
     }
   },
 
@@ -165,6 +159,7 @@ export default ({
     accueil () {
       this.$router.replace('/' + this.org)
     },
+
     async ping () {
       try {
         await ping()
@@ -172,14 +167,23 @@ export default ({
         console.log('Erreur ping ' + JSON.stringify(e))
       }
     },
+
+    async test2 () {
+      try {
+        const r = await post('m1', 'erreur', { c: 99, m: 'erreur volontaire', d: 'détail ici', s: 'trace back' }, 'test2')
+        console.log('testok ' + JSON.stringify(r))
+      } catch (e) {
+        console.log('testko ' + JSON.stringify(e))
+      }
+    },
+    testm () {
+      affichermessage('toto est beau', new Date().getMilliseconds() % 2)
+    },
     async testcpt () {
       await Compte.ex1()
     },
     testc () {
       crypt.test2()
-    },
-    testm () {
-      affichermessage('toto est beau ' + this.n++, this.n % 2)
     },
     testd () {
       afficherdiagnostic('mon <b>diagnostic</b>')
@@ -190,14 +194,6 @@ export default ({
         console.log('test2ok ' + JSON.stringify(r))
       } catch (e) {
         console.log('test2ko ' + JSON.stringify(e))
-      }
-    },
-    async test2 () {
-      try {
-        const r = await post('m1', 'erreur', { c: 99, m: 'erreur volontaire', d: 'détail ici', s: 'trace back' }, 'test2')
-        console.log('testok ' + JSON.stringify(r))
-      } catch (e) {
-        console.log('testko ' + JSON.stringify(e))
       }
     },
     async testws () {
@@ -222,6 +218,18 @@ export default ({
       get: () => $store.state.ui.menuouvert,
       set: (val) => $store.commit('ui/majmenuouvert', val)
     })
+    const infomode = computed({
+      get: () => $store.state.ui.infomode,
+      set: (val) => $store.commit('ui/majinfomode', val)
+    })
+    const inforeseau = computed({
+      get: () => $store.state.ui.inforeseau,
+      set: (val) => $store.commit('ui/majinforeseau', val)
+    })
+    const infosync = computed({
+      get: () => $store.state.ui.infosync,
+      set: (val) => $store.commit('ui/majinfosync', val)
+    })
     const org = computed(() => $store.state.ui.org)
     const orgicon = computed(() => $store.state.ui.orgicon)
     const mode = computed(() => $store.state.ui.mode)
@@ -230,7 +238,7 @@ export default ({
     const diagnosticvisible = computed(() => $store.getters['ui/diagnosticvisible'])
     const reqencours = computed(() => $store.state.ui.reqencours)
     const derniereerreur = computed(() => $store.state.ui.derniereerreur)
-    const labelorgclass = computed(() => 'font-antonio-l q-px-sm ' + ($store.state.ui.orgicon == null ? 'labelorg2' : 'labelorg1'))
+    const labelorgclass = computed(() => 'font-antonio-l q-px-sm ' + ($store.state.ui.org == null ? 'labelorg2' : 'labelorg1'))
     const lerr = [
       'La synchronisation fonctionne normalement.',
       'La liaison avec le serveur n\'a pas pu s\'établir au moment de commencer la synchronisation',
@@ -239,6 +247,9 @@ export default ({
     const labelerreursync = computed(() => lerr[$store.state.ui.sessionerreur])
     return {
       menuouvert,
+      infomode,
+      inforeseau,
+      infosync,
       org,
       orgicon,
       labelorgclass,
@@ -254,7 +265,7 @@ export default ({
 })
 </script>
 
-<style lang="sass">
+<style lang="sass" scpoed>
 @import '../css/app.sass'
 .iconstd
   font-size: $iconsize !important
@@ -278,6 +289,11 @@ export default ({
 .labelorg2
   color: $negative
 
+.reqencours
+  width: 15rem
+  height: 3rem
+  overflow: hidden
+
 .msgstd
   background-color: $grey-9
   color: white
@@ -285,10 +301,14 @@ export default ({
 
 .msgimp
   background-color: $grey-2
-  color: $red
+  color: $warning
   font-weight: bold
   cursor: pointer
-  border: 2px solid $red
+  border: 2px solid $warning
+
+.diag
+  font-size: 1rem
+  text-align: center
 
 .vert
   color: $green

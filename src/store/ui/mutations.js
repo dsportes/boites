@@ -38,6 +38,18 @@ export function razerreur (state) {
   state.erreur = null
 }
 
+export function majinfomode (state, val) {
+  state.infomode = val
+}
+
+export function majinforeseau (state, val) {
+  state.inforeseau = val
+}
+
+export function majinfosync (state, val) {
+  state.infosync = val
+}
+
 export function majstatushttp (state, status) { // boolean
   state.statushttp = status
 }

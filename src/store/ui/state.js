@@ -7,6 +7,9 @@ export default function () {
     diagnostic: null,
     menuouvert: false,
     reqencours: false,
+    infomode: false,
+    inforeseau: false,
+    infosync: false,
     mode: 0, // 0:inconnu, 1:synchronise, 2:incognito, 3:avion
     statushttp: 200,
     message: null,

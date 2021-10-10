@@ -5,7 +5,9 @@
     <div v-else class="column align-start items-center">
       <q-card flat class="q-ma-xs petitelargeur">
         <q-card-section>
-          <div class="titre-2">Choix du mode</div>
+          <div class="titre-2">Choix du mode
+            <q-btn flat dense round icon="info" aria-label="info" @click="$store.commit('ui/majinfomode', true)"/>
+          </div>
         </q-card-section>
       <q-card-section>
           <div class="q-gutter-sm">
@@ -132,13 +134,8 @@ export default ({
 })
 </script>
 
-<style lang="sass">
-@import '../css/app.sass'
-.diag
-  font-size: 1rem
-  text-align: center
-</style>
 <style lang="sass" scoped>
+@import '../css/app.sass'
 ::v-deep(.q-card__section)
   padding: 2px
 </style>
