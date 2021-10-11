@@ -1,21 +1,24 @@
 /* gestion WebSocket */
 
 import { cfg, store } from './util'
+import { random } from './crypto'
+const base64url = require('base64url')
 
-export async function newSession (init) {
-  const session = store().state.ui.session
-  if (session) {
-    session.close()
-    store().commit('ui/fermersession')
+export const session = {}
+
+export async function newSession () {
+  if (session.ws) {
+    session.ws.close()
     store().commit('ui/majsessionerreur', null)
   }
   return new Promise((resolve, reject) => {
     try {
-      const s = new Ws()
-      s.websocket.onopen = (event) => {
-        store().commit('ui/ouvrirsession', s)
-        s.send(init)
-        resolve(s)
+      const sessionId = base64url(random(6))
+      const ws = new Ws(sessionId)
+      ws.websocket.onopen = (event) => {
+        ws.websocket.send(sessionId)
+        session.ws = ws
+        resolve(ws)
       }
     } catch (e) {
       console.log(e)
@@ -25,8 +28,10 @@ export async function newSession (init) {
 }
 
 export class Ws {
-  constructor () {
+  constructor (sessionid) {
     try {
+      this.sessionId = sessionid
+      this.syncqueue = []
       store().commit('ui/majsessionerreur', 0)
       this.enfermeture = false
       const u = cfg().urlserveur
@@ -37,30 +42,28 @@ export class Ws {
         this.websocket.close()
       }
       this.websocket.onclose = () => {
-        if (!this.enfermeture && !store().state.ui.sessionerreur) {
+        const err = store().state.ui.sessionerreur
+        if (!this.enfermeture && err === 0) {
           store().commit('ui/majsessionerreur', 2) // serveur non joignable en cours de sync
         }
-        store().commit('ui/fermersession')
+        session.ws = null
       }
       this.websocket.onmessage = (m) => {
-        try {
-          const x = JSON.parse(m.data)
-          console.log(JSON.stringify(x))
-        } catch (e) {
-          console.log(e + '/n' + m)
-        }
+        this.syncqueue.push(m.data)
+        this.onsync()
       }
     } catch (e) {
       console.log(e)
     }
   }
 
+  onsync () {
+    console.log('sync reçu')
+    // TODO
+  }
+
   close () { // fermeture volontaire
     this.enfermeture = true
     this.websocket.close()
-  }
-
-  send (m) {
-    this.websocket.send(JSON.stringify(m))
   }
 }

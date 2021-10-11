@@ -70,14 +70,6 @@ export function majmode (state, val) {
   state.mode = val
 }
 
-export function ouvrirsession (state, val) {
-  state.session = val
-}
-
-export function fermersession (state) {
-  state.session = null
-}
-
 export function majsessionerreur (state, val) {
   state.sessionerreur = val
 }

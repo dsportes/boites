@@ -40,7 +40,7 @@
 import { computed } from 'vue'
 import { useStore } from 'vuex'
 import { gp, cfg, affichermessage, afficherdiagnostic } from '../app/util'
-import { connexion } from '../app/db'
+import { connexion, deconnexion } from '../app/db'
 import * as CONST from '../store/constantes'
 import PhraseSecrete from '../components/PhraseSecrete.vue'
 import DialogueCreationCompte from '../components/DialogueCreationCompte.vue'
@@ -77,13 +77,15 @@ export default ({
   },
 
   methods: {
-    sedeconnecter () {
+    async sedeconnecter () {
+      await deconnexion()
     },
 
     async connecter (ps) {
       if (!ps) return
       const ret = await connexion(ps)
-      switch (ret) {
+      console.log('Retour sessionId: ' + ret.sessionId + ' - ' + new Date(Math.floor(ret.dh / 1000)).toISOString())
+      switch (ret.status) {
         case 0 : {
           affichermessage('Compte authentifié et connecté', false)
           this.$router.push('/' + this.org + '/compte')

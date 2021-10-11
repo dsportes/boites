@@ -13,7 +13,7 @@
 
         <q-btn v-if="$store.getters['ui/modeincognito'] || $store.getters['ui/modesync']" flat dense round icon="autorenew" aria-label="Etat synchronisation"
           @click="infosync = true"
-          :class="$store.state.ui.session ? 'vert' : ($store.state.ui.sessionerreur ? 'rouge' : 'gris')"
+          :class="$store.state.ui.statuslogin ? 'vert' : ($store.state.ui.sessionerreur ? 'rouge' : 'gris')"
         />
         <q-btn v-if="$store.getters['ui/enligne']" flat dense round icon="cloud" aria-label="Accès serveur"
           @click="inforeseau = true"

@@ -1,5 +1,6 @@
 import Dexie from 'dexie'
-import { store, /* post, */ cfg } from './util'
+import { store, post, cfg } from './util'
+import { newSession, session } from './ws'
 
 import * as CONST from '../store/constantes'
 const avro = require('avsc')
@@ -110,6 +111,12 @@ export class Idb {
   }
 }
 
+export async function deconnexion () {
+  store().commit('ui/majstatuslogin', false)
+  const s = session.ws
+  if (s) s.close()
+}
+
 /*
 Connexion à un compte par sa phrase secrète
 Retour : 0:OK, -1:erreur technique, 1:non authentifié
@@ -121,17 +128,24 @@ export async function connexion (ps) {
       console.log('connexion locale')
       return 0
     } else {
-      console.log('connexion distante')
-      return 1
-      // return await post('m1', 'testconnexion', args, 'Connexion ...', 'respBase1')
+      const s = await newSession()
+      console.log('connexion distante: ' + s.sessionId)
+      const args = { sessionId: s.sessionId, pcbsh: ps.pcbsh, dpbh: ps.dpbh }
+      const ret = await post('m1', 'testconnexion', args, 'Connexion ...', 'respBase1')
+      if (ret.status === 0) {
+        store().commit('ui/majstatuslogin', true)
+      } else {
+        store().commit('ui/majstatuslogin', false)
+      }
+      return ret
     }
   } catch (e) {
-    return -1
+    return { status: -1, dh: 0, sessionId: '', rows: [] }
   }
 }
 
 /* état de session */
-export const session = {
+export const etatsession = {
   // non persistant
   phrase: null,
   clex: null, // PBKFD2 de la phrase complète saisie (clé X)
