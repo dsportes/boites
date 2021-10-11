@@ -4,6 +4,7 @@
         <q-card-section>
           <div class="titre-2">Crytographie</div>
           <q-btn flat label="Lancer le test de crypto" color="primary" @click="testcrypto" />
+          <q-btn flat label="Lancer le test courant" color="primary" @click="testEcho"/>
         </q-card-section>
         <phrase-secrete class="q-ma-xs" v-on:ok-ps="okps" icon-valider="check" verif label-valider="OK"></phrase-secrete>
         <mdp-admin class="q-ma-xs" v-on:ok-mdp="okmdp"></mdp-admin>
@@ -33,6 +34,9 @@ const crypt = require('../app/crypto')
 import PhraseSecrete from '../components/PhraseSecrete.vue'
 import MdpAdmin from '../components/MdpAdmin.vue'
 
+import { Compte, testdb } from '../app/db'
+import { post, affichermessage, afficherdiagnostic, testEcho } from '../app/util'
+
 export default ({
   name: 'DialogueCrypto',
 
@@ -48,14 +52,41 @@ export default ({
   },
 
   methods: {
-    testcrypto () {
-      crypt.test()
-    },
     okps (ps) {
       this.ps = ps
     },
     okmdp (mdp) {
       this.mdp = mdp
+    },
+
+    testcrypto () {
+      crypt.test()
+    },
+    async test2 () {
+      try {
+        const r = await post('m1', 'erreur', { c: 99, m: 'erreur volontaire', d: 'détail ici', s: 'trace back' }, 'test2')
+        console.log('testok ' + JSON.stringify(r))
+      } catch (e) {
+        console.log('testko ' + JSON.stringify(e))
+      }
+    },
+    testm () {
+      affichermessage('toto est beau', new Date().getMilliseconds() % 2)
+    },
+    async testcpt () {
+      await Compte.ex1()
+    },
+    async testEcho () {
+      await testEcho()
+    },
+    testc () {
+      crypt.test2()
+    },
+    testd () {
+      afficherdiagnostic('mon <b>diagnostic</b>')
+    },
+    testidb () {
+      testdb()
     }
   },
 

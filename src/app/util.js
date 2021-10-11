@@ -60,8 +60,8 @@ export async function post (module, fonction, args, info) {
   try {
     if (!info) info = 'Requête'
     const at = api.argTypes[fonction]
-    const type = at ? at[0] : null
-    const typeResp = at ? at[1] : null
+    const type = at && at.length > 0 ? at[0] : null
+    const typeResp = at && at.length > 1 ? at[1] : null
     let data
     if (type) {
       const buf = type.toBuffer(args)
@@ -114,6 +114,11 @@ export async function ping () {
   }
 }
 
+export async function testEcho () {
+  const r = await post('m1', 'echo', { a: 1, b: 'toto' })
+  console.log('test echo : ' + JSON.stringify(r))
+}
+
 export async function getBinPub (path) {
   try {
     return (await axios.get('./' + path, { responseType: 'arraybuffer' })).data
@@ -138,38 +143,6 @@ export async function getImagePub (path, type) {
     return null
   }
 }
-
-/*
-export async function orgicon (org) {
-  try {
-    const u = $cfg.urlserveur + '/icon/' + org
-    $store.commit('ui/debutreq')
-    affichermessage('Recherche de l\'icône de ' + org, false)
-    cancelSource = axios.CancelToken.source()
-    const r = await axios({ method: 'get', url: u, responseType: 'text', cancelToken: cancelSource.token })
-    $store.commit('ui/finreq')
-    razmessage()
-    $store.commit('ui/majstatushttp', r.status)
-    return r.data
-  } catch (e) {
-    $store.commit('ui/finreq')
-    err(e)
-  }
-}
-*/
-
-/*
-// generation de key pair sur le serveur
-export async function genkeypair () {
-  try {
-    const u = $cfg.urlserveur + '/genkeypair'
-    const r = await axios({ method: 'get', url: u, responseType: 'json' })
-    return { publicKey: r.data[0], privateKey: r.data[1] }
-  } catch (e) {
-    err(e)
-  }
-}
-*/
 
 function err (e, isPost) {
   $store.commit('ui/finreq')
@@ -208,3 +181,35 @@ export function log10 (v) { return Math.round(Math.log10(v > 100000 ? 100000 : v
 
 // Volume entier retourné depuis un byte en Ko
 export function pow10 (v) { return Math.round(Math.pow(10, v / 50)) }
+
+/*
+export async function orgicon (org) {
+  try {
+    const u = $cfg.urlserveur + '/icon/' + org
+    $store.commit('ui/debutreq')
+    affichermessage('Recherche de l\'icône de ' + org, false)
+    cancelSource = axios.CancelToken.source()
+    const r = await axios({ method: 'get', url: u, responseType: 'text', cancelToken: cancelSource.token })
+    $store.commit('ui/finreq')
+    razmessage()
+    $store.commit('ui/majstatushttp', r.status)
+    return r.data
+  } catch (e) {
+    $store.commit('ui/finreq')
+    err(e)
+  }
+}
+*/
+
+/*
+// generation de key pair sur le serveur
+export async function genkeypair () {
+  try {
+    const u = $cfg.urlserveur + '/genkeypair'
+    const r = await axios({ method: 'get', url: u, responseType: 'json' })
+    return { publicKey: r.data[0], privateKey: r.data[1] }
+  } catch (e) {
+    err(e)
+  }
+}
+*/

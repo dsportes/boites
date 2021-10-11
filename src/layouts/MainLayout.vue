@@ -4,7 +4,6 @@
       <q-toolbar>
         <q-btn flat dense round icon="menu" aria-label="Menu" @click="$store.commit('ui/majmenuouvert', true)"/>
         <q-btn flat dense round icon="home" aria-label="Accueil" @click="accueil"/>
-        <q-btn flat dense round icon="check" aria-label="Test" @click="test2"/>
 
         <q-toolbar-title>
           <img class="imgstd" :src="orgicon">
@@ -133,14 +132,10 @@
 import PanelMenu from 'src/components/PanelMenu.vue'
 import DialogueErreur from 'components/DialogueErreur.vue'
 import DialogueCrypto from 'components/DialogueCrypto.vue'
-import { cancelRequest, ping, post, affichermessage, afficherdiagnostic } from '../app/util'
+import { cancelRequest, ping } from '../app/util'
 import { useQuasar } from 'quasar'
 import { computed } from 'vue'
 import { useStore } from 'vuex'
-import { newSession } from '../app/ws'
-const testdb = require('../app/api').testdb
-const crypt = require('../app/crypto')
-import { Compte } from '../app/db'
 
 export default ({
   name: 'MainLayout',
@@ -166,47 +161,6 @@ export default ({
       } catch (e) {
         console.log('Erreur ping ' + JSON.stringify(e))
       }
-    },
-
-    async test2 () {
-      try {
-        const r = await post('m1', 'erreur', { c: 99, m: 'erreur volontaire', d: 'détail ici', s: 'trace back' }, 'test2')
-        console.log('testok ' + JSON.stringify(r))
-      } catch (e) {
-        console.log('testko ' + JSON.stringify(e))
-      }
-    },
-    testm () {
-      affichermessage('toto est beau', new Date().getMilliseconds() % 2)
-    },
-    async testcpt () {
-      await Compte.ex1()
-    },
-    testc () {
-      crypt.test2()
-    },
-    testd () {
-      afficherdiagnostic('mon <b>diagnostic</b>')
-    },
-    async test1 () {
-      try {
-        const r = await post('m1', 'echo', { a: 1, b: 'toto' }, 'test1')
-        console.log('test2ok ' + JSON.stringify(r))
-      } catch (e) {
-        console.log('test2ko ' + JSON.stringify(e))
-      }
-    },
-    async testws () {
-      this.$store.commit('ui/majstatuslogin', true)
-      const s = await newSession({ fn: 'f1', m: 'toto' })
-      s.send({ fn: 'f2', m: 'bla bla' })
-    },
-    testws2 () {
-      const s = this.$store.state.ui.session
-      s.send({ fn: 'f2', m: 'bluuu bluuu' })
-    },
-    testidb () {
-      testdb()
     }
   },
 

@@ -7,6 +7,7 @@ const avro = require('avsc')
 const crypt = require('./crypto')
 const base64url = require('base64url')
 const rowTypes = require('./rowTypes')
+const JSONbig = require('json-bigint')
 
 export class Idb {
   static get STORES () {
@@ -324,4 +325,43 @@ export class Invitgr {
     this.row = rowTypes.invitgr.toBuffer(x)
     return this.row
   }
+}
+
+export async function testdb () {
+  const c1 = {
+    dhc: 123,
+    pcbs: crypt.random(4),
+    k: crypt.random(32),
+    // idx: 456n,
+    idx: 999007199254740991n,
+    mcs: { 1: 'toto', 2: 'juju' },
+    avatars: ['toto', 'titi']
+  }
+
+  console.log(c1.idx)
+  console.log(JSONbig.stringify(c1))
+  const buf = rowTypes.idbCompte.toBuffer(c1)
+  const c2 = rowTypes.idbCompte.fromBuffer(buf)
+  console.log(JSONbig.stringify(c2))
+  console.log(c2.idx)
+}
+
+/* On poste :
+- le row Compte, v et dds à 0
+- la clé publique de l'avatar pour la table avrsa
+- les quotas pour la table avgrvq
+- le row Avatar, v et dds à 0
+Retour:
+- status :
+  0: créé et connecté
+  1: était déjà créé avec la bonne phrase secrète, transformé en login
+  2: début de phrase secrète déjà utilisée - refus
+  -1: erreur technique
+- dh, sessionId
+- rowItems retournés :
+  compte
+  avatar (1 pour le status 0)
+*/
+export async function creationCompte (mdp, ps, nom, quotas) {
+
 }
