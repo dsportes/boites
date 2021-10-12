@@ -14,14 +14,14 @@ export class Idb {
     return {
       compte: 'id',
       avatar: 'id',
-      invitgr: 'niv, ida',
-      contact: 'ida+ic',
-      invitct: 'cch, ida',
-      parrain: 'pph, ida',
-      rencontre: 'prh, ida',
+      invitgr: 'niv, id',
+      contact: 'id+ic',
+      invitct: 'cch, id',
+      parrain: 'pph, id',
+      rencontre: 'prh, id',
       groupe: 'id',
-      membre: 'ida+im',
-      secret: 'id, idag'
+      membre: 'id+im',
+      secret: 'ids, id'
     }
   }
 
@@ -34,7 +34,6 @@ export class Idb {
   constructor (nom) {
     this.db = new Dexie(nom, { autoOpen: true })
     this.db.version(1).stores(this.constructor.STORES)
-    this.lmaj = []
     this.constructor.idb = this
   }
 
@@ -49,66 +48,75 @@ export class Idb {
     }
   }
 
-  razMaj () {
-    this.lmaj.length = 0
-  }
-
-  addMaj (rowObj) {
-    this.lmaj.push(rowObj)
-  }
-
   async getCompte () {
-    const r = await this.db.compte.get(1)
-    return new Compte().fromRow(r.data)
+    const x = await this.db.compte.get(1)
+    return rowTypes.rowSchemas.compte.fromBuffer(x.data)
   }
 
-  async getInvitgr (ida) {
+  async getInvitgr (id) { // pas sur qu'on ait besoin de filtrer: on lit toutes les invitations
     const r = []
-    await this.db.invitgr.where({ ida: ida }).each(x => {
-      r.push(new Invitgr().fromRow(x.data))
+    await this.db.invitgr.where({ id: id }).each(x => {
+      r.push(rowTypes.rowSchemas.invitgr.fromBuffer(x.data))
     })
     return r
   }
 
-  async commit () {
-    const lmaj = this.lmaj
+  /*
+  Purge des avatars du compte et des groupes inutiles, dans toutes les tables où ils apparaissent.
+  - lav : liste des ids des avatars
+  - lgr : liste des ids des groupes
+  */
+  async purgeRows (lav, lgr) {
     await this.db.transaction('rw', this.constructor.tables, async () => {
-      for (let i = 0; i < lmaj.length; i++) {
-        const obj = lmaj[i]
-        const table = obj.table
-        const suppr = obj.st && obj.st < 0
-        let id1 = ''
-        let id2 = ''
-        switch (table) {
+    })
+  }
+
+  /*
+  Mise à jour (put ou delete) d'une liste d'items {table: ..., serial: ..., row: ...}
+  - serial : le binaire des données
+  - row : l'objet désérialisé
+  */
+  async commitRows (items) {
+    await this.db.transaction('rw', this.constructor.tables, async () => {
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i]
+        const suppr = item.row.st !== undefined && item.row.st < 0
+        switch (item.table) {
           case 'compte' : {
-            id1 = 1
-            await this.db.compte.put({ id: 1, data: obj.row || obj.serial() })
+            await this.db.compte.put({ id: 1, data: item.serial })
+            if (cfg().debug) console.log(suppr ? 'del' : 'put' + ' compte - ' + item.row.id)
             break
           }
           case 'avatar' : {
-            id1 = obj.sid
             if (!suppr) {
-              await this.db.avatar.put({ id: id1, data: obj.row || obj.serial() })
+              await this.db.avatar.put({ id: item.row.id, data: item.serial })
             } else {
-              await this.db.avatar.delete(id1)
+              await this.db.avatar.delete(item.row.id)
             }
+            if (cfg().debug) console.log(suppr ? 'del' : 'put' + ' avatar - ' + item.row.id)
+            break
+          }
+          case 'membre' : {
+            if (!suppr) {
+              await this.db.invitgr.put({ id: item.row.niv, im: item.row.im, data: item.serial })
+            } else {
+              await this.db.invitgr.delete([item.row.id, item.row.im])
+            }
+            if (cfg().debug) console.log(suppr ? 'del' : 'put' + ' membre - ' + item.row.id + ' / ' + item.row.im)
             break
           }
           case 'invitgr' : {
-            id1 = obj.sniv
-            id2 = obj.sid
             if (!suppr) {
-              await this.db.invitgr.put({ niv: id1, ida: id2, data: obj.row || obj.serial() })
+              await this.db.invitgr.put({ niv: item.row.niv, id: item.row.id, data: item.serial })
             } else {
-              await this.db.invitgr.delete(id1)
+              await this.db.invitgr.delete(item.niv)
             }
+            if (cfg().debug) console.log(suppr ? 'del' : 'put' + ' invitgr - ' + item.row.niv)
             break
           }
         }
-        if (cfg().debug) console.log(suppr ? 'del' : 'put' + table + ' - ' + id1 + ' @ ' + id2)
       }
     })
-    this.razMaj()
   }
 }
 

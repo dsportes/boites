@@ -3,7 +3,8 @@ const crypt = require('./crypto')
 // const JSONbig = require('json-bigint')
 
 // eslint-disable-next-line no-unused-vars
-const bigint = avro.types.LongType.__with({
+/* const bigint = */
+avro.types.LongType.__with({
   fromBuffer: buf => crypt.u82big(buf),
   toBuffer: n => crypt.big2u8(n < 0 ? -n : n),
   fromJSON: Number,
@@ -33,71 +34,222 @@ _**Tables aussi persistantes sur le client (IDB)**_
 
 */
 
-/* Compte ___________________________________________________
-`pcb` : PBKFD2 de la phrase complète (clé X) - 32 bytes.
+const rowAvatar = avro.Type.forSchema({
+  name: 'rowAvatar',
+  type: 'record',
+  fields: [
+    { name: 'id', type: 'long' }, // pk
+    { name: 'v', type: 'int' },
+    { name: 'st', type: 'int' },
+    { name: 'vcv', type: 'int' },
+    { name: 'dds', type: 'int' },
+    { name: 'cva', type: 'bytes' },
+    { name: 'lctk', type: 'bytes' }
+  ]
+})
 
-- `id` : id du compte.
-- `v` : version
-- `dds` : date (jour) de dernière signature.
-- `dpbh` : hashBin (53 bits) du PBKFD2 du début de la phrase secrète (32 bytes). Pour la connexion, l'id du compte n'étant pas connu de l'utilisateur.
-- `pcbsh` : hash du SHA pcb pour quasi-authentifier une connexion avant un éventuel échec de décryptage de `kx`.
-- `kx` : clé K du compte, crypté par la X (phrase secrète courante).
-- `mmck` {} : cryptées par la clé K, map des mots clés déclarés par le compte.
-  - *clé* : id du mot clé de 1 à 99.
-  - *valeur* : libellé du mot clé.
-- `mack` {} : map des avatars du compte `[nom@rnd, cpriv]`, cryptée par la clé K
-  - `nomc` : `nom@rnd` : nom complet.
-  - `cpriv` : clé privée asymétrique.
-*/
+const rowAvgrq = avro.Type.forSchema({
+  name: 'rowAvatar',
+  type: 'record',
+  fields: [
+    { name: 'id', type: 'long' }, // pk
+    { name: 'q1', type: 'long' },
+    { name: 'q2', type: 'long' },
+    { name: 'qm1', type: 'long' },
+    { name: 'qm2', type: 'long' },
+    { name: 'V1', type: 'long' },
+    { name: 'v2', type: 'long' },
+    { name: 'vm1', type: 'long' },
+    { name: 'vm2', type: 'long' }
+  ]
+})
 
-const compte = avro.Type.forSchema({
+const rowAvrsa = avro.Type.forSchema({
+  name: 'rowAvrsa',
+  type: 'record',
+  fields: [
+    { name: 'id', type: 'long' }, // pk
+    { name: 'clepub', type: 'bytes' }
+  ]
+})
+
+const rowCompte = avro.Type.forSchema({
   name: 'rowCompte',
   type: 'record',
   fields: [
-    { name: 'id', type: 'long' },
+    { name: 'id', type: 'long' }, // pk
     { name: 'v', type: 'int' },
     { name: 'dds', type: 'int' },
     { name: 'dpbh', type: 'long' },
-    { name: 'pcbsh', type: 'long' },
-    { name: 'k', type: 'bytes' },
-    { name: 'mmck', type: 'bytes' },
-    { name: 'mack', type: 'bytes' }
+    { name: 'pcbh', type: 'long' },
+    { name: 'kx', type: 'bytes' },
+    { name: 'mack', type: 'bytes' },
+    { name: 'mmck', type: 'bytes' }
   ]
 })
-exports.compte = compte
 
-/* Invitgr ___________________________________________________
-- `niv` : numéro d'invitation.
-- `id` : id du membre invité.
-- `v` :
-- `dlv` :
-- `st` : statut. Si `st` < 0, c'est une suppression.
-  - `x` : 0:annulée, (1:pressenti), 2:invité, 3:ayant accepté, 4:ayant refusé, 5:sans réponse, 8: résilié, 9:disparu.
-  - `y` : 1:lecteur, 2:auteur, 3:administrateur.
-- `datap` : pour une invitation _en cours_, crypté par la clé publique du membre invité, référence dans la liste des membres du groupe `[idg, cleg, im]`.
-  - `idg` : id du groupe.
-  - `cleg` : clé du groupe.
-  - `im` : indice de membre de l'invité dans le groupe.
-- `datak` : crypté par la clé K du compte de l'avatar, après une acceptation :
-  - `idg` : id du groupe.
-  - `im` : numéro de membre de l'invité dans le groupe.
-  - `info` : texte pour le membre à propos du groupe.
-  - `mc` : liste des mots clés de recherche du groupe pour l'avatar.
-- `clegk` : clé du groupe cryptée par la clé K après acceptation. Remise à null lors de la résiliation par un animateur (ou du membre lui-même).
-*/
+const rowContact = avro.Type.forSchema({
+  name: 'rowContact',
+  type: 'record',
+  fields: [
+    { name: 'id', type: 'long' }, // pk 1
+    { name: 'ic', type: 'int' }, // pk 2
+    { name: 'v', type: 'int' },
+    { name: 'st', type: 'int' },
+    { name: 'q1', type: 'long' },
+    { name: 'q2', type: 'long' },
+    { name: 'qm1', type: 'long' },
+    { name: 'qm2', type: 'long' },
+    { name: 'ardc', type: 'bytes' },
+    { name: 'icbc', type: 'bytes' },
+    { name: 'datak', type: 'bytes' }
+  ]
+})
 
-const invitgr = avro.Type.forSchema({
+const rowGroupe = avro.Type.forSchema({
+  name: 'rowGroupe',
+  type: 'record',
+  fields: [
+    { name: 'id', type: 'long' }, // pk
+    { name: 'v', type: 'int' },
+    { name: 'dds', type: 'int' },
+    { name: 'st', type: 'int' },
+    { name: 'cvg', type: 'bytes' },
+    { name: 'mcg', type: 'bytes' },
+    { name: 'lstmg', type: 'bytes' }
+  ]
+})
+
+const rowInvitct = avro.Type.forSchema({
+  name: 'rowInvitct',
+  type: 'record',
+  fields: [
+    { name: 'cch', type: 'long' }, // pk
+    { name: 'id', type: 'long' },
+    { name: 'dlv', type: 'int' },
+    { name: 'st', type: 'int' },
+    { name: 'ccpub', type: 'bytes' },
+    { name: 'datac', type: 'bytes' },
+    { name: 'ardc', type: 'bytes' }
+  ]
+})
+
+const rowInvitgr = avro.Type.forSchema({
   name: 'rowInvitgr',
   type: 'record',
   fields: [
-    { name: 'niv', type: 'long' },
+    { name: 'niv', type: 'long' }, // pk
     { name: 'id', type: 'long' },
     { name: 'v', type: 'int' },
     { name: 'dlv', type: 'int' },
     { name: 'st', type: 'int' },
     { name: 'datap', type: 'bytes' },
     { name: 'datak', type: 'bytes' },
-    { name: 'clegk', type: 'bytes' }
+    { name: 'clek', type: 'bytes' }
   ]
 })
-exports.invitgr = invitgr
+
+const rowMembre = avro.Type.forSchema({
+  name: 'rowMembre',
+  type: 'record',
+  fields: [
+    { name: 'id', type: 'long' }, // pk 1
+    { name: 'im', type: 'long' }, // pk 2
+    { name: 'v', type: 'int' },
+    { name: 'st', type: 'int' },
+    { name: 'dlv', type: 'int' },
+    { name: 'datag', type: 'bytes' },
+    { name: 'ardg', type: 'bytes' }
+  ]
+})
+
+const rowParrain = avro.Type.forSchema({
+  name: 'rowParrain',
+  type: 'record',
+  fields: [
+    { name: 'pph', type: 'long' }, // pk
+    { name: 'id', type: 'long' },
+    { name: 'nc', type: 'int' },
+    { name: 'dlv', type: 'int' },
+    { name: 'st', type: 'int' },
+    { name: 'v', type: 'int' },
+    { name: 'q1', type: 'long' },
+    { name: 'q2', type: 'long' },
+    { name: 'qm1', type: 'long' },
+    { name: 'qm2', type: 'long' },
+    { name: 'datak', type: 'bytes' },
+    { name: 'datax', type: 'bytes' },
+    { name: 'ardc', type: 'bytes' }
+  ]
+})
+
+const rowRencontre = avro.Type.forSchema({
+  name: 'rowRencontre',
+  type: 'record',
+  fields: [
+    { name: 'prh', type: 'long' }, // pk
+    { name: 'id', type: 'long' },
+    { name: 'v', type: 'int' },
+    { name: 'dlv', type: 'int' },
+    { name: 'st', type: 'int' },
+    { name: 'datak', type: 'bytes' },
+    { name: 'nomcx', type: 'bytes' }
+  ]
+})
+
+const rowSecret = avro.Type.forSchema({
+  name: 'rowSecret',
+  type: 'record',
+  fields: [
+    { name: 'ids', type: 'long' }, // pk
+    { name: 'id', type: 'long' },
+    { name: 'ic', type: 'int' },
+    { name: 'st', type: 'int' },
+    { name: 'txts', type: 'bytes' },
+    { name: 'mcs', type: 'bytes' },
+    { name: 'aps', type: 'bytes' },
+    { name: 'dups', type: 'bytes' }
+  ]
+})
+
+const rowVersions = avro.Type.forSchema({
+  name: 'rowVersions',
+  type: 'record',
+  fields: [
+    { name: 'id', type: 'int' }, // pk
+    { name: 'v', type: 'bytes' }
+  ]
+})
+
+const rowSchemas = {
+  avatar: rowAvatar,
+  avgrq: rowAvgrq,
+  avrsa: rowAvrsa,
+  compte: rowCompte,
+  contact: rowContact,
+  groupe: rowGroupe,
+  invitct: rowInvitct,
+  invitgr: rowInvitgr,
+  membre: rowMembre,
+  parrain: rowParrain,
+  rencontre: rowRencontre,
+  secret: rowSecret,
+  versions: rowVersions
+}
+exports.rowSchemas = rowSchemas
+
+function serialItem (table, row) {
+  const item = { table: table }
+  if (row.id) {
+    item.id = crypt.int2base64(row.id)
+  }
+  const type = rowSchemas[table]
+  item.serial = type.toBuffer(row)
+}
+exports.serialItem = serialItem
+
+function deserialItem (item) {
+  const type = rowSchemas[item.table]
+  item.row = type.fromBuffer(item.serial)
+}
+exports.deserialItem = deserialItem

@@ -3,13 +3,13 @@ const avro = require('avsc')
 const version = '1'
 exports.version = version
 
-const rowitem = avro.Type.forSchema({
+const rowItem = avro.Type.forSchema({
   name: 'rowitem',
   type: 'record',
   fields: [
     { name: 'table', type: 'string' },
-    { name: 'syncid', type: 'string' },
-    { name: 'row', type: ['null', 'bytes'], default: null }
+    { name: 'id', type: 'string' },
+    { name: 'serial', type: ['null', 'bytes'], default: null }
   ]
 })
 
@@ -20,7 +20,7 @@ const synclist = avro.Type.forSchema({
     { name: 'status', type: 'int' },
     { name: 'sessionId', type: 'string' },
     { name: 'dh', type: 'long' },
-    { name: 'rowitems', type: { type: 'array', items: [rowitem] } }
+    { name: 'rowItems', type: { type: 'array', items: [rowItem] } }
   ]
 })
 
