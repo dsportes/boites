@@ -25,7 +25,7 @@
     </q-card-section>
 </template>
 <script>
-import { Quotas } from '../app/db'
+import { Quotas } from '../app/modele'
 
 export default ({
   name: 'QuotasVolume',

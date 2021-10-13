@@ -66,7 +66,8 @@ import { computed } from 'vue'
 import PhraseSecrete from './PhraseSecrete.vue'
 import MdpAdmin from './MdpAdmin.vue'
 import QuotasVolume from './QuotasVolume.vue'
-import { Quotas } from '../app/db'
+import { creationCompte } from '../app/operations'
+import { Quotas } from '../app/modele'
 
 export default ({
   name: 'DialogueCreationCompte',
@@ -108,7 +109,7 @@ export default ({
       this.step = 5
     },
     confirmer () {
-
+      creationCompte()
     },
     corriger () {
       this.step = 1

@@ -1,7 +1,10 @@
 /* gestion WebSocket */
 
-import { cfg, store } from './util'
+import { cfg, store, dhtToString } from './util'
 import { random } from './crypto'
+import { Idb } from './db'
+const rowTypes = require('./rowTypes')
+
 const base64url = require('base64url')
 
 export const session = {}
@@ -57,13 +60,36 @@ export class Ws {
     }
   }
 
-  onsync () {
-    console.log('sync reçu')
-    // TODO
+  async onsync (syncList) {
+    if (cfg().debug) {
+      console.log('Liste sync reçue: ' + dhtToString(syncList.dh) +
+        ' status:' + syncList.status + ' sessionId:' + syncList.sessionId + ' nb rowItems:' + syncList.rowItems.length)
+    }
+    this.syncqueue.push(syncList)
+    if (store().state.ui.phasesync === 0) {
+      const q = this.syncqueue
+      this.syncqueue = []
+      await this.processqueue(q)
+    }
   }
 
   close () { // fermeture volontaire
     this.enfermeture = true
     this.websocket.close()
+  }
+
+  async processqueue (q) {
+    const items = []
+    const db = Idb.idb
+    for (let i = 0; i < q.length; i++) {
+      const syncList = q[i]
+      for (let j = 0; j < syncList.rowItems.length; j++) {
+        const rowItem = syncList.rowItems[j]
+        rowTypes.deserialItem(rowItem)
+        items.push(rowItem)
+      }
+    }
+    await db.commitRows(items)
+    // TODO : compilation des rows, mettre à jour de l'état mémoire
   }
 }

@@ -129,7 +129,7 @@
 </template>
 
 <script>
-import PanelMenu from 'src/components/PanelMenu.vue'
+import PanelMenu from 'components/PanelMenu.vue'
 import DialogueErreur from 'components/DialogueErreur.vue'
 import DialogueCrypto from 'components/DialogueCrypto.vue'
 import { cancelRequest, ping } from '../app/util'

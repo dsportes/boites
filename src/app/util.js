@@ -41,6 +41,9 @@ export function cancelRequest () {
   $store.commit('ui/finreq', '')
 }
 
+export function dhtToString (dht) {
+  return new Date(Math.floor(dht / 1000)).toISOString() + ' (' + (dht % 1000) + ')'
+}
 /*
 Envoi une requête POST :
 - module : module invoqué

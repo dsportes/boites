@@ -85,3 +85,7 @@ export function majdialoguecreationcompte (state, val) {
 export function majmenuouvert (state, val) {
   state.menuouvert = val
 }
+
+export function majphasesync (state, val) {
+  state.phasesync = val
+}

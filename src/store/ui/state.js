@@ -10,6 +10,7 @@ export default function () {
     infomode: false,
     inforeseau: false,
     infosync: false,
+    phasesync: 1, // 0: sync en cours, 1: login, ...
     mode: 0, // 0:inconnu, 1:synchronise, 2:incognito, 3:avion
     statushttp: 200,
     message: null,

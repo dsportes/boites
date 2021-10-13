@@ -34,7 +34,7 @@ const crypt = require('../app/crypto')
 import PhraseSecrete from '../components/PhraseSecrete.vue'
 import MdpAdmin from '../components/MdpAdmin.vue'
 
-import { Compte, testdb } from '../app/db'
+import { testdb } from '../app/db'
 import { post, affichermessage, afficherdiagnostic, testEcho } from '../app/util'
 
 export default ({
@@ -72,9 +72,6 @@ export default ({
     },
     testm () {
       affichermessage('toto est beau', new Date().getMilliseconds() % 2)
-    },
-    async testcpt () {
-      await Compte.ex1()
     },
     async testEcho () {
       await testEcho()

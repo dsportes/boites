@@ -40,7 +40,7 @@
 import { computed } from 'vue'
 import { useStore } from 'vuex'
 import { gp, cfg, affichermessage, afficherdiagnostic } from '../app/util'
-import { connexion, deconnexion } from '../app/db'
+import { connexion, deconnexion } from '../app/operations'
 import * as CONST from '../store/constantes'
 import PhraseSecrete from '../components/PhraseSecrete.vue'
 import DialogueCreationCompte from '../components/DialogueCreationCompte.vue'
