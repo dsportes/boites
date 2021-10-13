@@ -1,8 +1,11 @@
 import { store, post /*, cfg */ } from './util'
 import { newSession } from './ws'
+import { Idb, deleteIDB } from './db.js'
 
 import * as CONST from '../store/constantes'
-// const crypt = require('./crypto')
+import { NomAvatar } from './modele'
+const crypt = require('./crypto')
+const base64url = require('base64url')
 // const rowTypes = require('./rowTypes')
 // const JSONbig = require('json-bigint')
 
@@ -27,7 +30,20 @@ Retour:
   avatar (1 pour le status 0)
 */
 export async function creationCompte (mdp, ps, nom, quotas) {
+  const nomAvatar = new NomAvatar().initNom(nom)
+  const id = crypt.rnd6()
+  const sid = crypt.id2s(id)
+  const serial = null
 
+  if (store().getters['ui/modesync']) {
+    const org = store().state.ui.org
+    const nombase = org + '-' + sid
+    deleteIDB(nombase)
+    localStorage.setItem(org + '-' + base64url(ps.pcb), sid)
+    const db = new Idb(nombase)
+    await db.open()
+    await db.commitRows([{ table: 'compte', id: '1', serial: serial }])
+  }
 }
 
 /*

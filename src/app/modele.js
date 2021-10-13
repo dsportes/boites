@@ -6,6 +6,8 @@ const rowTypes = require('./rowTypes')
 import { session } from './ws'
 import { /* store */ cfg } from './util'
 
+// const base64url = require('base64url')
+
 // const JSONbig = require('json-bigint')
 
 /* état de session */
@@ -27,9 +29,8 @@ export class Phrase {
     this.debut = debut
     this.fin = fin
     this.pcb = crypt.pbkfd(debut + '\n' + fin)
-    this.pcbs = crypt.sha256(this.pcb)
     this.pcbs64 = base64url(this.pcbs)
-    this.pcbsh = crypt.hashBin(this.pcbs)
+    this.pcbh = crypt.hashBin(this.pcb)
     this.dpbh = crypt.hashBin(crypt.pbkfd(debut))
   }
 }
@@ -79,9 +80,48 @@ const compteMmcType = avro.Type.forSchema({ // map des avatars du compte
   values: 'string'
 })
 
+export class NomAvatar {
+  initNom (nom) {
+    this.nom = nom
+    const x = crypt.random(15)
+    this.rnd = base64url(x)
+    this.id = crypt.hashBin(x)
+    this.nomc = this.nom + '@' + this.rnd
+    return this
+  }
+
+  initNomc (nomc) {
+    this.nomc = nomc
+    const i = nomc.lastIndexof('@')
+    this.nom = nomc.substring(0, i)
+    this.rnd = nomc.substring(i + 1)
+    const x = base64url.toBuffer(this.rnd)
+    this.id = crypt.hashBin(x)
+    return this
+  }
+}
+
 /*
+  fields: [
+    { name: 'id', type: 'long' }, // pk
+    { name: 'v', type: 'int' },
+    { name: 'dds', type: 'int' },
+    { name: 'dpbh', type: 'long' },
+    { name: 'pcbh', type: 'long' },
+    { name: 'kx', type: 'bytes' },
+    { name: 'mack', type: 'bytes' },
+    { name: 'mmck', type: 'bytes' }
+  ]
+*/
 export class Compte {
-  get table () { return 'compte' }
+  initCreate (ps, mdp, nom, quotas) {
+    this.id = crypt.rnd6()
+    const sid = crypt.id2s(this.id)
+    this.v = 0
+    this.dds = 0
+    this.dpbh = ps.dpbh
+    this.pcbh = ps.pcbh
+  }
 
   fromRow (arg) { // arg : JSON sérialisé
     this.row = rowTypes.compte.fromBuffer(arg)
@@ -113,6 +153,7 @@ export class Compte {
   }
 
   static async ex1 () {
+    /*
     const idb = new Idb('db1')
     await idb.open()
 
@@ -140,9 +181,9 @@ export class Compte {
     console.log(c2.dpbh)
 
     idb.close()
+    */
   }
 }
-*/
 
 /** Invitgr **********************************/
 const invitgrDatak = avro.Type.forSchema({ // map des avatars du compte

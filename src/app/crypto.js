@@ -25,7 +25,7 @@ function random (nbytes) { return crypto.randomBytes(nbytes) }
 exports.random = random
 
 function rnd6 () { return u8ToInt(random(6)) }
-exports.rnd5 = rnd6
+exports.rnd6 = rnd6
 
 function hash (str, big = false, b64 = false, seed = 0) {
   // https://stackoverflow.com/questions/7616461/generate-a-hash-from-string-in-javascript

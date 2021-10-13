@@ -7,6 +7,14 @@ const crypt = require('./crypto')
 const rowTypes = require('./rowTypes')
 const JSONbig = require('json-bigint')
 
+export async function deleteIDB (nombase) {
+  try {
+    await Dexie.delete(nombase)
+  } catch (e) {
+    console.log(e.toString())
+  }
+}
+
 export class Idb {
   static get STORES () {
     return {
