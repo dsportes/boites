@@ -3,10 +3,11 @@ import { newSession } from './ws'
 import { Idb, deleteIDB } from './db.js'
 
 import * as CONST from '../store/constantes'
-import { NomAvatar } from './modele'
+import { NomAvatar, Compte, Avatar, data } from './modele'
+
 const crypt = require('./crypto')
 const base64url = require('base64url')
-// const rowTypes = require('./rowTypes')
+const rowTypes = require('./rowTypes')
 // const JSONbig = require('json-bigint')
 
 export async function deconnexion () {
@@ -27,22 +28,65 @@ Retour:
 - dh, sessionId
 - rowItems retournés :
   compte
-  avatar (1 pour le status 0)
+  avatar
 */
 export async function creationCompte (mdp, ps, nom, quotas) {
+  const s = await newSession() // store().state.ui.session
+  data.ps = ps
+  data.clek = crypt.random(32)
   const nomAvatar = new NomAvatar().initNom(nom)
-  const id = crypt.rnd6()
-  const sid = crypt.id2s(id)
-  const serial = null
+  const kp = await crypt.genKeyPair()
+  let compte = new Compte().initCreate(ps, nomAvatar, data.clek, kp.privateKey)
+  let rowCompte = rowTypes.compte.toBuffer()
+  let avatar = new Avatar().initCreate(nomAvatar, data.clek)
+  let rowAvatar = rowTypes.avatar.toBuffer(avatar)
 
+  let ret
+  try {
+    const args = { sessionId: s.sessionId, mdp: mdp.mdp64, q1: quotas.q1, q2: quotas.q2, qm1: quotas.qm1, qm2: quotas.qm2, clePub: kp.publicKey, rowCompte: rowCompte, rowAvatar }
+    ret = await post('m1', 'creationCompte', args, 'creation de compte sans parrain ...', 'respBase1')
+    if (ret.status === 0) {
+      store().commit('ui/majstatuslogin', true)
+    } else {
+      store().commit('ui/majstatuslogin', false)
+      data.clek = null
+      data.ps = null
+      data.dh = 0
+      s.close()
+      return
+    }
+  } catch (e) {
+    data.clek = null
+    data.ps = null
+    data.dh = 0
+    s.close()
+    return
+  }
+
+  // maj du modèle en mémoire
+  if (data.dh < ret.dh) data.dh = ret.dh
+  ret.rows.forEach(item => {
+    if (item.table === 'compte') {
+      rowCompte = rowTypes.compte.fromBuffer(item.row)
+      compte = new Compte().fromRow(rowCompte)
+    }
+    if (item.table === 'avatar') {
+      rowAvatar = rowTypes.compte.fromBuffer(item.row)
+      avatar = new Avatar().fromRow(rowAvatar)
+    }
+  })
+  store().commit('db/setCompte', compte)
+  store().commit('ui/avatars', [avatar])
+
+  // maj IDB
   if (store().getters['ui/modesync']) {
     const org = store().state.ui.org
-    const nombase = org + '-' + sid
+    const nombase = org + '-' + compte.sid
     deleteIDB(nombase)
-    localStorage.setItem(org + '-' + base64url(ps.pcb), sid)
+    localStorage.setItem(org + '-' + base64url(ps.pcb), compte.sid)
     const db = new Idb(nombase)
     await db.open()
-    await db.commitRows([{ table: 'compte', id: '1', serial: serial }])
+    await db.commitRows([{ table: 'compte', id: '1', serial: rowCompte }, { table: 'avatar', id: '1', serial: rowAvatar }])
   }
 }
 

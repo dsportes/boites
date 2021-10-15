@@ -11,25 +11,15 @@ import { /* store */ cfg } from './util'
 // const JSONbig = require('json-bigint')
 
 /* état de session */
-export const etatsession = {
-  // non persistant
-  phrase: null,
-  clex: null, // PBKFD2 de la phrase complète saisie (clé X)
-  clek: null, // clé k
-
-  // persistant
-  idc: null, // id du compte
-  dhds: 0, // date-heure de dernière synchronisation persistée
-  secavartars: {}, // avatars dont les secrets sont persistants en session : {ida, dhds}
-  secgroupes: {} // groupes dont les secrets sont persistants en session : {idg, dhds}
+export const data = {
+  ps: null, // phrase secrète saisie
+  clek: null // clé k
 }
 
 export class Phrase {
   constructor (debut, fin) {
-    this.debut = debut
-    this.fin = fin
     this.pcb = crypt.pbkfd(debut + '\n' + fin)
-    this.pcbs64 = base64url(this.pcbs)
+    this.pcb64 = base64url(this.pcb)
     this.pcbh = crypt.hashBin(this.pcb)
     this.dpbh = crypt.hashBin(crypt.pbkfd(debut))
   }
@@ -74,11 +64,79 @@ const compteMacType = avro.Type.forSchema({ // map des avatars du compte
   })
 })
 
-// eslint-disable-next-line no-unused-vars
 const compteMmcType = avro.Type.forSchema({ // map des avatars du compte
   type: 'map',
   values: 'string'
 })
+
+/*
+  fields: [
+    { name: 'id', type: 'long' }, // pk
+    { name: 'v', type: 'int' },
+    { name: 'dds', type: 'int' },
+    { name: 'dpbh', type: 'long' },
+    { name: 'pcbh', type: 'long' },
+    { name: 'kx', type: 'bytes' },
+    { name: 'mack', type: 'bytes' },
+    { name: 'mmck', type: 'bytes' }
+  ]
+*/
+export class Compte {
+  initCreate (nomAvatar, cpriv) {
+    this.id = crypt.rnd6()
+    const sid = crypt.id2s(this.id)
+    this.v = 0
+    this.dds = 0
+    this.dpbh = data.ps.dpbh
+    this.pcbh = data.ps.pcbh
+    this.k = data.clek
+    this.kx = crypt.crypter(data.ps.pcb, this.k)
+    this.mac = { }
+    this.mac[base64url(nomAvatar.id)] = { nomc: nomAvatar.nomc, cpriv: cpriv }
+    this.mack = crypt.crypter(data.clek, compteMacType.toBuffer(this.mac))
+    this.mmc = {}
+    this.mmck = crypt.crypter(data.clek, compteMmcType.toBuffer(this.mmc))
+    return this
+  }
+
+  fromRow (row) { // item désérialisé
+    this.id = row.id
+    this.sid = crypt.id2s(this.id)
+    this.v = row.v
+    this.dds = row.dds
+    this.dpbh = row.dpbh
+    this.pcbh = row.pcbh
+    this.kx = row.kx
+    this.k = crypt.decrypter(data.ps.pcb, this.kx)
+    data.clek = this.k
+    this.mmck = row.mmck
+    this.mack = row.mack
+    this.mmc = compteMmcType.fromBuffer(crypt.decrypter(data.clek, this.mmck))
+    this.mac = compteMacType.fromBuffer(crypt.decrypter(data.clek, this.mack))
+    return this
+  }
+
+  serial () { // après maj éventuelle de mac et / mmc
+    this.mmck = crypt.crypter(data.clek, compteMmcType.toBuffer(this.mmc))
+    this.mack = crypt.crypter(data.clek, compteMacType.toBuffer(this.mac))
+    return rowTypes.compte.toBuffer()
+  }
+}
+
+/** Avatar **********************************/
+const avatarCvaType = avro.Type.forSchema({ type: 'array', items: 'string' })
+const avatarLctType = avro.Type.forSchema({ type: 'array', items: 'int' })
+/*
+  fields: [
+    { name: 'id', type: 'long' }, // pk
+    { name: 'v', type: 'int' },
+    { name: 'st', type: 'int' },
+    { name: 'vcv', type: 'int' },
+    { name: 'dds', type: 'int' },
+    { name: 'cva', type: 'bytes' },
+    { name: 'lctk', type: 'bytes' }
+  ]
+*/
 
 export class NomAvatar {
   initNom (nom) {
@@ -101,87 +159,38 @@ export class NomAvatar {
   }
 }
 
-/*
-  fields: [
-    { name: 'id', type: 'long' }, // pk
-    { name: 'v', type: 'int' },
-    { name: 'dds', type: 'int' },
-    { name: 'dpbh', type: 'long' },
-    { name: 'pcbh', type: 'long' },
-    { name: 'kx', type: 'bytes' },
-    { name: 'mack', type: 'bytes' },
-    { name: 'mmck', type: 'bytes' }
-  ]
-*/
-export class Compte {
-  initCreate (ps, mdp, nom, quotas) {
-    this.id = crypt.rnd6()
-    const sid = crypt.id2s(this.id)
+export class Avatar {
+  initCreate (nomAvatar) {
+    this.id = nomAvatar.id
     this.v = 0
+    this.st = 0
+    this.vcv = 0
     this.dds = 0
-    this.dpbh = ps.dpbh
-    this.pcbh = ps.pcbh
-  }
-
-  fromRow (arg) { // arg : JSON sérialisé
-    this.row = rowTypes.compte.fromBuffer(arg)
-    this.id = this.row.id
-    this.sid = crypt.id2s(this.id)
-    this.v = this.row.v
-    this.dds = this.row.dds
-    this.dpbh = this.row.dpbh
-    this.pcbsh = this.row.pcbsh
-    this.k = crypt.decrypter(session.clex, this.row.k)
-    this.mmc = compteMmcType.fromBuffer(crypt.decrypter(this.k, this.row.mmck))
-    this.mac = compteMacType.fromBuffer(crypt.decrypter(this.k, this.row.mack))
+    this.cv = ['', nomAvatar.nomc]
+    this.cva = crypt.crypter(data.clek, avatarCvaType.toBuffer(this.cv))
+    this.lct = []
+    this.lctk = crypt.crypter(data.clek, avatarLctType.toBuffer(this.lct))
     return this
   }
 
-  serial () {
-    const x = {
-      id: this.id,
-      v: this.v,
-      dds: this.dds,
-      dpbh: this.dpbh,
-      pcbsh: this.pcbsh,
-      k: crypt.crypter(session.clex, this.k),
-      mmck: crypt.crypter(this.k, compteMmcType.toBuffer(this.mmc)),
-      mack: crypt.crypter(this.k, compteMacType.toBuffer(this.mac))
-    }
-    this.row = rowTypes.compte.toBuffer(x)
-    return this.row
+  fromRow (row) { // item désérialisé
+    this.id = row.id
+    this.sid = crypt.id2s(this.id)
+    this.v = row.v
+    this.st = row.st
+    this.vcv = row.vcv
+    this.dds = row.dds
+    this.cva = row.cva
+    this.cv = avatarCvaType.fromBuffer(crypt.decrypter(data.clek, this.cva))
+    this.lctk = row.lctk
+    this.lct = avatarLctType.fromBuffer(crypt.decrypter(data.clek, this.lctk))
+    return this
   }
 
-  static async ex1 () {
-    /*
-    const idb = new Idb('db1')
-    await idb.open()
-
-    const ph = new Phrase(cfg().phrase1[0], cfg().phrase1[1])
-    session.clex = ph.pcb
-
-    const c = new Compte()
-    c.id = 15151789
-    c.sid = crypt.id2s(c.id)
-    c.v = 2
-    c.dds = 27
-    c.dpbh = ph.dpbh
-    c.pcbsh = ph.pcbsh
-    c.k = crypt.sha256('maclek')
-    c.mmc = { 1: 'mot 1', 2: 'mot 2' }
-    c.mac = { }
-    c.mac[crypt.id2s(999001)] = { nomc: 'pseudo1@toto1', cpriv: crypt.intToU8(2999001) }
-    c.mac[crypt.id2s(999002)] = { nomc: 'pseudo2@toto2', cpriv: crypt.intToU8(2999002) }
-    idb.addMaj(c)
-    await idb.commit()
-
-    session.clek = c.k
-    const c2 = new Compte()
-    c2.fromRow(c.row)
-    console.log(c2.dpbh)
-
-    idb.close()
-    */
+  serial () { // après maj éventuelle de cv et / ou lct
+    this.cva = crypt.crypter(data.clek, avatarCvaType.toBuffer(this.cv))
+    this.lctk = crypt.crypter(data.clek, avatarLctType.toBuffer(this.lct))
+    return rowTypes.avatar.toBuffer()
   }
 }
 

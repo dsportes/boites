@@ -1,3 +1,4 @@
+/*
 export function avatar (state, val) {
   if (typeof val === 'string') {
     const x = state.avatars
@@ -12,7 +13,21 @@ export function avatar (state, val) {
     }
   }
 }
+*/
 
+export function setAvatars (state, val) { // val : array d'objets Avatar
+  const x = state.avatars
+  val.forEach(a => {
+    x[a.sid] = a
+  })
+  state.avatars = { ...x }
+}
+
+export function setCompte (state, val) { // val : objet Compte
+  state.compte = val
+}
+
+/*
 function XY (obj, X, val) { // val : { id, val } à insérer / modifier / supprimer dans la proriété X de obj
   const suppr = typeof val.val === 'string'
   if (!obj) return
@@ -37,3 +52,4 @@ export function avatarcontact (state, val) { // val est un objet de la forme {id
   const c = XY(obj, 'contacts', val)
   if (c) state.avatars[val.id] = { ...obj, contacts: c }
 }
+*/

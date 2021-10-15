@@ -31,9 +31,9 @@ export async function newSession () {
 }
 
 export class Ws {
-  constructor (sessionid) {
+  constructor (sessionId) {
     try {
-      this.sessionId = sessionid
+      this.sessionId = sessionId
       this.syncqueue = []
       store().commit('ui/majsessionerreur', 0)
       this.enfermeture = false

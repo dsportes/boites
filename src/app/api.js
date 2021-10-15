@@ -44,6 +44,7 @@ const echoResp = avro.Type.forSchema({
   ]
 })
 
+/*
 const conn1Compte = avro.Type.forSchema({
   name: 'conn1Compte',
   type: 'record',
@@ -53,6 +54,7 @@ const conn1Compte = avro.Type.forSchema({
     { name: 'dpbh', type: 'long' }
   ]
 })
+*/
 
 const respBase1 = avro.Type.forSchema({
   name: 'respBase1',
@@ -65,9 +67,26 @@ const respBase1 = avro.Type.forSchema({
   ]
 })
 
+const creationCompte = avro.Type.forSchema({
+  name: 'creationCompte',
+  type: 'record',
+  fields: [
+    { name: 'sessionId', type: 'string' },
+    { name: 'mdp64', type: 'string' },
+    { name: 'dpbh', type: 'long' },
+    { name: 'q1', type: 'int' },
+    { name: 'q2', type: 'int' },
+    { name: 'qm1', type: 'int' },
+    { name: 'qm2', type: 'int' },
+    { name: 'clePub', type: 'bytes' },
+    { name: 'rowCompte', type: 'bytes' },
+    { name: 'rowAvatar', type: 'bytes' }
+  ]
+})
+
 const argTypes = {
-  testconnexion: [conn1Compte, respBase1],
-  echo: [echoArg, echoResp]
+  echo: [echoArg, echoResp],
+  creationCompte: [creationCompte, respBase1]
 }
 exports.argTypes = argTypes
 
