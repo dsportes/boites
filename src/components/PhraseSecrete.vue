@@ -13,18 +13,18 @@
         <span :class="ligne2.length === 0 ? 'disabled' : ''"><q-icon name="cancel" class="cursor-pointer" @click="ligne2 = ''"/></span>
     </template>
     </q-input>
-    <div class="t3">
-    <div v-if="encours" class="t1">Cryptage en cours ...</div>
-    <div v-else class="row justify-between items-center">
-        <div v-if="isDev">
-          <q-btn flat label="P1" color="primary" @click="p1" />
-          <q-btn flat label="P2" color="primary" @click="p2" />
-        </div>
-        <div>
-          <q-btn color="primary" flat label="Renoncer" size="md" @click="ko" />
-          <q-btn color="warning" glossy :label="labelVal()" size="md" :icon-right="iconValider" :disable="ligne1.length < 16 || ligne2.length < 16" @click="ok" />
-        </div>
-    </div>
+    <div>
+      <div v-if="encours" class="t1">Cryptage en cours ...</div>
+      <div v-else class="row justify-between items-center no-wrap">
+          <div v-if="isDev">
+            <q-btn flat label="P1" color="primary" @click="p1" />
+            <q-btn flat label="P2" color="primary" @click="p2" />
+          </div>
+          <div>
+            <q-btn color="primary" flat label="Renoncer" size="md" @click="ko" />
+            <q-btn color="warning" glossy :label="labelVal()" size="md" :icon-right="iconValider" :disable="ligne1.length < 16 || ligne2.length < 16" @click="ok" />
+          </div>
+      </div>
     </div>
   </q-card-section>
 </template>
@@ -121,9 +121,6 @@ export default ({
 .shadow-box
   border: 1px solid $grey-5 !important
   border-radius:  5px !important
-.t3
-  height: 2rem
-  overflow: hidden
 .t1
   font-size: 1.1rem
   font-weight: bold

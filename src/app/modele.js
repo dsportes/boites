@@ -5,6 +5,7 @@ const base64url = require('base64url')
 const rowTypes = require('./rowTypes')
 import { session } from './ws'
 import { /* store */ cfg } from './util'
+import { store } from 'quasar/wrappers'
 
 // const base64url = require('base64url')
 
@@ -16,6 +17,19 @@ export const data = {
   clek: null // clé k
 }
 
+export function compte () {
+  return store().state.db.compte
+}
+
+export function avc (id) {
+  return compte().av(id)
+}
+
+export function avatar (id) {
+  return store().getters['db.avatar'](id)
+}
+
+/** classes Phrase, MdpAdmin, Quotas */
 export class Phrase {
   constructor (debut, fin) {
     this.pcb = crypt.pbkfd(debut + '\n' + fin)
@@ -59,7 +73,7 @@ const compteMacType = avro.Type.forSchema({ // map des avatars du compte
     type: 'record',
     fields: [
       { name: 'nomc', type: 'string' },
-      { name: 'cpriv', type: 'bytes' }
+      { name: 'cpriv', type: 'string' }
     ]
   })
 })
@@ -92,7 +106,7 @@ export class Compte {
     this.k = data.clek
     this.kx = crypt.crypter(data.ps.pcb, this.k)
     this.mac = { }
-    this.mac[base64url(nomAvatar.id)] = { nomc: nomAvatar.nomc, cpriv: cpriv }
+    this.mac[crypt.id2s(nomAvatar.id)] = { nomc: nomAvatar.nomc, na: nomAvatar, cpriv: cpriv }
     this.mack = crypt.crypter(data.clek, compteMacType.toBuffer(this.mac))
     this.mmc = {}
     this.mmck = crypt.crypter(data.clek, compteMmcType.toBuffer(this.mmc))
@@ -113,13 +127,21 @@ export class Compte {
     this.mack = row.mack
     this.mmc = compteMmcType.fromBuffer(crypt.decrypter(data.clek, this.mmck))
     this.mac = compteMacType.fromBuffer(crypt.decrypter(data.clek, this.mack))
+    for (const sid in this.mac) {
+      const x = this.mac[sid]
+      x.na = new NomAvatar().initNomc(x.nomc)
+    }
     return this
   }
 
   serial () { // après maj éventuelle de mac et / mmc
     this.mmck = crypt.crypter(data.clek, compteMmcType.toBuffer(this.mmc))
     this.mack = crypt.crypter(data.clek, compteMacType.toBuffer(this.mac))
-    return rowTypes.compte.toBuffer()
+    return rowTypes.rowSchemas.compte.toBuffer()
+  }
+
+  av (id) {
+    return this.mac[base64url(id)]
   }
 }
 
@@ -144,6 +166,7 @@ export class NomAvatar {
     const x = crypt.random(15)
     this.rnd = base64url(x)
     this.id = crypt.hashBin(x)
+    this.cle = crypt.sha256(x)
     this.nomc = this.nom + '@' + this.rnd
     return this
   }
@@ -154,6 +177,7 @@ export class NomAvatar {
     this.nom = nomc.substring(0, i)
     this.rnd = nomc.substring(i + 1)
     const x = base64url.toBuffer(this.rnd)
+    this.cle = crypt.sha256(x)
     this.id = crypt.hashBin(x)
     return this
   }
@@ -161,13 +185,14 @@ export class NomAvatar {
 
 export class Avatar {
   initCreate (nomAvatar) {
+    this.nomAvatar = nomAvatar
     this.id = nomAvatar.id
     this.v = 0
     this.st = 0
     this.vcv = 0
     this.dds = 0
     this.cv = ['', nomAvatar.nomc]
-    this.cva = crypt.crypter(data.clek, avatarCvaType.toBuffer(this.cv))
+    this.cva = crypt.crypter(nomAvatar.cle, avatarCvaType.toBuffer(this.cv))
     this.lct = []
     this.lctk = crypt.crypter(data.clek, avatarLctType.toBuffer(this.lct))
     return this
@@ -175,22 +200,23 @@ export class Avatar {
 
   fromRow (row) { // item désérialisé
     this.id = row.id
+    this.nomAvatar = avc(this.id).na
     this.sid = crypt.id2s(this.id)
     this.v = row.v
     this.st = row.st
     this.vcv = row.vcv
     this.dds = row.dds
     this.cva = row.cva
-    this.cv = avatarCvaType.fromBuffer(crypt.decrypter(data.clek, this.cva))
+    this.cv = avatarCvaType.fromBuffer(crypt.decrypter(this.nomAvatar.cle, this.cva))
     this.lctk = row.lctk
     this.lct = avatarLctType.fromBuffer(crypt.decrypter(data.clek, this.lctk))
     return this
   }
 
   serial () { // après maj éventuelle de cv et / ou lct
-    this.cva = crypt.crypter(data.clek, avatarCvaType.toBuffer(this.cv))
+    this.cva = crypt.crypter(this.nomAvatar.cle, avatarCvaType.toBuffer(this.cv))
     this.lctk = crypt.crypter(data.clek, avatarLctType.toBuffer(this.lct))
-    return rowTypes.avatar.toBuffer()
+    return rowTypes.rowSchemas.avatar.toBuffer()
   }
 }
 

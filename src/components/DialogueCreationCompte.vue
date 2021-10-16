@@ -108,8 +108,8 @@ export default ({
       this.quotas = new Quotas(q)
       this.step = 5
     },
-    confirmer () {
-      creationCompte()
+    async confirmer () {
+      await creationCompte(this.mdp, this.ps, this.nom, this.quotas)
     },
     corriger () {
       this.step = 1

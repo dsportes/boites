@@ -36,47 +36,45 @@ export async function creationCompte (mdp, ps, nom, quotas) {
   data.clek = crypt.random(32)
   const nomAvatar = new NomAvatar().initNom(nom)
   const kp = await crypt.genKeyPair()
-  let compte = new Compte().initCreate(ps, nomAvatar, data.clek, kp.privateKey)
-  let rowCompte = rowTypes.compte.toBuffer()
+  let compte = new Compte().initCreate(nomAvatar, kp.privateKey)
+  let rowCompte = rowTypes.rowSchemas.compte.toBuffer(compte)
   let avatar = new Avatar().initCreate(nomAvatar, data.clek)
-  let rowAvatar = rowTypes.avatar.toBuffer(avatar)
+  let rowAvatar = rowTypes.rowSchemas.avatar.toBuffer(avatar)
 
   let ret
   try {
-    const args = { sessionId: s.sessionId, mdp: mdp.mdp64, q1: quotas.q1, q2: quotas.q2, qm1: quotas.qm1, qm2: quotas.qm2, clePub: kp.publicKey, rowCompte: rowCompte, rowAvatar }
+    const args = { sessionId: s.sessionId, mdp64: mdp.mdp64, q1: quotas.q1, q2: quotas.q2, qm1: quotas.qm1, qm2: quotas.qm2, clePub: kp.publicKey, rowCompte: rowCompte, rowAvatar }
     ret = await post('m1', 'creationCompte', args, 'creation de compte sans parrain ...', 'respBase1')
-    if (ret.status === 0) {
-      store().commit('ui/majstatuslogin', true)
-    } else {
-      store().commit('ui/majstatuslogin', false)
-      data.clek = null
-      data.ps = null
-      data.dh = 0
-      s.close()
-      return
-    }
+    store().commit('ui/majstatuslogin', true)
   } catch (e) {
+    store().commit('ui/majstatuslogin', false)
     data.clek = null
     data.ps = null
     data.dh = 0
     s.close()
-    return
+    throw e
   }
 
   // maj du modèle en mémoire
   if (data.dh < ret.dh) data.dh = ret.dh
+
+  // obtenir d'abaord le compte PUIS l'avatar
   ret.rows.forEach(item => {
     if (item.table === 'compte') {
       rowCompte = rowTypes.compte.fromBuffer(item.row)
       compte = new Compte().fromRow(rowCompte)
     }
+  })
+  store().commit('db/setCompte')
+
+  // PUIS l'avatar une fois le compte en vuex
+  ret.rows.forEach(item => {
     if (item.table === 'avatar') {
       rowAvatar = rowTypes.compte.fromBuffer(item.row)
       avatar = new Avatar().fromRow(rowAvatar)
     }
   })
-  store().commit('db/setCompte', compte)
-  store().commit('ui/avatars', [avatar])
+  store().commit('db/setAvatars', [avatar])
 
   // maj IDB
   if (store().getters['ui/modesync']) {

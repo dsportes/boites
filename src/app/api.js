@@ -73,12 +73,11 @@ const creationCompte = avro.Type.forSchema({
   fields: [
     { name: 'sessionId', type: 'string' },
     { name: 'mdp64', type: 'string' },
-    { name: 'dpbh', type: 'long' },
     { name: 'q1', type: 'int' },
     { name: 'q2', type: 'int' },
     { name: 'qm1', type: 'int' },
     { name: 'qm2', type: 'int' },
-    { name: 'clePub', type: 'bytes' },
+    { name: 'clePub', type: 'string' },
     { name: 'rowCompte', type: 'bytes' },
     { name: 'rowAvatar', type: 'bytes' }
   ]
