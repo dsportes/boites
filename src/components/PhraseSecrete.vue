@@ -4,17 +4,19 @@
     <q-input dense counter hint="Au moins 16 caractères" v-model="ligne1" :type="isPwd ? 'password' : 'text'" label="Première ligne de la phrase secrète">
     <template v-slot:append>
         <q-icon :name="isPwd ? 'visibility_off' : 'visibility'" class="cursor-pointer" @click="isPwd = !isPwd"/>
-        <span :class="ligne1.length === 0 ? 'disabled' : ''"><q-icon name="cancel" class="cursor-pointer"  @click="ligne1 = ''"/></span>
+        <span :class="!ligne1 || ligne1.length === 0 ? 'disabled' : ''"><q-icon name="cancel" class="cursor-pointer"  @click="ligne1 = ''"/></span>
     </template>
     </q-input>
     <q-input dense counter hint="Au moins 16 caractères" v-model="ligne2" :type="isPwd ? 'password' : 'text'" label="Seconde ligne de la phrase secrète">
     <template v-slot:append>
         <q-icon :name="isPwd ? 'visibility_off' : 'visibility'" class="cursor-pointer" @click="isPwd = !isPwd"/>
-        <span :class="ligne2.length === 0 ? 'disabled' : ''"><q-icon name="cancel" class="cursor-pointer" @click="ligne2 = ''"/></span>
+        <span :class="!ligne2 || ligne2.length === 0 ? 'disabled' : ''"><q-icon name="cancel" class="cursor-pointer" @click="ligne2 = ''"/></span>
     </template>
     </q-input>
     <div>
-      <div v-if="encours" class="t1">Cryptage en cours ...</div>
+      <div v-if="encours" class="t1">Cryptage en cours ...
+        <q-spinner color="primary" size="2rem" :thickness="3" />
+      </div>
       <div v-else class="row justify-between items-center no-wrap">
           <div v-if="isDev">
             <q-btn flat label="P1" color="primary" @click="p1" />
@@ -22,7 +24,8 @@
           </div>
           <div>
             <q-btn color="primary" flat label="Renoncer" size="md" @click="ko" />
-            <q-btn color="warning" glossy :label="labelVal()" size="md" :icon-right="iconValider" :disable="ligne1.length < 16 || ligne2.length < 16" @click="ok" />
+            <q-btn color="warning" glossy :label="labelVal()" size="md" :icon-right="iconValider"
+            :disable="!ligne1 || !ligne2 || ligne1.length < 16 || ligne2.length < 16" @click="ok" />
           </div>
       </div>
     </div>
@@ -91,7 +94,7 @@ export default ({
         const ps = new Phrase(this.ligne1, this.ligne2)
         this.$emit('ok-ps', ps)
         this.raz()
-      }, 10)
+      }, 300)
     },
     ko () {
       this.raz()

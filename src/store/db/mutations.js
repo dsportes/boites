@@ -23,6 +23,14 @@ export function setAvatars (state, val) { // val : array d'objets Avatar
   state.avatars = { ...x }
 }
 
+export function setCvs (state, val) { // val : array d'objets Cv
+  const x = state.cvs
+  val.forEach(c => {
+    x[c.sid] = c
+  })
+  state.cvs = { ...x }
+}
+
 export function setCompte (state, val) { // val : objet Compte
   state.compte = val
 }

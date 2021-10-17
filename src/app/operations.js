@@ -3,10 +3,9 @@ import { newSession } from './ws'
 import { Idb, deleteIDB } from './db.js'
 
 import * as CONST from '../store/constantes'
-import { NomAvatar, Compte, Avatar, data } from './modele'
+import { NomAvatar, Compte, Avatar, data, Cv } from './modele'
 
 const crypt = require('./crypto')
-const base64url = require('base64url')
 const rowTypes = require('./rowTypes')
 // const JSONbig = require('json-bigint')
 
@@ -45,7 +44,6 @@ export async function creationCompte (mdp, ps, nom, quotas) {
   try {
     const args = { sessionId: s.sessionId, mdp64: mdp.mdp64, q1: quotas.q1, q2: quotas.q2, qm1: quotas.qm1, qm2: quotas.qm2, clePub: kp.publicKey, rowCompte: rowCompte, rowAvatar }
     ret = await post('m1', 'creationCompte', args, 'creation de compte sans parrain ...', 'respBase1')
-    store().commit('ui/majstatuslogin', true)
   } catch (e) {
     store().commit('ui/majstatuslogin', false)
     data.clek = null
@@ -58,34 +56,50 @@ export async function creationCompte (mdp, ps, nom, quotas) {
   // maj du modèle en mémoire
   if (data.dh < ret.dh) data.dh = ret.dh
 
-  // obtenir d'abaord le compte PUIS l'avatar
-  ret.rows.forEach(item => {
+  // obtenir d'abord le compte PUIS l'avatar
+  ret.rowItems.forEach(item => {
     if (item.table === 'compte') {
-      rowCompte = rowTypes.compte.fromBuffer(item.row)
+      rowCompte = rowTypes.fromBuffer('compte', item.serial)
       compte = new Compte().fromRow(rowCompte)
     }
   })
-  store().commit('db/setCompte')
+  store().commit('db/setCompte', compte)
 
   // PUIS l'avatar une fois le compte en vuex
-  ret.rows.forEach(item => {
+  ret.rowItems.forEach(item => {
     if (item.table === 'avatar') {
-      rowAvatar = rowTypes.compte.fromBuffer(item.row)
+      rowAvatar = rowTypes.fromBuffer('avatar', item.serial)
       avatar = new Avatar().fromRow(rowAvatar)
     }
   })
   store().commit('db/setAvatars', [avatar])
 
+  const cv = new Cv().fromAvatar(avatar)
+  store().commit('db/setCvs', [cv])
+
   // maj IDB
   if (store().getters['ui/modesync']) {
     const org = store().state.ui.org
     const nombase = org + '-' + compte.sid
-    deleteIDB(nombase)
-    localStorage.setItem(org + '-' + base64url(ps.pcb), compte.sid)
-    const db = new Idb(nombase)
-    await db.open()
-    await db.commitRows([{ table: 'compte', id: '1', serial: rowCompte }, { table: 'avatar', id: '1', serial: rowAvatar }])
+    const lstk = org + '-' + ps.dpbh
+    try {
+      deleteIDB(nombase)
+      localStorage.setItem(lstk, compte.sid)
+      const db = new Idb(nombase)
+      await db.open()
+      await db.commitRows([
+        { table: 'compte', row: compte, serial: rowCompte },
+        { table: 'avatar', row: avatar, serial: rowAvatar },
+        { table: 'cv', row: cv, serial: cv.serialIdb() }
+      ])
+    } catch (e) {
+      console.log(e.toString())
+      deleteIDB(nombase)
+      localStorage.removeItem(lstk)
+      throw e
+    }
   }
+  store().commit('ui/majstatuslogin', true)
 }
 
 /*

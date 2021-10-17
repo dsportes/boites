@@ -4,7 +4,7 @@
         <q-card-section>
           <div class="titre-2">Crytographie</div>
           <q-btn flat label="Lancer le test de crypto" color="primary" @click="testcrypto" />
-          <q-btn flat label="Lancer le test courant" color="primary" @click="testEcho"/>
+          <q-btn flat label="Lancer le test courant" color="primary" @click="testidb"/>
         </q-card-section>
         <phrase-secrete class="q-ma-xs" v-on:ok-ps="okps" icon-valider="check" verif label-valider="OK"></phrase-secrete>
         <mdp-admin class="q-ma-xs" v-on:ok-mdp="okmdp"></mdp-admin>

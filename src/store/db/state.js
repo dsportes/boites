@@ -1,7 +1,8 @@
 export default function () {
   return {
-    compte: {},
+    compte: null,
     avatars: {},
-    groupes: {}
+    groupes: {},
+    cvs: {}
   }
 }

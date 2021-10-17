@@ -9,6 +9,10 @@
     <div v-for="av in avatars" :key="av.id">
         <div>{{av.id}} - {{av.nomc}} {{av.nomAvatar.nomc}}</div>
     </div>
+    <h6>Liste des cartes de visite</h6>
+    <div v-for="av in cvs" :key="av.id">
+        <div>{{av.id}} - {{av.nomc}} {{av.nomAvatar.nomc}}</div>
+    </div>
   </q-page>
 </template>
 
@@ -32,11 +36,13 @@ export default ({
 
   setup () {
     const $store = useStore()
+    const cvs = computed(() => $store.state.db.cvs)
     const avatars = computed(() => $store.state.db.avatars)
     const compte = computed(() => $store.state.db.compte)
     const mode = computed(() => $store.state.ui.mode)
 
     return {
+      cvs,
       avatars,
       compte,
       mode

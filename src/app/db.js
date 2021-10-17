@@ -1,11 +1,7 @@
 import Dexie from 'dexie'
 import { store, cfg } from './util'
 import { session } from './ws'
-
-// import * as CONST from '../store/constantes'
-const crypt = require('./crypto')
 const rowTypes = require('./rowTypes')
-const JSONbig = require('json-bigint')
 
 export async function deleteIDB (nombase) {
   try {
@@ -20,14 +16,15 @@ export class Idb {
     return {
       compte: 'id',
       avatar: 'id',
-      invitgr: 'niv, id',
-      contact: 'id+ic',
-      invitct: 'cch, id',
-      parrain: 'pph, id',
-      rencontre: 'prh, id',
+      invitgr: 'niv,id',
+      contact: '[id+ic]',
+      invitct: 'cch,id',
+      parrain: 'pph,id',
+      rencontre: 'prh,id',
       groupe: 'id',
-      membre: 'id+im',
-      secret: 'ids, id'
+      membre: '[id+im]',
+      secret: 'ids,id',
+      cv: 'id'
     }
   }
 
@@ -111,6 +108,15 @@ export class Idb {
             if (cfg().debug) console.log(suppr ? 'del' : 'put' + ' membre - ' + item.row.id + ' / ' + item.row.im)
             break
           }
+          case 'cv' : {
+            if (!suppr) {
+              await this.db.cv.put({ id: item.row.id, data: item.serial })
+            } else {
+              await this.db.cv.delete(item.row.id)
+            }
+            if (cfg().debug) console.log(suppr ? 'del' : 'put' + ' cv - ' + item.row.id)
+            break
+          }
           case 'invitgr' : {
             if (!suppr) {
               await this.db.invitgr.put({ niv: item.row.niv, id: item.row.id, data: item.serial })
@@ -134,20 +140,7 @@ export async function deconnexion () {
 
 // A refaire complètement
 export async function testdb () {
-  const c1 = {
-    dhc: 123,
-    pcbs: crypt.random(4),
-    k: crypt.random(32),
-    // idx: 456n,
-    idx: 999007199254740991n,
-    mcs: { 1: 'toto', 2: 'juju' },
-    avatars: ['toto', 'titi']
-  }
-
-  console.log(c1.idx)
-  console.log(JSONbig.stringify(c1))
-  const buf = rowTypes.idbCompte.toBuffer(c1)
-  const c2 = rowTypes.idbCompte.fromBuffer(buf)
-  console.log(JSONbig.stringify(c2))
-  console.log(c2.idx)
+  deleteIDB('toto')
+  const db = new Idb('toto')
+  await db.open()
 }

@@ -4,12 +4,8 @@ const crypt = require('./crypto')
 const base64url = require('base64url')
 const rowTypes = require('./rowTypes')
 import { session } from './ws'
-import { /* store */ cfg } from './util'
-import { store } from 'quasar/wrappers'
-
-// const base64url = require('base64url')
-
-// const JSONbig = require('json-bigint')
+import { store } from './util'
+// import { store } from 'quasar/wrappers'
 
 /* état de session */
 export const data = {
@@ -141,7 +137,7 @@ export class Compte {
   }
 
   av (id) {
-    return this.mac[base64url(id)]
+    return this.mac[crypt.id2s(id)]
   }
 }
 
@@ -173,7 +169,7 @@ export class NomAvatar {
 
   initNomc (nomc) {
     this.nomc = nomc
-    const i = nomc.lastIndexof('@')
+    const i = nomc.lastIndexOf('@')
     this.nom = nomc.substring(0, i)
     this.rnd = nomc.substring(i + 1)
     const x = base64url.toBuffer(this.rnd)
@@ -217,6 +213,87 @@ export class Avatar {
     this.cva = crypt.crypter(this.nomAvatar.cle, avatarCvaType.toBuffer(this.cv))
     this.lctk = crypt.crypter(data.clek, avatarLctType.toBuffer(this.lct))
     return rowTypes.rowSchemas.avatar.toBuffer()
+  }
+}
+
+/** cvIdb ************************************/
+const cvIdb = avro.Type.forSchema({
+  name: 'cvIdb',
+  type: 'record',
+  fields: [
+    { name: 'id', type: 'long' },
+    { name: 'vcv', type: 'int' },
+    { name: 'st', type: 'int' }, // négatif, avatar supprimé / disparu, 0:OK, 1:alerte
+    { name: 'nomc', type: 'string' },
+    { name: 'photo', type: 'string' },
+    { name: 'texte', type: 'string' }
+  ]
+})
+
+export class Cv {
+  initCreate (id, vcv, st, nomc, cvbytes) {
+    this.id = id
+    this.sid = crypt.id2s(this.id)
+    this.vcv = vcv
+    this.st = st
+    this.nomc = nomc
+    this.nomAvatar = new NomAvatar().initNomc(nomc)
+    const x = Array.isArray(cvbytes) ? cvbytes : crypt.decrypter(this.na.cle, cvbytes)
+    this.photo = x[0]
+    this.texte = x[1]
+    return this
+  }
+
+  fromAvatar (av) { // av : objet Avatar
+    this.id = av.id
+    this.sid = av.sid
+    this.vcv = av.vcv
+    this.st = av.st
+    this.nomAvatar = av.nomAvatar
+    this.nomc = this.nomAvatar.nomc
+    this.photo = av.cv[0]
+    this.texte = av.cv[1]
+    return this
+  }
+
+  /*
+  name: 'rowCv',
+  type: 'record',
+  fields: [
+    { name: 'id', type: 'long' },
+    { name: 'vcv', type: 'int' },
+    { name: 'st', type: 'int' }, // négatif, avatar supprimé / disparu, 0:OK, 1:alerte
+    { name: 'serial', type: ['null', 'bytes'], default: null }
+  ]
+  */
+  fromRow (row, nomc) { // row : rowCv - item retour de sync
+    this.id = row.id
+    this.sid = crypt.id2s(this.id)
+    this.vcv = row.vcv
+    this.st = row.cv
+    this.nomc = nomc
+    this.na = new NomAvatar().initNomc(nomc)
+    const x = crypt.decrypter(this.na.cle, row.serial)
+    this.photo = x[0]
+    this.texte = x[1]
+    return this
+  }
+
+  serialIdb () {
+    return crypt.crypter(data.clek, cvIdb.toBuffer(this))
+  }
+
+  fromIdb (rowIdb) {
+    const row = crypt.decrypter(data.clex, cvIdb.fromBuffer(rowIdb))
+    this.id = row.id
+    this.sid = crypt.id2s(this.id)
+    this.vcv = row.vcv
+    this.st = row.cv
+    this.nomc = row.nomc
+    this.na = new NomAvatar().initNomc(this.nomc)
+    this.photo = row.photo
+    this.texte = row.texte
+    return this
   }
 }
 

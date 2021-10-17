@@ -32,7 +32,7 @@ export default ({
 
   data () {
     return {
-      errdetail: false,
+      errdetail: true,
       errstack: false
     }
   },
