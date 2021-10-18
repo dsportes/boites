@@ -39,9 +39,8 @@
 <script>
 import { computed } from 'vue'
 import { useStore } from 'vuex'
-import { gp, cfg, affichermessage, afficherdiagnostic } from '../app/util'
-import { connexion, deconnexion } from '../app/operations'
-import * as CONST from '../store/constantes'
+import { gp, cfg, affichermessage } from '../app/util'
+import { deconnexion, connexionCompte } from '../app/operations'
 import PhraseSecrete from '../components/PhraseSecrete.vue'
 import DialogueCreationCompte from '../components/DialogueCreationCompte.vue'
 
@@ -83,26 +82,9 @@ export default ({
 
     async connecter (ps) {
       if (!ps) return
-      const ret = await connexion(ps)
-      console.log('Retour sessionId: ' + ret.sessionId + ' - ' + new Date(Math.floor(ret.dh / 1000)).toISOString())
-      switch (ret.status) {
-        case 0 : {
-          affichermessage('Compte authentifié et connecté', false)
-          this.$router.push('/' + this.org + '/compte')
-          break
-        }
-        case -1 : {
-          afficherdiagnostic('Erreur technique, tenter à nouveau l\'opération')
-          break
-        }
-        case 1 : {
-          if (this.mode === CONST.MODE_AVION) {
-            afficherdiagnostic('<p>Aucun compte n\'est enregistré sur cet appareil avec cette phrase secréte</p>')
-          } else {
-            afficherdiagnostic('<p>Aucun compte n\'est enregistré avec cette phrase secréte</p>')
-          }
-        }
-      }
+      await connexionCompte(ps)
+      affichermessage('Compte authentifié et connecté', false)
+      this.$router.push('/' + this.org + '/compte')
     }
   },
 

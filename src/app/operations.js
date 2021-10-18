@@ -1,5 +1,5 @@
 import { store, post /*, cfg */ } from './util'
-import { newSession } from './ws'
+import { newSession, session } from './ws'
 import { Idb, deleteIDB } from './db.js'
 
 import * as CONST from '../store/constantes'
@@ -11,6 +11,10 @@ const rowTypes = require('./rowTypes')
 
 export async function deconnexion () {
   store().commit('ui/majstatuslogin', false)
+  data.clek = null
+  data.ps = null
+  data.dh = 0
+  session.ws.close()
 }
 
 /* On poste :
@@ -43,13 +47,10 @@ export async function creationCompte (mdp, ps, nom, quotas) {
   let ret
   try {
     const args = { sessionId: s.sessionId, mdp64: mdp.mdp64, q1: quotas.q1, q2: quotas.q2, qm1: quotas.qm1, qm2: quotas.qm2, clePub: kp.publicKey, rowCompte: rowCompte, rowAvatar }
-    ret = await post('m1', 'creationCompte', args, 'creation de compte sans parrain ...', 'respBase1')
+    ret = await post('m1', 'creationCompte', args, 'creation de compte sans parrain ...')
+    store().commit('ui/majstatuslogin', true)
   } catch (e) {
-    store().commit('ui/majstatuslogin', false)
-    data.clek = null
-    data.ps = null
-    data.dh = 0
-    s.close()
+    deconnexion()
     throw e
   }
 
@@ -106,25 +107,57 @@ export async function creationCompte (mdp, ps, nom, quotas) {
 Connexion à un compte par sa phrase secrète
 Retour : 0:OK, -1:erreur technique, 1:non authentifié
 */
-export async function connexion (ps) {
+export async function connexionCompte (ps) {
   const mode = store().state.ui.mode
-  try {
-    if (mode === CONST.MODE_AVION) {
-      console.log('connexion locale')
-      return 0
-    } else {
-      const s = await newSession()
-      console.log('connexion distante: ' + s.sessionId)
-      const args = { sessionId: s.sessionId, pcbsh: ps.pcbsh, dpbh: ps.dpbh }
-      const ret = await post('m1', 'testconnexion', args, 'Connexion ...', 'respBase1')
-      if (ret.status === 0) {
-        store().commit('ui/majstatuslogin', true)
-      } else {
-        store().commit('ui/majstatuslogin', false)
-      }
-      return ret
-    }
-  } catch (e) {
-    return { status: -1, dh: 0, sessionId: '', rows: [] }
+  if (mode === CONST.MODE_AVION) {
+    await connexionCompteAvion(ps)
+    return
   }
+  const s = await newSession()
+  console.log('connexion distante: ' + s.sessionId)
+  let ret
+  try {
+    const args = { sessionId: s.sessionId, pcbh: ps.pcbh, dpbh: ps.dpbh }
+    // eslint-disable-next-line no-unused-vars
+    ret = await post('m1', 'connexionCompte', args, 'Connexion compte ...')
+    store().commit('ui/majstatuslogin', true)
+  } catch (e) {
+    deconnexion()
+    throw e
+  }
+
+  // PROVISOIRE, pour test simple
+  // maj du modèle en mémoire
+  if (data.dh < ret.dh) data.dh = ret.dh
+  data.ps = ps
+
+  // obtenir le compte
+  let compte, rowCompte
+  ret.rowItems.forEach(item => {
+    if (item.table === 'compte') {
+      rowCompte = rowTypes.fromBuffer('compte', item.serial)
+      compte = new Compte().fromRow(rowCompte)
+    }
+  })
+  store().commit('db/setCompte', compte)
+
+  // TODO
+  if (store().getters['ui/modesync']) {
+    const org = store().state.ui.org
+    const nombase = org + '-' + compte.sid
+    const lstk = org + '-' + ps.dpbh
+    try {
+      localStorage.setItem(lstk, compte.sid)
+      const db = new Idb(nombase)
+      await db.open()
+    } catch (e) {
+      console.log(e.toString())
+      throw e
+    }
+  }
+}
+
+async function connexionCompteAvion (ps) {
+  console.log('connexion locale')
+  // TODO
 }

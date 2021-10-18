@@ -3,7 +3,7 @@
     <h6>Compte : {{compte.sid}}</h6>
     <h6>Liste des avatars du compte</h6>
     <div v-for="e in compte.mac" :key="e.na.id">
-        <div>{{e.na.id}} - {{e.nomc}} {{e.cpriv}}</div>
+        <div>{{e.na.id}} - {{e.nomc}} {{e.cpriv.length}}</div>
     </div>
     <h6>Liste des avatars</h6>
     <div v-for="av in avatars" :key="av.id">
