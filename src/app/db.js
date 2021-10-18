@@ -16,14 +16,14 @@ export class Idb {
     return {
       compte: 'id',
       avatar: 'id',
-      invitgr: 'niv,id',
+      invitgr: '[id+ni]',
       contact: '[id+ic]',
-      invitct: 'cch,id',
+      invitct: '[id+ni]',
       parrain: 'pph,id',
       rencontre: 'prh,id',
       groupe: 'id',
       membre: '[id+im]',
-      secret: 'ids,id',
+      secret: '[id+ns]',
       cv: 'id'
     }
   }
