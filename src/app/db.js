@@ -75,55 +75,53 @@ export class Idb {
   }
 
   /*
-  Mise à jour (put ou delete) d'une liste d'items {table: ..., serial: ..., row: ...}
-  - serial : le binaire des données
-  - row : l'objet désérialisé
+  Mise à jour (put ou delete) d'une liste d'objets (compte, avatar, etc.)
   */
-  async commitRows (items) {
+  async commitRows (lobj) {
     await this.db.transaction('rw', this.constructor.tables, async () => {
-      for (let i = 0; i < items.length; i++) {
-        const item = items[i]
-        const suppr = item.row.st !== undefined && item.row.st < 0
-        switch (item.table) {
+      for (let i = 0; i < lobj.length; i++) {
+        const obj = lobj[i]
+        const suppr = obj.st !== undefined && obj.st < 0
+        switch (obj.table) {
           case 'compte' : {
-            await this.db.compte.put({ id: 1, data: item.serial })
-            if (cfg().debug) console.log(suppr ? 'del' : 'put' + ' compte - ' + item.row.id)
+            await this.db.compte.put({ id: 1, data: obj.toIdb })
+            if (cfg().debug) console.log(suppr ? 'del' : 'put' + ' compte - ' + obj.sid)
             break
           }
           case 'avatar' : {
             if (!suppr) {
-              await this.db.avatar.put({ id: item.row.id, data: item.serial })
+              await this.db.avatar.put({ id: obj.id, data: obj.toIdb })
             } else {
-              await this.db.avatar.delete(item.row.id)
+              await this.db.avatar.delete(obj.id)
             }
-            if (cfg().debug) console.log(suppr ? 'del' : 'put' + ' avatar - ' + item.row.id)
+            if (cfg().debug) console.log(suppr ? 'del' : 'put' + ' avatar - ' + obj.sid)
             break
           }
           case 'membre' : {
             if (!suppr) {
-              await this.db.invitgr.put({ id: item.row.niv, im: item.row.im, data: item.serial })
+              await this.db.membre.put({ id: obj.id, im: obj.im, data: obj.toIdb })
             } else {
-              await this.db.invitgr.delete([item.row.id, item.row.im])
+              await this.db.membre.delete([obj.id, obj.im])
             }
-            if (cfg().debug) console.log(suppr ? 'del' : 'put' + ' membre - ' + item.row.id + ' / ' + item.row.im)
+            if (cfg().debug) console.log(suppr ? 'del' : 'put' + ' membre - ' + obj.sid + ' / ' + obj.im)
             break
           }
           case 'cv' : {
             if (!suppr) {
-              await this.db.cv.put({ id: item.row.id, data: item.serial })
+              await this.db.cv.put({ id: obj.id, data: obj.toIdb })
             } else {
-              await this.db.cv.delete(item.row.id)
+              await this.db.cv.delete(obj.id)
             }
-            if (cfg().debug) console.log(suppr ? 'del' : 'put' + ' cv - ' + item.row.id)
+            if (cfg().debug) console.log(suppr ? 'del' : 'put' + ' cv - ' + obj.sid)
             break
           }
           case 'invitgr' : {
             if (!suppr) {
-              await this.db.invitgr.put({ niv: item.row.niv, id: item.row.id, data: item.serial })
+              await this.db.invitgr.put({ id: obj.id, ni: obj.ni, data: obj.toIdb })
             } else {
-              await this.db.invitgr.delete(item.niv)
+              await this.db.invitgr.delete([obj.id, obj.ni])
             }
-            if (cfg().debug) console.log(suppr ? 'del' : 'put' + ' invitgr - ' + item.row.niv)
+            if (cfg().debug) console.log(suppr ? 'del' : 'put' + ' invitgr - ' + obj.sid + ' / ' + obj.ni)
             break
           }
         }

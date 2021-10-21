@@ -36,17 +36,18 @@ Retour:
 export async function creationCompte (mdp, ps, nom, quotas) {
   const s = await newSession() // store().state.ui.session
   data.ps = ps
-  data.clek = crypt.random(32)
-  const nomAvatar = new NomAvatar().initNom(nom)
   const kp = await crypt.genKeyPair()
-  let compte = new Compte().initCreate(nomAvatar, kp.privateKey)
-  let rowCompte = rowTypes.rowSchemas.compte.toBuffer(compte)
-  let avatar = new Avatar().initCreate(nomAvatar, data.clek)
-  let rowAvatar = rowTypes.rowSchemas.avatar.toBuffer(avatar)
+  const nomAvatar = new NomAvatar(nom, true) // nouveau
+  let compte = new Compte().nouveau(nomAvatar, kp.privateKey)
+  data.clek = compte.k
+  let rowCompte = compte.toRow
+  store().commit('db/setCompte', compte)
+  let avatar = new Avatar(nomAvatar)
+  let rowAvatar = avatar.toRow
 
   let ret
   try {
-    const args = { sessionId: s.sessionId, mdp64: mdp.mdp64, q1: quotas.q1, q2: quotas.q2, qm1: quotas.qm1, qm2: quotas.qm2, clePub: kp.publicKey, rowCompte: rowCompte, rowAvatar }
+    const args = { sessionId: s.sessionId, mdp64: mdp.mdp64, q1: quotas.q1, q2: quotas.q2, qm1: quotas.qm1, qm2: quotas.qm2, clePub: kp.publicKey, rowCompte, rowAvatar }
     ret = await post('m1', 'creationCompte', args, 'creation de compte sans parrain ...')
     store().commit('ui/majstatuslogin', true)
   } catch (e) {
@@ -88,11 +89,7 @@ export async function creationCompte (mdp, ps, nom, quotas) {
       localStorage.setItem(lstk, compte.sid)
       const db = new Idb(nombase)
       await db.open()
-      await db.commitRows([
-        { table: 'compte', row: compte, serial: rowCompte },
-        { table: 'avatar', row: avatar, serial: rowAvatar },
-        { table: 'cv', row: cv, serial: cv.serialIdb() }
-      ])
+      await db.commitRows([compte, avatar, cv])
     } catch (e) {
       console.log(e.toString())
       deleteIDB(nombase)
@@ -105,7 +102,6 @@ export async function creationCompte (mdp, ps, nom, quotas) {
 
 /*
 Connexion à un compte par sa phrase secrète
-Retour : 0:OK, -1:erreur technique, 1:non authentifié
 */
 export async function connexionCompte (ps) {
   const mode = store().state.ui.mode
@@ -132,10 +128,10 @@ export async function connexionCompte (ps) {
   data.ps = ps
 
   // obtenir le compte
-  let compte, rowCompte
+  let compte
   ret.rowItems.forEach(item => {
     if (item.table === 'compte') {
-      rowCompte = rowTypes.fromBuffer('compte', item.serial)
+      const rowCompte = rowTypes.fromBuffer('compte', item.serial)
       compte = new Compte().fromRow(rowCompte)
     }
   })

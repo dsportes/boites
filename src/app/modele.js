@@ -79,6 +79,21 @@ const compteMmcType = avro.Type.forSchema({ // map des avatars du compte
   values: 'string'
 })
 
+const idbCompte = avro.Type.forSchema({
+  name: 'idbCompte',
+  type: 'record',
+  fields: [
+    { name: 'id', type: 'long' },
+    { name: 'v', type: 'int' },
+    { name: 'dds', type: 'int' },
+    { name: 'dpbh', type: 'long' },
+    { name: 'pcbh', type: 'long' },
+    { name: 'k', type: 'bytes' },
+    { name: 'mac', type: compteMacType },
+    { name: 'mmc', type: compteMmcType }
+  ]
+})
+
 /*
   fields: [
     { name: 'id', type: 'long' }, // pk
@@ -91,59 +106,117 @@ const compteMmcType = avro.Type.forSchema({ // map des avatars du compte
     { name: 'mmck', type: 'bytes' }
   ]
 */
+
 export class Compte {
-  initCreate (nomAvatar, cpriv) {
+  get table () { return 'compte' }
+
+  nouveau (nomAvatar, cpriv) {
     this.id = crypt.rnd6()
-    const sid = crypt.id2s(this.id)
     this.v = 0
     this.dds = 0
     this.dpbh = data.ps.dpbh
     this.pcbh = data.ps.pcbh
-    this.k = data.clek
-    this.kx = crypt.crypter(data.ps.pcb, this.k)
+    this.k = crypt.random(32)
     this.mac = { }
-    this.mac[crypt.id2s(nomAvatar.id)] = { nomc: nomAvatar.nomc, na: nomAvatar, cpriv: cpriv }
-    this.mack = crypt.crypter(data.clek, compteMacType.toBuffer(this.mac))
+    this.mac[nomAvatar.sid] = { na: nomAvatar, cpriv: cpriv }
     this.mmc = {}
-    this.mmck = crypt.crypter(data.clek, compteMmcType.toBuffer(this.mmc))
     return this
   }
 
-  fromRow (row) { // item désérialisé
+  get sid () { return crypt.id2s(this.id) }
+
+  fromRow (row) {
     this.id = row.id
-    this.sid = crypt.id2s(this.id)
     this.v = row.v
     this.dds = row.dds
     this.dpbh = row.dpbh
     this.pcbh = row.pcbh
-    this.kx = row.kx
-    this.k = crypt.decrypter(data.ps.pcb, this.kx)
-    data.clek = this.k
-    this.mmck = row.mmck
-    this.mack = row.mack
-    this.mmc = compteMmcType.fromBuffer(crypt.decrypter(data.clek, this.mmck))
-    this.mac = compteMacType.fromBuffer(crypt.decrypter(data.clek, this.mack))
+    this.k = crypt.decrypter(data.ps.pcb, row.kx)
+    this.mmc = compteMmcType.fromBuffer(crypt.decrypter(this.k, row.mmck))
+    this.mac = compteMacType.fromBuffer(crypt.decrypter(this.k, row.mack))
     for (const sid in this.mac) {
       const x = this.mac[sid]
-      x.na = new NomAvatar().initNomc(x.nomc)
+      x.na = new NomAvatar(x.nomc)
+      delete x.nomc
     }
     return this
   }
 
-  serial () { // après maj éventuelle de mac et / mmc
-    this.mmck = crypt.crypter(data.clek, compteMmcType.toBuffer(this.mmc))
-    this.mack = crypt.crypter(data.clek, compteMacType.toBuffer(this.mac))
-    return rowTypes.rowSchemas.compte.toBuffer()
+  fromIdb (idb) {
+    const row = idbCompte.fromBuffer(idb)
+    this.id = row.id
+    this.v = row.v
+    this.dds = row.dds
+    this.dpbh = row.dpbh
+    this.pcbh = row.pcbh
+    this.k = row.k
+    this.mmc = row.mmc
+    this.mac = row.mac
+    for (const sid in this.mac) {
+      const x = this.mac[sid]
+      x.na = new NomAvatar(x.nomc)
+      delete x.nomc
+    }
+    return this
   }
+
+  get toRow () { // après maj éventuelle de mac et / ou mmc
+    this.mmck = crypt.crypter(data.clek, compteMmcType.toBuffer(this.mmc))
+    for (const sid in this.mac) {
+      const x = this.mac[sid]
+      x.nomc = x.na.nomc
+    }
+    this.mack = crypt.crypter(data.clek, compteMacType.toBuffer(this.mac))
+    for (const sid in this.mac) {
+      const x = this.mac[sid]
+      delete x.nomc
+    }
+    const buf = rowTypes.rowSchemas.compte.toBuffer()
+    delete this.mack
+    delete this.mmck
+    return buf
+  }
+
+  get toIdb () {
+    for (const sid in this.mac) {
+      const x = this.mac[sid]
+      x.nomc = x.na.nomc
+    }
+    return idbCompte.toBuffer(this)
+  }
+
+  get clone () { return new Compte().fromIdb(this.toIdb) }
 
   av (id) {
     return this.mac[crypt.id2s(id)]
   }
 }
 
+/** NomAvatar **********************************/
+export class NomAvatar {
+  constructor (n, nouveau) {
+    if (nouveau) {
+      this.rndb = crypt.random(15)
+      this.nom = n
+    } else {
+      const i = n.lastIndexOf('@')
+      this.nom = n.substring(0, i)
+      this.rndb = base64url.toBuffer(n.substring(i + 1))
+    }
+  }
+
+  get id () { return crypt.hashBin(this.rndb) }
+
+  get nomc () { return this.nom + '@' + base64url(this.rndb) }
+
+  get sid () { return crypt.id2s(this.id) }
+
+  get cle () { return crypt.sha256(this.rndb) }
+}
+
 /** Avatar **********************************/
 const avatarCvaType = avro.Type.forSchema({ type: 'array', items: 'string' })
-const avatarLctType = avro.Type.forSchema({ type: 'array', items: 'int' })
+const avatarLctType = avro.Type.forSchema({ type: 'array', items: 'long' })
 /*
   fields: [
     { name: 'id', type: 'long' }, // pk
@@ -156,63 +229,78 @@ const avatarLctType = avro.Type.forSchema({ type: 'array', items: 'int' })
   ]
 */
 
-export class NomAvatar {
-  initNom (nom) {
-    this.nom = nom
-    const x = crypt.random(15)
-    this.rnd = base64url(x)
-    this.id = crypt.hashBin(x)
-    this.cle = crypt.sha256(x)
-    this.nomc = this.nom + '@' + this.rnd
-    return this
-  }
-
-  initNomc (nomc) {
-    this.nomc = nomc
-    const i = nomc.lastIndexOf('@')
-    this.nom = nomc.substring(0, i)
-    this.rnd = nomc.substring(i + 1)
-    const x = base64url.toBuffer(this.rnd)
-    this.cle = crypt.sha256(x)
-    this.id = crypt.hashBin(x)
-    return this
-  }
-}
+const idbAvatar = avro.Type.forSchema({
+  name: 'idbAvatar',
+  type: 'record',
+  fields: [
+    { name: 'id', type: 'long' },
+    { name: 'v', type: 'int' },
+    { name: 'st', type: 'int' },
+    { name: 'vcv', type: 'int' },
+    { name: 'dds', type: 'int' },
+    { name: 'photo', type: 'string' },
+    { name: 'info', type: 'string' },
+    { name: 'lct', type: avatarLctType }
+  ]
+})
 
 export class Avatar {
-  initCreate (nomAvatar) {
-    this.nomAvatar = nomAvatar
-    this.id = nomAvatar.id
+  get table () { return 'avatar' }
+
+  nouveau (nomAvatar) {
+    this.na = nomAvatar
+    this.id = this.na.id
     this.v = 0
     this.st = 0
     this.vcv = 0
     this.dds = 0
-    this.cv = ['', nomAvatar.nomc]
-    this.cva = crypt.crypter(nomAvatar.cle, avatarCvaType.toBuffer(this.cv))
+    this.photo = ''
+    this.info = this.na.nomc
     this.lct = []
-    this.lctk = crypt.crypter(data.clek, avatarLctType.toBuffer(this.lct))
     return this
   }
 
-  fromRow (row) { // item désérialisé
+  fromRow (row) {
     this.id = row.id
-    this.nomAvatar = avc(this.id).na
-    this.sid = crypt.id2s(this.id)
+    this.na = avc(this.id).na
     this.v = row.v
     this.st = row.st
     this.vcv = row.vcv
     this.dds = row.dds
-    this.cva = row.cva
-    this.cv = avatarCvaType.fromBuffer(crypt.decrypter(this.nomAvatar.cle, this.cva))
-    this.lctk = row.lctk
-    this.lct = avatarLctType.fromBuffer(crypt.decrypter(data.clek, this.lctk))
+    const x = avatarCvaType.fromBuffer(crypt.decrypter(this.na.cle, row.cva))
+    this.photo = x[0]
+    this.info = x[1]
+    this.lct = avatarLctType.fromBuffer(crypt.decrypter(data.clek, row.lctk))
     return this
   }
 
-  serial () { // après maj éventuelle de cv et / ou lct
-    this.cva = crypt.crypter(this.nomAvatar.cle, avatarCvaType.toBuffer(this.cv))
+  get sid () { return crypt.id2s(this.id) }
+
+  get toRow () { // après maj éventuelle de cv et / ou lct
+    this.cva = crypt.crypter(this.na.cle, avatarCvaType.toBuffer([this.photo, this.info]))
     this.lctk = crypt.crypter(data.clek, avatarLctType.toBuffer(this.lct))
-    return rowTypes.rowSchemas.avatar.toBuffer()
+    const buf = rowTypes.rowSchemas.avatar.toBuffer(this)
+    delete this.cva
+    delete this.lctk
+    return buf
+  }
+
+  get toIdb () {
+    return idbAvatar.toBuffer(this)
+  }
+
+  fromIdb (idb) {
+    const row = idbAvatar.fromBuffer(idb)
+    this.id = row.id
+    this.na = avc(this.id).na
+    this.v = row.v
+    this.st = row.st
+    this.vcv = row.vcv
+    this.dds = row.dds
+    this.photo = row.photo
+    this.info = row.info
+    this.lct = row.lct
+    return this
   }
 }
 
@@ -226,33 +314,30 @@ const cvIdb = avro.Type.forSchema({
     { name: 'st', type: 'int' }, // négatif, avatar supprimé / disparu, 0:OK, 1:alerte
     { name: 'nomc', type: 'string' },
     { name: 'photo', type: 'string' },
-    { name: 'texte', type: 'string' }
+    { name: 'info', type: 'string' }
   ]
 })
 
 export class Cv {
-  initCreate (id, vcv, st, nomc, cvbytes) {
+  constructor (id, vcv, st, nomc, photo, info) {
     this.id = id
-    this.sid = crypt.id2s(this.id)
     this.vcv = vcv
     this.st = st
-    this.nomc = nomc
-    this.nomAvatar = new NomAvatar().initNomc(nomc)
-    const x = Array.isArray(cvbytes) ? cvbytes : crypt.decrypter(this.na.cle, cvbytes)
-    this.photo = x[0]
-    this.texte = x[1]
+    this.na = new NomAvatar(nomc)
+    this.photo = photo
+    this.info = info
     return this
   }
 
+  get sid () { return crypt.id2s(this.id) }
+
   fromAvatar (av) { // av : objet Avatar
     this.id = av.id
-    this.sid = av.sid
     this.vcv = av.vcv
     this.st = av.st
-    this.nomAvatar = av.nomAvatar
-    this.nomc = this.nomAvatar.nomc
-    this.photo = av.cv[0]
-    this.texte = av.cv[1]
+    this.na = av.na
+    this.photo = av.photo
+    this.info = av.info
     return this
   }
 
@@ -268,29 +353,26 @@ export class Cv {
   */
   fromRow (row, nomc) { // row : rowCv - item retour de sync
     this.id = row.id
-    this.sid = crypt.id2s(this.id)
     this.vcv = row.vcv
     this.st = row.cv
     this.nomc = nomc
-    this.na = new NomAvatar().initNomc(nomc)
+    this.na = new NomAvatar(nomc)
     const x = crypt.decrypter(this.na.cle, row.serial)
     this.photo = x[0]
     this.texte = x[1]
     return this
   }
 
-  serialIdb () {
-    return crypt.crypter(data.clek, cvIdb.toBuffer(this))
+  get toIdb () {
+    return cvIdb.toBuffer(this)
   }
 
-  fromIdb (rowIdb) {
-    const row = crypt.decrypter(data.clex, cvIdb.fromBuffer(rowIdb))
+  fromIdb (idb) {
+    const row = cvIdb.fromBuffer(idb)
     this.id = row.id
-    this.sid = crypt.id2s(this.id)
     this.vcv = row.vcv
-    this.st = row.cv
-    this.nomc = row.nomc
-    this.na = new NomAvatar().initNomc(this.nomc)
+    this.st = row.st
+    this.na = new NomAvatar(row.nomc)
     this.photo = row.photo
     this.texte = row.texte
     return this
