@@ -1,3 +1,4 @@
+import { NomAvatar, Cv } from '../../app/modele'
 /*
 export function avatar (state, val) {
   if (typeof val === 'string') {
@@ -23,10 +24,15 @@ export function setAvatars (state, val) { // val : array d'objets Avatar
   state.avatars = { ...x }
 }
 
-export function setCvs (state, val) { // val : array d'objets Cv
+export function setCvs (state, val) { // val : array d'objets Cv OU NomAvatar
   const x = state.cvs
   val.forEach(c => {
-    x[c.sid] = c
+    if (c instanceof NomAvatar) {
+      if (x[c.sid]) x[c.sid] = new Cv().fromNomAvatar(c)
+    } else {
+      const y = x[c.sid]
+      if (!y || y.vcv < c.vcv) x[c.sid] = c
+    }
   })
   state.cvs = { ...x }
 }

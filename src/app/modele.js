@@ -350,6 +350,15 @@ export class Cv {
     return this
   }
 
+  fromNomAvatar (na) {
+    this.id = na.id
+    this.vcv = 0
+    this.st = 0
+    this.na = na
+    this.photo = ''
+    this.info = na.nomc
+  }
+
   get sid () { return crypt.id2s(this.id) }
 
   fromAvatar (av) { // av : objet Avatar
@@ -399,6 +408,120 @@ export class Cv {
     this.na = new NomAvatar(row.nomc)
     this.photo = row.photo
     this.texte = row.texte
+    return this
+  }
+}
+
+/** contact **********************************/
+const contactData = avro.Type.forSchema({ // map des avatars du compte
+  type: 'map',
+  values: avro.Type.forSchema({
+    name: 'contactData',
+    type: 'record',
+    fields: [
+      { name: 'nomc', type: 'string' },
+      { name: 'cc', type: 'bytes' },
+      { name: 'dlv', type: 'int' },
+      { name: 'pph', type: 'long' },
+      { name: 'nomc', type: 'string' },
+      { name: 'mc', type: { type: 'array', items: 'string' } }
+    ]
+  })
+})
+
+const idbContact = avro.Type.forSchema({
+  name: 'idbContact',
+  type: 'record',
+  fields: [
+    { name: 'id', type: 'long' },
+    { name: 'ic', type: 'int' },
+    { name: 'v', type: 'int' },
+    { name: 'st', type: 'int' }, // négatif, avatar supprimé / disparu, 0:OK, 1:alerte
+    { name: 'q1', type: 'long' },
+    { name: 'q2', type: 'long' },
+    { name: 'qm1', type: 'long' },
+    { name: 'qm2', type: 'long' },
+    { name: 'ard', type: 'string' },
+    { name: 'icb', type: 'int' },
+    { name: 'data', type: contactData }
+  ]
+})
+
+/*
+  name: 'rowContact',
+  type: 'record',
+  fields: [
+    { name: 'id', type: 'long' }, // pk 1
+    { name: 'ic', type: 'int' }, // pk 2
+    { name: 'v', type: 'int' },
+    { name: 'st', type: 'int' },
+    { name: 'q1', type: 'long' },
+    { name: 'q2', type: 'long' },
+    { name: 'qm1', type: 'long' },
+    { name: 'qm2', type: 'long' },
+    { name: 'ardc', type: 'bytes' },
+    { name: 'icbc', type: 'bytes' },
+    { name: 'datak', type: 'bytes' }
+  ]
+  - `ardc` : **ardoise** partagée entre A et B cryptée par la clé `cc` associée au contact _fort_ avec un avatar B.
+  - `icbc` : pour un contact fort _accepté_, indice de A chez B (communiqué lors de l'acceptation par B) pour mise à jour dédoublée de l'ardoise et du statut, crypté par la clé `cc`.
+  - `datak` : information cryptée par la clé K de A.
+    - `nomc` : nom complet de l'avatar `nom@rnd`.
+    - `cc` : 32 bytes aléatoires donnant la clé `cc` d'un contact _fort_ avec B (en attente ou accepté).
+    - `dlv` : date limite de validité de l'invitation à être contact _fort_ ou du parrainage.
+    - `pph` : hash du PBKFD2 de la phrase de parrainage.
+    - `info` : information libre donnée par A à propos du contact.
+    - `mc` : liste des mots clés associés par A au contact.
+*/
+
+export class Contact {
+  get table () { return 'contact' }
+
+  get sidIc () { return [crypt.id2s(this.id), this.ic] }
+
+  fromRow (row) {
+    this.id = row.id
+    this.ic = row.ic
+    this.v = row.v
+    this.st = row.st
+    this.q1 = row.q1
+    this.q2 = row.q2
+    this.qm1 = row.qm1
+    this.qm2 = row.qm2
+    this.data = contactData.fromBuffer(crypt.decrypter(data.clek, row.datak))
+    this.ard = Buffer.from(crypt.decrypter(this.data.cc, row.ardc)).toString()
+    this.icb = crypt.u8ToInt(crypt.decrypter(this.data.cc, row.icbc))
+    return this
+  }
+
+  get toRow () {
+    this.datak = crypt.crypter(data.clek, contactData.toBuffer(this.data))
+    this.ardc = crypt.crypter(this.data.cc, this.ard)
+    this.icbc = crypt.crypter(this.data.cc, crypt.int2u8(this.icb))
+    const buf = rowTypes.rowSchemas.contact.toBuffer(this)
+    delete this.datak
+    delete this.icbc
+    delete this.ardc
+    return buf
+  }
+
+  get toIdb () {
+    return idbContact.toBuffer(this)
+  }
+
+  fromIdb (idb) {
+    const row = idbContact.fromBuffer(idb)
+    this.id = row.id
+    this.ic = row.ic
+    this.v = row.v
+    this.st = row.st
+    this.q1 = row.q1
+    this.q2 = row.q2
+    this.qm1 = row.qm1
+    this.qm2 = row.qm2
+    this.data = row.data
+    this.ard = row.ard
+    this.icb = row.icb
     return this
   }
 }
