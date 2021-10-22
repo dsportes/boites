@@ -61,6 +61,23 @@ export class Quotas {
   }
 }
 
+export function rowItemsToRows (rowItems) {
+  const rows = {}
+  function addRow (row) {
+    if (!rows[row.table]) rows[row.table] = []
+    rows[row.table].push(row)
+  }
+  let rowBuf
+  rowItems.forEach(item => {
+    rowBuf = rowTypes.fromBuffer(item.table, item.serial)
+    switch (item.table) {
+      case 'compte' : { addRow(new Compte().fromRow(rowBuf)); break }
+      case 'avatar' : { addRow(new Avatar().fromRow(rowBuf)); break }
+    }
+  })
+  return rows
+}
+
 /** Compte **********************************/
 const compteMacType = avro.Type.forSchema({ // map des avatars du compte
   type: 'map',
@@ -171,9 +188,11 @@ export class Compte {
       const x = this.mac[sid]
       delete x.nomc
     }
-    const buf = rowTypes.rowSchemas.compte.toBuffer()
+    this.kx = crypt.crypter(data.ps.pcb, this.k)
+    const buf = rowTypes.rowSchemas.compte.toBuffer(this)
     delete this.mack
     delete this.mmck
+    delete this.kx
     return buf
   }
 
@@ -319,7 +338,9 @@ const cvIdb = avro.Type.forSchema({
 })
 
 export class Cv {
-  constructor (id, vcv, st, nomc, photo, info) {
+  get table () { return 'cv' }
+
+  nouveau (id, vcv, st, nomc, photo, info) {
     this.id = id
     this.vcv = vcv
     this.st = st
@@ -364,7 +385,10 @@ export class Cv {
   }
 
   get toIdb () {
-    return cvIdb.toBuffer(this)
+    this.nomc = this.na.nomc
+    const buf = cvIdb.toBuffer(this)
+    delete this.nomc
+    return buf
   }
 
   fromIdb (idb) {

@@ -3,7 +3,7 @@ import { newSession, session } from './ws'
 import { Idb, deleteIDB } from './db.js'
 
 import * as CONST from '../store/constantes'
-import { NomAvatar, Compte, Avatar, data, Cv } from './modele'
+import { NomAvatar, Compte, Avatar, data, Cv, rowItemsToRows } from './modele'
 
 const crypt = require('./crypto')
 const rowTypes = require('./rowTypes')
@@ -40,10 +40,10 @@ export async function creationCompte (mdp, ps, nom, quotas) {
   const nomAvatar = new NomAvatar(nom, true) // nouveau
   let compte = new Compte().nouveau(nomAvatar, kp.privateKey)
   data.clek = compte.k
-  let rowCompte = compte.toRow
+  const rowCompte = compte.toRow
   store().commit('db/setCompte', compte)
-  let avatar = new Avatar(nomAvatar)
-  let rowAvatar = avatar.toRow
+  let avatar = new Avatar().nouveau(nomAvatar)
+  const rowAvatar = avatar.toRow
 
   let ret
   try {
@@ -58,22 +58,17 @@ export async function creationCompte (mdp, ps, nom, quotas) {
   // maj du modèle en mémoire
   if (data.dh < ret.dh) data.dh = ret.dh
 
-  // obtenir d'abord le compte PUIS l'avatar
-  ret.rowItems.forEach(item => {
-    if (item.table === 'compte') {
-      rowCompte = rowTypes.fromBuffer('compte', item.serial)
-      compte = new Compte().fromRow(rowCompte)
-    }
-  })
+  /*
+  Le compte vient d'être créé,
+  il est déjà dans le modèle et data.clek contient la clé
+  On peut désrialiser la liste d'items
+  */
+  const rows = rowItemsToRows(ret.rowItems)
+  for (const t in rows) {
+    if (t === 'compte') compte = rows[t][0]
+    if (t === 'avatar') avatar = rows[t][0]
+  }
   store().commit('db/setCompte', compte)
-
-  // PUIS l'avatar une fois le compte en vuex
-  ret.rowItems.forEach(item => {
-    if (item.table === 'avatar') {
-      rowAvatar = rowTypes.fromBuffer('avatar', item.serial)
-      avatar = new Avatar().fromRow(rowAvatar)
-    }
-  })
   store().commit('db/setAvatars', [avatar])
 
   const cv = new Cv().fromAvatar(avatar)

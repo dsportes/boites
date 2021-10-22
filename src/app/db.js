@@ -1,6 +1,8 @@
 import Dexie from 'dexie'
+import { data } from './modele'
 import { store, cfg } from './util'
 import { session } from './ws'
+const crypt = require('./crypto')
 const rowTypes = require('./rowTypes')
 
 export async function deleteIDB (nombase) {
@@ -82,15 +84,16 @@ export class Idb {
       for (let i = 0; i < lobj.length; i++) {
         const obj = lobj[i]
         const suppr = obj.st !== undefined && obj.st < 0
+        const buf = suppr ? null : crypt.crypter(obj.table === 'compte' ? data.ps.pcb : data.clek, obj.toIdb)
         switch (obj.table) {
           case 'compte' : {
-            await this.db.compte.put({ id: 1, data: obj.toIdb })
+            await this.db.compte.put({ id: 1, data: buf })
             if (cfg().debug) console.log(suppr ? 'del' : 'put' + ' compte - ' + obj.sid)
             break
           }
           case 'avatar' : {
             if (!suppr) {
-              await this.db.avatar.put({ id: obj.id, data: obj.toIdb })
+              await this.db.avatar.put({ id: obj.id, data: buf })
             } else {
               await this.db.avatar.delete(obj.id)
             }
@@ -99,7 +102,7 @@ export class Idb {
           }
           case 'membre' : {
             if (!suppr) {
-              await this.db.membre.put({ id: obj.id, im: obj.im, data: obj.toIdb })
+              await this.db.membre.put({ id: obj.id, im: obj.im, data: buf })
             } else {
               await this.db.membre.delete([obj.id, obj.im])
             }
@@ -108,7 +111,7 @@ export class Idb {
           }
           case 'cv' : {
             if (!suppr) {
-              await this.db.cv.put({ id: obj.id, data: obj.toIdb })
+              await this.db.cv.put({ id: obj.id, data: buf })
             } else {
               await this.db.cv.delete(obj.id)
             }
@@ -117,7 +120,7 @@ export class Idb {
           }
           case 'invitgr' : {
             if (!suppr) {
-              await this.db.invitgr.put({ id: obj.id, ni: obj.ni, data: obj.toIdb })
+              await this.db.invitgr.put({ id: obj.id, ni: obj.ni, data: buf })
             } else {
               await this.db.invitgr.delete([obj.id, obj.ni])
             }

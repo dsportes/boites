@@ -112,7 +112,7 @@ export default ({
     async confirmer () {
       await creationCompte(this.mdp, this.ps, this.nom, this.quotas)
       this.ps = null
-      this.msp = null
+      this.mdp = null
       this.quotas = null
       this.nom = ''
       this.step = 1
