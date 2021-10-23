@@ -113,9 +113,9 @@ const rowGroupe = avro.Type.forSchema({
     { name: 'v', type: 'int' },
     { name: 'dds', type: 'int' },
     { name: 'st', type: 'int' },
-    { name: 'cvg', type: 'bytes' },
-    { name: 'mcg', type: 'bytes' },
-    { name: 'lstmg', type: 'bytes' }
+    { name: 'cvg', type: ['null', 'bytes'] },
+    { name: 'mcg', type: ['null', 'bytes'] },
+    { name: 'lstmg', type: ['null', 'bytes'] }
   ]
 })
 
@@ -130,7 +130,7 @@ const rowInvitct = avro.Type.forSchema({
     { name: 'st', type: 'int' },
     { name: 'datap', type: ['null', 'bytes'] },
     { name: 'datak', type: ['null', 'bytes'] },
-    { name: 'ardc', type: 'bytes' }
+    { name: 'ardc', type: ['null', 'bytes'] }
   ]
 })
 
@@ -153,12 +153,13 @@ const rowMembre = avro.Type.forSchema({
   type: 'record',
   fields: [
     { name: 'id', type: 'long' }, // pk 1
-    { name: 'im', type: 'long' }, // pk 2
+    { name: 'im', type: 'int' }, // pk 2
     { name: 'v', type: 'int' },
     { name: 'st', type: 'int' },
     { name: 'dlv', type: 'int' },
-    { name: 'datag', type: 'bytes' },
-    { name: 'ardg', type: 'bytes' }
+    { name: 'datag', type: ['null', 'bytes'] },
+    { name: 'ardg', type: ['null', 'bytes'] },
+    { name: 'lmck', type: ['null', 'bytes'] }
   ]
 })
 
@@ -176,9 +177,9 @@ const rowParrain = avro.Type.forSchema({
     { name: 'q2', type: 'long' },
     { name: 'qm1', type: 'long' },
     { name: 'qm2', type: 'long' },
-    { name: 'datak', type: 'bytes' },
-    { name: 'datax', type: 'bytes' },
-    { name: 'ardc', type: 'bytes' }
+    { name: 'datak', type: ['null', 'bytes'] },
+    { name: 'datax', type: ['null', 'bytes'] },
+    { name: 'ardc', type: ['null', 'bytes'] }
   ]
 })
 
@@ -191,8 +192,8 @@ const rowRencontre = avro.Type.forSchema({
     { name: 'v', type: 'int' },
     { name: 'dlv', type: 'int' },
     { name: 'st', type: 'int' },
-    { name: 'datak', type: 'bytes' },
-    { name: 'nomcx', type: 'bytes' }
+    { name: 'datak', type: ['null', 'bytes'] },
+    { name: 'nomcx', type: ['null', 'bytes'] }
   ]
 })
 
@@ -204,10 +205,10 @@ const rowSecret = avro.Type.forSchema({
     { name: 'nc', type: 'int' }, // pk2
     { name: 'ic', type: 'int' },
     { name: 'st', type: 'int' },
-    { name: 'txts', type: 'bytes' },
-    { name: 'mcs', type: 'bytes' },
-    { name: 'aps', type: 'bytes' },
-    { name: 'dups', type: 'bytes' }
+    { name: 'txts', type: ['null', 'bytes'] },
+    { name: 'mcs', type: ['null', 'bytes'] },
+    { name: 'aps', type: ['null', 'bytes'] },
+    { name: 'dups', type: ['null', 'bytes'] }
   ]
 })
 
@@ -227,7 +228,7 @@ const rowCv = avro.Type.forSchema({
     { name: 'id', type: 'long' },
     { name: 'vcv', type: 'int' },
     { name: 'st', type: 'int' }, // négatif, avatar supprimé / disparu, 0:OK, 1:alerte
-    { name: 'serial', type: ['null', 'bytes'], default: null }
+    { name: 'phinf', type: ['null', 'bytes'], default: null }
   ]
 })
 

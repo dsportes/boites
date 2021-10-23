@@ -406,7 +406,7 @@ export class Cv {
     { name: 'id', type: 'long' },
     { name: 'vcv', type: 'int' },
     { name: 'st', type: 'int' }, // négatif, avatar supprimé / disparu, 0:OK, 1:alerte
-    { name: 'serial', type: ['null', 'bytes'], default: null }
+    { name: 'phinf', type: ['null', 'bytes'], default: null }
   ]
   */
   fromRow (row, nomc) { // row : rowCv - item retour de sync
@@ -415,9 +415,9 @@ export class Cv {
     this.st = row.cv
     this.nomc = nomc
     this.na = new NomAvatar(nomc)
-    const x = crypt.decrypter(this.na.cle, row.serial)
-    this.photo = x[0]
-    this.texte = x[1]
+    const x = row.phinf ? arrayStringType.fromBuffer(crypt.decrypter(this.na.cle, row.phinf)) : null
+    this.photo = x ? x[0] : null
+    this.info = x ? x[1] : null
     return this
   }
 
@@ -562,9 +562,9 @@ export class Contact {
     { name: 'v', type: 'int' },
     { name: 'dds', type: 'int' },
     { name: 'st', type: 'int' },
-    { name: 'cvg', type: 'bytes' },
-    { name: 'mcg', type: 'bytes' },
-    { name: 'lstmg', type: 'bytes' }
+    { name: 'cvg', type: ['null', 'bytes'] },
+    { name: 'mcg', type: ['null', 'bytes'] },
+    { name: 'lstmg', type: ['null', 'bytes'] }
   ]
 - `id` : id du groupe.
 - `v` :
@@ -585,9 +585,9 @@ const idbGroupe = avro.Type.forSchema({
     { name: 'v', type: 'int' },
     { name: 'dds', type: 'int' },
     { name: 'st', type: 'int' },
-    { name: 'cv', type: arrayStringType },
-    { name: 'mc', type: arrayIntType },
-    { name: 'lstm', type: arrayLongType }
+    { name: 'cv', type: ['null', arrayStringType] },
+    { name: 'mc', type: ['null', arrayIntType] },
+    { name: 'lstm', type: ['null', arrayLongType] }
   ]
 })
 
@@ -602,17 +602,17 @@ export class Groupe {
     this.dds = row.dds
     this.st = row.st
     const cleg = data.cleg(this.id)
-    this.cv = arrayStringType.fromBuffer(crypt.decrypter(cleg, row.cvg))
-    this.mc = arrayIntType.fromBuffer(crypt.decrypter(cleg, row.mcg))
-    this.lstm = arrayLongType.fromBuffer(crypt.decrypter(cleg, row.lstmg))
+    this.cv = row.cvg ? arrayStringType.fromBuffer(crypt.decrypter(cleg, row.cvg)) : null
+    this.mc = row.mcg ? arrayIntType.fromBuffer(crypt.decrypter(cleg, row.mcg)) : null
+    this.lstm = row.lstmg ? arrayLongType.fromBuffer(crypt.decrypter(cleg, row.lstmg)) : null
     return this
   }
 
   get toRow () {
     const cleg = data.cleg(this.id)
-    this.cvg = crypt.crypter(cleg, arrayStringType.toBuffer(this.cv))
-    this.mcg = crypt.crypter(cleg, arrayIntType.toBuffer(this.mc))
-    this.lstmg = crypt.crypter(cleg, arrayLongType.toBuffer(this.lstm))
+    this.cvg = this.cv ? crypt.crypter(cleg, arrayStringType.toBuffer(this.cv)) : null
+    this.mcg = this.mcg ? crypt.crypter(cleg, arrayIntType.toBuffer(this.mc)) : null
+    this.lstmg = this.lstm ? crypt.crypter(cleg, arrayLongType.toBuffer(this.lstm)) : null
     const buf = rowTypes.rowSchemas.groupe.toBuffer(this)
     delete this.cvg
     delete this.mcg
@@ -648,9 +648,9 @@ const rowInvitct = avro.Type.forSchema({
     { name: 'v', type: 'int' },
     { name: 'dlv', type: 'int' },
     { name: 'st', type: 'int' },
-    { name: 'datap', type: 'bytes' },
-    { name: 'datak', type: 'bytes' },
-    { name: 'ardc', type: 'bytes' }
+    { name: 'datap', type: ['null', 'bytes'] },
+    { name: 'datak', type: ['null', 'bytes'] },
+    { name: 'ardc', type: ['null', 'bytes'] }
   ]
 })
 */
@@ -679,8 +679,8 @@ const idbInvitct = avro.Type.forSchema({
     { name: 'v', type: 'int' },
     { name: 'dlv', type: 'int' },
     { name: 'st', type: 'int' },
-    { name: 'data', type: 'bytes' },
-    { name: 'ard', type: 'bytes' }
+    { name: 'data', type: ['null', 'bytes'] },
+    { name: 'ard', type: ['null', 'bytes'] }
   ]
 })
 
@@ -695,21 +695,21 @@ export class Invitct {
     this.v = row.v
     this.dlv = row.dlv
     this.st = row.st
-    let rowData
+    let rowData = null
     if (row.datak) {
       rowData = crypt.decrypter(data.clek, row.datak)
-    } else {
+    } else if (row.datap) {
       const cpriv = data.avc(this.id).cpriv
       rowData = crypt.decrypterRSA(cpriv, row.datap)
     }
-    this.data = invitctData.fromBuffer(rowData)
-    this.ard = crypt.decrypter(this.data.cc, row.ardc)
+    this.data = rowData ? invitctData.fromBuffer(rowData) : null
+    this.ard = row.ardc ? crypt.decrypter(this.data.cc, row.ardc) : null
     return this
   }
 
   get toRow () {
-    this.datak = crypt.crypter(data.clek, invitctData.toBuffer(this.data))
-    this.ardc = crypt.crypter(this.data.cc, this.ard)
+    this.datak = this.data ? crypt.crypter(data.clek, invitctData.toBuffer(this.data)) : null
+    this.ardc = this.ard ? crypt.crypter(this.data.cc, this.ard) : null
     const buf = rowTypes.rowSchemas.invitct.toBuffer(this)
     delete this.datak
     delete this.ardc
@@ -779,7 +779,7 @@ const idbInvitgr = avro.Type.forSchema({
     { name: 'v', type: 'int' },
     { name: 'dlv', type: 'int' },
     { name: 'st', type: 'int' },
-    { name: 'data', type: 'bytes' }
+    { name: 'data', type: ['null', 'bytes'] }
   ]
 })
 
@@ -788,25 +788,25 @@ export class Invitgr {
 
   get sidNi () { return [crypt.id2s(this.id), this.ni] }
 
-  fromRow (row) { // arg : JSON sérialisé
+  fromRow (row) {
     this.id = row.id
     this.ni = row.ni
     this.v = row.v
     this.dlv = row.dlv
     this.st = row.st
-    let rowData
+    let rowData = null
     if (row.datak) {
       rowData = crypt.decrypter(data.clek, row.datak)
-    } else {
+    } else if (row.datap) {
       const cpriv = data.avc(this.id).cpriv
       rowData = crypt.decrypterRSA(cpriv, row.datap)
     }
-    this.data = invitgrData.fromBuffer(rowData)
+    this.data = rowData ? invitgrData.fromBuffer(rowData) : null
     return this
   }
 
   get toRow () {
-    this.datak = crypt.crypter(data.clek, invitgrData.toBuffer(this.data))
+    this.datak = this.data ? crypt.crypter(data.clek, invitgrData.toBuffer(this.data)) : null
     const buf = rowTypes.rowSchemas.invitct.toBuffer(this)
     delete this.datak
     return buf
@@ -827,3 +827,254 @@ export class Invitgr {
     return this
   }
 }
+
+/** Membre ***********************************/
+/*
+  name: 'rowMembre',
+  type: 'record',
+  fields: [
+    { name: 'id', type: 'long' }, // pk 1
+    { name: 'im', type: 'int' }, // pk 2
+    { name: 'v', type: 'int' },
+    { name: 'st', type: 'int' },
+    { name: 'dlv', type: 'int' },
+    { name: 'datag', type: ['null', 'bytes'] },
+    { name: 'ardg', type: ['null', 'bytes'] },
+    { name: 'lmck', type: ['null', 'bytes'] }
+  ]
+
+- `id` : id du groupe.
+- `im` : numéro du membre dans le groupe.
+- `v` :
+- `st` : statut. `xy` : < 0 signifie supprimé.
+  - `x` : 1:pressenti, 2:invité, 3:ayant refusé, 3:actif, 8: résilié, 9:disparu.
+  - `y` : 0:lecteur, 1:auteur, 2:administrateur.
+- `vote` : vote de réouverture.
+- `dlv` : date limite de validité de l'invitation. N'est significative qu'en statut _invité_.
+- `datag` : données cryptées par la clé du groupe.
+  - `nomc` : nom complet de l'avatar `nom@rnd` (donne la clé d'accès à sa carte de visite)
+  - `ni` : numéro d'invitation du membre dans `invitgr` relativement à son `id` (issu de `nomc`).
+  Permet de supprimer son accès au groupe (`st < 0, datap / datak null` dans `invitgr`) quand il est résilié / disparu.
+  - `idi` : id du membre qui l'a pressenti puis invité.
+  - `q1 q2` : balance des quotas donnés / reçus par le membre au groupe.
+- `ardg` : ardoise du membre vis à vis du groupe, texte d'invitation / réponse de l'invité cryptée par la clé du groupe.
+- `lmck` : liste, cryptée par la clé k du membre, des mots clés de rangement / recherche attribués par le membre quand il est actif.
+*/
+
+const membreData = avro.Type.forSchema({ // map des avatars du compte
+  type: 'map',
+  values: avro.Type.forSchema({
+    name: 'membreData',
+    type: 'record',
+    fields: [
+      { name: 'nomc', type: 'string' },
+      { name: 'ni', type: 'int' },
+      { name: 'idi', type: 'long' },
+      { name: 'q1', type: 'long' },
+      { name: 'q2', type: 'long' }
+    ]
+  })
+})
+
+const idbMembre = avro.Type.forSchema({
+  name: 'idbMembre',
+  type: 'record',
+  fields: [
+    { name: 'id', type: 'long' },
+    { name: 'im', type: 'int' },
+    { name: 'v', type: 'int' },
+    { name: 'st', type: 'int' },
+    { name: 'dlv', type: 'int' },
+    { name: 'data', type: 'bytes' },
+    { name: 'ard', type: 'string' },
+    { name: 'lmc', type: ['null', 'bytes'] }
+  ]
+})
+
+export class Membre {
+  get table () { return 'membre' }
+
+  get sidIm () { return [crypt.id2s(this.id), this.im] }
+
+  fromRow (row) {
+    this.id = row.id
+    this.im = row.im
+    this.v = row.v
+    this.st = row.st
+    this.dlv = row.dlv
+    const cg = row.datag || row.ardg || row.lmck ? data.cleg(this.id) : null
+    const rowData = row.datag ? crypt.decrypter(cg, row.datag) : null
+    this.data = rowData ? invitgrData.fromBuffer(rowData) : null
+    this.ard = row.ardg ? Buffer.from(crypt.decrypter(cg, row.ardg)).toString() : null
+    const lmc = row.lmck ? crypt.decrypter(data.clek, row.lmck) : null
+    this.lmc = lmc ? arrayIntType.fromBuffer(lmc) : null
+    return this
+  }
+
+  get toRow () {
+    const cg = this.data || this.ard || this.lmc ? data.cleg(this.id) : null
+    this.datag = this.data ? crypt.crypter(cg, membreData.toBuffer(this.data)) : null
+    this.ardg = this.ard ? crypt.crypter(cg, this.ard) : null
+    this.lmck = this.lmc ? crypt.crypter(data.clek, arrayIntType.toBuffer(this.lmc)) : null
+    const buf = rowTypes.rowSchemas.membre.toBuffer(this)
+    delete this.datag
+    delete this.ardg
+    delete this.lmck
+    return buf
+  }
+
+  get toIdb () {
+    return idbInvitct.toBuffer(this)
+  }
+
+  fromIdb (idb) {
+    const row = idbInvitgr.fromBuffer(idb)
+    this.id = row.id
+    this.im = row.im
+    this.v = row.v
+    this.dlv = row.dlv
+    this.st = row.st
+    this.data = row.data
+    this.ard = row.ard
+    this.lmc = row.lmc
+    return this
+  }
+}
+
+/** Parrain **********************************/
+/*
+  name: 'rowParrain',
+  type: 'record',
+  fields: [
+    { name: 'pph', type: 'long' }, // pk
+    { name: 'id', type: 'long' },
+    { name: 'nc', type: 'int' },
+    { name: 'dlv', type: 'int' },
+    { name: 'st', type: 'int' },
+    { name: 'v', type: 'int' },
+    { name: 'q1', type: 'long' },
+    { name: 'q2', type: 'long' },
+    { name: 'qm1', type: 'long' },
+    { name: 'qm2', type: 'long' },
+    { name: 'datak', type: ['null', 'bytes'] },
+    { name: 'datax', type: ['null', 'bytes'] },
+    { name: 'ardc', type: ['null', 'bytes'] }
+  ]
+- `pph` : hash du PBKFD2 de la phrase de parrainage.
+- `id` : id du parrain.
+- `ic` : numéro de contact du filleul chez le parrain.
+- `dlv` : la date limite de validité permettant de purger les parrainages (quels qu'en soient les statuts).
+- `st` : 0: annulé par P, 1: en attente de décision de F, 2: accepté par F, 3: refusé par F
+- `q1 q2 qm1 qm2` : quotas donnés par P à F en cas d'acceptation.
+- `datak` : cryptée par la clé K du parrain, **phrase de parrainage et clé X** (PBKFD2 de la phrase). La clé X figure afin de ne pas avoir à recalculer un PBKFD2 en session du parrain pour qu'il puisse afficher `datax`.
+- `datax` : données de l'invitation cryptées par le PBKFD2 de la phrase de parrainage.
+  - `nomp` : `nom@rnd` nom complet de l'avatar P.
+  - `nomf` : `nom@rnd` : nom complet du filleul F (donné par P).
+  - `cc` : clé `cc` générée par P pour le couple P / F.
+- `ardc` : cryptée par la clé `cc`, *ardoise*, texte de sollicitation écrit par A pour B et/ou réponse de B.
+*/
+
+const parrainPhCx = avro.Type.forSchema({ // map des avatars du compte
+  type: 'map',
+  values: avro.Type.forSchema({
+    name: 'parrainPhCx',
+    type: 'record',
+    fields: [
+      { name: 'ph', type: 'string' },
+      { name: 'cx', type: 'bytes' }
+    ]
+  })
+})
+
+const parrainData = avro.Type.forSchema({ // map des avatars du compte
+  type: 'map',
+  values: avro.Type.forSchema({
+    name: 'parrainData',
+    type: 'record',
+    fields: [
+      { name: 'nomp', type: 'string' },
+      { name: 'nomf', type: 'string' },
+      { name: 'cc', type: 'bytes' }
+    ]
+  })
+})
+
+const idbParrain = avro.Type.forSchema({
+  name: 'idbParrain',
+  type: 'record',
+  fields: [
+    { name: 'pph', type: 'long' }, // pk
+    { name: 'id', type: 'long' },
+    { name: 'nc', type: 'int' },
+    { name: 'dlv', type: 'int' },
+    { name: 'st', type: 'int' },
+    { name: 'v', type: 'int' },
+    { name: 'q1', type: 'long' },
+    { name: 'q2', type: 'long' },
+    { name: 'qm1', type: 'long' },
+    { name: 'qm2', type: 'long' },
+    { name: 'phcx', type: ['null', parrainPhCx] },
+    { name: 'data', type: ['null', parrainData] },
+    { name: 'ard', type: ['null', 'string'] }
+  ]
+})
+
+export class Parrain {
+  get table () { return 'parrain' }
+
+  get spph () { return crypt.id2s(this.pph) }
+
+  fromRow (row) {
+    this.pph = row.pph
+    this.id = row.id
+    this.nc = row.nc
+    this.dlv = row.dlv
+    this.st = row.st
+    this.v = row.v
+    this.q1 = row.q1
+    this.q2 = row.q2
+    this.qm1 = row.qm1
+    this.qm2 = row.qm2
+    const rowDatak = row.datak ? crypt.decrypter(data.clek, row.datak) : null
+    this.phcx = rowDatak ? parrainPhCx.fromBuffer(rowDatak) : null
+    const rowDatax = row.datax && this.phcx ? crypt.decrypter(this.phcx.cx, row.datax) : null
+    this.data = rowDatax ? parrainData.fromBuffer(rowDatax) : null
+    this.ard = row.ardc && this.data ? Buffer.from(crypt.decrypter(this.data.cc, row.ardc)).toString() : null
+    return this
+  }
+
+  get toRow () {
+    this.datak = this.phcx ? crypt.crypter(data.clek, parrainPhCx.toBuffer(this.phcx)) : null
+    this.datax = this.phcx && this.data ? crypt.crypter(this.phcx.cx, parrainData.toBuffer(this.data)) : null
+    this.ardc = this.data && this.ard ? crypt.crypter(this.data.cc, this.ard) : null
+    const buf = rowTypes.rowSchemas.membre.toBuffer(this)
+    delete this.datak
+    delete this.ardg
+    delete this.datax
+    return buf
+  }
+
+  get toIdb () {
+    return idbParrain.toBuffer(this)
+  }
+
+  fromIdb (idb) {
+    const row = idbParrain.fromBuffer(idb)
+    this.pph = row.pph
+    this.id = row.id
+    this.nc = row.nc
+    this.dlv = row.dlv
+    this.st = row.st
+    this.v = row.v
+    this.q1 = row.q1
+    this.q2 = row.q2
+    this.qm1 = row.qm1
+    this.qm2 = row.qm2
+    this.phcx = row.phcx
+    this.data = row.data
+    this.ard = row.ard
+    return this
+  }
+}
+
+// TODO: rencontre secrets
