@@ -125,10 +125,11 @@ const rowInvitct = avro.Type.forSchema({
   fields: [
     { name: 'id', type: 'long' }, // pk1
     { name: 'ni', type: 'int' }, // pk2
+    { name: 'v', type: 'int' },
     { name: 'dlv', type: 'int' },
     { name: 'st', type: 'int' },
-    { name: 'ccpub', type: 'bytes' },
-    { name: 'datac', type: 'bytes' },
+    { name: 'datap', type: ['null', 'bytes'] },
+    { name: 'datak', type: ['null', 'bytes'] },
     { name: 'ardc', type: 'bytes' }
   ]
 })
@@ -142,9 +143,8 @@ const rowInvitgr = avro.Type.forSchema({
     { name: 'v', type: 'int' },
     { name: 'dlv', type: 'int' },
     { name: 'st', type: 'int' },
-    { name: 'datap', type: 'bytes' },
-    { name: 'datak', type: 'bytes' },
-    { name: 'clek', type: 'bytes' }
+    { name: 'datap', type: ['null', 'bytes'] },
+    { name: 'datak', type: ['null', 'bytes'] }
   ]
 })
 

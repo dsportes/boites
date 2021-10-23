@@ -1,25 +1,25 @@
 import { NomAvatar, Cv } from '../../app/modele'
-/*
-export function avatar (state, val) {
-  if (typeof val === 'string') {
-    const x = state.avatars
-    delete x[val]
-    state.avatars = x
-  } else {
-    const x = state.avatars[val.id]
-    if (!x) {
-      state.avatars[val.id] = val
-    } else {
-      state.avatars[val.id] = { ...x, ...val }
-    }
-  }
+
+export function raz (state) {
+  state.compte = null
+  state.avatars = {}
+  state.contacts = {}
+  state.invitcts = {}
+  state.invitgrs = {}
+  state.groupes = {}
+  state.membres = {}
+  state.secrets = {}
+  state.parrains = {}
+  state.rencontres = {}
+  state.cvs = {}
 }
-*/
 
 export function setAvatars (state, val) { // val : array d'objets Avatar
   const x = state.avatars
   val.forEach(a => {
-    x[a.sid] = a
+    a.dernier = false
+    const y = x[a.sid]
+    if (!y || y.v < a.v) { x[a.sid] = a; a.dernier = true }
   })
   state.avatars = { ...x }
 }
@@ -30,15 +30,17 @@ export function setCvs (state, val) { // val : array d'objets Cv OU NomAvatar
     if (c instanceof NomAvatar) {
       if (x[c.sid]) x[c.sid] = new Cv().fromNomAvatar(c)
     } else {
+      c.dernier = false
       const y = x[c.sid]
-      if (!y || y.vcv < c.vcv) x[c.sid] = c
+      if (!y || y.vcv < c.vcv) { x[c.sid] = c; c.dernier = true }
     }
   })
   state.cvs = { ...x }
 }
 
 export function setCompte (state, val) { // val : objet Compte
-  state.compte = val
+  val.dernier = false
+  if (!state.compte || state.compte.v < val.v) { state.compte = val; val.dernier = true }
 }
 
 /*
@@ -66,4 +68,20 @@ export function avatarcontact (state, val) { // val est un objet de la forme {id
   const c = XY(obj, 'contacts', val)
   if (c) state.avatars[val.id] = { ...obj, contacts: c }
 }
+
+export function avatar (state, val) {
+  if (typeof val === 'string') {
+    const x = state.avatars
+    delete x[val]
+    state.avatars = x
+  } else {
+    const x = state.avatars[val.id]
+    if (!x) {
+      state.avatars[val.id] = val
+    } else {
+      state.avatars[val.id] = { ...x, ...val }
+    }
+  }
+}
+
 */

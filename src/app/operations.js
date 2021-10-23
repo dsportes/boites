@@ -11,9 +11,8 @@ const rowTypes = require('./rowTypes')
 
 export async function deconnexion () {
   store().commit('ui/majstatuslogin', false)
-  data.clek = null
-  data.ps = null
-  data.dh = 0
+  store().commit('db/raz')
+  data.raz()
   session.ws.close()
 }
 
