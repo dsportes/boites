@@ -202,8 +202,9 @@ const rowSecret = avro.Type.forSchema({
   type: 'record',
   fields: [
     { name: 'id', type: 'long' }, // pk1
-    { name: 'nc', type: 'int' }, // pk2
+    { name: 'ns', type: 'int' }, // pk2
     { name: 'ic', type: 'int' },
+    { name: 'v', type: 'int' },
     { name: 'st', type: 'int' },
     { name: 'txts', type: ['null', 'bytes'] },
     { name: 'mcs', type: ['null', 'bytes'] },

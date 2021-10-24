@@ -1,9 +1,8 @@
 import Dexie from 'dexie'
-import { data } from './modele'
+import { Avatar, Compte, Invitgr, Invitct, Contact, Parrain, Rencontre, Groupe, Membre, Secret, Cv, data } from './modele'
 import { store, cfg } from './util'
 import { session } from './ws'
 const crypt = require('./crypto')
-const rowTypes = require('./rowTypes')
 
 export async function deleteIDB (nombase) {
   try {
@@ -54,15 +53,67 @@ export class Idb {
   }
 
   async getCompte () {
-    const x = await this.db.compte.get(1)
-    return rowTypes.rowSchemas.compte.fromBuffer(x.data)
+    const idb = await this.db.compte.get(1)
+    return new Compte().fromIdb(idb)
   }
 
-  async getInvitgr (id) { // pas sur qu'on ait besoin de filtrer: on lit toutes les invitations
+  async getAvatars () {
     const r = []
-    await this.db.invitgr.where({ id: id }).each(x => {
-      r.push(rowTypes.rowSchemas.invitgr.fromBuffer(x.data))
-    })
+    await this.db.avatar.each(idb => { r.push(new Avatar().fromIdb(idb)) })
+    return r
+  }
+
+  async getInvitgrs () {
+    const r = []
+    await this.db.invitgr.each(idb => { r.push(new Invitgr().fromIdb(idb)) })
+    return r
+  }
+
+  async getInvitgct () {
+    const r = []
+    await this.db.invitct.each(idb => { r.push(new Invitct().fromIdb(idb)) })
+    return r
+  }
+
+  async getContacts () {
+    const r = []
+    await this.db.contact.each(idb => { r.push(new Contact().fromIdb(idb)) })
+    return r
+  }
+
+  async getParrains () {
+    const r = []
+    await this.db.parrain.each(idb => { r.push(new Parrain().fromIdb(idb)) })
+    return r
+  }
+
+  async getRencontres () {
+    const r = []
+    await this.db.rencontre.each(idb => { r.push(new Rencontre().fromIdb(idb)) })
+    return r
+  }
+
+  async getGroupes () {
+    const r = []
+    await this.db.groupe.each(idb => { r.push(new Groupe().fromIdb(idb)) })
+    return r
+  }
+
+  async getMembres () {
+    const r = []
+    await this.db.membre.each(idb => { r.push(new Membre().fromIdb(idb)) })
+    return r
+  }
+
+  async getSecrets () {
+    const r = []
+    await this.db.secret.each(idb => { r.push(new Secret().fromIdb(idb)) })
+    return r
+  }
+
+  async getCvs () {
+    const r = []
+    await this.db.cv.each(idb => { r.push(new Cv().fromIdb(idb)) })
     return r
   }
 
@@ -73,6 +124,22 @@ export class Idb {
   */
   async purgeRows (lav, lgr) {
     await this.db.transaction('rw', this.constructor.tables, async () => {
+      for (let i = 0; i < lav.length; i++) {
+        const id = { id: lav[i] }
+        await this.db.avatar.where(id).delete()
+        await this.db.invitgr.where(id).delete()
+        await this.db.contact.where(id).delete()
+        await this.db.invitct.where(id).delete()
+        await this.db.rencontre.where(id).delete()
+        await this.db.parrain.where(id).delete()
+        await this.db.secret.where(id).delete()
+      }
+      for (let i = 0; i < lgr.length; i++) {
+        const id = { id: lav[i] }
+        await this.db.groupe.where(id).delete()
+        await this.db.membre.where(id).delete()
+        await this.db.secret.where(id).delete()
+      }
     })
   }
 
@@ -84,50 +151,14 @@ export class Idb {
       for (let i = 0; i < lobj.length; i++) {
         const obj = lobj[i]
         const suppr = obj.st !== undefined && obj.st < 0
-        const buf = suppr ? null : crypt.crypter(obj.table === 'compte' ? data.ps.pcb : data.clek, obj.toIdb)
-        switch (obj.table) {
-          case 'compte' : {
-            await this.db.compte.put({ id: 1, data: buf })
-            if (cfg().debug) console.log(suppr ? 'del' : 'put' + ' compte - ' + obj.sid)
-            break
-          }
-          case 'avatar' : {
-            if (!suppr) {
-              await this.db.avatar.put({ id: obj.id, data: buf })
-            } else {
-              await this.db.avatar.delete(obj.id)
-            }
-            if (cfg().debug) console.log(suppr ? 'del' : 'put' + ' avatar - ' + obj.sid)
-            break
-          }
-          case 'membre' : {
-            if (!suppr) {
-              await this.db.membre.put({ id: obj.id, im: obj.im, data: buf })
-            } else {
-              await this.db.membre.delete([obj.id, obj.im])
-            }
-            if (cfg().debug) console.log(suppr ? 'del' : 'put' + ' membre - ' + obj.sid + ' / ' + obj.im)
-            break
-          }
-          case 'cv' : {
-            if (!suppr) {
-              await this.db.cv.put({ id: obj.id, data: buf })
-            } else {
-              await this.db.cv.delete(obj.id)
-            }
-            if (cfg().debug) console.log(suppr ? 'del' : 'put' + ' cv - ' + obj.sid)
-            break
-          }
-          case 'invitgr' : {
-            if (!suppr) {
-              await this.db.invitgr.put({ id: obj.id, ni: obj.ni, data: buf })
-            } else {
-              await this.db.invitgr.delete([obj.id, obj.ni])
-            }
-            if (cfg().debug) console.log(suppr ? 'del' : 'put' + ' invitgr - ' + obj.sid + ' / ' + obj.ni)
-            break
-          }
+        const idb = obj.toIdb
+        if (!suppr) {
+          idb.data = crypt.crypter(obj.table === 'compte' ? data.ps.pcb : data.clek, idb.data)
+          await this.db[obj.table].put(idb)
+        } else {
+          await this.db[obj.table].delete(obj.pk)
         }
+        if (cfg().debug) console.log(suppr ? 'del ' : 'put ' + obj.table + ' - ' + obj.sid)
       }
     })
   }
