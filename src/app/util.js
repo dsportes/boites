@@ -179,6 +179,13 @@ function err (e, isPost) {
   throw ex
 }
 
+export function errjs (x) {
+  razmessage()
+  const ex = { majeur: "Echec de l'opération", code: x.c, message: x.m, detail: x.d, stack: x.s }
+  $store.commit('ui/majerreur', ex)
+  throw ex
+}
+
 // Volume entier approximatif exprimé en Ko rendu sur un byte (max 100Mo)
 export function log10 (v) { return Math.round(Math.log10(v > 100000 ? 100000 : v) * 50) }
 

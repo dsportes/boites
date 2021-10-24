@@ -1,9 +1,8 @@
-/* eslint-disable no-unused-vars */
 const avro = require('avsc')
 const crypt = require('./crypto')
 const base64url = require('base64url')
 const rowTypes = require('./rowTypes')
-import { session } from './ws'
+// import { session } from './ws'
 import { store } from './util'
 // import { store } from 'quasar/wrappers'
 
@@ -36,6 +35,58 @@ export class Etat {
     return this.compte().av(id)
   }
 
+  get setAvatars () {
+    const s = new Set()
+    for (const sid in this.compte().mac) s.add(this.compte().mac[sid].na.id)
+    return s
+  }
+
+  get setGroupes () {
+    const s = new Set()
+    const l1 = store().state.db.invitgrs
+    for (const ids in l1) {
+      const l2 = l1[ids]
+      for (const nis in l2) {
+        const g = l2[nis]
+        if (g.st >= 0 && g.data) s.add(g.data.idg)
+      }
+    }
+    return s
+  }
+
+  get setCvsUtiles () {
+    const s = this.setAvatars
+    let l1
+    l1 = store().state.db.invitcts
+    for (const ids in l1) {
+      const l2 = l1[ids]
+      for (const nis in l2) {
+        const c = l2[nis]
+        if (c.st >= 0) { s.add(c.id); break }
+      }
+    }
+    l1 = store().state.db.contacts
+    for (const ids in l1) {
+      const l2 = l1[ids]
+      for (const ic in l2) {
+        const c = l2[ic]
+        if (c.st >= 0) { s.add(c.id); break }
+      }
+    }
+    l1 = store().state.db.membres
+    for (const ids in l1) {
+      const l2 = l1[ids]
+      for (const im in l2) {
+        const m = l2[im]
+        if (m.st >= 0) {
+          const na = m.na
+          if (na) { s.add(na.id); break }
+        }
+      }
+    }
+    return s
+  }
+
   avatar (id) {
     return store().getters['db/avatar'](id)
   }
@@ -44,8 +95,36 @@ export class Etat {
     return store().getters['db/contact']({ id, ic })
   }
 
+  invitct (id, ni) {
+    return store().getters['db/invitct']({ id, ni })
+  }
+
+  invitgr (id, ni) {
+    return store().getters['db/invitgr']({ id, ni })
+  }
+
+  rencontre (prh, id) {
+    return store().getters['db/rencontre']({ prh, id })
+  }
+
+  parrain (pph, id) {
+    return store().getters['db/parrain']({ pph, id })
+  }
+
   groupe (id) {
     return store().getters['db/groupe'](id)
+  }
+
+  membre (id, im) {
+    return store().getters['db/membre']({ id, im })
+  }
+
+  secret (id, ns) {
+    return store().getters['db/secret']({ id, ns })
+  }
+
+  cv (id) {
+    return store().getters['db/cv'](id)
   }
 }
 export const data = new Etat()
@@ -517,6 +596,8 @@ export class Contact {
 
   get pk () { return [this.id, this.ic] }
 
+  get nact () { return this.data ? new NomAvatar(this.data.nomc) : null }
+
   majCc () {
     if (this.data) data.clec[this.sid] = this.data.cc
   }
@@ -709,6 +790,8 @@ export class Invitct {
 
   get pk () { return [this.id, this.ni] }
 
+  get nact () { return this.data ? new NomAvatar(this.data.nomc) : null }
+
   majCc () {
     if (this.data) data.clec[this.sid] = this.data.cc
   }
@@ -815,6 +898,8 @@ export class Invitgr {
   get sid () { return crypt.id2s(this.id) + '/' + crypt.id2s(this.ni) }
 
   get pk () { return [this.id, this.ni] }
+
+  get idg () { return this.data ? this.data.idg : null }
 
   majCg () {
     if (this.data) data.cleg[crypt.id2s(this.id)] = this.data.cleg
@@ -931,6 +1016,8 @@ export class Membre {
   get sid () { return crypt.id2s(this.id) + '/' + this.im }
 
   get pk () { return [this.id, this.im] }
+
+  get na () { return this.data ? new NomAvatar(this.data.nomc) : null }
 
   fromRow (row) {
     this.id = row.id

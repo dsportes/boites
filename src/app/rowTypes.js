@@ -1,9 +1,6 @@
 const avro = require('avsc')
 const crypt = require('./crypto')
-// const JSONbig = require('json-bigint')
 
-// eslint-disable-next-line no-unused-vars
-/* const bigint = */
 avro.types.LongType.__with({
   fromBuffer: buf => crypt.u82big(buf),
   toBuffer: n => crypt.big2u8(n < 0 ? -n : n),

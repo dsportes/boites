@@ -1,9 +1,10 @@
-import { store, post /*, cfg */ } from './util'
+import { store, post, errjs /*, cfg */ } from './util'
 import { newSession, session } from './ws'
 import { Idb, deleteIDB } from './db.js'
 
 import * as CONST from '../store/constantes'
 import { NomAvatar, Compte, Avatar, data, Cv, rowItemsToRows } from './modele'
+import db from 'src/store/db'
 
 const crypt = require('./crypto')
 const rowTypes = require('./rowTypes')
@@ -13,7 +14,8 @@ export async function deconnexion () {
   store().commit('ui/majstatuslogin', false)
   store().commit('db/raz')
   data.raz()
-  session.ws.close()
+  const s = session.ws
+  if (s) s.close()
 }
 
 /* On poste :
@@ -98,6 +100,7 @@ export async function creationCompte (mdp, ps, nom, quotas) {
 Connexion à un compte par sa phrase secrète
 */
 export async function connexionCompte (ps) {
+  data.ps = ps
   const mode = store().state.ui.mode
   if (mode === CONST.MODE_AVION) {
     await connexionCompteAvion(ps)
@@ -119,7 +122,6 @@ export async function connexionCompte (ps) {
   // PROVISOIRE, pour test simple
   // maj du modèle en mémoire
   if (data.dh < ret.dh) data.dh = ret.dh
-  data.ps = ps
 
   // obtenir le compte
   let compte
@@ -147,7 +149,34 @@ export async function connexionCompte (ps) {
   }
 }
 
-async function connexionCompteAvion (ps) {
+async function connexionCompteAvion () {
   console.log('connexion locale')
-  // TODO
+  const org = store().state.ui.org
+  const lstk = org + '-' + data.ps.dpbh
+  const idCompte = localStorage.getItem(lstk)
+  if (!idCompte) {
+    errjs({
+      code: 5,
+      message: 'Compte non enregistré localement',
+      detail: 'Aucune session synchronisée ne s\'est préalablement exécutée sur ce poste avec cette phrase secrète. Erreur dans la saisie de la ligne 1 de la phrase ?'
+    })
+  }
+  const nombase = org + '-' + idCompte
+  try {
+    const db = new Idb(nombase)
+    await db.open()
+  } catch (e) {
+    console.log(e.toString())
+    throw e
+  }
+  const compte = await db.getCompte()
+  if (!compte || compte.psbh !== data.ps.psbh) {
+    errjs({
+      code: 6,
+      message: 'Compte non enregistré localement',
+      detail: 'Aucune session synchronisée ne s\'est préalablement exécutée sur ce poste avec cette phrase secrète. Erreur dans la saisie de la ligne 2 de la phrase ?'
+    })
+  }
+  store().commit('db/setCompte', compte)
+  await data.chargementIdb(db)
 }
