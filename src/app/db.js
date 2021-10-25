@@ -1,6 +1,7 @@
+/* eslint-disable func-call-spacing */
 import Dexie from 'dexie'
 import { Avatar, Compte, Invitgr, Invitct, Contact, Parrain, Rencontre, Groupe, Membre, Secret, Cv, data } from './modele'
-import { store, cfg } from './util'
+import { store, cfg, sleep } from './util'
 const crypt = require('./crypto')
 
 export async function deleteIDB (nombase) {
@@ -53,118 +54,138 @@ export class Idb {
 
   async getCompte () {
     const idb = await this.db.compte.get(1)
-    return new Compte().fromIdb(idb)
+    return new Compte().fromIdb(crypt.decrypter(data.ps.pcb, idb.data))
   }
 
   async getAvatars () {
+    let vol = 0
     const r = []
     await this.db.avatar.each(idb => {
-      const x = new Avatar().fromIdb(idb)
+      vol += idb.data.length
+      const x = new Avatar().fromIdb(crypt.decrypter(data.clek, idb.data))
       r.push(x)
       this.refsAv.add(x.id)
       this.refsCv.add(x.id)
     })
-    return r
+    return { objs: r, vol: Math.round(vol) }
   }
 
   async getInvitgrs () {
+    let vol = 0
     const r = []
     await this.db.invitgr.each(idb => {
-      const x = new Invitgr().fromIdb(idb)
+      vol += idb.data.length
+      const x = new Invitgr().fromIdb(crypt.decrypter(data.clek, idb.data))
       r.push(x)
       this.refsAv.add(x.id)
       this.refsCv.add(x.id)
       if (x.idg) this.refsGr.add(x.idg)
     })
-    return r
+    return { objs: r, vol: Math.round(vol / 1000) }
   }
 
   async getInvitcts () {
+    let vol = 0
     const r = []
     await this.db.invitct.each(idb => {
-      const x = new Invitct().fromIdb(idb)
+      vol += idb.data.length
+      const x = new Invitct().fromIdb(crypt.decrypter(data.clek, idb.data))
       r.push(x)
       this.refsAv.add(x.id)
       this.refsCv.add(x.id)
       if (x.nact) this.refsCv.add(x.nact.id)
     })
-    return r
+    return { objs: r, vol: Math.round(vol / 1000) }
   }
 
   async getContacts () {
+    let vol = 0
     const r = []
     await this.db.contact.each(idb => {
-      const x = new Contact().fromIdb(idb)
+      vol += idb.data.length
+      const x = new Contact().fromIdb(crypt.decrypter(data.clek, idb.data))
       r.push(x)
       this.refsAv.add(x.id)
       this.refsCv.add(x.id)
       if (x.nact) this.refsCv.add(x.nact.id)
     })
-    return r
+    return { objs: r, vol: Math.round(vol / 1000) }
   }
 
   async getParrains () {
+    let vol = 0
     const r = []
     await this.db.parrain.each(idb => {
-      const x = new Parrain().fromIdb(idb)
+      vol += idb.data.length
+      const x = new Parrain().fromIdb(crypt.decrypter(data.clek, idb.data))
       r.push(x)
       this.refsAv.add(x.id)
       this.refsCv.add(x.id)
     })
-    return r
+    return { objs: r, vol: Math.round(vol / 1000) }
   }
 
   async getRencontres () {
+    let vol = 0
     const r = []
     await this.db.rencontre.each(idb => {
-      const x = new Rencontre().fromIdb(idb)
+      vol += idb.data.length
+      const x = new Rencontre().fromIdb(crypt.decrypter(data.clek, idb.data))
       r.push(x)
       this.refsAv.add(x.id)
       this.refsCv.add(x.id)
     })
-    return r
+    return { objs: r, vol: Math.round(vol / 1000) }
   }
 
   async getGroupes () {
+    let vol = 0
     const r = []
     await this.db.groupe.each(idb => {
-      const x = new Groupe().fromIdb(idb)
+      vol += idb.data.length
+      const x = new Groupe().fromIdb(crypt.decrypter(data.clek, idb.data))
       r.push(x)
       this.refsGr.add(x.id)
     })
-    return r
+    return { objs: r, vol: Math.round(vol / 1000) }
   }
 
   async getMembres () {
+    let vol = 0
     const r = []
     await this.db.membre.each(idb => {
-      const x = new Membre().fromIdb(idb)
+      vol += idb.data.length
+      const x = new Membre().fromIdb(crypt.decrypter(data.clek, idb.data))
       r.push(x)
       this.refsGr.add(x.id)
       if (x.na) { this.refsAv.add(x.na); this.refsCv.add(x.na) }
     })
-    return r
+    return { objs: r, vol: Math.round(vol / 1000) }
   }
 
   async getSecrets () {
+    let vol = 0
     const r = []
     await this.db.secret.each(idb => {
-      const x = new Secret().fromIdb(idb)
+      vol += idb.data.length
+      const x = new Secret().fromIdb(crypt.decrypter(data.clek, idb.data))
       r.push(x)
       if (x.ts === 2) this.refsGr.add(x.id)
       else { this.refsAv.add(x.id); this.refsCv.add(x.id) }
     })
-    return r
+    return { objs: r, vol: Math.round(vol / 1000) }
   }
 
   async getCvs () {
+    let vol = 0
     const r = []
     await this.db.cv.each(idb => {
-      const x = new Cv().fromIdb(idb)
+      vol += idb.data.length
+      const x = new Cv().fromIdb(crypt.decrypter(data.clek, idb.data))
       r.push(x)
-      this.enregCv.add(x.id)
+      this.enregCvs.add(x.id)
     })
-    return r
+    return { objs: r, vol: Math.round(vol / 1000) }
   }
 
   /* Chargement de la totalité de la base en mémoire :
@@ -173,59 +194,103 @@ export class Idb {
   - puis récupère les CVs et supprime celles non référencées
   */
   async chargementIdb () {
-    let objs
+    // eslint-disable-next-line no-unused-vars
+    const dd = data
+    data.stopChargt = false
+    let objs, vol, t, nbp
+    // const d = 1000
     this.refsAv = new Set()
     this.refsGr = new Set()
     this.refsCv = new Set()
 
-    objs = await this.getAvatars()
+    store().commit('ui/razidblec')
+    t = true; ({ objs, vol } = await this.getAvatars())
     store().commit('db/setAvatars', objs)
-    objs = await this.getInvitgrs()
+    store().commit('ui/majidblec', { table: 'avatar', st: t, vol: vol, nbl: objs.length })
+    // await sleep(d)
+    if (data.stopChargt) throw Error('STOPCHARGT')
+
+    t = true; ({ objs, vol } = await this.getInvitgrs())
     store().commit('db/setInvitgrs', objs)
-    objs = await this.getContacts()
+    store().commit('ui/majidblec', { table: 'invitgr', st: t, vol: vol, nbl: objs.length })
+    // await sleep(d)
+    if (data.stopChargt) throw Error('STOPCHARGT')
+
+    t = true; ({ objs, vol } = await this.getContacts())
     store().commit('db/setContacts', objs)
-    objs = await this.getInvitcts()
+    store().commit('ui/majidblec', { table: 'invcontactitgr', st: t, vol: vol, nbl: objs.length })
+    if (data.stopChargt) throw Error('STOPCHARGT')
+
+    t = true; ({ objs, vol } = await this.getInvitcts())
     store().commit('db/setInvitcts', objs)
-    objs = await this.getParrains()
+    store().commit('ui/majidblec', { table: 'invitct', st: t, vol: vol, nbl: objs.length })
+    if (data.stopChargt) throw Error('STOPCHARGT')
+
+    t = true; ({ objs, vol } = await this.getParrains())
     store().commit('db/setParrains', objs)
-    objs = await this.getRencontres()
+    store().commit('ui/majidblec', { table: 'parrain', st: t, vol: vol, nbl: objs.length })
+    // await sleep(d)
+    if (data.stopChargt) throw Error('STOPCHARGT')
+
+    t = true; ({ objs, vol } = await this.getRencontres())
     store().commit('db/setRencontres', objs)
-    objs = await this.getGroupes()
+    store().commit('ui/majidblec', { table: 'rencontre', st: t, vol: vol, nbl: objs.length })
+    if (data.stopChargt) throw Error('STOPCHARGT')
+
+    t = true; ({ objs, vol } = await this.getGroupes())
     store().commit('db/setGroupes', objs)
-    objs = await this.getMembres()
+    store().commit('ui/majidblec', { table: 'groupe', st: t, vol: vol, nbl: objs.length })
+    if (data.stopChargt) throw Error('STOPCHARGT')
+
+    t = true; ({ objs, vol } = await this.getMembres())
     store().commit('db/setMembres', objs)
-    objs = await this.getSecrets()
+    store().commit('ui/majidblec', { table: 'membre', st: t, vol: vol, nbl: objs.length })
+    if (data.stopChargt) throw Error('STOPCHARGT')
+
+    t = true; ({ objs, vol } = await this.getSecrets())
     store().commit('db/setSecrets', objs)
+    store().commit('ui/majidblec', { table: 'secret', st: t, vol: vol, nbl: objs.length })
+    // await sleep(d)
+    if (data.stopChargt) throw Error('STOPCHARGT')
 
     // purge des avatars inutiles
     const avInutiles = new Set()
     const avUtiles = new Set(data.setAvatars)
     for (const id of this.refsAv) if (!avUtiles.has(id)) avInutiles.add(id)
-    await this.purgeAvatars(avInutiles)
+    nbp = await this.purgeAvatars(avInutiles)
     store().commit('db/purgeAvatars', avUtiles)
+    store().commit('ui/majidblec', { table: 'purgeav', st: t, vol: 0, nbl: nbp })
+    if (data.stopChargt) throw Error('STOPCHARGT')
 
     // purge des groupes inutiles
     const grInutiles = new Set()
     const grUtiles = new Set(data.setGroupes)
     for (const id of this.refsGr) if (!grUtiles.has(id)) grInutiles.add(id)
-    await this.purgeGroupes(grInutiles)
+    nbp = await this.purgeGroupes(grInutiles)
     store().commit('db/purgeGroupes', grUtiles)
+    store().commit('ui/majidblec', { table: 'purgegr', st: t, vol: 0, nbl: nbp })
+    // await sleep(d)
+    if (data.stopChargt) throw Error('STOPCHARGT')
 
     // chargement des CVs
     this.enregCvs = new Set()
-    objs = await this.getCvs()
+    t = true; ({ objs, vol } = await this.getCvs())
     store().commit('db/setCvs', objs)
+    store().commit('ui/majidblec', { table: 'cv', st: t, vol: vol, nbl: objs.length })
+    if (data.stopChargt) throw Error('STOPCHARGT')
 
     // purge des CVs inutiles
     const cvInutiles = new Set()
     const cvUtiles = new Set(data.setCvUtiles)
-    for (const id of this.enregCv) if (!cvUtiles.has(id)) cvInutiles.add(id)
-    await this.purgeCvs(cvInutiles)
-    store().commit('db/purgeGroupes', cvUtiles)
+    for (const id of this.enregCvs) if (!cvUtiles.has(id)) cvInutiles.add(id)
+    nbp = await this.purgeCvs(cvInutiles)
+    store().commit('db/purgeCvs', cvUtiles)
+    store().commit('ui/majidblec', { table: 'purgecv', st: t, vol: 0, nbl: nbp })
 
     data.idbSetAvatars = data.setAvatars
     data.idbSetGroupes = data.setGroupes
     data.idbsetCvsUtiles = data.setCvsUtiles
+    await sleep(2000)
   }
 
   /*
@@ -234,6 +299,7 @@ export class Idb {
   - lgr : liste des ids des groupes
   */
   async purgeGroupes (lgr) {
+    if (!lgr || !lgr.size) return 0
     await this.db.transaction('rw', this.constructor.tables, async () => {
       for (const i of lgr) {
         const id = { id: i }
@@ -242,9 +308,11 @@ export class Idb {
         await this.db.secret.where(id).delete()
       }
     })
+    return lgr.size
   }
 
   async purgeAvatars (lav) {
+    if (!lav || !lav.size) return 0
     await this.db.transaction('rw', this.constructor.tables, async () => {
       for (const i of lav) {
         const id = { id: i }
@@ -257,12 +325,25 @@ export class Idb {
         await this.db.secret.where(id).delete()
       }
     })
+    return lav.size
+  }
+
+  async purgeCvs (lcv) {
+    if (!lcv || !lcv.size) return 0
+    await this.db.transaction('rw', this.constructor.tables, async () => {
+      for (const i of lcv) {
+        const id = { id: i }
+        await this.db.cv.where(id).delete()
+      }
+    })
+    return lcv.size
   }
 
   /*
   Mise à jour (put ou delete) d'une liste d'objets (compte, avatar, etc.)
   */
   async commitRows (lobj) {
+    if (!lobj || !lobj.length) return
     await this.db.transaction('rw', this.constructor.tables, async () => {
       for (let i = 0; i < lobj.length; i++) {
         const obj = lobj[i]

@@ -22,7 +22,10 @@ export function store () { return $store }
 
 export function gp () { return globalProperties }
 
-export function sleep (delai) { return new Promise((resolve) => { setTimeout(() => resolve(), delai) }) }
+export function sleep (delai) {
+  if (delai <= 0) return
+  return new Promise((resolve) => { setTimeout(() => resolve(), delai) })
+}
 
 export function affichermessage (texte, important) {
   $store.dispatch('ui/affichermessage', { texte, important })

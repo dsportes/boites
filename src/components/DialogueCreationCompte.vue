@@ -67,8 +67,7 @@ import PhraseSecrete from './PhraseSecrete.vue'
 import MdpAdmin from './MdpAdmin.vue'
 import QuotasVolume from './QuotasVolume.vue'
 import { creationCompte } from '../app/operations'
-import { Quotas, compte } from '../app/modele'
-import { affichermessage } from '../app/util'
+import { Quotas } from '../app/modele'
 
 export default ({
   name: 'DialogueCreationCompte',
@@ -116,7 +115,6 @@ export default ({
       this.quotas = null
       this.nom = ''
       this.step = 1
-      affichermessage('Compte créé et connecté', false)
       this.$router.push('/' + this.org + '/compte')
     },
     corriger () {
@@ -125,7 +123,6 @@ export default ({
   },
 
   setup () {
-    compte()
     const $store = useStore()
     const org = computed(() => $store.state.ui.org)
     return {

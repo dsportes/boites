@@ -133,7 +133,7 @@ exports.crypter = crypter
 function decrypter (cle, buffer) {
   const k = typeof cle === 'string' ? Buffer.from(cle, 'base64') : cle
   const decipher = crypto.createDecipheriv('aes-256-cbc', k, SALTS[Number(buffer[0])])
-  return Buffer.concat([decipher.update(buffer.slice(1)), decipher.final()])
+  return Buffer.concat([decipher.update(Buffer.from(buffer.slice(1))), decipher.final()])
 }
 exports.decrypter = decrypter
 

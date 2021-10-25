@@ -1,3 +1,5 @@
+import { IDBLEC_RAZ } from '../constantes'
+
 let nummessage = 1
 
 export function debutreq (state) {
@@ -78,6 +80,10 @@ export function majdialoguecrypto (state, val) {
   state.dialoguecrypto = val
 }
 
+export function majdialoguesynchro (state, val) {
+  state.dialoguesynchro = val
+}
+
 export function majdialoguecreationcompte (state, val) {
   state.dialoguecreationcompte = val
 }
@@ -88,4 +94,14 @@ export function majmenuouvert (state, val) {
 
 export function majphasesync (state, val) {
   state.phasesync = val
+}
+
+export function majidblec (state, { table, st, vol, nbl }) {
+  const x = state.idblec
+  x[table] = { st, vol, nbl }
+  state.idblec = { ...x }
+}
+
+export function razidblec (state) {
+  state.idblec = { ...IDBLEC_RAZ }
 }

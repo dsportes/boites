@@ -26,6 +26,7 @@ export function purgeAvatars (state, val) { // val : Set des ids des avatars uti
     for (const sid of s) delete x[sid]
     state.avatars = { ...x }
   }
+  return s.size
 }
 
 export function purgeGroupes (state, val) { // val : Set des ids des groupes utiles
@@ -39,6 +40,7 @@ export function purgeGroupes (state, val) { // val : Set des ids des groupes uti
     for (const sid of s) delete x[sid]
     state.groupes = { ...x }
   }
+  return s.size
 }
 
 export function purgeCvs (state, val) { // val : Set des ids des avatars utiles
@@ -52,6 +54,7 @@ export function purgeCvs (state, val) { // val : Set des ids des avatars utiles
     for (const sid of s) delete x[sid]
     state.cvs = { ...x }
   }
+  return s.size
 }
 
 export function setAvatars (state, val) { // val : array d'objets Avatar

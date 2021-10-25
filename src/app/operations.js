@@ -1,10 +1,9 @@
-import { store, post, errjs /*, cfg */ } from './util'
+import { store, post, errjs, affichermessage /*, cfg */ } from './util'
 import { newSession, session } from './ws'
 import { Idb, deleteIDB } from './db.js'
 
 import * as CONST from '../store/constantes'
 import { NomAvatar, Compte, Avatar, data, Cv, rowItemsToRows } from './modele'
-import db from 'src/store/db'
 
 const crypt = require('./crypto')
 const rowTypes = require('./rowTypes')
@@ -94,6 +93,7 @@ export async function creationCompte (mdp, ps, nom, quotas) {
     }
   }
   store().commit('ui/majstatuslogin', true)
+  affichermessage('Compte créé et connecté', false)
 }
 
 /*
@@ -162,21 +162,35 @@ async function connexionCompteAvion () {
     })
   }
   const nombase = org + '-' + idCompte
+  let db
   try {
-    const db = new Idb(nombase)
+    db = new Idb(nombase)
     await db.open()
   } catch (e) {
     console.log(e.toString())
     throw e
   }
   const compte = await db.getCompte()
-  if (!compte || compte.psbh !== data.ps.psbh) {
+  if (!compte || compte.pcbh !== data.ps.pcbh) {
     errjs({
       code: 6,
       message: 'Compte non enregistré localement',
       detail: 'Aucune session synchronisée ne s\'est préalablement exécutée sur ce poste avec cette phrase secrète. Erreur dans la saisie de la ligne 2 de la phrase ?'
     })
   }
+  data.clek = compte.k
   store().commit('db/setCompte', compte)
-  await data.chargementIdb(db)
+  store().commit('ui/majdialoguesynchro', true)
+  let ok = true
+  try {
+    await db.chargementIdb()
+  } catch (e) {
+    if (e.message === 'STOPCHARGT') {
+      ok = false
+      affichermessage('Chargement des données locales interrompu sur demande explicite', true)
+    } else throw e
+  }
+  store().commit('ui/majdialoguesynchro', false)
+  store().commit('ui/majstatuslogin', true)
+  affichermessage('Compte authentifié et connecté' + (ok ? '' : ' mais données peut-être incomplètes'), false)
 }

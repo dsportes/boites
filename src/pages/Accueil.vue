@@ -26,12 +26,14 @@
       </q-card>
 
       <div v-if="locmode != 0" class="q-my-md petitelargeur column items-start">
+        <q-btn flat color="warning" icon="add_circle" label="Test synchro" @click="$store.commit('ui/majdialoguesynchro', true)"/>
         <q-btn flat color="warning" icon="add_circle" label="Nouveau compte parrainé" />
         <q-btn flat color="primary" icon="add_circle" label="Nouveau compte (sans parrain)" @click="$store.commit('ui/majdialoguecreationcompte', true)"/>
       </div>
     </div>
 
     <dialogue-creation-compte></dialogue-creation-compte>
+    <dialogue-synchro></dialogue-synchro>
 
   </q-page>
 </template>
@@ -39,14 +41,15 @@
 <script>
 import { computed } from 'vue'
 import { useStore } from 'vuex'
-import { gp, cfg, affichermessage } from '../app/util'
+import { gp, cfg } from '../app/util'
 import { deconnexion, connexionCompte } from '../app/operations'
 import PhraseSecrete from '../components/PhraseSecrete.vue'
 import DialogueCreationCompte from '../components/DialogueCreationCompte.vue'
+import DialogueSynchro from '../components/DialogueSynchro.vue'
 
 export default ({
   name: 'Accueil',
-  components: { PhraseSecrete, DialogueCreationCompte },
+  components: { PhraseSecrete, DialogueCreationCompte, DialogueSynchro },
   data () {
     return {
       locmode: 0,
@@ -83,7 +86,6 @@ export default ({
     async connecter (ps) {
       if (!ps) return
       await connexionCompte(ps)
-      affichermessage('Compte authentifié et connecté', false)
       this.$router.push('/' + this.org + '/compte')
     }
   },

@@ -1,8 +1,10 @@
+import { IDBLEC_RAZ } from '../constantes'
 export default function () {
   return {
     erreur: null,
     derniereerreur: null,
     dialoguecrypto: false,
+    dialoguesynchro: false,
     dialoguecreationcompte: false,
     diagnostic: null,
     menuouvert: false,
@@ -18,6 +20,7 @@ export default function () {
     statuslogin: false,
     org: null,
     orgicon: null, // Non null quand l'organisation est connue
-    sessionerreur: 0
+    sessionerreur: 0,
+    idblec: IDBLEC_RAZ
   }
 }

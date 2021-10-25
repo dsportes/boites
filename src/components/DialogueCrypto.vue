@@ -33,8 +33,6 @@ import { computed } from 'vue'
 const crypt = require('../app/crypto')
 import PhraseSecrete from '../components/PhraseSecrete.vue'
 import MdpAdmin from '../components/MdpAdmin.vue'
-
-import { testdb } from '../app/db'
 import { post, affichermessage, afficherdiagnostic, testEcho } from '../app/util'
 
 export default ({
@@ -82,8 +80,9 @@ export default ({
     testd () {
       afficherdiagnostic('mon <b>diagnostic</b>')
     },
-    testidb () {
-      testdb()
+    async testidb () {
+      const l = await indexedDB.databases()
+      l.forEach(db => { console.log(db) })
     }
   },
 

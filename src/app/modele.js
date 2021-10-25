@@ -17,6 +17,7 @@ export class Etat {
     this.clek = null
     this.cleg = {}
     this.clec = {} // {id, {ic... }}
+    this.stopChargt = false
   }
 
   clegDe (sid) {
@@ -294,13 +295,13 @@ export class Compte {
       const x = this.mac[sid]
       x.nomc = x.na.nomc
     }
-    const idb = { id: this.id, data: idbCompte.toBuffer(this) }
+    const idb = { id: 1, data: idbCompte.toBuffer(this) }
     for (const sid in this.mac) delete this.mac[sid].nomc
     return idb
   }
 
   fromIdb (idb) {
-    const row = idbCompte.fromBuffer(idb.data)
+    const row = idbCompte.fromBuffer(idb)
     this.id = row.id
     this.v = row.v
     this.dds = row.dds
@@ -317,7 +318,7 @@ export class Compte {
     return this
   }
 
-  get clone () { return new Compte().fromIdb(this.toIdb) }
+  get clone () { return new Compte().fromIdb(this.toIdb.data) }
 
   av (id) {
     return this.mac[crypt.id2s(id)]
@@ -422,7 +423,7 @@ export class Avatar {
   }
 
   fromIdb (idb) {
-    const row = idbAvatar.fromBuffer(idb.data)
+    const row = idbAvatar.fromBuffer(idb)
     this.id = row.id
     this.na = data.avc(this.id).na
     this.v = row.v
@@ -516,7 +517,7 @@ export class Cv {
   }
 
   fromIdb (idb) {
-    const row = cvIdb.fromBuffer(idb.data)
+    const row = cvIdb.fromBuffer(idb)
     this.id = row.id
     this.vcv = row.vcv
     this.st = row.st
@@ -538,8 +539,7 @@ const contactData = avro.Type.forSchema({ // map des avatars du compte
       { name: 'cc', type: 'bytes' },
       { name: 'dlv', type: 'int' },
       { name: 'pph', type: 'long' },
-      { name: 'nomc', type: 'string' },
-      { name: 'mc', type: arrayStringType }
+      { name: 'mc', type: arrayIntType }
     ]
   })
 })
@@ -634,7 +634,7 @@ export class Contact {
   }
 
   fromIdb (idb) {
-    const row = idbContact.fromBuffer(idb.data)
+    const row = idbContact.fromBuffer(idb)
     this.id = row.id
     this.ic = row.ic
     this.v = row.v
@@ -724,7 +724,7 @@ export class Groupe {
   }
 
   fromIdb (idb) {
-    const row = idbGroupe.fromBuffer(idb.data)
+    const row = idbGroupe.fromBuffer(idb)
     this.id = row.id
     this.v = row.v
     this.dds = row.dds
@@ -829,7 +829,7 @@ export class Invitct {
   }
 
   fromIdb (idb) {
-    const row = idbInvitct.fromBuffer(idb.data)
+    const row = idbInvitct.fromBuffer(idb)
     this.id = row.id
     this.ni = row.ni
     this.v = row.v
@@ -935,7 +935,7 @@ export class Invitgr {
   }
 
   fromIdb (idb) {
-    const row = idbInvitgr.fromBuffer(idb.data)
+    const row = idbInvitgr.fromBuffer(idb)
     this.id = row.id
     this.ni = row.ni
     this.v = row.v
@@ -1051,7 +1051,7 @@ export class Membre {
   }
 
   fromIdb (idb) {
-    const row = idbMembre.fromBuffer(idb.data)
+    const row = idbMembre.fromBuffer(idb)
     this.id = row.id
     this.im = row.im
     this.v = row.v
@@ -1184,7 +1184,7 @@ export class Parrain {
   }
 
   fromIdb (idb) {
-    const row = idbParrain.fromBuffer(idb.data)
+    const row = idbParrain.fromBuffer(idb)
     this.pph = row.pph
     this.id = row.id
     this.nc = row.nc
@@ -1271,7 +1271,7 @@ export class Rencontre {
   }
 
   fromIdb (idb) {
-    const row = idbRencontre.fromBuffer(idb.data)
+    const row = idbRencontre.fromBuffer(idb)
     this.prh = row.prh
     this.id = row.id
     this.dlv = row.dlv
@@ -1400,7 +1400,7 @@ export class Secret {
   }
 
   fromIdb (idb) {
-    const row = idbSecret.fromBuffer(idb.data)
+    const row = idbSecret.fromBuffer(idb)
     this.id = row.id
     this.ns = row.ns
     this.ic = row.ic
