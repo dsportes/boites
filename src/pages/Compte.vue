@@ -4,13 +4,15 @@
     <h6>Liste des avatars du compte</h6>
     <div v-for="e in compte.mac" :key="e.na.sid">
         <div>{{e.na.sid}} - {{e.na.nomc}} {{e.cpriv.length}}</div>
+        <q-btn label="GET cv" color="primary" @click="getcv(e.na.sid)" />
+        <q-btn label="GET clepub" color="primary" @click="getclepub(e.na.sid)" />
     </div>
     <h6>Liste des avatars</h6>
-    <div v-for="av in avatars" :key="av.id">
+    <div v-for="av in avatars" :key="av.sid">
         <div>{{av.sid}} - {{av.na.nomc}}</div>
     </div>
     <h6>Liste des cartes de visite</h6>
-    <div v-for="cv in cvs" :key="cv.id">
+    <div v-for="cv in cvs" :key="cv.sid">
         <div>{{cv.sid}} - {{cv.na.nomc}}</div>
     </div>
   </q-page>
@@ -19,6 +21,8 @@
 <script>
 import { computed } from 'vue'
 import { useStore } from 'vuex'
+import { get } from '../app/util'
+const rowTypes = require('../app/rowTypes')
 
 export default ({
   name: 'Compte',
@@ -32,6 +36,20 @@ export default ({
   },
 
   methods: {
+    async getcv (sid) {
+      const r = await get('m1', 'getcv', { sid: sid })
+      if (r) {
+        const objcv = rowTypes.rowSchemas.cv.fromBuffer(Buffer.from(r))
+        console.log(JSON.stringify(objcv))
+      }
+    },
+    async getclepub (sid) {
+      const r = await get('m1', 'getclepub', { sid: sid })
+      if (r) {
+        const c = Buffer.from(r).toString()
+        console.log(c)
+      }
+    }
   },
 
   setup () {

@@ -25,7 +25,7 @@ export async function newSession () {
       }
     } catch (e) {
       console.log(e)
-      reject(e)
+      resolve(null)
     }
   })
 }
@@ -40,9 +40,10 @@ export class Ws {
       const u = cfg().urlserveur
       const url = 'wss' + u.substring(u.indexOf('://'))
       this.websocket = new WebSocket(url)
-      this.websocket.onerror = () => {
+      this.websocket.onerror = (e) => {
         store().commit('ui/majsessionerreur', 1) // serveur injoignable à l'ouverture d'un sync
         this.websocket.close()
+        throw e
       }
       this.websocket.onclose = () => {
         const err = store().state.ui.sessionerreur

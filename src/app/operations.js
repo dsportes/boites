@@ -107,6 +107,13 @@ export async function connexionCompte (ps) {
     return
   }
   const s = await newSession()
+  if (!s) {
+    errjs({
+      code: 11,
+      message: 'Serveur non joignable ou arrêté',
+      detail: 'Problème technique, soit de réseau, soit sur le site du serveur'
+    })
+  }
   console.log('connexion distante: ' + s.sessionId)
   let ret
   try {

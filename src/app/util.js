@@ -104,6 +104,33 @@ export async function post (module, fonction, args, info) {
   }
 }
 
+/*
+Envoi une requête GET :
+- module : module invoqué
+- fonction : code la fonction du module
+- args : objet avec les arguments qui seront transmis en query string
+Retour :
+- OK : les bytes demandés
+- KO : null
+*/
+export async function get (module, fonction, args) {
+  try {
+    const u = $cfg.urlserveur + '/' + $store.state.ui.org + '/' + module + '/' + fonction
+    const r = await axios({
+      method: 'get',
+      url: u,
+      params: args,
+      headers: headers,
+      responseType: 'arraybuffer',
+      timeout: 500000
+    })
+    return r.status === 200 ? r.data : null
+  } catch (e) {
+    console.log(e)
+    throw e
+  }
+}
+
 export async function ping () {
   try {
     const u = $cfg.urlserveur + '/ping'
