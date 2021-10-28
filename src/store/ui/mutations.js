@@ -2,6 +2,20 @@ import { IDBLEC_RAZ } from '../constantes'
 
 let nummessage = 1
 
+export function razdialogues (state) {
+  razdiagnostic(state)
+  razmessage(state)
+  finreq(state)
+  razerreur(state)
+  majdialoguecrypto(state, false)
+  majdialoguesynchro(state, false)
+  majmenuouvert(state, false)
+  majinfomode(state, false)
+  majinforeseau(state, false)
+  majinfosync(state, false)
+  state.dialoguecreationcompte = false
+}
+
 export function debutreq (state) {
   state.reqencours = true
 }

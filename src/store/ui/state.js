@@ -20,7 +20,7 @@ export default function () {
     statuslogin: false,
     org: null,
     orgicon: null, // Non null quand l'organisation est connue
-    sessionerreur: 0,
+    sessionerreur: null,
     idblec: IDBLEC_RAZ
   }
 }

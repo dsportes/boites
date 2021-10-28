@@ -2,9 +2,15 @@ const avro = require('avsc')
 const crypt = require('./crypto')
 const base64url = require('base64url')
 const rowTypes = require('./rowTypes')
-// import { session } from './ws'
-import { store } from './util'
+import { Idb } from './db'
+import { session } from './ws'
+import { cfg, store, dhtToString } from './util'
+import { types } from './api'
 // import { store } from 'quasar/wrappers'
+
+export function onRuptureSession (appExc) {
+  console.log('Rupture de session : ' + appExc.message)
+}
 
 /* état de session */
 export class Etat {
@@ -18,6 +24,7 @@ export class Etat {
     this.cleg = {}
     this.clec = {} // {id, {ic... }}
     this.stopChargt = false
+    this.syncqueue = []
   }
 
   clegDe (sid) {
@@ -1413,4 +1420,36 @@ export class Secret {
     this.dupns = row.dupns
     return this
   }
+}
+
+export async function onsync (msgdata) {
+  const syncList = types.fromBuffer(msgdata)
+  if (cfg().debug) {
+    console.log('Liste sync reçue: ' + dhtToString(syncList.dh) +
+      ' status:' + syncList.status + ' sessionId:' + syncList.sessionId + ' nb rowItems:' + syncList.rowItems.length)
+  }
+  if (syncList.sessionId !== session.sessionId) return
+  data.syncqueue.push(syncList)
+  if (store().state.ui.phasesync === 3) {
+    const q = data.syncqueue
+    data.syncqueue = []
+    try {
+      await processqueue(q)
+    } catch (e) { }
+  }
+}
+
+async function processqueue (q) {
+  const items = []
+  const db = Idb.idb
+  for (let i = 0; i < q.length; i++) {
+    const syncList = q[i]
+    for (let j = 0; j < syncList.rowItems.length; j++) {
+      const rowItem = syncList.rowItems[j]
+      rowTypes.deserialItem(rowItem)
+      items.push(rowItem)
+    }
+  }
+  await db.commitRows(items)
+  // TODO : compilation des rows, mettre à jour de l'état mémoire
 }

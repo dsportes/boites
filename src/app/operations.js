@@ -1,9 +1,10 @@
-import { store, post, errjs, affichermessage /*, cfg */ } from './util'
+import { store, post, affichermessage /*, cfg */ } from './util'
 import { newSession, session } from './ws'
 import { Idb, deleteIDB } from './db.js'
 
 import * as CONST from '../store/constantes'
 import { NomAvatar, Compte, Avatar, data, Cv, rowItemsToRows } from './modele'
+import { AppExc } from './api'
 
 const crypt = require('./crypto')
 const rowTypes = require('./rowTypes')
@@ -108,11 +109,7 @@ export async function connexionCompte (ps) {
   }
   const s = await newSession()
   if (!s) {
-    errjs({
-      code: 11,
-      message: 'Serveur non joignable ou arrêté',
-      detail: 'Problème technique, soit de réseau, soit sur le site du serveur'
-    })
+    throw new AppExc(-101, 'Serveur non joignable ou arrêté', 'Problème technique, soit de réseau, soit sur le site du serveur')
   }
   console.log('connexion distante: ' + s.sessionId)
   let ret
@@ -162,11 +159,7 @@ async function connexionCompteAvion () {
   const lstk = org + '-' + data.ps.dpbh
   const idCompte = localStorage.getItem(lstk)
   if (!idCompte) {
-    errjs({
-      code: 5,
-      message: 'Compte non enregistré localement',
-      detail: 'Aucune session synchronisée ne s\'est préalablement exécutée sur ce poste avec cette phrase secrète. Erreur dans la saisie de la ligne 1 de la phrase ?'
-    })
+    throw new AppExc(100, 'Compte non enregistré localement', 'Aucune session synchronisée ne s\'est préalablement exécutée sur ce poste avec cette phrase secrète. Erreur dans la saisie de la ligne 1 de la phrase ?')
   }
   const nombase = org + '-' + idCompte
   let db
@@ -179,11 +172,7 @@ async function connexionCompteAvion () {
   }
   const compte = await db.getCompte()
   if (!compte || compte.pcbh !== data.ps.pcbh) {
-    errjs({
-      code: 6,
-      message: 'Compte non enregistré localement',
-      detail: 'Aucune session synchronisée ne s\'est préalablement exécutée sur ce poste avec cette phrase secrète. Erreur dans la saisie de la ligne 2 de la phrase ?'
-    })
+    throw new AppExc(101, 'Compte non enregistré localement', 'Aucune session synchronisée ne s\'est préalablement exécutée sur ce poste avec cette phrase secrète. Erreur dans la saisie de la ligne 2 de la phrase ?')
   }
   data.clek = compte.k
   store().commit('db/setCompte', compte)

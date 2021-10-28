@@ -1,11 +1,14 @@
 import axios from 'axios'
 const api = require('./api')
+import { SCID } from './ws'
+const AppExc = require('./api').AppExc
 const headers = { 'x-api-version': api.version }
 // import * as CONST from '../store/constantes'
 
 let $cfg
 let globalProperties
-let cancelSource
+let cancelSourceGET
+let cancelSourcePOST
 let $store
 
 export function setup (gp, appconfig) {
@@ -40,13 +43,18 @@ export function afficherdiagnostic (texte) {
 }
 
 export function cancelRequest () {
-  if (cancelSource) cancelSource.cancel('Operation interrompue par l\'utilisateur.')
-  $store.commit('ui/finreq', '')
+  if (cancelSourcePOST) cancelSourcePOST.cancel('Operation interrompue par l\'utilisateur.')
+}
+
+export function cancelAllRequests () {
+  if (cancelSourcePOST) cancelSourcePOST.cancel('Operation interrompue par l\'utilisateur.')
+  if (cancelSourceGET) cancelSourceGET.cancel('Operation interrompue par l\'utilisateur.')
 }
 
 export function dhtToString (dht) {
   return new Date(Math.floor(dht / 1000)).toISOString() + ' (' + (dht % 1000) + ')'
 }
+
 /*
 Envoi une requête POST :
 - module : module invoqué
@@ -63,44 +71,64 @@ s : stack (fac)
 l'erreur a déjà été affichée : le catch dans l'appel sert à différencier la suite du traitement.
 */
 export async function post (module, fonction, args, info) {
+  const scid = SCID()
   try {
     if (!info) info = 'Requête'
     const at = api.argTypes[fonction]
     const type = at && at.length > 0 ? at[0] : null
     const typeResp = at && at.length > 1 ? at[1] : null
-    let data
-    if (type) {
-      const buf = type.toBuffer(args)
-      data = buf.buffer
-    } else {
-      data = Buffer.from(JSON.stringify(args))
-    }
+    const data = type ? type.toBuffer(args).buffer : Buffer.from(JSON.stringify(args))
     const u = $cfg.urlserveur + '/' + $store.state.ui.org + '/' + module + '/' + fonction
     $store.commit('ui/debutreq')
     affichermessage(info + ' - ' + u, false)
-    cancelSource = axios.CancelToken.source()
-    const r = await axios({
-      method: 'post',
-      url: u,
-      data: data,
-      headers: headers,
-      responseType: 'arraybuffer',
-      cancelToken: cancelSource.token
-    })
+    cancelSourcePOST = axios.CancelToken.source()
+    // console.log('Avant post : ' + scid)
+    const r = await axios({ method: 'post', url: u, data: data, headers: headers, responseType: 'arraybuffer', cancelToken: cancelSourcePOST.token })
+    cancelSourcePOST = null
+    // console.log('Après post : ' + SCID())
+    if (SCID() !== scid) throw Error('RUPTURESESSION')
     $store.commit('ui/finreq')
-    razmessage()
     $store.commit('ui/majstatushttp', r.status)
+    razmessage()
     const buf = Buffer.from(r.data)
-    if (r.status === 200 && typeResp) {
-      return typeResp.fromBuffer(buf)
+    // les status HTTP non 2xx tombent en exception
+    if (typeResp) { // résultat normal sérialisé
+      try {
+        return typeResp.fromBuffer(buf)
+      } catch (e) { // Résultat mal formé
+        throw new AppExc(-1020, 'Retour de la requête mal formé', 'Désérialisation de la réponse à ' + fonction + ' : ' + e.message)
+      }
     }
+    // sérialisé en JSON
     try {
       return JSON.parse(buf.toString())
-    } catch (e) {
-      return { code: -1, message: 'Retour de la requête mal formé', detail: 'JSON parse : ' + e.message }
+    } catch (e) { // Résultat mal formé
+      throw new AppExc(-1021, 'Retour de la requête mal formé', 'JSON parse : ' + e.message)
     }
   } catch (e) {
-    err(e, true)
+    $store.commit('ui/finreq')
+    razmessage()
+    if (e.message === 'RUPTURESESSION') throw e
+    if (SCID() !== scid) throw Error('RUPTURESESSION')
+    const status = (e.response && e.response.status) || 0
+    $store.commit('ui/majstatushttp', status)
+    if (axios.isCancel(e)) throw new AppExc(-1000, "Interruption de l'opération par l'utilisateur")
+    let x
+    if (status === 400 || status === 401) {
+      try {
+        x = JSON.parse(Buffer.from(e.response.data).toString())
+      } catch (e2) {
+        x = new AppExc(-1001, 'Retour en exception de la requête mal formé', 'JSON parse : ' + e2.message)
+      }
+      if (status === 400) return x // 400 : anomalie fonctionnelle à traiter par l'application
+      $store.commit('ui/majerreur', x) // 401 : anomalie fonctionnelle à afficher et traiter comme exception
+      throw x
+    }
+    // Erreurs réseau / serveur inattendues
+    const m = e.message === 'Network Error' ? 'Probable erreur de réseau' : e.message
+    x = new AppExc(-1002, 'Echec de l\'opération : BUG ou incident technique', m)
+    $store.commit('ui/majerreur', x) // Autres statuts : anomalie / bug / incident à afficher et traiter comme exception
+    throw x
   }
 }
 
@@ -116,18 +144,24 @@ Retour :
 export async function get (module, fonction, args) {
   try {
     const u = $cfg.urlserveur + '/' + $store.state.ui.org + '/' + module + '/' + fonction
+    cancelSourceGET = axios.CancelToken.source()
+    const scid = SCID()
     const r = await axios({
       method: 'get',
       url: u,
       params: args,
       headers: headers,
       responseType: 'arraybuffer',
-      timeout: 500000
+      cancelToken: cancelSourceGET.token,
+      timeout: $cfg.debug ? 500000 : 5000
     })
+    cancelSourceGET = null
+    if (SCID() !== scid) throw Error('RUPTURESESSION')
     return r.status === 200 ? r.data : null
   } catch (e) {
+    if (e.message !== 'RUPTURESESSION') throw e
     console.log(e)
-    throw e
+    return null
   }
 }
 
@@ -136,19 +170,30 @@ export async function ping () {
     const u = $cfg.urlserveur + '/ping'
     $store.commit('ui/debutreq')
     affichermessage('ping - ' + u, false)
-    cancelSource = axios.CancelToken.source()
-    const r = await axios({ method: 'get', url: u, responseType: 'text', cancelToken: cancelSource.token })
+    cancelSourceGET = axios.CancelToken.source()
+    const scid = SCID()
+    const r = await axios({ method: 'get', url: u, responseType: 'text', cancelToken: cancelSourceGET.token })
+    cancelSourceGET = null
+    if (SCID() !== scid) throw Error('RUPTURESESSION')
     $store.commit('ui/finreq')
     affichermessage(r.data)
     $store.commit('ui/majstatushttp', r.status)
     return r.data
   } catch (e) {
-    err(e)
+    if (e.message !== 'RUPTURESESSION') throw e
+    console.log(e)
+    return null
   }
 }
 
-export async function testEcho () {
-  const r = await post('m1', 'echo', { a: 1, b: 'toto' })
+export function throwAppExc (appExc) {
+  razmessage()
+  store().commit('ui/majerreur', appExc)
+  throw appExc
+}
+
+export async function testEcho (to) {
+  const r = await post('m1', 'echo', { a: 1, b: 'toto', to: to || 0 })
   console.log('test echo : ' + JSON.stringify(r))
 }
 
@@ -177,50 +222,13 @@ export async function getImagePub (path, type) {
   }
 }
 
-function err (e, isPost) {
-  $store.commit('ui/finreq')
-  razmessage()
-  const status = (e.response && e.response.status) || 0
-  $store.commit('ui/majstatushttp', status)
-  let ex
-  if (axios.isCancel(e)) {
-    ex = { majeur: "Interruption de l'opération", code: 0, message: e.message }
-  } else {
-    if (status === 400 || status === 401) {
-      let x
-      if (!isPost) {
-        x = e.response.data
-      } else {
-        try {
-          x = JSON.parse(Buffer.from(e.response.data).toString())
-        } catch (e2) {
-          x = { c: -1, m: 'Retour en erreur de la requête mal formé', d: 'JSON parse : ' + e2.message }
-        }
-      }
-      x = x.apperror || x
-      ex = { majeur: "Echec de l'opération", code: x.c, message: x.m, detail: x.d, stack: x.s }
-    } else {
-      ex = { majeur: "Echec de l'opération : BUG ou incident technique", code: 0, message: e.message, stack: e.stack }
-    }
-  }
-  if (status !== 400) { // 400 : anomalie fonctionnelle à traiter par l'application
-    $store.commit('ui/majerreur', ex)
-  }
-  throw ex
-}
-
-export function errjs (x) {
-  razmessage()
-  const ex = { majeur: "Echec de l'opération", code: x.c, message: x.m, detail: x.d, stack: x.s }
-  $store.commit('ui/majerreur', ex)
-  throw ex
-}
-
+/*
 // Volume entier approximatif exprimé en Ko rendu sur un byte (max 100Mo)
 export function log10 (v) { return Math.round(Math.log10(v > 100000 ? 100000 : v) * 50) }
 
 // Volume entier retourné depuis un byte en Ko
 export function pow10 (v) { return Math.round(Math.pow(10, v / 50)) }
+*/
 
 /*
 export async function orgicon (org) {

@@ -2,11 +2,10 @@
     <q-dialog v-model="enerreur">
       <q-card class="q-ma-xs moyennelargeur">
         <q-card-section>
-          <div class="titre-2">{{erreur.majeur}}</div>
+          <div class="titre-2">{{erreur.message}}</div>
         </q-card-section>
         <q-card-section class="q-pt-none">
           <div>Code : {{ erreur.code }}</div>
-          <div v-if="erreur.message">{{ erreur.message }}</div>
           <div v-if="erreur.detail">
             Détail <q-toggle v-model="errdetail"/>
             <div v-if="errdetail">{{ erreur.detail }}</div>
@@ -40,7 +39,7 @@ export default ({
   methods: {
     fermererreur () {
       this.errstack = false
-      this.errdetail = false
+      this.errdetail = true
       this.$store.commit('ui/razerreur')
     }
   },

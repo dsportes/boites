@@ -102,7 +102,7 @@
       </q-card>
     </q-dialog>
 
-    <q-dialog v-model="reqencours" seamless position="top">
+    <q-dialog v-model="reqencours" seamless position="top" persistent transition-show="scale" transition-hide="scale">
       <q-card class="reqencours row items-center justify-between no-wrap bg-amber-2 q-pa-sm">
           <div class="text-weight-bold">Annuler la requête</div>
           <q-spinner color="primary" size="2rem" :thickness="3" />
@@ -136,6 +136,7 @@ import { cancelRequest, ping } from '../app/util'
 import { useQuasar } from 'quasar'
 import { computed } from 'vue'
 import { useStore } from 'vuex'
+import { onRuptureSession } from '../app/modele'
 
 export default ({
   name: 'MainLayout',
@@ -146,7 +147,17 @@ export default ({
 
   data () {
     return {
-      cancelRequest
+      cancelRequest // fonction de util.js
+    }
+  },
+
+  watch: {
+    '$store.state.ui.sessionerreur': function (newp, oldp) {
+      console.log('Session erreur : ' + (newp ? newp.message : 'x') + ' / ' + (oldp ? oldp.message : 'x'))
+      if (newp) {
+        this.$store.commit('ui/razdialogues')
+        onRuptureSession(newp)
+      }
     }
   },
 
@@ -192,6 +203,7 @@ export default ({
     const diagnosticvisible = computed(() => $store.getters['ui/diagnosticvisible'])
     const reqencours = computed(() => $store.state.ui.reqencours)
     const derniereerreur = computed(() => $store.state.ui.derniereerreur)
+    const sessionerreur = computed(() => $store.state.ui.sessionerreur)
     const labelorgclass = computed(() => 'font-antonio-l q-px-sm ' + ($store.state.ui.org == null ? 'labelorg2' : 'labelorg1'))
     const lerr = [
       'La synchronisation fonctionne normalement.',
@@ -199,6 +211,14 @@ export default ({
       'La liaison avec le serveur a été interrompue en cours de synchronisation'
     ]
     const labelerreursync = computed(() => lerr[$store.state.ui.sessionerreur])
+    /* alternative au watch dans page
+    $store.watch(
+      () => $store.getters['ui/sessionerreurmsg'],
+      sessionerreurmsg => {
+        console.log('<<<<' + sessionerreurmsg)
+      }
+    )
+    */
     return {
       menuouvert,
       infomode,
@@ -212,6 +232,7 @@ export default ({
       diagnosticvisible,
       reqencours,
       derniereerreur,
+      sessionerreur,
       labelerreursync,
       reseauok
     }
@@ -245,7 +266,8 @@ export default ({
 
 .reqencours
   width: 15rem
-  height: 3rem
+  height: 4rem
+  color: black
   overflow: hidden
 
 .msgstd

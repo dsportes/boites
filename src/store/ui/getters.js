@@ -40,3 +40,7 @@ export function modeinconnu (state) { // boolean
 export function labelorg (state) {
   return state.org || 'Organisation non saisie'
 }
+
+export function sessionerreurmsg (state) {
+  return state.sessionerreur ? state.sessionerreur.message : 'OK'
+}

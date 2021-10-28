@@ -1,27 +1,27 @@
 /* gestion WebSocket */
 
-import { cfg, store, dhtToString } from './util'
-import { random } from './crypto'
-import { Idb } from './db'
-const rowTypes = require('./rowTypes')
+import { cfg, store } from './util'
+import { onsync } from './modele'
+import { random, id2s } from './crypto'
+import { AppExc } from './api'
 
-const base64url = require('base64url')
+export const session = { sessionId: '$NULL' }
 
-export const session = {}
+export function SCID () { return session.sessionId }
 
 export async function newSession () {
   if (session.ws) {
     session.ws.close()
     store().commit('ui/majsessionerreur', null)
   }
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     try {
-      const sessionId = base64url(random(6))
-      const ws = new Ws(sessionId)
-      ws.websocket.onopen = (event) => {
-        ws.websocket.send(sessionId)
-        session.ws = ws
-        resolve(ws)
+      session.sessionId = (store().getters['ui/modeincognito'] ? 'I' : 'S') + id2s(random(6))
+      session.ws = new Ws(session.sessionId)
+      session.sortie = 0
+      session.ws.websocket.onopen = (event) => {
+        session.ws.websocket.send(session.sessionId)
+        resolve(session.ws)
       }
     } catch (e) {
       console.log(e)
@@ -30,67 +30,42 @@ export async function newSession () {
   })
 }
 
+function onwserror (e) {
+  store().commit('ui/majsessionerreur', new AppExc(-998, 'WebSocket error'))
+  session.sortie = 2
+  if (session.ws) session.ws.close()
+}
+
 export class Ws {
   constructor (sessionId) {
     try {
       this.sessionId = sessionId
       this.syncqueue = []
-      store().commit('ui/majsessionerreur', 0)
-      this.enfermeture = false
+      store().commit('ui/majsessionerreur', null)
       const u = cfg().urlserveur
       const url = 'wss' + u.substring(u.indexOf('://'))
       this.websocket = new WebSocket(url)
-      this.websocket.onerror = (e) => {
-        store().commit('ui/majsessionerreur', 1) // serveur injoignable à l'ouverture d'un sync
-        this.websocket.close()
-        throw e
-      }
+      this.websocket.onerror = onwserror
       this.websocket.onclose = () => {
-        const err = store().state.ui.sessionerreur
-        if (!this.enfermeture && err === 0) {
-          store().commit('ui/majsessionerreur', 2) // serveur non joignable en cours de sync
-        }
         session.ws = null
+        session.sessionId = '$NULL'
+        if (!session.sortie) {
+          // fermeture par le serveur
+          store().commit('ui/majsessionerreur', new AppExc(-999, 'Session fermée par le serveur'))
+        }
+        session.sortie = 0
       }
       this.websocket.onmessage = (m) => {
-        this.syncqueue.push(m.data)
-        this.onsync()
+        onsync(m.data)
       }
-    } catch (e) {
-      console.log(e)
-    }
-  }
-
-  async onsync (syncList) {
-    if (cfg().debug) {
-      console.log('Liste sync reçue: ' + dhtToString(syncList.dh) +
-        ' status:' + syncList.status + ' sessionId:' + syncList.sessionId + ' nb rowItems:' + syncList.rowItems.length)
-    }
-    this.syncqueue.push(syncList)
-    if (store().state.ui.phasesync === 0) {
-      const q = this.syncqueue
-      this.syncqueue = []
-      await this.processqueue(q)
+    } catch (e) { // on ne passe jamais ici
+      console.log('>>>> ' + e)
     }
   }
 
   close () { // fermeture volontaire
-    this.enfermeture = true
-    this.websocket.close()
-  }
-
-  async processqueue (q) {
-    const items = []
-    const db = Idb.idb
-    for (let i = 0; i < q.length; i++) {
-      const syncList = q[i]
-      for (let j = 0; j < syncList.rowItems.length; j++) {
-        const rowItem = syncList.rowItems[j]
-        rowTypes.deserialItem(rowItem)
-        items.push(rowItem)
-      }
-    }
-    await db.commitRows(items)
-    // TODO : compilation des rows, mettre à jour de l'état mémoire
+    session.sortie = 1
+    store().commit('ui/majsessionerreur', null)
+    if (this.websocket) this.websocket.close()
   }
 }
