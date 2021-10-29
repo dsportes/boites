@@ -33,7 +33,6 @@
     </div>
 
     <dialogue-creation-compte></dialogue-creation-compte>
-    <dialogue-synchro></dialogue-synchro>
 
   </q-page>
 </template>
@@ -45,11 +44,10 @@ import { gp, cfg } from '../app/util'
 import { deconnexion, connexionCompte } from '../app/operations'
 import PhraseSecrete from '../components/PhraseSecrete.vue'
 import DialogueCreationCompte from '../components/DialogueCreationCompte.vue'
-import DialogueSynchro from '../components/DialogueSynchro.vue'
 
 export default ({
   name: 'Accueil',
-  components: { PhraseSecrete, DialogueCreationCompte, DialogueSynchro },
+  components: { PhraseSecrete, DialogueCreationCompte },
   data () {
     return {
       locmode: 0,
@@ -86,7 +84,6 @@ export default ({
     async connecter (ps) {
       if (!ps) return
       await connexionCompte(ps)
-      this.$router.push('/' + this.org + '/compte')
     }
   },
 

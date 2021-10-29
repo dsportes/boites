@@ -8,7 +8,6 @@ export function razdialogues (state) {
   finreq(state)
   razerreur(state)
   majdialoguecrypto(state, false)
-  majdialoguesynchro(state, false)
   majmenuouvert(state, false)
   majinfomode(state, false)
   majinforeseau(state, false)
@@ -92,10 +91,6 @@ export function majsessionerreur (state, val) {
 
 export function majdialoguecrypto (state, val) {
   state.dialoguecrypto = val
-}
-
-export function majdialoguesynchro (state, val) {
-  state.dialoguesynchro = val
 }
 
 export function majdialoguecreationcompte (state, val) {

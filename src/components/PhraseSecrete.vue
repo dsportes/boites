@@ -19,8 +19,7 @@
       </div>
       <div v-else class="row justify-between items-center no-wrap">
           <div v-if="isDev">
-            <q-btn flat label="P1" color="primary" @click="p1" />
-            <q-btn flat label="P2" color="primary" @click="p2" />
+            <span class="text-weight-bold text-primary cursor-pointer q-px-xs" v-for="(p, idx) in phrases" :key="idx" @click="selph(p)">{{idx}}</span>
           </div>
           <div>
             <q-btn color="primary" flat label="Renoncer" size="md" @click="ko" />
@@ -49,6 +48,7 @@ export default ({
       msg: msg,
       encours: false,
       isPwd: false,
+      phrases: this.$cfg.phrases,
       ligne1: this.initVal ? this.initVal.debut : '',
       ligne2: this.initVal ? this.initVal.fin : '',
       vligne1: '',
@@ -56,13 +56,9 @@ export default ({
     }
   },
   methods: {
-    p1 () {
-      this.ligne1 = this.$cfg.phrase1[0]
-      this.ligne2 = this.$cfg.phrase1[1]
-    },
-    p2 () {
-      this.ligne1 = this.$cfg.phrase2[0]
-      this.ligne2 = this.$cfg.phrase2[1]
+    selph (p) {
+      this.ligne1 = p[0]
+      this.ligne2 = p[1]
     },
     labelVal () {
       if (!this.verif) return this.labelValider

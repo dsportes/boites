@@ -1,5 +1,5 @@
 <template>
-  <q-dialog v-model="dialoguesynchro" persistent transition-show="scale" transition-hide="scale">
+    <q-page>
     <q-card class="q-ma-xs">
       <q-card-section>
         <div class="titre-2">Chargement et synchronisation</div>
@@ -12,7 +12,7 @@
             <q-icon class="col-1" size="sm" :name="idb[t[key]].st ? 'done' : 'arrow_right'"/>
             <div class="col-8">{{label}}</div>
             <div class="col-1">{{idb[t[key]].nbl ? idb[t[key]].nbl : ''}}</div>
-            <div class="col-2">{{idb[t[key]].vol ? idb[t[key]].vol + 'Ko' : ''}}</div>
+            <div class="col-2">{{idb[t[key]].vol ? ed(idb[t[key]].vol) : ''}}</div>
           </div>
         </div>
         <div v-if="!$store.getters['ui/modeavion']">
@@ -40,13 +40,14 @@
       </q-card>
     </q-dialog>
 
-  </q-dialog>
+  </q-page>
 </template>
 
 <script>
 import { useStore } from 'vuex'
 import { computed } from 'vue'
 import { data } from '../app/modele'
+import { edvol } from '../app/util'
 
 const labels = [
   'Avatars des comptes',
@@ -67,12 +68,13 @@ const labels = [
 const tables = ['avatar', 'invitgr', 'contact', 'invitct', 'parrain', 'rencontre', 'groupe', 'membre', 'secrets', 'purgeav', 'purgegr', 'cv', 'purgecv']
 
 export default ({
-  name: 'DialogueSynchro',
+  name: 'Synchro',
 
   components: { },
 
   data () {
     return {
+      ed: edvol,
       labels: labels,
       t: tables,
       confirm: false
@@ -82,17 +84,12 @@ export default ({
   methods: {
     stop () {
       data.stopChargt = true
-      // this.dialoguesynchro = false
     }
   },
 
   setup () {
     const $store = useStore()
     return {
-      dialoguesynchro: computed({
-        get: () => $store.state.ui.dialoguesynchro,
-        set: (val) => $store.commit('ui/majdialoguesynchro', val)
-      }),
       idb: computed({
         get: () => $store.state.ui.idblec
       })

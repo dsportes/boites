@@ -2,8 +2,10 @@
     "build" : 2,
     "debug" : 1,
     "urlserveur": "https://test.sportes.fr:8443",
-    "phrase1" : ["leszsanglotszLONGSz", "garezauzGORILLEz"],
-    "phrase2" : ["auzvillagezSANSz", "jaizmauvaisezREPUTATIONz"],
+    "phrases" : [
+      ["leszsanglotszLONGSz", "garezauzGORILLEz"],
+      ["auzvillagezSANSz", "jaizmauvaisezREPUTATIONz"]
+    ],
     "mdpadmin" : "motdepassedugrandargentier",
     "pathlogo" : "icons/favicon-96x96.png",
     "orgs": { "doda": { "pathicon":"doda-icon.png" }, "super": { "pathicon":"super-icon.png" } }

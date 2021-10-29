@@ -1,4 +1,4 @@
-import { store, post, affichermessage /*, cfg */ } from './util'
+import { store, post, affichermessage, router /*, cfg */ } from './util'
 import { newSession, session } from './ws'
 import { Idb, deleteIDB } from './db.js'
 
@@ -35,6 +35,7 @@ Retour:
   avatar
 */
 export async function creationCompte (mdp, ps, nom, quotas) {
+  const org = store().state.ui.org
   const s = await newSession() // store().state.ui.session
   data.ps = ps
   const kp = await crypt.genKeyPair()
@@ -77,7 +78,6 @@ export async function creationCompte (mdp, ps, nom, quotas) {
 
   // maj IDB
   if (store().getters['ui/modesync']) {
-    const org = store().state.ui.org
     const nombase = org + '-' + compte.sid
     const lstk = org + '-' + ps.dpbh
     try {
@@ -93,6 +93,8 @@ export async function creationCompte (mdp, ps, nom, quotas) {
       throw e
     }
   }
+
+  router().push('/' + org + '/compte')
   store().commit('ui/majstatuslogin', true)
   affichermessage('Compte créé et connecté', false)
 }
@@ -176,7 +178,9 @@ async function connexionCompteAvion () {
   }
   data.clek = compte.k
   store().commit('db/setCompte', compte)
-  store().commit('ui/majdialoguesynchro', true)
+
+  router().push('/' + org + '/synchro')
+
   let ok = true
   try {
     await db.chargementIdb()
@@ -186,7 +190,8 @@ async function connexionCompteAvion () {
       affichermessage('Chargement des données locales interrompu sur demande explicite', true)
     } else throw e
   }
-  store().commit('ui/majdialoguesynchro', false)
+
+  router().push('/' + org + '/compte')
   store().commit('ui/majstatuslogin', true)
   affichermessage('Compte authentifié et connecté' + (ok ? '' : ' mais données peut-être incomplètes'), false)
 }

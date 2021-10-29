@@ -25,10 +25,49 @@ export function store () { return $store }
 
 export function gp () { return globalProperties }
 
+export function router () { return globalProperties.$router }
+
 export function sleep (delai) {
   if (delai <= 0) return
   return new Promise((resolve) => { setTimeout(() => resolve(), delai) })
 }
+
+export function edvol (vol) {
+  const v = vol || 0
+  if (v <= 999) return v + 'o'
+  let s = '' + Math.round(v / 10)
+  if (v <= 9999) return s.substring(0, 1) + ',' + s.substring(1, 3) + 'Ko'
+  s = '' + Math.round(v / 100)
+  if (v <= 99999) return s.substring(0, 2) + ',' + s.substring(2, 4) + 'Ko'
+  s = '' + Math.round(v / 1000)
+  if (v <= 999999) return s + 'Ko'
+  s = '' + Math.round(v / 10000)
+  if (v <= 9999999) return s.substring(0, 1) + ',' + s.substring(1, 3) + 'Mo'
+  s = '' + Math.round(v / 100000)
+  if (v <= 99999999) return s.substring(0, 2) + ',' + s.substring(2, 4) + 'Mo'
+  s = '' + Math.round(v / 1000000)
+  if (v <= 999999999) return s + 'Mo'
+  s = '' + Math.round(v / 10000000)
+  if (v <= 9999999999) return s.substring(0, 1) + ',' + s.substring(1, 3) + 'Go'
+  s = '' + Math.round(v / 100000000)
+  if (v <= 99999999999) return s.substring(0, 2) + ',' + s.substring(2, 4) + 'Go'
+  return Math.round(v / 1000000000) + 'Go'
+}
+
+/*
+console.log(edvol(6))
+console.log(edvol(67))
+console.log(edvol(675))
+console.log(edvol(6757))
+console.log(edvol(67578))
+console.log(edvol(675789))
+console.log(edvol(6757892))
+console.log(edvol(67578920))
+console.log(edvol(675789200))
+console.log(edvol(6757892000))
+console.log(edvol(67578920000))
+console.log(edvol(675789200000))
+*/
 
 export function affichermessage (texte, important) {
   $store.dispatch('ui/affichermessage', { texte, important })

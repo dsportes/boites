@@ -4,7 +4,6 @@ export default function () {
     erreur: null,
     derniereerreur: null,
     dialoguecrypto: false,
-    dialoguesynchro: false,
     dialoguecreationcompte: false,
     diagnostic: null,
     menuouvert: false,

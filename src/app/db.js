@@ -54,7 +54,7 @@ export class Idb {
 
   async getCompte () {
     const idb = await this.db.compte.get(1)
-    return new Compte().fromIdb(crypt.decrypter(data.ps.pcb, idb.data))
+    return new Compte().fromIdb(crypt.decrypter(data.ps.pcb, idb.data), idb.vs)
   }
 
   async getAvatars () {
@@ -62,12 +62,12 @@ export class Idb {
     const r = []
     await this.db.avatar.each(idb => {
       vol += idb.data.length
-      const x = new Avatar().fromIdb(crypt.decrypter(data.clek, idb.data))
+      const x = new Avatar().fromIdb(crypt.decrypter(data.clek, idb.data), idb.vs)
       r.push(x)
       this.refsAv.add(x.id)
       this.refsCv.add(x.id)
     })
-    return { objs: r, vol: Math.round(vol) }
+    return { objs: r, vol: vol }
   }
 
   async getInvitgrs () {
@@ -75,13 +75,13 @@ export class Idb {
     const r = []
     await this.db.invitgr.each(idb => {
       vol += idb.data.length
-      const x = new Invitgr().fromIdb(crypt.decrypter(data.clek, idb.data))
+      const x = new Invitgr().fromIdb(crypt.decrypter(data.clek, idb.data), idb.vs)
       r.push(x)
       this.refsAv.add(x.id)
       this.refsCv.add(x.id)
       if (x.idg) this.refsGr.add(x.idg)
     })
-    return { objs: r, vol: Math.round(vol / 1000) }
+    return { objs: r, vol: vol }
   }
 
   async getInvitcts () {
@@ -89,13 +89,13 @@ export class Idb {
     const r = []
     await this.db.invitct.each(idb => {
       vol += idb.data.length
-      const x = new Invitct().fromIdb(crypt.decrypter(data.clek, idb.data))
+      const x = new Invitct().fromIdb(crypt.decrypter(data.clek, idb.data), idb.vs)
       r.push(x)
       this.refsAv.add(x.id)
       this.refsCv.add(x.id)
       if (x.nact) this.refsCv.add(x.nact.id)
     })
-    return { objs: r, vol: Math.round(vol / 1000) }
+    return { objs: r, vol: vol }
   }
 
   async getContacts () {
@@ -103,13 +103,13 @@ export class Idb {
     const r = []
     await this.db.contact.each(idb => {
       vol += idb.data.length
-      const x = new Contact().fromIdb(crypt.decrypter(data.clek, idb.data))
+      const x = new Contact().fromIdb(crypt.decrypter(data.clek, idb.data), idb.vs)
       r.push(x)
       this.refsAv.add(x.id)
       this.refsCv.add(x.id)
       if (x.nact) this.refsCv.add(x.nact.id)
     })
-    return { objs: r, vol: Math.round(vol / 1000) }
+    return { objs: r, vol: vol }
   }
 
   async getParrains () {
@@ -117,12 +117,12 @@ export class Idb {
     const r = []
     await this.db.parrain.each(idb => {
       vol += idb.data.length
-      const x = new Parrain().fromIdb(crypt.decrypter(data.clek, idb.data))
+      const x = new Parrain().fromIdb(crypt.decrypter(data.clek, idb.data), idb.vs)
       r.push(x)
       this.refsAv.add(x.id)
       this.refsCv.add(x.id)
     })
-    return { objs: r, vol: Math.round(vol / 1000) }
+    return { objs: r, vol: vol }
   }
 
   async getRencontres () {
@@ -130,12 +130,12 @@ export class Idb {
     const r = []
     await this.db.rencontre.each(idb => {
       vol += idb.data.length
-      const x = new Rencontre().fromIdb(crypt.decrypter(data.clek, idb.data))
+      const x = new Rencontre().fromIdb(crypt.decrypter(data.clek, idb.data), idb.vs)
       r.push(x)
       this.refsAv.add(x.id)
       this.refsCv.add(x.id)
     })
-    return { objs: r, vol: Math.round(vol / 1000) }
+    return { objs: r, vol: vol }
   }
 
   async getGroupes () {
@@ -143,11 +143,11 @@ export class Idb {
     const r = []
     await this.db.groupe.each(idb => {
       vol += idb.data.length
-      const x = new Groupe().fromIdb(crypt.decrypter(data.clek, idb.data))
+      const x = new Groupe().fromIdb(crypt.decrypter(data.clek, idb.data), idb.vs)
       r.push(x)
       this.refsGr.add(x.id)
     })
-    return { objs: r, vol: Math.round(vol / 1000) }
+    return { objs: r, vol: vol }
   }
 
   async getMembres () {
@@ -155,12 +155,12 @@ export class Idb {
     const r = []
     await this.db.membre.each(idb => {
       vol += idb.data.length
-      const x = new Membre().fromIdb(crypt.decrypter(data.clek, idb.data))
+      const x = new Membre().fromIdb(crypt.decrypter(data.clek, idb.data), idb.vs)
       r.push(x)
       this.refsGr.add(x.id)
       if (x.na) { this.refsAv.add(x.na); this.refsCv.add(x.na) }
     })
-    return { objs: r, vol: Math.round(vol / 1000) }
+    return { objs: r, vol: vol }
   }
 
   async getSecrets () {
@@ -168,12 +168,12 @@ export class Idb {
     const r = []
     await this.db.secret.each(idb => {
       vol += idb.data.length
-      const x = new Secret().fromIdb(crypt.decrypter(data.clek, idb.data))
+      const x = new Secret().fromIdb(crypt.decrypter(data.clek, idb.data), idb.vs)
       r.push(x)
       if (x.ts === 2) this.refsGr.add(x.id)
       else { this.refsAv.add(x.id); this.refsCv.add(x.id) }
     })
-    return { objs: r, vol: Math.round(vol / 1000) }
+    return { objs: r, vol: vol }
   }
 
   async getCvs () {
@@ -181,11 +181,11 @@ export class Idb {
     const r = []
     await this.db.cv.each(idb => {
       vol += idb.data.length
-      const x = new Cv().fromIdb(crypt.decrypter(data.clek, idb.data))
+      const x = new Cv().fromIdb(crypt.decrypter(data.clek, idb.data), idb.vs)
       r.push(x)
       this.enregCvs.add(x.id)
     })
-    return { objs: r, vol: Math.round(vol / 1000) }
+    return { objs: r, vol: vol }
   }
 
   /* Chargement de la totalité de la base en mémoire :

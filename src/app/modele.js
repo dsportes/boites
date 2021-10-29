@@ -228,6 +228,22 @@ const idbCompte = avro.Type.forSchema({
   ]
 })
 
+const idbCompte1 = avro.Type.forSchema({
+  name: 'idbCompte',
+  type: 'record',
+  fields: [
+    { name: 'id', type: 'long' },
+    { name: 'v', type: 'int' },
+    { name: 'dds', type: 'int' },
+    { name: 'dpbh', type: 'long' },
+    { name: 'pcbh', type: 'long' },
+    { name: 'k', type: 'bytes' },
+    { name: 'mac', type: compteMacType },
+    { name: 'mmc', type: compteMmcType },
+    { name: 'memo', type: ['null', 'string'] }
+  ]
+})
+
 /*
   fields: [
     { name: 'id', type: 'long' }, // pk
@@ -237,7 +253,8 @@ const idbCompte = avro.Type.forSchema({
     { name: 'pcbh', type: 'long' },
     { name: 'kx', type: 'bytes' },
     { name: 'mack', type: 'bytes' },
-    { name: 'mmck', type: 'bytes' }
+    { name: 'mmck', type: 'bytes' },
+    { name: 'memok', type: ['null', 'bytes'] }
   ]
 */
 
@@ -254,6 +271,7 @@ export class Compte {
     this.mac = { }
     this.mac[nomAvatar.sid] = { na: nomAvatar, cpriv: cpriv }
     this.mmc = {}
+    this.memo = 'Mémo de ' + nomAvatar.nom
     return this
   }
 
@@ -275,10 +293,12 @@ export class Compte {
       x.na = new NomAvatar(x.nomc)
       delete x.nomc
     }
+    this.memo = Buffer.from(crypt.decrypter(this.k, row.memok)).toString()
     return this
   }
 
   get toRow () { // après maj éventuelle de mac et / ou mmc
+    this.memok = crypt.crypter(data.clek, this.memo)
     this.mmck = crypt.crypter(data.clek, compteMmcType.toBuffer(this.mmc))
     for (const sid in this.mac) {
       const x = this.mac[sid]
@@ -302,13 +322,14 @@ export class Compte {
       const x = this.mac[sid]
       x.nomc = x.na.nomc
     }
-    const idb = { id: 1, data: idbCompte.toBuffer(this) }
+    const idb = { id: 1, vs: 1, data: idbCompte1.toBuffer(this) }
     for (const sid in this.mac) delete this.mac[sid].nomc
     return idb
   }
 
-  fromIdb (idb) {
-    const row = idbCompte.fromBuffer(idb)
+  fromIdb (idb, vs) {
+    const sch = [idbCompte, idbCompte1][vs || 0]
+    const row = sch.fromBuffer(idb)
     this.id = row.id
     this.v = row.v
     this.dds = row.dds
@@ -317,6 +338,7 @@ export class Compte {
     this.k = row.k
     this.mmc = row.mmc
     this.mac = row.mac
+    this.memo = vs ? (row.memo || '') : ''
     for (const sid in this.mac) {
       const x = this.mac[sid]
       x.na = new NomAvatar(x.nomc)

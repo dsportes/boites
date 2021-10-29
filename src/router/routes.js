@@ -2,6 +2,7 @@ import MainLayout from 'layouts/MainLayout.vue'
 import Org from 'src/pages/Org.vue'
 import Accueil from 'src/pages/Accueil.vue'
 import Compte from 'src/pages/Compte.vue'
+import Synchro from 'src/pages/Synchro.vue'
 
 const routes = [
   {
@@ -10,6 +11,7 @@ const routes = [
     children: [
       { path: '', component: Org },
       { path: ':org', component: Accueil },
+      { path: ':org/synchro', component: Synchro },
       { path: ':org/compte', component: Compte }
     ]
   },
