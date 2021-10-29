@@ -22,6 +22,7 @@
 import { computed } from 'vue'
 import { useStore } from 'vuex'
 import { get } from '../app/util'
+import { remplacePage } from '../app/modele'
 const rowTypes = require('../app/rowTypes')
 
 export default ({
@@ -54,6 +55,16 @@ export default ({
 
   setup () {
     const $store = useStore()
+    const org = $store.state.ui.org
+    if (!org) {
+      remplacePage('Org')
+      return
+    }
+    const statuslogin = $store.state.ui.statuslogin
+    if (!statuslogin) {
+      remplacePage('Accueil')
+      return
+    }
     const cvs = computed(() => $store.state.db.cvs)
     const avatars = computed(() => $store.state.db.avatars)
     const compte = computed(() => $store.state.db.compte)

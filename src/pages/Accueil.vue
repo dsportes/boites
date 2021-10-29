@@ -1,5 +1,6 @@
 <template>
   <q-page class="column align-start items-center">
+    <q-btn v-if="!connecte" class="q-ma-sm" color="primary" icon-right="check" label="Changer d'organisation" @click="changerOrg"/>
     <q-btn v-if="connecte" class="q-ma-sm" color="primary" icon-right="logout" label="Se déconnecter" @click="sedeconnecter"/>
 
     <div v-else class="column align-start items-center">
@@ -44,6 +45,7 @@ import { gp, cfg } from '../app/util'
 import { deconnexion, connexionCompte } from '../app/operations'
 import PhraseSecrete from '../components/PhraseSecrete.vue'
 import DialogueCreationCompte from '../components/DialogueCreationCompte.vue'
+import { remplacePage } from '../app/modele'
 
 export default ({
   name: 'Accueil',
@@ -58,19 +60,6 @@ export default ({
   },
 
   watch: {
-    // changement d'organisation directement sur l'URL
-    '$route.params': function (newp, oldp) {
-      console.log(JSON.stringify(newp) + ' -- ' + JSON.stringify(oldp))
-      const x = cfg().orgs[newp.org]
-      if (!x) {
-        this.$store.commit('ui/majorg', null)
-        this.$store.commit('ui/majorgicon', cfg().logo)
-        setTimeout(() => { this.$router.replace('/') }, 10)
-      } else {
-        this.$store.commit('ui/majorg', newp.org)
-        this.$store.commit('ui/majorgicon', x.icon)
-      }
-    },
     locmode: async function (m) {
       this.$store.commit('ui/majmode', m)
     }
@@ -79,6 +68,11 @@ export default ({
   methods: {
     async sedeconnecter () {
       await deconnexion()
+    },
+
+    changerOrg () {
+      this.$store.commit('ui/majorg', null)
+      remplacePage('Org')
     },
 
     async connecter (ps) {

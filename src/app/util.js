@@ -2,6 +2,7 @@ import axios from 'axios'
 const api = require('./api')
 import { SCID } from './ws'
 const AppExc = require('./api').AppExc
+
 const headers = { 'x-api-version': api.version }
 // import * as CONST from '../store/constantes'
 
@@ -15,6 +16,7 @@ export function setup (gp, appconfig) {
   $cfg = appconfig
   globalProperties = gp
 }
+
 export function setstore (store) {
   $store = store
 }

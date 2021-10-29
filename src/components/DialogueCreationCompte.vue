@@ -67,7 +67,7 @@ import PhraseSecrete from './PhraseSecrete.vue'
 import MdpAdmin from './MdpAdmin.vue'
 import QuotasVolume from './QuotasVolume.vue'
 import { creationCompte } from '../app/operations'
-import { Quotas } from '../app/modele'
+import { Quotas, remplacePage } from '../app/modele'
 
 export default ({
   name: 'DialogueCreationCompte',
@@ -115,7 +115,7 @@ export default ({
       this.quotas = null
       this.nom = ''
       this.step = 1
-      this.$router.push('/' + this.org + '/compte')
+      remplacePage('Compte')
     },
     corriger () {
       this.step = 1

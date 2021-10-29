@@ -13,6 +13,7 @@
 <script>
 import { cfg } from '../app/util'
 import { useStore } from 'vuex'
+import { remplacePage } from '../app/modele'
 
 export default ({
   name: 'Org',
@@ -24,7 +25,8 @@ export default ({
 
   methods: {
     ok (o) {
-      this.$router.replace({ path: `/${o.id}` })
+      this.$store.commit('ui/majorg', o.id)
+      remplacePage('Accueil')
     }
   },
 
@@ -36,6 +38,7 @@ export default ({
     for (const o in orgs) {
       listeorgs.push({ id: o, icon: orgs[o].icon })
     }
+    $store.commit('ui/majorg', null)
     return {
       listeorgs
     }

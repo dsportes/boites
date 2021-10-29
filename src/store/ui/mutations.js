@@ -114,3 +114,19 @@ export function majidblec (state, { table, st, vol, nbl }) {
 export function razidblec (state) {
   state.idblec = { ...IDBLEC_RAZ }
 }
+
+export function majphase (state, val) {
+  state.phase = val
+}
+
+export function majidberreur (state, val) {
+  state.idberreur = val
+}
+
+export function modeleactif (state) {
+  state.modeleactif = true
+}
+
+export function modelepassif (state) {
+  state.modeleactif = false
+}

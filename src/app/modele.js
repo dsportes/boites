@@ -4,12 +4,67 @@ const base64url = require('base64url')
 const rowTypes = require('./rowTypes')
 import { Idb } from './db'
 import { session } from './ws'
-import { cfg, store, dhtToString } from './util'
+import { cfg, store, dhtToString, router } from './util'
 import { types } from './api'
 // import { store } from 'quasar/wrappers'
 
+export function onBoot (router) {
+  router.beforeEach((to, from, next) => {
+    const org = store().state.ui.org
+    if (!org) {
+      if (to.name !== 'Org') {
+        next({ name: 'Org' })
+        return
+      } else next()
+    }
+    const statuslogin = store().state.ui.statuslogin
+    if (!statuslogin) {
+      if (to.name !== 'Accueil') {
+        next({ name: 'Accueil', params: { org: org } })
+        return
+      } else next()
+    }
+    next()
+  })
+}
+
 export function onRuptureSession (appExc) {
   console.log('Rupture de session : ' + appExc.message)
+}
+
+export function remplacePage (page) {
+  const r = router()
+  const org = store().state.ui.org
+  switch (page) {
+    case 'Org' : {
+      data.page = page
+      data.phase = 0
+      store().commit('ui/majphase', 0)
+      r.replace('/')
+      break
+    }
+    case 'Accueil' : {
+      data.page = page
+      data.phase = 0
+      store().commit('ui/majphase', 0)
+      r.replace('/' + org)
+      break
+    }
+    case 'Synchro' : {
+      data.page = page
+      data.phase = 1
+      store().commit('ui/majphase', 1)
+      r.replace('/' + org + '/synchro')
+      break
+    }
+    case 'Compte' : {
+      data.page = page
+      data.phase = 2
+      store().commit('ui/majphase', 2)
+      r.replace('/' + org + '/compte')
+      break
+    }
+  }
 }
 
 /* état de session */

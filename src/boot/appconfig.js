@@ -13,8 +13,8 @@ export default boot(async ({ app /*, router, store, Vue */ }) => {
   }
   cfg.isDev = process.env.DEV
   gp.$cfg = cfg
-  setup(gp, cfg)
   console.log('Build : ' + cfg.build)
   const salts = await getBinPub('salts')
   crypt.setSalts(salts)
+  setup(gp, cfg)
 })

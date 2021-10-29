@@ -132,11 +132,12 @@
 import PanelMenu from 'components/PanelMenu.vue'
 import DialogueErreur from 'components/DialogueErreur.vue'
 import DialogueCrypto from 'components/DialogueCrypto.vue'
-import { cancelRequest, ping } from '../app/util'
+import { cancelRequest, ping, cfg } from '../app/util'
 import { useQuasar } from 'quasar'
 import { computed } from 'vue'
 import { useStore } from 'vuex'
-import { onRuptureSession } from '../app/modele'
+import { onRuptureSession, remplacePage, onBoot } from '../app/modele'
+import { useRouter /*, useRoute */ } from 'vue-router'
 
 export default ({
   name: 'MainLayout',
@@ -152,6 +153,19 @@ export default ({
   },
 
   watch: {
+    // changement d'organisation directement sur l'URL
+    '$route.params': function (newp, oldp) {
+      console.log(JSON.stringify(newp) + ' -- ' + JSON.stringify(oldp))
+      const x = cfg().orgs[newp.org]
+      if (!x) {
+        this.$store.commit('ui/majorg', null)
+        this.$store.commit('ui/majorgicon', cfg().logo)
+        setTimeout(() => { remplacePage('Org') }, 10)
+      } else {
+        this.$store.commit('ui/majorg', newp.org)
+        this.$store.commit('ui/majorgicon', x.icon)
+      }
+    },
     '$store.state.ui.sessionerreur': function (newp, oldp) {
       console.log('Session erreur : ' + (newp ? newp.message : 'x') + ' / ' + (oldp ? oldp.message : 'x'))
       if (newp) {
@@ -163,7 +177,7 @@ export default ({
 
   methods: {
     accueil () {
-      this.$router.replace('/' + this.org)
+      remplacePage('Accueil')
     },
 
     async ping () {
@@ -176,6 +190,7 @@ export default ({
   },
 
   setup () {
+    onBoot(useRouter())
     const $q = useQuasar()
     $q.dark.set(true)
     const $store = useStore()

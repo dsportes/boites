@@ -1,9 +1,9 @@
-import { store, post, affichermessage, router /*, cfg */ } from './util'
+import { store, post, affichermessage /*, cfg */ } from './util'
 import { newSession, session } from './ws'
 import { Idb, deleteIDB } from './db.js'
 
 import * as CONST from '../store/constantes'
-import { NomAvatar, Compte, Avatar, data, Cv, rowItemsToRows } from './modele'
+import { NomAvatar, Compte, Avatar, data, Cv, rowItemsToRows, remplacePage } from './modele'
 import { AppExc } from './api'
 
 const crypt = require('./crypto')
@@ -94,9 +94,9 @@ export async function creationCompte (mdp, ps, nom, quotas) {
     }
   }
 
-  router().push('/' + org + '/compte')
   store().commit('ui/majstatuslogin', true)
   affichermessage('Compte créé et connecté', false)
+  remplacePage('Compte')
 }
 
 /*
@@ -178,8 +178,8 @@ async function connexionCompteAvion () {
   }
   data.clek = compte.k
   store().commit('db/setCompte', compte)
-
-  router().push('/' + org + '/synchro')
+  store().commit('ui/majstatuslogin', true)
+  remplacePage('Synchro')
 
   let ok = true
   try {
@@ -191,7 +191,6 @@ async function connexionCompteAvion () {
     } else throw e
   }
 
-  router().push('/' + org + '/compte')
-  store().commit('ui/majstatuslogin', true)
   affichermessage('Compte authentifié et connecté' + (ok ? '' : ' mais données peut-être incomplètes'), false)
+  remplacePage('Compte')
 }

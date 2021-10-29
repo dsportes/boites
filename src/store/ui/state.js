@@ -20,6 +20,9 @@ export default function () {
     org: null,
     orgicon: null, // Non null quand l'organisation est connue
     sessionerreur: null,
-    idblec: IDBLEC_RAZ
+    idblec: IDBLEC_RAZ,
+    phase: 0,
+    idberreur: null,
+    modeleactif: false
   }
 }
