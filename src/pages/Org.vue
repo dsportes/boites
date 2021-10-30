@@ -26,7 +26,8 @@ export default ({
   methods: {
     ok (o) {
       this.$store.commit('ui/majorg', o.id)
-      remplacePage('Accueil')
+      this.$store.commit('ui/majorgicon', o.icon)
+      remplacePage('Login')
     }
   },
 

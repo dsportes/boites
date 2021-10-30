@@ -14,18 +14,22 @@ export function onBoot (router) {
     if (!org) {
       if (to.name !== 'Org') {
         next({ name: 'Org' })
-      } else {
-        next()
+        return
       }
+      next()
       return
     }
-    const statuslogin = store().state.ui.statuslogin
-    if (!statuslogin) {
-      if (to.name !== 'Accueil') {
-        next({ name: 'Accueil', params: { org: org } })
-      } else {
+    const compte = store().state.db.compte
+    if (!compte) {
+      if (to.name === 'Org') {
         next()
+        return
       }
+      if (to.name !== 'Login') {
+        next({ name: 'Login', params: { org: org } })
+        return
+      }
+      next()
       return
     }
     next()
@@ -47,11 +51,11 @@ export function remplacePage (page) {
       r.replace({ name: 'Org' })
       break
     }
-    case 'Accueil' : {
+    case 'Login' : {
       data.page = page
       data.phase = 0
       store().commit('ui/majphase', 0)
-      r.replace({ name: 'Accueil', params: { org: org } })
+      r.replace({ name: 'Login', params: { org: org } })
       break
     }
     case 'Synchro' : {
@@ -66,6 +70,20 @@ export function remplacePage (page) {
       data.phase = 2
       store().commit('ui/majphase', 2)
       r.replace({ name: 'Compte', params: { org: org } })
+      break
+    }
+    case 'Avatar' : {
+      data.page = page
+      data.phase = 2
+      store().commit('ui/majphase', 2)
+      r.replace({ name: 'Avatar', params: { org: org } })
+      break
+    }
+    case 'Groupe' : {
+      data.page = page
+      data.phase = 2
+      store().commit('ui/majphase', 2)
+      r.replace({ name: 'Groupe', params: { org: org } })
       break
     }
   }
@@ -337,6 +355,12 @@ export class Compte {
   get sid () { return crypt.id2s(this.id) }
 
   get pk () { return this.id }
+
+  get titre () {
+    if (!this.memo) return '(inconnu)'
+    const i = this.memo.indexOf('/n')
+    return i === -1 ? this.memo : this.memo.substring(0, i)
+  }
 
   fromRow (row) {
     this.id = row.id

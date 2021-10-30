@@ -2,12 +2,14 @@
   <q-layout view="hHh lpR fFf">
     <q-header reveal elevated>
       <q-toolbar>
-        <q-btn flat dense round icon="menu" aria-label="Menu" @click="$store.commit('ui/majmenuouvert', true)"/>
-        <q-btn flat dense round icon="home" aria-label="Accueil" @click="accueil"/>
-
         <q-toolbar-title>
-          <img class="imgstd" :src="orgicon">
-          <span :class="labelorgclass">{{ $store.getters['ui/labelorg'] }}</span>
+          <span :class="compte == null ? 'cursor-pointer' : 'no-pointer-events'" @click="toorg">
+            <img class="imgstd" :src="orgicon">
+            <span :class="labelorgclass">{{ $store.getters['ui/labelorg'] }}</span>
+          </span>
+          <q-btn v-if="org != null && compte == null" flat dense icon="login" label="Connexion" @click="login"/>
+          <q-btn v-if="org != null && compte != null" flat dense icon="logout" label="Déconnexion" @click="logout"/>
+          <span v-if="org != null && compte != null" class="font-antonio-l q-px-sm">{{ compte.titre }}</span>
         </q-toolbar-title>
 
         <q-btn v-if="$store.getters['ui/modeincognito'] || $store.getters['ui/modesync']" flat dense round icon="autorenew" aria-label="Etat synchronisation"
@@ -25,6 +27,12 @@
         :name="['info','sync_alt','info','airplanemode_active'][$store.state.ui.mode]" />
 
       </q-toolbar>
+        <q-toolbar inset>
+          <q-toolbar-title>
+
+          </q-toolbar-title>
+          <q-btn flat dense round icon="menu" aria-label="Menu" @click="$store.commit('ui/majmenuouvert', true)"/>
+        </q-toolbar>
     </q-header>
 
     <q-drawer v-model="menuouvert" side="left" overlay elevated class="bg-grey-1" >
@@ -180,8 +188,12 @@ export default {
   },
 
   methods: {
-    accueil () {
-      remplacePage('Accueil')
+    login () {
+      remplacePage('Login')
+    },
+
+    toorg () {
+      remplacePage('Org')
     },
 
     async ping () {
@@ -216,6 +228,9 @@ export default {
     })
     const org = computed(() => $store.state.ui.org)
     const orgicon = computed(() => $store.state.ui.orgicon)
+    const compte = $store.state.ui.compte
+    const avatar = $store.state.ui.avatar
+    const groupe = $store.state.ui.groupe
     const mode = computed(() => $store.state.ui.mode)
     const reseauok = computed(() => $store.getters['ui/reseauok'])
     const messagevisible = computed(() => $store.getters['ui/messagevisible'])
@@ -245,6 +260,9 @@ export default {
       infosync,
       org,
       orgicon,
+      compte,
+      avatar,
+      groupe,
       labelorgclass,
       mode,
       messagevisible,
@@ -261,6 +279,12 @@ export default {
 
 <style lang="sass" scpoed>
 @import '../css/app.sass'
+.fade-enter-active, .fade-leave-active
+  transition: all 0.2s ease-in-out
+.fade-enter, .fade-leave-active
+  opacity: 0
+  transform: translateX(50%)
+
 .iconstd
   font-size: $iconsize !important
   background-color: white
@@ -311,17 +335,8 @@ export default {
   color: $red
 .gris
   color: $grey-6
-</style>
-<style scoped>
-.fade-enter-active,
-.fade-leave-active {
-  transition-duration: 0.5s;
-  transition-property: opacity;
-  transition-timing-function: ease;
-}
 
-.fade-enter,
-.fade-leave-active {
-  opacity: 0
-}
+.q-toolbar
+  padding: 2px !important
+  min-height: 0 !important
 </style>

@@ -3,6 +3,8 @@ const crypt = require('../../app/crypto')
 
 export function raz (state) {
   state.compte = null
+  state.avatar = null
+  state.groupe = null
   state.avatars = {}
   state.contacts = {}
   state.invitcts = {}
@@ -13,6 +15,18 @@ export function raz (state) {
   state.parrains = {}
   state.rencontres = {}
   state.cvs = {}
+}
+
+export function majcompte (state, val) {
+  state.compte = val
+}
+
+export function majavatar (state, val) {
+  state.avatar = val
+}
+
+export function majgroupe (state, val) {
+  state.groupe = val
 }
 
 export function purgeAvatars (state, val) { // val : Set des ids des avatars utiles

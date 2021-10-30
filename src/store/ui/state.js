@@ -18,7 +18,7 @@ export default function () {
     messageto: null,
     statuslogin: false,
     org: null,
-    orgicon: null, // Non null quand l'organisation est connue
+    orgicon: null,
     sessionerreur: null,
     idblec: IDBLEC_RAZ,
     phase: 0,

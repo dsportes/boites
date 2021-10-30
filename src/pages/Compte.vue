@@ -58,22 +58,24 @@ export default ({
     const org = $store.state.ui.org
     if (!org) {
       remplacePage('Org')
-      return { compte: null }
+      return { org: null, compte: null }
     }
-    const statuslogin = $store.state.ui.statuslogin
-    if (!statuslogin) {
-      remplacePage('Accueil')
-      return { compte: null }
+    const compte = computed(() => $store.state.db.compte)
+    if (!compte.value) {
+      remplacePage('Login')
+      return { org: org, compte: null }
     }
     const cvs = computed(() => $store.state.db.cvs)
     const avatars = computed(() => $store.state.db.avatars)
-    const compte = computed(() => $store.state.db.compte)
     const mode = computed(() => $store.state.ui.mode)
+    const modeleactif = computed(() => $store.state.ui.modeleactif)
     return {
-      cvs,
-      avatars,
+      org,
       compte,
-      mode
+      mode,
+      modeleactif,
+      cvs,
+      avatars
     }
   }
 

@@ -1,9 +1,7 @@
 <template>
   <q-page class="column align-start items-center">
-    <q-btn v-if="!connecte" class="q-ma-sm" color="primary" icon-right="check" label="Changer d'organisation" @click="changerOrg"/>
-    <q-btn v-if="connecte" class="q-ma-sm" color="primary" icon-right="logout" label="Se déconnecter" @click="sedeconnecter"/>
 
-    <div v-else class="column align-start items-center">
+    <div class="column align-start items-center">
       <q-card flat class="q-ma-xs petitelargeur">
         <q-card-section>
           <div class="titre-2">Choix du mode
@@ -41,14 +39,14 @@
 <script>
 import { computed } from 'vue'
 import { useStore } from 'vuex'
-import { gp, cfg } from '../app/util'
+import { cfg } from '../app/util'
 import { deconnexion, connexionCompte } from '../app/operations'
 import PhraseSecrete from '../components/PhraseSecrete.vue'
 import DialogueCreationCompte from '../components/DialogueCreationCompte.vue'
 import { remplacePage } from '../app/modele'
 
 export default ({
-  name: 'Accueil',
+  name: 'Login',
   components: { PhraseSecrete, DialogueCreationCompte },
   data () {
     return {
@@ -85,26 +83,26 @@ export default ({
     const $store = useStore()
     const org = computed(() => $store.state.ui.org)
     const orgicon = computed(() => $store.state.ui.orgicon)
-    const connecte = computed(() => $store.state.ui.statuslogin)
+    const compte = computed(() => $store.state.db.compte)
     // org reçue sur l'URL, soit directement soit parce que routée par la vue Org
-    const localorg = computed(() => gp().$route.params.org)
+    // const localorg = computed(() => gp().$route.params.org)
 
-    const x = cfg().orgs[localorg.value]
-    if (!x) {
-      // org reçue sur l'URL non contrôlée par la vue Org et non définie. Retour à la page Org
+    // const x = cfg().orgs[localorg.value]
+    if (!org.value) {
       $store.commit('ui/majorg', null)
       $store.commit('ui/majorgicon', cfg().logo)
-      setTimeout(() => { gp().$router.replace('/') }, 10)
+      remplacePage('Org')
+      // setTimeout(() => { gp().$router.replace('/') }, 10)
     } else {
       // org valide
-      $store.commit('ui/majorg', localorg.value)
-      $store.commit('ui/majorgicon', x.icon)
+      $store.commit('ui/majorg', org.value)
+      $store.commit('ui/majorgicon', org.value.icon)
     }
 
     return {
       org,
       orgicon,
-      connecte
+      compte
     }
   }
 

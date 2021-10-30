@@ -1,8 +1,10 @@
 import MainLayout from 'layouts/MainLayout.vue'
 import Org from 'src/pages/Org.vue'
-import Accueil from 'src/pages/Accueil.vue'
-import Compte from 'src/pages/Compte.vue'
+import Login from 'src/pages/Login.vue'
 import Synchro from 'src/pages/Synchro.vue'
+import Compte from 'src/pages/Compte.vue'
+import Avatar from 'src/pages/Avatar.vue'
+import Groupe from 'src/pages/Groupe.vue'
 
 const routes = [
   {
@@ -10,9 +12,11 @@ const routes = [
     component: MainLayout,
     children: [
       { path: '', name: 'Org', component: Org },
-      { path: ':org', name: 'Accueil', component: Accueil },
+      { path: ':org', name: 'Login', component: Login },
       { path: ':org/synchro', name: 'Synchro', component: Synchro },
-      { path: ':org/compte', name: 'Compte', component: Compte }
+      { path: ':org/compte', name: 'Compte', component: Compte },
+      { path: ':org/compte', name: 'Avatar', component: Avatar },
+      { path: ':org/compte', name: 'Groupe', component: Groupe }
     ]
   },
 
