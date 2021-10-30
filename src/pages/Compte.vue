@@ -1,5 +1,5 @@
 <template>
-  <q-page class="column align-start items-center">
+  <q-page v-if="compte != null" class="column align-start items-center">
     <h6>Compte : {{compte.sid}}</h6>
     <h6>Liste des avatars du compte</h6>
     <div v-for="e in compte.mac" :key="e.na.sid">
@@ -58,12 +58,12 @@ export default ({
     const org = $store.state.ui.org
     if (!org) {
       remplacePage('Org')
-      return
+      return { compte: null }
     }
     const statuslogin = $store.state.ui.statuslogin
     if (!statuslogin) {
       remplacePage('Accueil')
-      return
+      return { compte: null }
     }
     const cvs = computed(() => $store.state.db.cvs)
     const avatars = computed(() => $store.state.db.avatars)
