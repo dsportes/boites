@@ -1,4 +1,13 @@
 import * as CONST from '../constantes'
+import { cfg } from '../../app/util'
+
+export function orgicon (state) {
+  return state.org ? cfg().orgs[state.org].icon : cfg().logo
+}
+
+export function orglabel (state) {
+  return state.org || 'Organisation non saisie'
+}
 
 export function enerreur (state) { // boolean
   return state.erreur != null
@@ -36,9 +45,6 @@ export function modesync (state) { // boolean
 }
 export function modeinconnu (state) { // boolean
   return state.mode === CONST.MODE_INCONNU
-}
-export function labelorg (state) {
-  return state.org || 'Organisation non saisie'
 }
 
 export function sessionerreurmsg (state) {

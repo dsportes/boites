@@ -23,6 +23,7 @@ export default function () {
     idblec: IDBLEC_RAZ,
     phase: 0,
     idberreur: null,
-    modeleactif: false
+    modeleactif: false,
+    page: 'Org'
   }
 }

@@ -10,21 +10,21 @@
         </q-card-section>
       <q-card-section>
           <div class="q-gutter-sm">
-            <q-radio dark dense v-model="locmode" :val="1" label="Synchronisé" />
-            <q-radio dark dense v-model="locmode" :val="2" label="Incognito" />
-            <q-radio dark dense v-model="locmode" :val="3" label="Avion" />
+            <q-radio dark dense v-model="mode" :val="1" label="Synchronisé" />
+            <q-radio dark dense v-model="mode" :val="2" label="Incognito" />
+            <q-radio dark dense v-model="mode" :val="3" label="Avion" />
           </div>
       </q-card-section>
       </q-card>
 
-      <q-card flat v-if="locmode != 0" class="q-ma-xs petitelargeur">
+      <q-card flat v-if="mode != 0" class="q-ma-xs petitelargeur">
         <q-card-section>
           <div class="titre-2">Phrase secrète de connexion</div>
         </q-card-section>
         <phrase-secrete label-valider="Se connecter" icon-valider="send" v-on:ok-ps="connecter"></phrase-secrete>
       </q-card>
 
-      <div v-if="locmode != 0" class="q-my-md petitelargeur column items-start">
+      <div v-if="mode != 0" class="q-my-md petitelargeur column items-start">
         <q-btn flat color="warning" icon="add_circle" label="Test synchro" @click="$store.commit('ui/majdialoguesynchro', true)"/>
         <q-btn flat color="warning" icon="add_circle" label="Nouveau compte parrainé" />
         <q-btn flat color="primary" icon="add_circle" label="Nouveau compte (sans parrain)" @click="$store.commit('ui/majdialoguecreationcompte', true)"/>
@@ -39,7 +39,7 @@
 <script>
 import { computed } from 'vue'
 import { useStore } from 'vuex'
-import { cfg } from '../app/util'
+// import { cfg } from '../app/util'
 import { deconnexion, connexionCompte } from '../app/operations'
 import PhraseSecrete from '../components/PhraseSecrete.vue'
 import DialogueCreationCompte from '../components/DialogueCreationCompte.vue'
@@ -50,19 +50,19 @@ export default ({
   components: { PhraseSecrete, DialogueCreationCompte },
   data () {
     return {
-      locmode: 0,
       ps: null,
       erreurconnexion: false,
       diag: ''
     }
   },
 
+  /*
   watch: {
     locmode: async function (m) {
       this.$store.commit('ui/majmode', m)
     }
   },
-
+  */
   methods: {
     async sedeconnecter () {
       await deconnexion()
@@ -82,26 +82,19 @@ export default ({
   setup () {
     const $store = useStore()
     const org = computed(() => $store.state.ui.org)
-    const orgicon = computed(() => $store.state.ui.orgicon)
+    const mode = computed({
+      get: () => $store.state.ui.mode,
+      set: (val) => $store.commit('ui/majmode', val)
+    })
     const compte = computed(() => $store.state.db.compte)
-    // org reçue sur l'URL, soit directement soit parce que routée par la vue Org
-    // const localorg = computed(() => gp().$route.params.org)
-
-    // const x = cfg().orgs[localorg.value]
     if (!org.value) {
-      $store.commit('ui/majorg', null)
-      $store.commit('ui/majorgicon', cfg().logo)
       remplacePage('Org')
-      // setTimeout(() => { gp().$router.replace('/') }, 10)
-    } else {
-      // org valide
-      $store.commit('ui/majorg', org.value)
-      $store.commit('ui/majorgicon', org.value.icon)
+      // setTimeout(() => { remplacePage('Org') }, 10)
     }
 
     return {
       org,
-      orgicon,
+      mode,
       compte
     }
   }

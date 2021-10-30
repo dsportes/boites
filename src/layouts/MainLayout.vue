@@ -5,11 +5,12 @@
         <q-toolbar-title>
           <span :class="compte == null ? 'cursor-pointer' : 'no-pointer-events'" @click="toorg">
             <img class="imgstd" :src="orgicon">
-            <span :class="labelorgclass">{{ $store.getters['ui/labelorg'] }}</span>
+            <span :class="orglabelclass">{{ orglabel }}</span>
           </span>
-          <q-btn v-if="org != null && compte == null" flat dense icon="login" label="Connexion" @click="login"/>
-          <q-btn v-if="org != null && compte != null" flat dense icon="logout" label="Déconnexion" @click="logout"/>
+          <q-btn v-if="org != null && compte == null && page !== 'Login'" color="warning" dense icon="login" label="Connexion" @click="login"/>
+          <span v-if="org != null && compte == null && page === 'Login'" class="q-px-sm">Connexion ...</span>
           <span v-if="org != null && compte != null" class="font-antonio-l q-px-sm">{{ compte.titre }}</span>
+          <q-btn v-if="org != null && compte != null" dense color="warning" icon="logout" label="Déconnexion" @click="logout"/>
         </q-toolbar-title>
 
         <q-btn v-if="$store.getters['ui/modeincognito'] || $store.getters['ui/modesync']" flat dense round icon="autorenew" aria-label="Etat synchronisation"
@@ -149,7 +150,8 @@ import { useQuasar } from 'quasar'
 import { computed } from 'vue'
 import { useStore } from 'vuex'
 import { onRuptureSession, remplacePage, onBoot } from '../app/modele'
-import { useRouter /*, useRoute */ } from 'vue-router'
+import { deconnexion } from '../app/operations'
+import { useRouter, useRoute } from 'vue-router'
 
 export default {
   name: 'MainLayout',
@@ -170,12 +172,10 @@ export default {
       console.log(JSON.stringify(newp) + ' -- ' + JSON.stringify(oldp))
       const x = cfg().orgs[newp.org]
       if (!x) {
-        this.$store.commit('ui/majorg', null)
-        this.$store.commit('ui/majorgicon', cfg().logo)
+        this.org = null
         setTimeout(() => { remplacePage('Org') }, 10)
       } else {
-        this.$store.commit('ui/majorg', newp.org)
-        this.$store.commit('ui/majorgicon', x.icon)
+        this.org = newp.org
       }
     },
     '$store.state.ui.sessionerreur': function (newp, oldp) {
@@ -196,6 +196,10 @@ export default {
       remplacePage('Org')
     },
 
+    logout () {
+      deconnexion()
+    },
+
     async ping () {
       try {
         await ping()
@@ -206,10 +210,18 @@ export default {
   },
 
   setup () {
-    onBoot(useRouter())
     const $q = useQuasar()
     $q.dark.set(true)
     const $store = useStore()
+    const $route = useRoute()
+
+    onBoot(useRouter())
+
+    const urlorg = $route.params.org
+    console.log('URL org : ' + urlorg)
+    if (urlorg && cfg().orgs[urlorg]) {
+      $store.commit('ui/org', urlorg)
+    }
     const menuouvert = computed({
       get: () => $store.state.ui.menuouvert,
       set: (val) => $store.commit('ui/majmenuouvert', val)
@@ -226,11 +238,17 @@ export default {
       get: () => $store.state.ui.infosync,
       set: (val) => $store.commit('ui/majinfosync', val)
     })
-    const org = computed(() => $store.state.ui.org)
-    const orgicon = computed(() => $store.state.ui.orgicon)
-    const compte = $store.state.ui.compte
-    const avatar = $store.state.ui.avatar
-    const groupe = $store.state.ui.groupe
+    const org = computed({
+      get: () => $store.state.ui.org,
+      set: (val) => $store.commit('ui/majorg', val)
+    })
+    const page = computed(() => $store.state.ui.page)
+    const orgicon = computed(() => $store.getters['ui/orgicon'])
+    const orglabel = computed(() => $store.getters['ui/orglabel'])
+    const orglabelclass = computed(() => 'font-antonio-l q-px-sm ' + ($store.state.ui.org == null ? 'labelorg2' : 'labelorg1'))
+    const compte = computed(() => $store.state.db.compte)
+    const avatar = computed(() => $store.state.db.avatar)
+    const groupe = computed(() => $store.state.db.groupe)
     const mode = computed(() => $store.state.ui.mode)
     const reseauok = computed(() => $store.getters['ui/reseauok'])
     const messagevisible = computed(() => $store.getters['ui/messagevisible'])
@@ -238,7 +256,6 @@ export default {
     const reqencours = computed(() => $store.state.ui.reqencours)
     const derniereerreur = computed(() => $store.state.ui.derniereerreur)
     const sessionerreur = computed(() => $store.state.ui.sessionerreur)
-    const labelorgclass = computed(() => 'font-antonio-l q-px-sm ' + ($store.state.ui.org == null ? 'labelorg2' : 'labelorg1'))
     const lerr = [
       'La synchronisation fonctionne normalement.',
       'La liaison avec le serveur n\'a pas pu s\'établir au moment de commencer la synchronisation',
@@ -253,17 +270,20 @@ export default {
       }
     )
     */
+    console.log('Page:' + page.value)
     return {
+      page,
       menuouvert,
       infomode,
       inforeseau,
       infosync,
       org,
       orgicon,
+      orglabel,
+      orglabelclass,
       compte,
       avatar,
       groupe,
-      labelorgclass,
       mode,
       messagevisible,
       diagnosticvisible,
@@ -299,6 +319,7 @@ export default {
   border-radius: $iconsize / 2
   cursor: pointer
   position: relative
+  margin-right: 2px
   top: 4px
 
 .labelorg1

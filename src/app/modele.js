@@ -13,22 +13,27 @@ export function onBoot (router) {
     const org = store().state.ui.org
     if (!org) {
       if (to.name !== 'Org') {
+        store().commit('ui/majpage', 'Org')
         next({ name: 'Org' })
         return
       }
+      store().commit('ui/majpage', 'Org')
       next()
       return
     }
     const compte = store().state.db.compte
     if (!compte) {
       if (to.name === 'Org') {
+        store().commit('ui/majpage', 'Org')
         next()
         return
       }
       if (to.name !== 'Login') {
+        store().commit('ui/majpage', 'Login')
         next({ name: 'Login', params: { org: org } })
         return
       }
+      store().commit('ui/majpage', 'Login')
       next()
       return
     }

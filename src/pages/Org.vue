@@ -12,6 +12,7 @@
 
 <script>
 import { cfg } from '../app/util'
+import { computed } from 'vue'
 import { useStore } from 'vuex'
 import { remplacePage } from '../app/modele'
 
@@ -25,22 +26,25 @@ export default ({
 
   methods: {
     ok (o) {
-      this.$store.commit('ui/majorg', o.id)
-      this.$store.commit('ui/majorgicon', o.icon)
+      this.org = o.id
       remplacePage('Login')
     }
   },
 
   setup () {
     const $store = useStore()
-    $store.commit('ui/majorgicon', cfg().logo)
     const orgs = cfg().orgs
     const listeorgs = []
     for (const o in orgs) {
       listeorgs.push({ id: o, icon: orgs[o].icon })
     }
     $store.commit('ui/majorg', null)
+    const org = computed({
+      get: () => $store.state.ui.org,
+      set: (val) => $store.commit('ui/majorg', val)
+    })
     return {
+      org,
       listeorgs
     }
   }

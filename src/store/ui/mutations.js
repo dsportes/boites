@@ -73,6 +73,10 @@ export function majorg (state, val) {
   state.org = val
 }
 
+export function majpage (state, val) {
+  state.page = val
+}
+
 export function majorgicon (state, val) {
   state.orgicon = val
 }
