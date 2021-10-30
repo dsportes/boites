@@ -32,7 +32,11 @@
     </q-drawer>
 
     <q-page-container>
-      <router-view/>
+      <router-view v-slot="{ Component }">
+        <transition appear name="fade" mode="out-in">
+          <component :is="Component" />
+        </transition>
+      </router-view>
     </q-page-container>
 
     <dialogue-crypto></dialogue-crypto>
@@ -139,7 +143,7 @@ import { useStore } from 'vuex'
 import { onRuptureSession, remplacePage, onBoot } from '../app/modele'
 import { useRouter /*, useRoute */ } from 'vue-router'
 
-export default ({
+export default {
   name: 'MainLayout',
 
   components: {
@@ -252,7 +256,7 @@ export default ({
       reseauok
     }
   }
-})
+}
 </script>
 
 <style lang="sass" scpoed>
@@ -307,4 +311,17 @@ export default ({
   color: $red
 .gris
   color: $grey-6
+</style>
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+  transition-duration: 0.5s;
+  transition-property: opacity;
+  transition-timing-function: ease;
+}
+
+.fade-enter,
+.fade-leave-active {
+  opacity: 0
+}
 </style>
