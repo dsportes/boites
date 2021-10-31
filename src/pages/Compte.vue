@@ -6,6 +6,7 @@
         <div>{{e.na.sid}} - {{e.na.nomc}} {{e.cpriv.length}}</div>
         <q-btn label="GET cv" color="primary" @click="getcv(e.na.sid)" />
         <q-btn label="GET clepub" color="primary" @click="getclepub(e.na.sid)" />
+        <q-btn label="Vue Avatar" color="primary" @click="toAvatar(e.na.sid)" />
     </div>
     <h6>Liste des avatars</h6>
     <div v-for="av in avatars" :key="av.sid">
@@ -22,7 +23,7 @@
 import { computed } from 'vue'
 import { useStore } from 'vuex'
 import { get } from '../app/util'
-import { onBoot } from '../app/modele'
+import { onBoot, remplacePage } from '../app/modele'
 const rowTypes = require('../app/rowTypes')
 
 export default ({
@@ -50,6 +51,14 @@ export default ({
         const c = Buffer.from(r).toString()
         console.log(c)
       }
+    },
+    toAvatar (sid) {
+      this.avatar = this.avatars[sid]
+      remplacePage('Avatar')
+    },
+    toGroupe (sid) {
+      this.groupe = this.groupes[sid]
+      remplacePage('Groupe')
     }
   },
 
@@ -68,8 +77,10 @@ export default ({
     })
     const cvs = computed(() => $store.state.db.cvs)
     const avatars = computed(() => $store.state.db.avatars)
+    const groupes = computed(() => $store.state.db.groupes)
     const mode = computed(() => $store.state.ui.mode)
     const modeleactif = computed(() => $store.state.ui.modeleactif)
+
     return {
       org,
       compte,
@@ -78,7 +89,8 @@ export default ({
       mode,
       modeleactif,
       cvs,
-      avatars
+      avatars,
+      groupes
     }
   }
 

@@ -92,14 +92,15 @@ function u82big (u8, number = false) {
 }
 exports.u82big = u82big
 
+const BI_MAX_SAFE_INTEGER = BigInt(Number.MAX_SAFE_INTEGER)
 function u8ToInt (u8) {
   if (!u8 || !u8.length || u8.length > 8) return 0
-  const bi = u8.length > 6
-  let r = bi ? 0n : 0
+  let r = 0n
   for (let i = u8.length - 1; i > 0; i--) {
-    r += bi ? BigInt(u8[i]) * (p2b[i - 1] + 1n) : u8[i] * (p2[i - 1] + 1)
+    r += BigInt(u8[i]) * (p2b[i - 1] + 1n)
   }
-  return r + (bi ? BigInt(u8[0]) : u8[0])
+  r += BigInt(u8[0])
+  return r > BI_MAX_SAFE_INTEGER ? r : Number(r)
 }
 exports.u8ToInt = u8ToInt
 

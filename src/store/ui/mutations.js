@@ -11,7 +11,7 @@ export function razdialogues (state) {
   majmenuouvert(state, false)
   majinfomode(state, false)
   majinforeseau(state, false)
-  majinfosync(state, false)
+  majinfoidb(state, false)
   state.dialoguecreationcompte = false
 }
 
@@ -61,8 +61,8 @@ export function majinforeseau (state, val) {
   state.inforeseau = val
 }
 
-export function majinfosync (state, val) {
-  state.infosync = val
+export function majinfoidb (state, val) {
+  state.infoidb = val
 }
 
 export function majstatushttp (state, status) { // boolean
@@ -75,10 +75,6 @@ export function majorg (state, val) {
 
 export function majpage (state, val) {
   state.page = val
-}
-
-export function majorgicon (state, val) {
-  state.orgicon = val
 }
 
 export function majmode (state, val) {
@@ -101,8 +97,8 @@ export function majmenuouvert (state, val) {
   state.menuouvert = val
 }
 
-export function majphasesync (state, val) {
-  state.phasesync = val
+export function majsyncencours (state, val) {
+  state.syncencours = val
 }
 
 export function majidblec (state, { table, st, vol, nbl }) {
@@ -113,10 +109,6 @@ export function majidblec (state, { table, st, vol, nbl }) {
 
 export function razidblec (state) {
   state.idblec = { ...IDBLEC_RAZ }
-}
-
-export function majphase (state, val) {
-  state.phase = val
 }
 
 export function majidberreur (state, val) {

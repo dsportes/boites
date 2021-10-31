@@ -15,8 +15,8 @@ const routes = [
       { path: ':org', name: 'Login', component: Login },
       { path: ':org/synchro', name: 'Synchro', component: Synchro },
       { path: ':org/compte', name: 'Compte', component: Compte },
-      { path: ':org/compte', name: 'Avatar', component: Avatar },
-      { path: ':org/compte', name: 'Groupe', component: Groupe }
+      { path: ':org/avatar', name: 'Avatar', component: Avatar },
+      { path: ':org/groupe', name: 'Groupe', component: Groupe }
     ]
   },
 

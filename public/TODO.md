@@ -1,9 +1,11 @@
+BUG : retour sur login après déconnexion
+
 Rupture de session
 
 IDB en exception
 
-Icône dans Toolbar
+Dialogue info IDB et réseau
 
 Synchro : en cours, interruption
 
-Toolbar du bas
+Traitement des notifications Ws

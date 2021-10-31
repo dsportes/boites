@@ -176,18 +176,25 @@ async function connexionCompteAvion () {
   }
   data.clek = compte.k
   store().commit('db/setCompte', compte)
+  store().commit('ui/majsyncencours', true)
   remplacePage('Synchro')
 
   let ok = true
   try {
     await db.chargementIdb()
+    const xx = store().state.db.avatars
+    for (const av in xx) {
+      console.log('Avatar ' + av + '=' + JSON.stringify(xx[av]))
+    }
   } catch (e) {
+    store().commit('ui/majsyncencours', false)
     if (e.message === 'STOPCHARGT') {
       ok = false
       affichermessage('Chargement des données locales interrompu sur demande explicite', true)
     } else throw e
   }
 
+  store().commit('ui/majsyncencours', true)
   affichermessage('Compte authentifié et connecté' + (ok ? '' : ' mais données peut-être incomplètes'), false)
   remplacePage('Compte')
 }

@@ -15,62 +15,120 @@ export function onBoot () {
   if (bootfait) return
   bootfait = true
   $router = useRouter()
-  $router.beforeEach((to, from, next) => {
+  $router.beforeEach((to, from) => {
+    const $store = store()
+    const org = $store.state.ui.org
+    const compte = $store.state.db.compte
+    const avatar = $store.state.db.avatar
+    const groupe = $store.state.db.groupe
+    const neworg = to.params.org
+
+    if (!neworg) {
+      // il faut aller sur Org
+      if (org && compte) return false // pas déconnecté : refusé
+      $store.commit('ui/majorg', null)
+      $store.commit('ui/majpage', 'Org')
+      if (to.name === 'Org') return true // devrait toujours être vrai
+      return '/'
+    }
+
+    if (!cfg().orgs[neworg]) return false
+
+    if (!org) {
+      // définition de l'organisation, il n'y en avait pas
+      $store.commit('ui/majorg', neworg)
+      $store.commit('ui/majpage', 'Login')
+      if (to.name === 'Login') return true
+      return '/' + org // vers Login
+    }
+
+    if (org !== neworg) {
+      // changement d'organisation
+      if (compte) return false // pas déconnecté : refusé
+      $store.commit('ui/majorg', neworg)
+      $store.commit('ui/majpage', 'Login')
+      if (to.name === 'Login') return true
+      return '/' + neworg
+    }
+
+    // l'organisation était définie et elle est inchangée
+    if (!compte) {
+      // on ne peut aller que sur Login
+      $store.commit('ui/majpage', 'Login')
+      if (to.name === 'Login') return true
+      return '/' + org
+    }
+
+    // org inchangée, compte existant : on peut aller sur synchro / compte / avatar / groupe
+    if (to.name === 'Synchro') {
+      $store.commit('ui/majpage', 'Synchro')
+      return true // condition à ajouter
+    }
+    if (to.name === 'Compte') {
+      $store.commit('ui/majpage', 'Compte')
+      return true
+    }
+    if (to.name === 'Avatar') {
+      if (avatar) {
+        $store.commit('ui/majpage', 'Avatar')
+        return true
+      }
+      return false
+    }
+    if (to.name === 'Groupe') {
+      if (groupe) {
+        $store.commit('ui/majpage', 'Groupe')
+        return true
+      }
+      return false
+    }
+    return false
+    /*
     const $store = store()
     const org = store().state.ui.org
     if (!org) {
       if (to.name !== 'Org') {
         $store.commit('ui/majpage', 'Org')
-        next({ name: 'Org' })
-        return
+        return '/'
       }
       $store.commit('ui/majpage', 'Org')
-      next()
       return
     }
     const compte = $store.state.db.compte
     if (!compte) {
       if (to.name === 'Org') {
         $store.commit('ui/majpage', 'Org')
-        next()
         return
       }
       if (to.name !== 'Login') {
         $store.commit('ui/majpage', 'Login')
-        next({ name: 'Login', params: { org: org } })
-        return
+        return '/' + org
       }
       $store.commit('ui/majpage', 'Login')
-      next()
       return
     }
     if (to.name === 'Compte') {
       $store.commit('ui/majpage', 'Compte')
-      next()
       return
     }
     if (to.name === 'Avatar') {
       const av = $store.state.db.avatar
       if (av) {
         $store.commit('ui/majpage', 'Avatar')
-        next()
         return
       }
-      next({ name: 'Compte', params: { org: org } })
-      return
+      return '/' + org + '/compte'
     }
     if (to.name === 'Groupe') {
       const av = $store.state.db.avatar
       if (av) {
         $store.commit('ui/majpage', 'Groupe')
-        next()
         return
       }
-      next({ name: 'Compte', params: { org: org } })
-      return
+      return '/' + org + '/compte'
     }
     // Synchro
-    next()
+    */
   })
   // Traitement de la route au boot
   const $route = useRoute()
@@ -78,8 +136,8 @@ export function onBoot () {
   console.log('URL org : ' + urlorg + ' Boot page : ' + $route.name)
   store().commit('ui/majorg', (urlorg && cfg().orgs[urlorg]) ? urlorg : null)
   const org = store().state.ui.org
-  store().commit('ui/majphase', 0)
   if (!org && $route.name === 'Org') {
+    store().commit('ui/majpage', 'Org')
     return
   }
   if (!org) {
@@ -87,46 +145,43 @@ export function onBoot () {
     return
   }
   if ($route.name === 'Login') {
+    store().commit('ui/majpage', 'Login')
     return
   }
   remplacePage('Login')
 }
 
-export function remplacePage (page) {
+export async function remplacePage (page) {
   const r = $router
   const org = store().state.ui.org
+  let x
   switch (page) {
     case 'Org' : {
-      store().commit('ui/majphase', 0)
-      r.replace({ name: 'Org' })
+      x = { name: 'Org' }
       break
     }
     case 'Login' : {
-      store().commit('ui/majphase', 0)
-      r.replace({ name: 'Login', params: { org: org } })
+      x = { name: 'Login', params: { org: org } }
       break
     }
     case 'Synchro' : {
-      store().commit('ui/majphase', 1)
-      r.replace({ name: 'Synchro', params: { org: org } })
+      x = { name: 'Synchro', params: { org: org } }
       break
     }
     case 'Compte' : {
-      store().commit('ui/majphase', 2)
-      r.replace({ name: 'Compte', params: { org: org } })
+      x = { name: 'Compte', params: { org: org } }
       break
     }
     case 'Avatar' : {
-      store().commit('ui/majphase', 2)
-      r.replace({ name: 'Avatar', params: { org: org } })
+      x = { name: 'Avatar', params: { org: org } }
       break
     }
     case 'Groupe' : {
-      store().commit('ui/majphase', 2)
-      r.replace({ name: 'Groupe', params: { org: org } })
+      x = { name: 'Groupe', params: { org: org } }
       break
     }
   }
+  await r.replace(x)
 }
 
 export function onRuptureSession (appExc) { // TODO
@@ -565,6 +620,14 @@ export class Avatar {
 
   get pk () { return this.id }
 
+  get label () {
+    return this.na.nom
+  }
+
+  get icone () {
+    return this.photo || ''
+  }
+
   get toRow () { // après maj éventuelle de cv et / ou lct
     this.cva = crypt.crypter(this.na.cle, arrayStringType.toBuffer([this.photo, this.info]))
     this.lctk = crypt.crypter(data.clek, arrayLongType.toBuffer(this.lct))
@@ -851,13 +914,23 @@ export class Groupe {
 
   get pk () { return this.id }
 
+  get label () {
+    return this.info ? this.info : this.sid
+  }
+
+  get icone () {
+    return this.photo || ''
+  }
+
   fromRow (row) {
     this.id = row.id
     this.v = row.v
     this.dds = row.dds
     this.st = row.st
     const cleg = data.clegDe(this.sid)
-    this.cv = row.cvg ? arrayStringType.fromBuffer(crypt.decrypter(cleg, row.cvg)) : null
+    const cv = row.cvg ? arrayStringType.fromBuffer(crypt.decrypter(cleg, row.cvg)) : null
+    this.photo = cv ? (cv[0] || '') : ''
+    this.info = cv ? (cv[1] || '') : ''
     this.mc = row.mcg ? arrayIntType.fromBuffer(crypt.decrypter(cleg, row.mcg)) : null
     this.lstm = row.lstmg ? arrayLongType.fromBuffer(crypt.decrypter(cleg, row.lstmg)) : null
     return this
@@ -865,7 +938,7 @@ export class Groupe {
 
   get toRow () {
     const cleg = data.clegDe(this.sid)
-    this.cvg = this.cv ? crypt.crypter(cleg, arrayStringType.toBuffer(this.cv)) : null
+    this.cvg = crypt.crypter(cleg, arrayStringType.toBuffer([this.photo, this.info]))
     this.mcg = this.mcg ? crypt.crypter(cleg, arrayIntType.toBuffer(this.mc)) : null
     this.lstmg = this.lstm ? crypt.crypter(cleg, arrayLongType.toBuffer(this.lstm)) : null
     const buf = rowTypes.rowSchemas.groupe.toBuffer(this)
@@ -885,7 +958,8 @@ export class Groupe {
     this.v = row.v
     this.dds = row.dds
     this.st = row.st
-    this.cv = row.cv
+    this.photo = row.photo
+    this.info = row.info
     this.mc = row.mc
     this.lstm = row.lstm
     return this

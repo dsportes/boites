@@ -4,7 +4,9 @@
       <q-toolbar>
         <q-toolbar-title>
           <span :class="compte == null ? 'cursor-pointer' : 'no-pointer-events'" @click="toorg">
-            <img class="imgstd" :src="orgicon">
+            <q-avatar round size="md">
+              <img :src="orgicon">
+            </q-avatar>
             <span :class="orglabelclass">{{ orglabel }}</span>
           </span>
           <q-btn v-if="org != null && compte == null && page !== 'Login'" color="warning" dense icon="login" label="Connexion" @click="login"/>
@@ -13,30 +15,61 @@
           <q-btn v-if="org != null && compte != null" class="btnsm" dense size="sm" color="warning" icon="logout" label="Déconnexion" @click="logout"/>
         </q-toolbar-title>
 
-        <q-btn v-if="$store.getters['ui/modeincognito'] || $store.getters['ui/modesync']" flat dense round icon="autorenew" aria-label="Etat synchronisation"
-          @click="infosync = true"
-          :class="$store.state.ui.statuslogin ? 'vert' : ($store.state.ui.sessionerreur ? 'rouge' : 'gris')"
-        />
-        <q-btn v-if="$store.getters['ui/enligne']" flat dense round icon="cloud" aria-label="Accès serveur"
-          @click="inforeseau = true"
-          :class="$store.getters['ui/reseauok'] ? 'vert' : 'rouge'"
-        />
-        <div v-if="$store.getters['ui/modeincognito']" @click="infomode = true">
-          <img class="imgstd" src="~assets/incognito.svg">
+        <div class="cursor-pointer q-px-xs" @click="infoidb = true">
+          <q-avatar v-if="mode === 0 || mode === 2 || !compte" round size="md">
+              <img src="~assets/database_gris.svg">
+            </q-avatar>
+          <div v-else>
+            <q-avatar v-if="!idberreur" round size="md">
+              <img src="~assets/database_vert.svg">
+            </q-avatar>
+            <q-avatar v-else round size="md">
+              <img src="~assets/database_rouge.svg">
+            </q-avatar>
+          </div>
         </div>
-        <q-icon  v-else class="iconstd" @click="infomode = true"
-        :name="['info','sync_alt','info','airplanemode_active'][$store.state.ui.mode]" />
+
+        <div class="cursor-pointer q-px-xs" @click="inforeseau = true">
+          <q-avatar v-if="mode === 0 || mode === 3 || !compte" round color="grey-5" size="md"/>
+          <div v-else>
+            <q-icon v-if="syncencours" size="md" icon="autorenew"/>
+            <div v-else>
+              <q-avatar v-if="modelactif" round color="green" size="md"/>
+              <q-icon v-else name="visibility" size="md" color="warning"/>
+            </div>
+          </div>
+        </div>
+
+        <div class="cursor-pointer q-px-xs" @click="infomode = true">
+          <q-avatar v-if="$store.getters['ui/modeincognito']" round size="md">
+            <img src="~assets/incognito_blanc.svg">
+          </q-avatar>
+          <q-icon v-else round size="md" :name="['info','sync_alt','info','airplanemode_active'][$store.state.ui.mode]" />
+        </div>
 
       </q-toolbar>
         <q-toolbar inset>
           <q-toolbar-title>
-
+          <span v-if="compte != null" class="cursor-pointer q-pr-md" @click="tocompte">Synthèse</span>
+          <q-avatar v-if="avatar != null || groupe != null" class="q-px-md" round size="md">
+            <q-icon round size="md" name="label_important"/>
+          </q-avatar>
+          <q-avatar v-if="avatar != null" round size="md">
+            <img v-if="avatar.icone.length !== 0" :src="avatar.icone">
+            <q-icon v-else round size="md" name="face"/>
+          </q-avatar>
+          <q-avatar v-if="groupe != null" round size="md">
+            <img v-if="groupe.icone.length !== 0" :src="groupe.icone">
+            <q-icon v-else round size="md" name="group"/>
+          </q-avatar>
+          <span v-if="avatar != null">{{avatar.label}}</span>
           </q-toolbar-title>
+          <q-btn flat dense round icon="people" aria-label="Contacts"/>
           <q-btn flat dense round icon="menu" aria-label="Menu" @click="$store.commit('ui/majmenuouvert', true)"/>
         </q-toolbar>
     </q-header>
 
-    <q-drawer v-model="menuouvert" side="left" overlay elevated class="bg-grey-1" >
+    <q-drawer v-model="menuouvert" side="right" overlay elevated class="bg-grey-1" >
       <panel-menu></panel-menu>
     </q-drawer>
 
@@ -61,15 +94,16 @@
           Le mode n'a pas encore été choisi.
         </q-card-section>
         <q-card-section :class="'q-pt-none' + ($store.getters['ui/modesync'] ? 'text-body-1 text-weight-bold' : 'text-body-2 text-weight-regular')">
-          <q-icon class="iconstd" name="sync_alt"/><span class="titre-2 q-px-sm">Synchronisé :</span>
+          <q-icon size="md" name="sync_alt"/><span class="titre-2 q-px-sm">Synchronisé :</span>
           L'application accède au serveur central pour obtenir les données et les synchronise sur un stockage local crypté.
         </q-card-section>
         <q-card-section :class="'q-pt-none' + ($store.getters['ui/modeincognito'] ? 'text-body-1 text-weight-bold' : 'text-body-2 text-weight-regular')">
-          <img class="imgstd" src="~assets/incognito.svg"><span class="titre-2 q-px-sm">Incognito :</span>
+          <q-avatar round size="md"><img src="~assets/incognito_blanc.svg"></q-avatar>
+          <span class="titre-2 q-px-sm">Incognito :</span>
           L'application accède au serveur central pour obtenir les données mais n'accède pas au stockage local et n'y laisse pas de trace d'exécution.
         </q-card-section>
         <q-card-section :class="'q-pt-none' + ($store.getters['ui/modeavion'] ? 'text-body-1 text-weight-bold' : 'text-body-2 text-weight-regular')">
-          <q-icon class="iconstd" name="airplanemode_active"/><span class="titre-2 q-px-sm">Avion :</span>
+          <q-icon size="md" name="airplanemode_active"/><span class="titre-2 q-px-sm">Avion :</span>
           L'application n'accède pas au réseau, il obtient les données depuis le stockage local crypté où elles ont été mises à jour lors de la dernière session en mode synchronisé.
         </q-card-section>
         <q-card-actions align="right">
@@ -90,15 +124,12 @@
           L'application accède par le réseau aux données sur le serveur, toutefois la dernière requête a rencontré un incident.
         </q-card-section>
         <q-card-actions align="right">
-          <q-btn flat label="Tester l'accès au serveur" color="accent" v-close-popup @click="ping"/>
-          <q-btn v-if="$store.getters['ui/aeuuneerreur']" flat label="Voir la dernière erreur" color="accent" v-close-popup
-           @click="$store.commit('ui/majerreur', this.derniereerreur)"/>
           <q-btn flat label="J'ai lu" color="primary" v-close-popup />
         </q-card-actions>
       </q-card>
     </q-dialog>
 
-    <q-dialog v-model="infosync">
+    <q-dialog v-model="infoidb">
       <q-card>
         <q-card-section>
           <div class="titre-2">État courant de la synchronisation (mode synchronisé et incognito)</div>
@@ -117,9 +148,9 @@
 
     <q-dialog v-model="reqencours" seamless position="top" persistent transition-show="scale" transition-hide="scale">
       <q-card class="reqencours row items-center justify-between no-wrap bg-amber-2 q-pa-sm">
-          <div class="text-weight-bold">Annuler la requête</div>
-          <q-spinner color="primary" size="2rem" :thickness="3" />
-          <q-btn flat round icon="stop" class="text-red" @click="cancelRequest" />
+        <div class="text-weight-bold">Annuler la requête</div>
+        <q-spinner color="primary" size="2rem" :thickness="3" />
+        <q-btn flat round icon="stop" class="text-red" @click="cancelRequest" />
       </q-card>
     </q-dialog>
 
@@ -145,7 +176,7 @@
 import PanelMenu from 'components/PanelMenu.vue'
 import DialogueErreur from 'components/DialogueErreur.vue'
 import DialogueCrypto from 'components/DialogueCrypto.vue'
-import { cancelRequest, ping, cfg } from '../app/util'
+import { cancelRequest, ping /*, cfg */ } from '../app/util'
 import { useQuasar } from 'quasar'
 import { computed } from 'vue'
 import { useStore } from 'vuex'
@@ -172,7 +203,8 @@ export default {
     On le déconnecte s'il était connecté et on le ramène au tout début (bien fait !)
     */
     '$route.params': function (newp, oldp) {
-      // console.log(JSON.stringify(newp) + ' -- ' + JSON.stringify(oldp))
+      console.log(JSON.stringify(newp) + ' -- ' + JSON.stringify(oldp))
+      /*
       if (newp.org === this.org) return
       if (!cfg().orgs[newp.org]) {
         this.org = null
@@ -188,6 +220,7 @@ export default {
           remplacePage('Login')
         }
       }
+      */
     },
     '$store.state.ui.sessionerreur': function (newp, oldp) {
       console.log('Session erreur : ' + (newp ? newp.message : 'x') + ' / ' + (oldp ? oldp.message : 'x'))
@@ -205,6 +238,10 @@ export default {
 
     toorg () {
       remplacePage('Org')
+    },
+
+    tocompte () {
+      remplacePage('Compte')
     },
 
     logout () {
@@ -238,9 +275,9 @@ export default {
       get: () => $store.state.ui.inforeseau,
       set: (val) => $store.commit('ui/majinforeseau', val)
     })
-    const infosync = computed({
+    const infoidb = computed({
       get: () => $store.state.ui.infosync,
-      set: (val) => $store.commit('ui/majinfosync', val)
+      set: (val) => $store.commit('ui/majinfoidb', val)
     })
     const org = computed({
       get: () => $store.state.ui.org,
@@ -258,29 +295,19 @@ export default {
     const messagevisible = computed(() => $store.getters['ui/messagevisible'])
     const diagnosticvisible = computed(() => $store.getters['ui/diagnosticvisible'])
     const reqencours = computed(() => $store.state.ui.reqencours)
+    const syncencours = computed(() => $store.state.ui.syncencours)
     const derniereerreur = computed(() => $store.state.ui.derniereerreur)
     const sessionerreur = computed(() => $store.state.ui.sessionerreur)
-    const lerr = [
-      'La synchronisation fonctionne normalement.',
-      'La liaison avec le serveur n\'a pas pu s\'établir au moment de commencer la synchronisation',
-      'La liaison avec le serveur a été interrompue en cours de synchronisation'
-    ]
-    const labelerreursync = computed(() => lerr[$store.state.ui.sessionerreur])
-    /* alternative au watch dans page
-    $store.watch(
-      () => $store.getters['ui/sessionerreurmsg'],
-      sessionerreurmsg => {
-        console.log('<<<<' + sessionerreurmsg)
-      }
-    )
-    */
+    const modeleactif = computed(() => $store.state.ui.modeleactif)
+    const idberreur = computed(() => $store.state.ui.idberreur)
+
     console.log('Page:' + page.value)
     return {
       page,
       menuouvert,
       infomode,
       inforeseau,
-      infosync,
+      infoidb,
       org,
       orgicon,
       orglabel,
@@ -294,7 +321,9 @@ export default {
       reqencours,
       derniereerreur,
       sessionerreur,
-      labelerreursync,
+      syncencours,
+      idberreur,
+      modeleactif,
       reseauok
     }
   }
@@ -312,23 +341,6 @@ export default {
 .btnsm
   position: relative
   top: -3px
-
-.iconstd
-  font-size: $iconsize !important
-  background-color: white
-  color: black
-  border-radius: 12px
-  cursor: pointer
-
-.imgstd
-  width: $iconsize
-  background-color: white
-  color: black
-  border-radius: $iconsize / 2
-  cursor: pointer
-  position: relative
-  margin-right: 2px
-  top: 4px
 
 .labelorg1
   color: white

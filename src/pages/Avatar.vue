@@ -1,5 +1,7 @@
 <template>
-  <h6>Page Avatar</h6>
+<div v-if="avatar != null">
+  <h6>Page Avatar {{avatar.label}}</h6>
+</div>
 </template>
 
 <script>
@@ -26,7 +28,7 @@ export default ({
     const $store = useStore()
     const org = computed(() => $store.state.ui.org)
     const compte = computed(() => $store.state.db.compte)
-    const avatar = computed(() => $store.state.ui.avatar)
+    const avatar = computed(() => $store.state.db.avatar)
     const mode = computed(() => $store.state.ui.mode)
     const modeleactif = computed(() => $store.state.ui.modeleactif)
     return {

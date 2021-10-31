@@ -208,6 +208,7 @@ export class Idb {
     store().commit('db/setAvatars', objs)
     store().commit('ui/majidblec', { table: 'avatar', st: t, vol: vol, nbl: objs.length })
     // await sleep(d)
+
     if (data.stopChargt) throw Error('STOPCHARGT')
 
     t = true; ({ objs, vol } = await this.getInvitgrs())

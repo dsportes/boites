@@ -1,5 +1,7 @@
 <template>
-  <h6>Page Avatar</h6>
+<div v-if="groupe != null">
+  <h6>Page Groupe {{groupe.label}}</h6>
+</div>
 </template>
 
 <script>

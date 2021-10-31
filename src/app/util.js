@@ -221,6 +221,7 @@ export async function ping () {
     $store.commit('ui/majstatushttp', r.status)
     return r.data
   } catch (e) {
+    $store.commit('ui/finreq')
     if (e.message !== 'RUPTURESESSION') throw e
     console.log(e)
     return null

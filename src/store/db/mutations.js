@@ -17,10 +17,6 @@ export function raz (state) {
   state.cvs = {}
 }
 
-export function majcompte (state, val) {
-  state.compte = val
-}
-
 export function majavatar (state, val) {
   state.avatar = val
 }
