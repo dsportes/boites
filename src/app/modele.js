@@ -4,94 +4,133 @@ const base64url = require('base64url')
 const rowTypes = require('./rowTypes')
 import { Idb } from './db'
 import { session } from './ws'
-import { cfg, store, dhtToString, router } from './util'
+import { cfg, store, dhtToString /*, router */ } from './util'
 import { types } from './api'
-// import { store } from 'quasar/wrappers'
+import { useRouter, useRoute } from 'vue-router'
 
-export function onBoot (router) {
-  router.beforeEach((to, from, next) => {
+let bootfait = false
+let $router
+
+export function onBoot () {
+  if (bootfait) return
+  bootfait = true
+  $router = useRouter()
+  $router.beforeEach((to, from, next) => {
+    const $store = store()
     const org = store().state.ui.org
     if (!org) {
       if (to.name !== 'Org') {
-        store().commit('ui/majpage', 'Org')
+        $store.commit('ui/majpage', 'Org')
         next({ name: 'Org' })
         return
       }
-      store().commit('ui/majpage', 'Org')
+      $store.commit('ui/majpage', 'Org')
       next()
       return
     }
-    const compte = store().state.db.compte
+    const compte = $store.state.db.compte
     if (!compte) {
       if (to.name === 'Org') {
-        store().commit('ui/majpage', 'Org')
+        $store.commit('ui/majpage', 'Org')
         next()
         return
       }
       if (to.name !== 'Login') {
-        store().commit('ui/majpage', 'Login')
+        $store.commit('ui/majpage', 'Login')
         next({ name: 'Login', params: { org: org } })
         return
       }
-      store().commit('ui/majpage', 'Login')
+      $store.commit('ui/majpage', 'Login')
       next()
       return
     }
+    if (to.name === 'Compte') {
+      $store.commit('ui/majpage', 'Compte')
+      next()
+      return
+    }
+    if (to.name === 'Avatar') {
+      const av = $store.state.db.avatar
+      if (av) {
+        $store.commit('ui/majpage', 'Avatar')
+        next()
+        return
+      }
+      next({ name: 'Compte', params: { org: org } })
+      return
+    }
+    if (to.name === 'Groupe') {
+      const av = $store.state.db.avatar
+      if (av) {
+        $store.commit('ui/majpage', 'Groupe')
+        next()
+        return
+      }
+      next({ name: 'Compte', params: { org: org } })
+      return
+    }
+    // Synchro
     next()
   })
-}
-
-export function onRuptureSession (appExc) {
-  console.log('Rupture de session : ' + appExc.message)
+  // Traitement de la route au boot
+  const $route = useRoute()
+  const urlorg = $route.params.org
+  console.log('URL org : ' + urlorg + ' Boot page : ' + $route.name)
+  store().commit('ui/majorg', (urlorg && cfg().orgs[urlorg]) ? urlorg : null)
+  const org = store().state.ui.org
+  store().commit('ui/majphase', 0)
+  if (!org && $route.name === 'Org') {
+    return
+  }
+  if (!org) {
+    remplacePage('Org')
+    return
+  }
+  if ($route.name === 'Login') {
+    return
+  }
+  remplacePage('Login')
 }
 
 export function remplacePage (page) {
-  const r = router()
+  const r = $router
   const org = store().state.ui.org
   switch (page) {
     case 'Org' : {
-      data.page = page
-      data.phase = 0
       store().commit('ui/majphase', 0)
       r.replace({ name: 'Org' })
       break
     }
     case 'Login' : {
-      data.page = page
-      data.phase = 0
       store().commit('ui/majphase', 0)
       r.replace({ name: 'Login', params: { org: org } })
       break
     }
     case 'Synchro' : {
-      data.page = page
-      data.phase = 1
       store().commit('ui/majphase', 1)
       r.replace({ name: 'Synchro', params: { org: org } })
       break
     }
     case 'Compte' : {
-      data.page = page
-      data.phase = 2
       store().commit('ui/majphase', 2)
       r.replace({ name: 'Compte', params: { org: org } })
       break
     }
     case 'Avatar' : {
-      data.page = page
-      data.phase = 2
       store().commit('ui/majphase', 2)
       r.replace({ name: 'Avatar', params: { org: org } })
       break
     }
     case 'Groupe' : {
-      data.page = page
-      data.phase = 2
       store().commit('ui/majphase', 2)
       r.replace({ name: 'Groupe', params: { org: org } })
       break
     }
   }
+}
+
+export function onRuptureSession (appExc) { // TODO
+  console.log('Rupture de session : ' + appExc.message)
 }
 
 /* état de session */
@@ -362,7 +401,7 @@ export class Compte {
   get pk () { return this.id }
 
   get titre () {
-    if (!this.memo) return '(inconnu)'
+    if (!this.memo) return this.sid
     const i = this.memo.indexOf('/n')
     return i === -1 ? this.memo : this.memo.substring(0, i)
   }

@@ -22,7 +22,7 @@
 import { computed } from 'vue'
 import { useStore } from 'vuex'
 import { get } from '../app/util'
-import { remplacePage } from '../app/modele'
+import { onBoot } from '../app/modele'
 const rowTypes = require('../app/rowTypes')
 
 export default ({
@@ -54,17 +54,18 @@ export default ({
   },
 
   setup () {
+    onBoot()
     const $store = useStore()
-    const org = $store.state.ui.org
-    if (!org) {
-      remplacePage('Org')
-      return { org: null, compte: null }
-    }
+    const org = computed(() => $store.state.ui.org)
     const compte = computed(() => $store.state.db.compte)
-    if (!compte.value) {
-      remplacePage('Login')
-      return { org: org, compte: null }
-    }
+    const avatar = computed({
+      get: () => $store.state.db.avatar,
+      set: (val) => $store.commit('db/majavatar', val)
+    })
+    const groupe = computed({
+      get: () => $store.state.db.groupe,
+      set: (val) => $store.commit('db/majgroupe', val)
+    })
     const cvs = computed(() => $store.state.db.cvs)
     const avatars = computed(() => $store.state.db.avatars)
     const mode = computed(() => $store.state.ui.mode)
@@ -72,6 +73,8 @@ export default ({
     return {
       org,
       compte,
+      avatar,
+      groupe,
       mode,
       modeleactif,
       cvs,

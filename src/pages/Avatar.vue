@@ -5,7 +5,7 @@
 <script>
 import { computed } from 'vue'
 import { useStore } from 'vuex'
-import { remplacePage } from '../app/modele'
+import { onBoot } from '../app/modele'
 
 export default ({
   name: 'Avatar',
@@ -22,22 +22,11 @@ export default ({
   },
 
   setup () {
+    onBoot()
     const $store = useStore()
-    const org = $store.state.ui.org
-    if (!org) {
-      remplacePage('Org')
-      return { org: null, compte: null, avatar: null }
-    }
-    const compte = $store.state.db.compte
-    if (!compte) {
-      remplacePage('Login')
-      return { org: org, compte: null, avatar: null }
-    }
-    const avatar = $store.state.db.avatar
-    if (!avatar) {
-      remplacePage('Compte')
-      return { org: org, compte: compte, avatar: null }
-    }
+    const org = computed(() => $store.state.ui.org)
+    const compte = computed(() => $store.state.db.compte)
+    const avatar = computed(() => $store.state.ui.avatar)
     const mode = computed(() => $store.state.ui.mode)
     const modeleactif = computed(() => $store.state.ui.modeleactif)
     return {

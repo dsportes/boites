@@ -14,7 +14,7 @@
 import { cfg } from '../app/util'
 import { computed } from 'vue'
 import { useStore } from 'vuex'
-import { remplacePage } from '../app/modele'
+import { remplacePage, onBoot } from '../app/modele'
 
 export default ({
   name: 'Org',
@@ -32,12 +32,11 @@ export default ({
   },
 
   setup () {
+    onBoot()
     const $store = useStore()
     const orgs = cfg().orgs
     const listeorgs = []
-    for (const o in orgs) {
-      listeorgs.push({ id: o, icon: orgs[o].icon })
-    }
+    for (const o in orgs) listeorgs.push({ id: o, icon: orgs[o].icon })
     $store.commit('ui/majorg', null)
     const org = computed({
       get: () => $store.state.ui.org,

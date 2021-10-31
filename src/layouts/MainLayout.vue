@@ -10,7 +10,7 @@
           <q-btn v-if="org != null && compte == null && page !== 'Login'" color="warning" dense icon="login" label="Connexion" @click="login"/>
           <span v-if="org != null && compte == null && page === 'Login'" class="q-px-sm">Connexion ...</span>
           <span v-if="org != null && compte != null" class="font-antonio-l q-px-sm">{{ compte.titre }}</span>
-          <q-btn v-if="org != null && compte != null" dense color="warning" icon="logout" label="Déconnexion" @click="logout"/>
+          <q-btn v-if="org != null && compte != null" class="btnsm" dense size="sm" color="warning" icon="logout" label="Déconnexion" @click="logout"/>
         </q-toolbar-title>
 
         <q-btn v-if="$store.getters['ui/modeincognito'] || $store.getters['ui/modesync']" flat dense round icon="autorenew" aria-label="Etat synchronisation"
@@ -151,7 +151,6 @@ import { computed } from 'vue'
 import { useStore } from 'vuex'
 import { onRuptureSession, remplacePage, onBoot } from '../app/modele'
 import { deconnexion } from '../app/operations'
-import { useRouter, useRoute } from 'vue-router'
 
 export default {
   name: 'MainLayout',
@@ -167,15 +166,27 @@ export default {
   },
 
   watch: {
-    // changement d'organisation directement sur l'URL
+    /*
+    Traitement d'un changement d'organisation directement sur l'URL
+    Quand une URL n'est pas reconnue par le router (l'utilisateur a frappé n'importe quoi), newp est null.
+    On le déconnecte s'il était connecté et on le ramène au tout début (bien fait !)
+    */
     '$route.params': function (newp, oldp) {
-      console.log(JSON.stringify(newp) + ' -- ' + JSON.stringify(oldp))
-      const x = cfg().orgs[newp.org]
-      if (!x) {
+      // console.log(JSON.stringify(newp) + ' -- ' + JSON.stringify(oldp))
+      if (newp.org === this.org) return
+      if (!cfg().orgs[newp.org]) {
         this.org = null
-        setTimeout(() => { remplacePage('Org') }, 10)
+        if (this.compte) {
+          deconnexion() // renverra sur Org
+        } else {
+          remplacePage('Org')
+        }
       } else {
-        this.org = newp.org
+        if (this.compte) {
+          deconnexion() // renverra sur Login
+        } else {
+          remplacePage('Login')
+        }
       }
     },
     '$store.state.ui.sessionerreur': function (newp, oldp) {
@@ -212,16 +223,9 @@ export default {
   setup () {
     const $q = useQuasar()
     $q.dark.set(true)
+    onBoot()
+
     const $store = useStore()
-    const $route = useRoute()
-
-    onBoot(useRouter())
-
-    const urlorg = $route.params.org
-    console.log('URL org : ' + urlorg)
-    if (urlorg && cfg().orgs[urlorg]) {
-      $store.commit('ui/org', urlorg)
-    }
     const menuouvert = computed({
       get: () => $store.state.ui.menuouvert,
       set: (val) => $store.commit('ui/majmenuouvert', val)
@@ -304,6 +308,10 @@ export default {
 .fade-enter, .fade-leave-active
   opacity: 0
   transform: translateX(50%)
+
+.btnsm
+  position: relative
+  top: -3px
 
 .iconstd
   font-size: $iconsize !important

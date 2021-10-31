@@ -46,7 +46,7 @@
 <script>
 import { useStore } from 'vuex'
 import { computed } from 'vue'
-import { data } from '../app/modele'
+import { data, onBoot } from '../app/modele'
 import { edvol } from '../app/util'
 
 const labels = [
@@ -88,6 +88,7 @@ export default ({
   },
 
   setup () {
+    onBoot()
     const $store = useStore()
     return {
       idb: computed({

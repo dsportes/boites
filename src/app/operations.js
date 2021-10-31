@@ -11,11 +11,12 @@ const rowTypes = require('./rowTypes')
 // const JSONbig = require('json-bigint')
 
 export async function deconnexion () {
-  store().commit('ui/majstatuslogin', false)
   store().commit('db/raz')
   data.raz()
   const s = session.ws
   if (s) s.close()
+  const org = store().state.ui.org
+  remplacePage(org ? 'Login' : 'Org')
 }
 
 /* On poste :
@@ -51,7 +52,6 @@ export async function creationCompte (mdp, ps, nom, quotas) {
   try {
     const args = { sessionId: s.sessionId, mdp64: mdp.mdp64, q1: quotas.q1, q2: quotas.q2, qm1: quotas.qm1, qm2: quotas.qm2, clePub: kp.publicKey, rowCompte, rowAvatar }
     ret = await post('m1', 'creationCompte', args, 'creation de compte sans parrain ...')
-    store().commit('ui/majstatuslogin', true)
   } catch (e) {
     deconnexion()
     throw e
@@ -94,7 +94,6 @@ export async function creationCompte (mdp, ps, nom, quotas) {
     }
   }
 
-  store().commit('ui/majstatuslogin', true)
   affichermessage('Compte créé et connecté', false)
   remplacePage('Compte')
 }
@@ -119,7 +118,6 @@ export async function connexionCompte (ps) {
     const args = { sessionId: s.sessionId, pcbh: ps.pcbh, dpbh: ps.dpbh }
     // eslint-disable-next-line no-unused-vars
     ret = await post('m1', 'connexionCompte', args, 'Connexion compte ...')
-    store().commit('ui/majstatuslogin', true)
   } catch (e) {
     deconnexion()
     throw e
@@ -178,7 +176,6 @@ async function connexionCompteAvion () {
   }
   data.clek = compte.k
   store().commit('db/setCompte', compte)
-  store().commit('ui/majstatuslogin', true)
   remplacePage('Synchro')
 
   let ok = true

@@ -5,7 +5,7 @@
       <q-card flat class="q-ma-xs petitelargeur">
         <q-card-section>
           <div class="titre-2">Choix du mode
-            <q-btn flat dense round icon="info" aria-label="info" @click="$store.commit('ui/majinfomode', true)"/>
+            <q-btn flat dense round icon="info" aria-label="info" @click="infomode = true"/>
           </div>
         </q-card-section>
       <q-card-section>
@@ -25,9 +25,9 @@
       </q-card>
 
       <div v-if="mode != 0" class="q-my-md petitelargeur column items-start">
-        <q-btn flat color="warning" icon="add_circle" label="Test synchro" @click="$store.commit('ui/majdialoguesynchro', true)"/>
+        <q-btn flat color="warning" icon="add_circle" label="Test synchro" @click="dialoguesynchro = true"/>
         <q-btn flat color="warning" icon="add_circle" label="Nouveau compte parrainé" />
-        <q-btn flat color="primary" icon="add_circle" label="Nouveau compte (sans parrain)" @click="$store.commit('ui/majdialoguecreationcompte', true)"/>
+        <q-btn flat color="primary" icon="add_circle" label="Nouveau compte (sans parrain)" @click="dialoguecreationcompte = true"/>
       </div>
     </div>
 
@@ -40,10 +40,10 @@
 import { computed } from 'vue'
 import { useStore } from 'vuex'
 // import { cfg } from '../app/util'
-import { deconnexion, connexionCompte } from '../app/operations'
+import { connexionCompte } from '../app/operations'
 import PhraseSecrete from '../components/PhraseSecrete.vue'
 import DialogueCreationCompte from '../components/DialogueCreationCompte.vue'
-import { remplacePage } from '../app/modele'
+import { onBoot } from '../app/modele'
 
 export default ({
   name: 'Login',
@@ -56,23 +56,7 @@ export default ({
     }
   },
 
-  /*
-  watch: {
-    locmode: async function (m) {
-      this.$store.commit('ui/majmode', m)
-    }
-  },
-  */
   methods: {
-    async sedeconnecter () {
-      await deconnexion()
-    },
-
-    changerOrg () {
-      this.$store.commit('ui/majorg', null)
-      remplacePage('Org')
-    },
-
     async connecter (ps) {
       if (!ps) return
       await connexionCompte(ps)
@@ -80,21 +64,32 @@ export default ({
   },
 
   setup () {
+    onBoot()
     const $store = useStore()
     const org = computed(() => $store.state.ui.org)
     const mode = computed({
       get: () => $store.state.ui.mode,
       set: (val) => $store.commit('ui/majmode', val)
     })
+    const infomode = computed({
+      get: () => $store.state.ui.infomode,
+      set: (val) => $store.commit('ui/majinfomode', val)
+    })
+    const dialoguesynchro = computed({
+      get: () => $store.state.ui.infomode,
+      set: (val) => $store.commit('ui/majdialoguesynchro', val)
+    })
+    const dialogcreationcompte = computed({
+      get: () => $store.state.ui.infomode,
+      set: (val) => $store.commit('ui/majdialoguecreationcompte', val)
+    })
     const compte = computed(() => $store.state.db.compte)
-    if (!org.value) {
-      remplacePage('Org')
-      // setTimeout(() => { remplacePage('Org') }, 10)
-    }
-
     return {
       org,
       mode,
+      infomode,
+      dialoguesynchro,
+      dialogcreationcompte,
       compte
     }
   }
