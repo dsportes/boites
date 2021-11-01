@@ -1,11 +1,11 @@
 <template>
     <q-page>
-    <q-card class="q-ma-xs">
+    <q-card class="q-pa-xs"> <!-- na pas mettre de marges haute / basse dans un q-page -->
       <q-card-section>
         <div class="titre-2">Chargement et synchronisation</div>
       </q-card-section>
       <q-separator />
-      <q-card-section style="max-height:70vh" class="scroll">
+      <q-card-section style="max-height:70vh;overflow:auto">
         <div v-if="!$store.getters['ui/modeincognito']">
           <div class="titre-2">Chargement des données stockées en local</div>
           <div v-for="(label, key) in labels" :key="key" class="row no-wrap items-start">
@@ -22,23 +22,7 @@
         <p>En chantier ...</p>
       </q-card-section>
       <q-separator />
-      <q-card-actions align="right">
-        <q-btn flat label="Interrompre" color="primary" @click="confirm = true"/>
-      </q-card-actions>
     </q-card>
-
-    <q-dialog v-model="confirm">
-      <q-card>
-        <q-card-section class="q-pa-md diag">
-          Interrompre le chargement des données de la base locale affichera des données
-          incomplètes en mode avion et allongera la synchronisation en mode synchro.
-        </q-card-section>
-        <q-card-actions align="right">
-          <q-btn flat label="Confirmer l'interruption" color="warning" v-close-popup @click="stop"/>
-          <q-btn flat label="Laisser le chargement se poursuivre" color="primary" v-close-popup/>
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
 
   </q-page>
 </template>
@@ -46,7 +30,7 @@
 <script>
 import { useStore } from 'vuex'
 import { computed } from 'vue'
-import { data, onBoot } from '../app/modele'
+import { onBoot } from '../app/modele'
 import { edvol } from '../app/util'
 
 const labels = [
@@ -76,15 +60,11 @@ export default ({
     return {
       ed: edvol,
       labels: labels,
-      t: tables,
-      confirm: false
+      t: tables
     }
   },
 
   methods: {
-    stop () {
-      data.stopChargt = true
-    }
   },
 
   setup () {

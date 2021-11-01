@@ -27,8 +27,14 @@ export default ({
     onBoot()
     const $store = useStore()
     const org = computed(() => $store.state.ui.org)
-    const compte = computed(() => $store.state.db.compte)
-    const avatar = computed(() => $store.state.db.avatar)
+    // En déconnexion, compte passe à null et provoque un problème dans la page. Un getter ne marche pas ?!
+    const compte = computed({
+      get: () => { const c = $store.state.db.compte; return c || { ko: true } }
+    })
+    const avatar = computed({
+      get: () => { const a = $store.state.db.avatar; return a || { ko: true } },
+      set: (val) => $store.commit('db/majavatar', val)
+    })
     const mode = computed(() => $store.state.ui.mode)
     const modeleactif = computed(() => $store.state.ui.modeleactif)
     return {

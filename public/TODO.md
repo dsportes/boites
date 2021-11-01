@@ -1,11 +1,11 @@
-BUG : retour sur login après déconnexion
+Boîtes de dialogue info IDB et réseau (texte)
 
-Rupture de session
+Rupture de session : récupération et changement des états
 
-IDB en exception
+IDB en exception : récupération et changement des états
 
-Dialogue info IDB et réseau
+Nettoyage des IDB non joignables (sur Org ?)
 
-Synchro : en cours, interruption
+Menu : gestion des IDB
 
 Traitement des notifications Ws

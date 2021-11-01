@@ -1,72 +1,59 @@
 <template>
   <q-page class="column align-start items-center">
-
-    <div class="column align-start items-center">
-      <q-card flat class="q-ma-xs petitelargeur">
-        <q-card-section>
-          <div class="titre-2">Choix du mode
-            <q-btn flat dense round icon="info" aria-label="info" @click="infomode = true"/>
-          </div>
-        </q-card-section>
+    <q-card flat class="q-ma-xs petitelargeur">
       <q-card-section>
-          <div class="q-gutter-sm">
-            <q-radio dark dense v-model="mode" :val="1" label="Synchronisé" />
-            <q-radio dark dense v-model="mode" :val="2" label="Incognito" />
-            <q-radio dark dense v-model="mode" :val="3" label="Avion" />
-          </div>
+        <div class="titre-2">Choix du mode
+          <q-btn flat dense round icon="info" aria-label="info" @click="infomode = true"/>
+        </div>
       </q-card-section>
-      </q-card>
+    <q-card-section>
+        <div class="q-gutter-sm">
+          <q-radio dark dense v-model="mode" :val="1" label="Synchronisé" />
+          <q-radio dark dense v-model="mode" :val="2" label="Incognito" />
+          <q-radio dark dense v-model="mode" :val="3" label="Avion" />
+        </div>
+    </q-card-section>
+    </q-card>
 
-      <q-card flat v-if="mode != 0" class="q-ma-xs petitelargeur">
-        <q-card-section>
-          <div class="titre-2">Phrase secrète de connexion</div>
-        </q-card-section>
-        <phrase-secrete label-valider="Se connecter" icon-valider="send" v-on:ok-ps="connecter"></phrase-secrete>
-      </q-card>
+    <q-card flat v-if="mode != 0" class="q-ma-xs petitelargeur">
+      <q-card-section>
+        <div class="titre-2">Phrase secrète de connexion</div>
+      </q-card-section>
+      <phrase-secrete label-valider="Se connecter" icon-valider="send" v-on:ok-ps="connecter"></phrase-secrete>
+    </q-card>
 
-      <div v-if="mode != 0" class="q-my-md petitelargeur column items-start">
-        <q-btn flat color="warning" icon="add_circle" label="Test synchro" @click="dialoguesynchro = true"/>
-        <q-btn flat color="warning" icon="add_circle" label="Nouveau compte parrainé" />
-        <q-btn flat color="primary" icon="add_circle" label="Nouveau compte (sans parrain)" @click="dialoguecreationcompte = true"/>
-      </div>
+    <div v-if="mode === 1 || mode === 2" class="q-my-md petitelargeur column items-start">
+      <q-btn flat color="warning" icon="add_circle" label="Nouveau compte parrainé" />
+      <q-btn flat color="primary" icon="add_circle" label="Nouveau compte (sans parrain)" @click="dialoguecreationcompte = true"/>
     </div>
-
-    <dialogue-creation-compte></dialogue-creation-compte>
-
   </q-page>
 </template>
 
 <script>
 import { computed } from 'vue'
 import { useStore } from 'vuex'
-// import { cfg } from '../app/util'
 import { connexionCompte } from '../app/operations'
 import PhraseSecrete from '../components/PhraseSecrete.vue'
-import DialogueCreationCompte from '../components/DialogueCreationCompte.vue'
 import { onBoot } from '../app/modele'
 
 export default ({
   name: 'Login',
-  components: { PhraseSecrete, DialogueCreationCompte },
+  components: { PhraseSecrete },
   data () {
     return {
-      ps: null,
-      erreurconnexion: false,
-      diag: ''
+      ps: null
     }
   },
 
   methods: {
     async connecter (ps) {
-      if (!ps) return
-      await connexionCompte(ps)
+      if (ps) await connexionCompte(ps)
     }
   },
 
   setup () {
-    onBoot()
     const $store = useStore()
-    const org = computed(() => $store.state.ui.org)
+    onBoot()
     const mode = computed({
       get: () => $store.state.ui.mode,
       set: (val) => $store.commit('ui/majmode', val)
@@ -75,22 +62,14 @@ export default ({
       get: () => $store.state.ui.infomode,
       set: (val) => $store.commit('ui/majinfomode', val)
     })
-    const dialoguesynchro = computed({
-      get: () => $store.state.ui.infomode,
-      set: (val) => $store.commit('ui/majdialoguesynchro', val)
-    })
-    const dialogcreationcompte = computed({
+    const dialoguecreationcompte = computed({
       get: () => $store.state.ui.infomode,
       set: (val) => $store.commit('ui/majdialoguecreationcompte', val)
     })
-    const compte = computed(() => $store.state.db.compte)
     return {
-      org,
       mode,
       infomode,
-      dialoguesynchro,
-      dialogcreationcompte,
-      compte
+      dialoguecreationcompte
     }
   }
 

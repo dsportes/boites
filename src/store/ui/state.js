@@ -5,6 +5,7 @@ export default function () {
     derniereerreur: null,
     dialoguecrypto: false,
     dialoguecreationcompte: false,
+    confirmstopchargement: false,
     diagnostic: null,
     menuouvert: false,
     reqencours: false,

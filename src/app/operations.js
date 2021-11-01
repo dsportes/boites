@@ -8,15 +8,14 @@ import { AppExc } from './api'
 
 const crypt = require('./crypto')
 const rowTypes = require('./rowTypes')
-// const JSONbig = require('json-bigint')
 
 export async function deconnexion () {
   store().commit('db/raz')
   data.raz()
   const s = session.ws
   if (s) s.close()
-  const org = store().state.ui.org
-  remplacePage(org ? 'Login' : 'Org')
+  const np = store().state.ui.org ? 'Login' : 'Org'
+  remplacePage(np)
 }
 
 /* On poste :
@@ -182,19 +181,15 @@ async function connexionCompteAvion () {
   let ok = true
   try {
     await db.chargementIdb()
-    const xx = store().state.db.avatars
-    for (const av in xx) {
-      console.log('Avatar ' + av + '=' + JSON.stringify(xx[av]))
-    }
   } catch (e) {
     store().commit('ui/majsyncencours', false)
     if (e.message === 'STOPCHARGT') {
       ok = false
-      affichermessage('Chargement des données locales interrompu sur demande explicite', true)
     } else throw e
   }
 
+  store().commit('ui/majmodeleactif', ok)
   store().commit('ui/majsyncencours', true)
-  affichermessage('Compte authentifié et connecté' + (ok ? '' : ' mais données peut-être incomplètes'), false)
+  affichermessage('Compte authentifié et connecté' + (ok ? '' : ' mais données peut-être incomplètes'), ok)
   remplacePage('Compte')
 }

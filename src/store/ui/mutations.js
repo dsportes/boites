@@ -12,6 +12,7 @@ export function razdialogues (state) {
   majinfomode(state, false)
   majinforeseau(state, false)
   majinfoidb(state, false)
+  majconfirmstopchargement(state, false)
   state.dialoguecreationcompte = false
 }
 
@@ -51,6 +52,10 @@ export function majerreur (state, err) {
 
 export function razerreur (state) {
   state.erreur = null
+}
+
+export function majconfirmstopchargement (state, val) {
+  state.confirmstopchargement = val
 }
 
 export function majinfomode (state, val) {
@@ -115,10 +120,6 @@ export function majidberreur (state, val) {
   state.idberreur = val
 }
 
-export function modeleactif (state) {
-  state.modeleactif = true
-}
-
-export function modelepassif (state) {
-  state.modeleactif = false
+export function majmodeleactif (state, val) {
+  state.modeleactif = val
 }

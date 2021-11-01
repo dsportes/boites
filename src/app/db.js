@@ -291,7 +291,8 @@ export class Idb {
     data.idbSetAvatars = data.setAvatars
     data.idbSetGroupes = data.setGroupes
     data.idbsetCvsUtiles = data.setCvsUtiles
-    await sleep(2000)
+    await sleep(1000)
+    if (data.stopChargt) throw Error('STOPCHARGT')
   }
 
   /*

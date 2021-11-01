@@ -4,23 +4,26 @@
       <q-toolbar>
         <q-toolbar-title>
           <span :class="compte == null ? 'cursor-pointer' : 'no-pointer-events'" @click="toorg">
-            <q-avatar round size="md">
+            <q-avatar round size="sm">
               <img :src="orgicon">
             </q-avatar>
             <span :class="orglabelclass">{{ orglabel }}</span>
+            <q-tooltip>Changer d'organisation</q-tooltip>
           </span>
-          <q-btn v-if="org != null && compte == null && page !== 'Login'" color="warning" dense icon="login" label="Connexion" @click="login"/>
-          <span v-if="org != null && compte == null && page === 'Login'" class="q-px-sm">Connexion ...</span>
-          <span v-if="org != null && compte != null" class="font-antonio-l q-px-sm">{{ compte.titre }}</span>
-          <q-btn v-if="org != null && compte != null" class="btnsm" dense size="sm" color="warning" icon="logout" label="Déconnexion" @click="logout"/>
+          <span v-if="org != null && compte == null && page === 'Login'" class="q-px-sm"  @click="login">Connexion ...</span>
+          <span v-if="org != null && compte != null" class="labeltitre q-px-sm">{{ compte.titre }}</span>
         </q-toolbar-title>
+
+        <q-btn v-if="org != null && compte != null" class="btnsm" dense size="md" color="warning" icon="logout" @click="logout">
+          <q-tooltip>Déconnexion du compte</q-tooltip>
+        </q-btn>
 
         <div class="cursor-pointer q-px-xs" @click="infoidb = true">
           <q-avatar v-if="mode === 0 || mode === 2 || !compte" round size="md">
               <img src="~assets/database_gris.svg">
             </q-avatar>
           <div v-else>
-            <q-avatar v-if="!idberreur" round size="md">
+            <q-avatar v-if="modeleactif" round size="md">
               <img src="~assets/database_vert.svg">
             </q-avatar>
             <q-avatar v-else round size="md">
@@ -34,7 +37,7 @@
           <div v-else>
             <q-icon v-if="syncencours" size="md" icon="autorenew"/>
             <div v-else>
-              <q-avatar v-if="modelactif" round color="green" size="md"/>
+              <q-avatar v-if="modeleactif" round color="green" size="md"/>
               <q-icon v-else name="visibility" size="md" color="warning"/>
             </div>
           </div>
@@ -50,19 +53,21 @@
       </q-toolbar>
         <q-toolbar inset>
           <q-toolbar-title>
-          <span v-if="compte != null" class="cursor-pointer q-pr-md" @click="tocompte">Synthèse</span>
-          <q-avatar v-if="avatar != null || groupe != null" class="q-px-md" round size="md">
-            <q-icon round size="md" name="label_important"/>
-          </q-avatar>
-          <q-avatar v-if="avatar != null" round size="md">
+          <span v-if="page === 'Synchro'" class="q-px-xs">Chargement / Synchronisation</span>
+          <q-btn v-if="page === 'Synchro'" dense size="md" color="warning" icon="stop" @click="confirmstopchargement = true">
+            <q-tooltip>Interrompre le chargement des données</q-tooltip>
+          </q-btn>
+          <span v-if="page !== 'Synchro' && compte != null" class="cursor-pointer q-px-xs" @click="tocompte">Synthèse</span>
+          <q-icon v-if="page !== 'Synchro' && (avatar != null || groupe != null)" class="q-px-xs" size="md" name="label_important"/>
+          <q-avatar v-if="page !== 'Synchro' && avatar != null" round size="md">
             <img v-if="avatar.icone.length !== 0" :src="avatar.icone">
-            <q-icon v-else round size="md" name="face"/>
+            <q-icon v-else size="md" name="face"/>
           </q-avatar>
-          <q-avatar v-if="groupe != null" round size="md">
+          <q-avatar v-if="page !== 'Synchro' && groupe != null" round size="md">
             <img v-if="groupe.icone.length !== 0" :src="groupe.icone">
-            <q-icon v-else round size="md" name="group"/>
+            <q-icon v-else size="md" name="group"/>
           </q-avatar>
-          <span v-if="avatar != null">{{avatar.label}}</span>
+          <span v-if="page !== 'Synchro' && avatar != null">{{avatar.label}}</span>
           </q-toolbar-title>
           <q-btn flat dense round icon="people" aria-label="Contacts"/>
           <q-btn flat dense round icon="menu" aria-label="Menu" @click="$store.commit('ui/majmenuouvert', true)"/>
@@ -169,6 +174,20 @@
       </q-card>
     </q-dialog>
 
+    <q-dialog v-model="confirmstopchargement">
+      <q-card>
+        <q-card-section class="q-pa-md diag">
+          Interrompre le chargement des données de la base locale affichera des données
+          incomplètes en mode avion et allongera la synchronisation en mode synchro.
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat label="Confirmer l'interruption" color="warning" v-close-popup @click="stop"/>
+          <q-btn flat label="Laisser le chargement se poursuivre" color="primary" v-close-popup/>
+        </q-card-actions>
+      </q-card>
+
+    </q-dialog>
+    <dialogue-creation-compte></dialogue-creation-compte>
   </q-layout>
 </template>
 
@@ -180,14 +199,15 @@ import { cancelRequest, ping /*, cfg */ } from '../app/util'
 import { useQuasar } from 'quasar'
 import { computed } from 'vue'
 import { useStore } from 'vuex'
-import { onRuptureSession, remplacePage, onBoot } from '../app/modele'
+import { onRuptureSession, remplacePage, onBoot, data } from '../app/modele'
 import { deconnexion } from '../app/operations'
+import DialogueCreationCompte from 'components/DialogueCreationCompte.vue'
 
 export default {
   name: 'MainLayout',
 
   components: {
-    PanelMenu, DialogueErreur, DialogueCrypto
+    PanelMenu, DialogueErreur, DialogueCrypto, DialogueCreationCompte
   },
 
   data () {
@@ -201,27 +221,10 @@ export default {
     Traitement d'un changement d'organisation directement sur l'URL
     Quand une URL n'est pas reconnue par le router (l'utilisateur a frappé n'importe quoi), newp est null.
     On le déconnecte s'il était connecté et on le ramène au tout début (bien fait !)
-    */
     '$route.params': function (newp, oldp) {
       console.log(JSON.stringify(newp) + ' -- ' + JSON.stringify(oldp))
-      /*
-      if (newp.org === this.org) return
-      if (!cfg().orgs[newp.org]) {
-        this.org = null
-        if (this.compte) {
-          deconnexion() // renverra sur Org
-        } else {
-          remplacePage('Org')
-        }
-      } else {
-        if (this.compte) {
-          deconnexion() // renverra sur Login
-        } else {
-          remplacePage('Login')
-        }
-      }
-      */
     },
+    */
     '$store.state.ui.sessionerreur': function (newp, oldp) {
       console.log('Session erreur : ' + (newp ? newp.message : 'x') + ' / ' + (oldp ? oldp.message : 'x'))
       if (newp) {
@@ -248,6 +251,11 @@ export default {
       deconnexion()
     },
 
+    stop () {
+      this.confirmstopchargement = true
+      data.stopChargt = true
+    },
+
     async ping () {
       try {
         await ping()
@@ -266,6 +274,10 @@ export default {
     const menuouvert = computed({
       get: () => $store.state.ui.menuouvert,
       set: (val) => $store.commit('ui/majmenuouvert', val)
+    })
+    const confirmstopchargement = computed({
+      get: () => $store.state.ui.confirmstopchargement,
+      set: (val) => $store.commit('ui/majconfirmstopchargement', val)
     })
     const infomode = computed({
       get: () => $store.state.ui.infomode,
@@ -286,7 +298,7 @@ export default {
     const page = computed(() => $store.state.ui.page)
     const orgicon = computed(() => $store.getters['ui/orgicon'])
     const orglabel = computed(() => $store.getters['ui/orglabel'])
-    const orglabelclass = computed(() => 'font-antonio-l q-px-sm ' + ($store.state.ui.org == null ? 'labelorg2' : 'labelorg1'))
+    const orglabelclass = computed(() => 'font-antonio-l ' + ($store.state.ui.org == null ? 'labelorg2' : 'labelorg1'))
     const compte = computed(() => $store.state.db.compte)
     const avatar = computed(() => $store.state.db.avatar)
     const groupe = computed(() => $store.state.db.groupe)
@@ -308,6 +320,7 @@ export default {
       infomode,
       inforeseau,
       infoidb,
+      confirmstopchargement,
       org,
       orgicon,
       orglabel,
@@ -336,17 +349,25 @@ export default {
   transition: all 0.2s ease-in-out
 .fade-enter, .fade-leave-active
   opacity: 0
-  transform: translateX(50%)
+  transform: translateX(50%) /* CA BUG : Login ne se réaffichae pas */
 
 .btnsm
   position: relative
-  top: -3px
+  top: 0
+
+.labeltitre
+  padding: 0 2px
+  color: white
+  font-size: 1rem
 
 .labelorg1
+  padding: 0 2px
   color: white
+  font-size: 1rem
 
 .labelorg2
   color: $negative
+  font-size: 1rem
 
 .reqencours
   width: 15rem

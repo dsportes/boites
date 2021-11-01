@@ -1,5 +1,5 @@
 <template>
-  <q-page v-if="compte != null" class="column align-start items-center">
+  <q-page class="column align-start items-center">
     <h6>Compte : {{compte.sid}}</h6>
     <h6>Liste des avatars du compte</h6>
     <div v-for="e in compte.mac" :key="e.na.sid">
@@ -66,13 +66,16 @@ export default ({
     onBoot()
     const $store = useStore()
     const org = computed(() => $store.state.ui.org)
-    const compte = computed(() => $store.state.db.compte)
+    // En déconnexion, compte passe à null et provoque un problème dans la page. Un getter ne marche pas ?!
+    const compte = computed({
+      get: () => { const c = $store.state.db.compte; return c || { ko: true } }
+    })
     const avatar = computed({
-      get: () => $store.state.db.avatar,
+      get: () => { const a = $store.state.db.avatar; return a || { ko: true } },
       set: (val) => $store.commit('db/majavatar', val)
     })
     const groupe = computed({
-      get: () => $store.state.db.groupe,
+      get: () => { const a = $store.state.db.avatar; return a || { ko: true } },
       set: (val) => $store.commit('db/majgroupe', val)
     })
     const cvs = computed(() => $store.state.db.cvs)

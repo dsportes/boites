@@ -1,6 +1,6 @@
 <template>
-  <q-dialog v-model="dialoguecreationcompte">
-  <q-card class="q-ma-xs moyennelargeur">
+  <q-dialog v-model="dialoguecreationcompte" class="grandelargeur">
+  <q-card>
     <q-card-section>
       <div class="titre-2 text-italic">Création d'un compte SANS parrain</div>
       <q-btn flat @click="close" color="primary" label="Renoncer" class="q-ml-sm" />
@@ -89,7 +89,7 @@ export default ({
 
   methods: {
     close () {
-      this.$store.commit('ui/majdialoguecreationcompte', false)
+      this.dialoguecreationcompte = false
     },
     okmdp (mdp) {
       this.mdp = mdp
@@ -125,12 +125,13 @@ export default ({
   setup () {
     const $store = useStore()
     const org = computed(() => $store.state.ui.org)
+    const dialoguecreationcompte = computed({
+      get: () => $store.state.ui.dialoguecreationcompte,
+      set: (val) => $store.commit('ui/majdialoguecreationcompte', val)
+    })
     return {
       org,
-      dialoguecreationcompte: computed({
-        get: () => $store.state.ui.dialoguecreationcompte,
-        set: (val) => $store.commit('ui/majdialoguecreationcompte', val)
-      })
+      dialoguecreationcompte
     }
   }
 })
@@ -144,10 +145,18 @@ export default ({
   font-weight: bold
   font-style: normal
   font-family: 'Roboto Mono'
+</style>
+<style lang="sass">
 .q-card__section
   padding: 5px
 .q-stepper--vertical
-  padding: 12px 4px !important
+  padding: 4px !important
+.q-stepper__tab
+  padding: 2px 0 !important
 .q-stepper__step-inner
-  padding: 0px 12px 32px 32px !important
+  padding: 0px 2px 2px 18px !important
+.q-stepper__nav
+  padding: 0 !important
+.q-dialog__inner
+  padding: 0 !important
 </style>

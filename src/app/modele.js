@@ -83,52 +83,6 @@ export function onBoot () {
       return false
     }
     return false
-    /*
-    const $store = store()
-    const org = store().state.ui.org
-    if (!org) {
-      if (to.name !== 'Org') {
-        $store.commit('ui/majpage', 'Org')
-        return '/'
-      }
-      $store.commit('ui/majpage', 'Org')
-      return
-    }
-    const compte = $store.state.db.compte
-    if (!compte) {
-      if (to.name === 'Org') {
-        $store.commit('ui/majpage', 'Org')
-        return
-      }
-      if (to.name !== 'Login') {
-        $store.commit('ui/majpage', 'Login')
-        return '/' + org
-      }
-      $store.commit('ui/majpage', 'Login')
-      return
-    }
-    if (to.name === 'Compte') {
-      $store.commit('ui/majpage', 'Compte')
-      return
-    }
-    if (to.name === 'Avatar') {
-      const av = $store.state.db.avatar
-      if (av) {
-        $store.commit('ui/majpage', 'Avatar')
-        return
-      }
-      return '/' + org + '/compte'
-    }
-    if (to.name === 'Groupe') {
-      const av = $store.state.db.avatar
-      if (av) {
-        $store.commit('ui/majpage', 'Groupe')
-        return
-      }
-      return '/' + org + '/compte'
-    }
-    // Synchro
-    */
   })
   // Traitement de la route au boot
   const $route = useRoute()
@@ -152,36 +106,10 @@ export function onBoot () {
 }
 
 export async function remplacePage (page) {
-  const r = $router
-  const org = store().state.ui.org
-  let x
-  switch (page) {
-    case 'Org' : {
-      x = { name: 'Org' }
-      break
-    }
-    case 'Login' : {
-      x = { name: 'Login', params: { org: org } }
-      break
-    }
-    case 'Synchro' : {
-      x = { name: 'Synchro', params: { org: org } }
-      break
-    }
-    case 'Compte' : {
-      x = { name: 'Compte', params: { org: org } }
-      break
-    }
-    case 'Avatar' : {
-      x = { name: 'Avatar', params: { org: org } }
-      break
-    }
-    case 'Groupe' : {
-      x = { name: 'Groupe', params: { org: org } }
-      break
-    }
-  }
-  await r.replace(x)
+  const x = { name: page }
+  if (page !== 'Org') x.params = { org: store().state.ui.org }
+  // eslint-disable-next-line no-unused-vars
+  await $router.replace(x)
 }
 
 export function onRuptureSession (appExc) { // TODO

@@ -1,5 +1,6 @@
 <template>
   <q-list>
+    <q-btn class="fermer" round size="md" color="warning" icon="close" @click="fermer"/>
     <q-item-section>
       <q-item>
         <span class="text-primary text-italic q-pl-md q-ma-none">Build : {{ $cfg.build }}</span>
@@ -44,6 +45,10 @@ export default ({
       this.$store.commit('ui/majmenuouvert', false)
     },
 
+    fermer () {
+      this.$store.commit('ui/majmenuouvert', false)
+    },
+
     async ping () {
       try {
         this.pingret = null
@@ -71,6 +76,11 @@ export default ({
 </script>
 <style lang="sass" scpoed>
 @import '../css/app.sass'
+.fermer
+  position: absolute
+  top: 0.5rem
+  left: -1.5rem
+  z-index: 2
 .q-item
   padding: 0 !important
   min-height:0 !important
