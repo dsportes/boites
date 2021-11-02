@@ -2,6 +2,7 @@
 import Dexie from 'dexie'
 import { Avatar, Compte, Invitgr, Invitct, Contact, Parrain, Rencontre, Groupe, Membre, Secret, Cv, data } from './modele'
 import { store, cfg, sleep } from './util'
+import { AppExc } from './api'
 const crypt = require('./crypto')
 
 export async function deleteIDB (nombase) {
@@ -12,9 +13,34 @@ export async function deleteIDB (nombase) {
   }
 }
 
+export async function getIDB () {
+  // eslint-disable-next-line no-unused-vars
+  const d = data
+  if (!data.idb) {
+    let db
+    try {
+      db = new Idb()
+      await db.open()
+    } catch (e) {
+      const ex = new AppExc(-1100, 'Erreur d\'accès à la base locale ' + (data.nombase || ''), 'Exception à l\'ouverture' + e.message)
+      store().commit('ui/majidberreur', ex)
+      db.close()
+      throw ex
+    }
+  }
+  return data.idb
+}
+
+export function throwIdbErr (e) {
+  const ex = e instanceof AppExc ? e : new AppExc(-1100, 'Erreur d\'accès à la base locale ' + (data.nombase || ''), 'Exception à l\'exécution' + e.message)
+  store().commit('ui/majidberreur', ex)
+  throw ex
+}
+
 export class Idb {
   static get STORES () {
     return {
+      etat: 'id',
       compte: 'id',
       avatar: 'id',
       invitgr: '[id+ni]',
@@ -35,10 +61,13 @@ export class Idb {
     return t
   }
 
-  constructor (nom) {
-    this.db = new Dexie(nom, { autoOpen: true })
+  constructor () {
+    const org = store().state.ui.org
+    const lstk = org + '-' + data.ps.dpbh
+    data.nombase = org + '-' + localStorage.getItem(lstk)
+    this.db = new Dexie(data.nombase, { autoOpen: true })
     this.db.version(1).stores(this.constructor.STORES)
-    this.constructor.idb = this
+    data.idb = this
   }
 
   async open () {
@@ -46,10 +75,19 @@ export class Idb {
   }
 
   close () {
-    if (this.db && this.db.isOpen()) {
-      this.db.close()
-      this.db = null
-    }
+    try {
+      if (this.db && this.db.isOpen()) {
+        this.db.close()
+      }
+    } catch (e) {}
+    this.db = null
+    data.idb = null
+    data.nombase = null
+  }
+
+  async getEtat () {
+    const etat = await this.db.etat.get(1)
+    return etat ? JSON.parse(etat.data) : {}
   }
 
   async getCompte () {

@@ -16,6 +16,19 @@ export function razdialogues (state) {
   state.dialoguecreationcompte = false
 }
 
+export function deconnexion (state) {
+  razdiagnostic(state)
+  razmessage(state)
+  finreq(state)
+  razerreur(state)
+  state.reqencours = false
+  state.syncencours = false
+  state.idberreur = null
+  state.modeleactif = true
+  state.sessionerreur = null
+  state.idblec = IDBLEC_RAZ
+}
+
 export function debutreq (state) {
   state.reqencours = true
 }
@@ -96,6 +109,10 @@ export function majdialoguecrypto (state, val) {
 
 export function majdialoguecreationcompte (state, val) {
   state.dialoguecreationcompte = val
+}
+
+export function majdialoguetestping (state, val) {
+  state.dialoguetestping = val
 }
 
 export function majmenuouvert (state, val) {

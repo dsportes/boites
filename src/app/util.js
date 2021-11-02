@@ -166,13 +166,15 @@ export async function post (module, fonction, args, info) {
       throw x
     }
     // Erreurs réseau / serveur inattendues
-    const m = e.message === 'Network Error' ? 'Probable erreur de réseau' : e.message
-    x = new AppExc(-1002, 'Echec de l\'opération : BUG ou incident technique', m)
-    $store.commit('ui/majerreur', x) // Autres statuts : anomalie / bug / incident à afficher et traiter comme exception
-    throw x
+    errNetSrv(e)
   }
 }
 
+function errNetSrv (e) {
+  const m = e.message === 'Network Error' ? 'Probable erreur de réseau' : e.message
+  const x = new AppExc(-1002, 'Echec de l\'opération : BUG ou incident technique', m)
+  throwAppExc(x) // Autres statuts : anomalie / bug / incident à afficher et traiter comme exception
+}
 /*
 Envoi une requête GET :
 - module : module invoqué
@@ -222,16 +224,16 @@ export async function ping () {
     return r.data
   } catch (e) {
     $store.commit('ui/finreq')
-    if (e.message !== 'RUPTURESESSION') throw e
-    console.log(e)
+    if (e.message !== 'RUPTURESESSION') errNetSrv(e)
     return null
   }
 }
 
-export function throwAppExc (appExc) {
+export function throwAppExc (appExc, nothrow) {
   razmessage()
   store().commit('ui/majerreur', appExc)
-  throw appExc
+  console.log('test echo : ' + JSON.stringify(appExc))
+  if (!nothrow) throw appExc
 }
 
 export async function testEcho (to) {

@@ -16,10 +16,11 @@ export function aeuuneerreur (state) { // boolean
   return state.derniereerreur != null
 }
 
+/*
 export function reseauok (state) { // boolean
   return state.statushttp === 200 || state.statushttp === 400 || state.statushttp === 401
 }
-
+*/
 export function messagevisible (state) {
   return state.message != null
 }

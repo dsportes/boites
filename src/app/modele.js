@@ -129,6 +129,7 @@ export class Etat {
     this.clec = {} // {id, {ic... }}
     this.stopChargt = false
     this.syncqueue = []
+    this.nombase = null
   }
 
   clegDe (sid) {

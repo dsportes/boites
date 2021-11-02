@@ -14,14 +14,14 @@
           <span v-if="org != null && compte != null" class="labeltitre q-px-sm">{{ compte.titre }}</span>
         </q-toolbar-title>
 
-        <q-btn v-if="org != null && compte != null" class="btnsm" dense size="md" color="warning" icon="logout" @click="logout">
+        <q-btn v-if="org != null && compte != null" dense size="md" color="warning" icon="logout" @click="logout">
           <q-tooltip>Déconnexion du compte</q-tooltip>
         </q-btn>
 
         <div class="cursor-pointer q-px-xs" @click="infoidb = true">
           <q-avatar v-if="mode === 0 || mode === 2 || !compte" round size="md">
               <img src="~assets/database_gris.svg">
-            </q-avatar>
+          </q-avatar>
           <div v-else>
             <q-avatar v-if="modeleactif" round size="md">
               <img src="~assets/database_vert.svg">
@@ -88,28 +88,40 @@
 
     <dialogue-crypto></dialogue-crypto>
     <dialogue-erreur></dialogue-erreur>
+    <dialogue-test-ping></dialogue-test-ping>
 
     <q-dialog v-model="infomode">
       <q-card>
         <q-card-section>
           <div class="titre-2">Les modes inconnu, synchronisé, incognito, avion</div>
         </q-card-section>
-        <q-card-section :class="'q-pt-none' + ($store.getters['ui/modeinconnu'] ? 'text-body-1 text-weight-bold' : 'text-body-2 text-weight-regular')">
-          <q-icon class="iconstd" name="info"/><span class="titre-2 q-px-sm">Inconnu :</span>
-          Le mode n'a pas encore été choisi.
+        <q-card-section>
+          <q-icon size="md" name="info"/>
+          <span :class="(mode === 0 ? 'text-bold text-primary ' : '') + 'titre-2 q-px-sm'">Inconnu :</span>
+          <span :class="mode === 0 ? 'text-bold text-primary' : ''">
+            Le mode n'a pas encore été choisi.
+          </span>
         </q-card-section>
-        <q-card-section :class="'q-pt-none' + ($store.getters['ui/modesync'] ? 'text-body-1 text-weight-bold' : 'text-body-2 text-weight-regular')">
-          <q-icon size="md" name="sync_alt"/><span class="titre-2 q-px-sm">Synchronisé :</span>
-          L'application accède au serveur central pour obtenir les données et les synchronise sur un stockage local crypté.
+        <q-card-section>
+          <q-icon size="md" name="sync_alt"/>
+          <span :class="(mode === 1 ? 'text-bold text-primary ' : '') + 'titre-2 q-px-sm'">Synchronisé :</span>
+          <span :class="mode === 1 ? 'text-bold text-primary' : ''">
+            L'application accède au serveur central pour obtenir les données et les synchronise sur un stockage local crypté.
+          </span>
         </q-card-section>
-        <q-card-section :class="'q-pt-none' + ($store.getters['ui/modeincognito'] ? 'text-body-1 text-weight-bold' : 'text-body-2 text-weight-regular')">
+        <q-card-section>
           <q-avatar round size="md"><img src="~assets/incognito_blanc.svg"></q-avatar>
-          <span class="titre-2 q-px-sm">Incognito :</span>
-          L'application accède au serveur central pour obtenir les données mais n'accède pas au stockage local et n'y laisse pas de trace d'exécution.
+          <span :class="(mode === 2 ? 'text-bold text-primary ' : '') + 'titre-2 q-px-sm'">Incognito :</span>
+          <span :class="mode === 2 ? 'text-bold text-primary' : ''">
+            L'application accède au serveur central pour obtenir les données mais n'accède pas au stockage local et n'y laisse pas de trace d'exécution.
+          </span>
         </q-card-section>
-        <q-card-section :class="'q-pt-none' + ($store.getters['ui/modeavion'] ? 'text-body-1 text-weight-bold' : 'text-body-2 text-weight-regular')">
-          <q-icon size="md" name="airplanemode_active"/><span class="titre-2 q-px-sm">Avion :</span>
-          L'application n'accède pas au réseau, il obtient les données depuis le stockage local crypté où elles ont été mises à jour lors de la dernière session en mode synchronisé.
+        <q-card-section>
+          <q-icon size="md" name="airplanemode_active"/>
+          <span :class="(mode === 3 ? 'text-bold text-primary ' : '') + 'titre-2 q-px-sm'">Avion :</span>
+          <span :class="mode === 3 ? 'text-bold text-primary' : ''">
+            L'application n'accède pas au réseau, elle obtient ses données depuis le stockage local crypté où elles ont été mises à jour lors de la dernière session en mode synchronisé.
+          </span>
         </q-card-section>
         <q-card-actions align="right">
           <q-btn flat label="J'ai lu" color="primary" v-close-popup />
@@ -122,12 +134,39 @@
         <q-card-section>
           <div class="titre-2">Etat d'accès au réseau (mode synchronisé et incognito)</div>
         </q-card-section>
-        <q-card-section v-if="$store.getters['ui/reseauok']" class="q-pt-none">
-          L'application accède par le réseau aux données sur le serveur, la dernière requête s'est terminée normalement.
+        <q-card-section>
+          <q-avatar round color="grey-5" size="md"/>
+          <span :class="mode === 0 || mode === 3 || compte == null  ? 'text-bold text-primary' : ''">
+            Le réseau et le serveur central ne sont pas accédés avant connexion à un compte ou en mode avion.
+          </span>
         </q-card-section>
-        <q-card-section v-else class="q-pt-none">
-          L'application accède par le réseau aux données sur le serveur, toutefois la dernière requête a rencontré un incident.
+        <q-card-section>
+          <q-icon size="md" name="autorenew"/>
+          <span :class="syncencours  ? 'text-bold text-primary' : ''">
+            Une phase de synchronisation avec le serveur central est en cours.
+          </span>
         </q-card-section>
+        <q-card-section>
+          <q-avatar round color="green" size="md"/>
+          <span :class="compte != null && (mode === 1 || mode === 2) && modelactif  ? 'text-bold text-primary' : ''">
+            Les échanges / synchronisations avec le serveur sont opérationnels.
+          </span>
+        </q-card-section>
+        <q-card-section>
+          <q-icon name="visibility" size="md" color="warning"/>
+          <span :class="compte != null && (mode === 1 || mode === 2) && !modelactif  ? 'text-bold text-primary' : ''">
+            Les échanges / synchronisations avec le serveur ont été interrompus :
+            les opérations de mise à jour sont interdites jusqu'à ce que la session ait été resynchronisée.
+          </span>
+        </q-card-section>
+        <q-card-actions align="left">
+          <q-btn v-if="(mode === 1 || mode === 2) && !modelactif" dense size="md" color="warning"
+            icon="logout" label="Déconnexion du compte" @click="logout" v-close-popup/>
+          <q-btn v-if="(mode === 1 || mode === 2) && !modelactif" dense size="md" color="Primary"
+            icon="logout" label="Tentativee de reconnexion au compte" @click="reconnexion" v-close-popup/>
+          <q-btn v-if="(mode === 1 || mode === 2) && !modelactif" dense size="md" color="Primary"
+            icon="logout" label="Tests d'accès à la base et au serveur" @click="dialoguetestping = true" v-close-popup/>
+        </q-card-actions>
         <q-card-actions align="right">
           <q-btn flat label="J'ai lu" color="primary" v-close-popup />
         </q-card-actions>
@@ -137,14 +176,40 @@
     <q-dialog v-model="infoidb">
       <q-card>
         <q-card-section>
-          <div class="titre-2">État courant de la synchronisation (mode synchronisé et incognito)</div>
+          <div class="titre-2">Accès à la base locale</div>
         </q-card-section>
-        <q-card-section v-if="!$store.state.ui.statuslogin" class="q-pt-none">
-          La synchronisation n'est activé qu'après s'être connecté.
+        <q-card-section>
+          <q-avatar round size="md">
+            <img src="~assets/database_gris.svg">
+          </q-avatar>
+          <span :class="mode == 2 || mode == 0 || compte == null ? 'text-bold text-primary' : ''">
+            Il n'y a pas d'accès à la base locale avant connexion à un compte ou en mode incognito
+          </span>
         </q-card-section>
-        <q-card-section v-else class="q-pt-none">
-          {{ labelerreursync }}
+        <q-card-section>
+          <q-avatar round size="md">
+            <img src="~assets/database_vert.svg">
+          </q-avatar>
+          <span :class="(mode == 1 || mode == 3) && idberreur == null && compte != null ? 'text-bold text-primary' : ''">
+              La base locale est accessible : un compte est connecté en mode synchronisé ou avion
+          </span>
         </q-card-section>
+        <q-card-section>
+          <q-avatar round size="md">
+            <img src="~assets/database_rouge.svg">
+          </q-avatar>
+          <span :class="(mode == 1 || mode == 3) && idberreur != null && compte != null ? 'text-bold text-primary' : ''">
+              Erreur d'accès à la base locale (corrompue ? détruite ?) : un compte est connecté en mode synchronisé ou avion.
+              Les opérations de mise à jour sont interdites jusqu'à ce que la session ait été resynchronisée.
+          </span>
+        </q-card-section>
+        <q-card-actions align="left">
+          <q-btn v-if="(mode === 1 || mode === 2) && !modelactif" dense size="md" color="warning"
+            icon="logout" label="Déconnexion du compte" @click="logout" v-close-popup/>
+          <q-btn v-if="(mode === 1 || mode === 2) && !modelactif" dense size="md" color="Primary"
+            icon="logout" label="Tentativee de reconnexion au compte" @click="reconnexion" v-close-popup/>
+          <q-btn dense size="md" color="primary" label="Tests d'accès à la base et au serveur" @click="dialoguetestping = true" v-close-popup/>
+        </q-card-actions>
         <q-card-actions align="right">
           <q-btn flat label="J'ai lu" color="primary" v-close-popup />
         </q-card-actions>
@@ -187,7 +252,9 @@
       </q-card>
 
     </q-dialog>
+
     <dialogue-creation-compte></dialogue-creation-compte>
+
   </q-layout>
 </template>
 
@@ -200,14 +267,15 @@ import { useQuasar } from 'quasar'
 import { computed } from 'vue'
 import { useStore } from 'vuex'
 import { onRuptureSession, remplacePage, onBoot, data } from '../app/modele'
-import { deconnexion } from '../app/operations'
+import { deconnexion, reconnexion } from '../app/operations'
 import DialogueCreationCompte from 'components/DialogueCreationCompte.vue'
+import DialogueTestPing from 'components/DialogueTestPing.vue'
 
 export default {
   name: 'MainLayout',
 
   components: {
-    PanelMenu, DialogueErreur, DialogueCrypto, DialogueCreationCompte
+    PanelMenu, DialogueErreur, DialogueCrypto, DialogueCreationCompte, DialogueTestPing
   },
 
   data () {
@@ -251,6 +319,10 @@ export default {
       deconnexion()
     },
 
+    reconnexion () {
+      reconnexion()
+    },
+
     stop () {
       this.confirmstopchargement = true
       data.stopChargt = true
@@ -288,8 +360,12 @@ export default {
       set: (val) => $store.commit('ui/majinforeseau', val)
     })
     const infoidb = computed({
-      get: () => $store.state.ui.infosync,
+      get: () => $store.state.ui.infoidb,
       set: (val) => $store.commit('ui/majinfoidb', val)
+    })
+    const dialoguetestping = computed({
+      get: () => $store.state.ui.dialoguetestping,
+      set: (val) => $store.commit('ui/majdialoguetestping', val)
     })
     const org = computed({
       get: () => $store.state.ui.org,
@@ -303,7 +379,6 @@ export default {
     const avatar = computed(() => $store.state.db.avatar)
     const groupe = computed(() => $store.state.db.groupe)
     const mode = computed(() => $store.state.ui.mode)
-    const reseauok = computed(() => $store.getters['ui/reseauok'])
     const messagevisible = computed(() => $store.getters['ui/messagevisible'])
     const diagnosticvisible = computed(() => $store.getters['ui/diagnosticvisible'])
     const reqencours = computed(() => $store.state.ui.reqencours)
@@ -321,6 +396,7 @@ export default {
       inforeseau,
       infoidb,
       confirmstopchargement,
+      dialoguetestping,
       org,
       orgicon,
       orglabel,
@@ -336,8 +412,7 @@ export default {
       sessionerreur,
       syncencours,
       idberreur,
-      modeleactif,
-      reseauok
+      modeleactif
     }
   }
 }
@@ -350,10 +425,6 @@ export default {
 .fade-enter, .fade-leave-active
   opacity: 0
   transform: translateX(50%) /* CA BUG : Login ne se réaffichae pas */
-
-.btnsm
-  position: relative
-  top: 0
 
 .labeltitre
   padding: 0 2px

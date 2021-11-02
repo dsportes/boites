@@ -1,6 +1,6 @@
-import { store, post, affichermessage /*, cfg */ } from './util'
+import { store, post, affichermessage, throwAppExc /*, cfg */ } from './util'
 import { newSession, session } from './ws'
-import { Idb, deleteIDB } from './db.js'
+import { getIDB, deleteIDB } from './db.js'
 
 import * as CONST from '../store/constantes'
 import { NomAvatar, Compte, Avatar, data, Cv, rowItemsToRows, remplacePage } from './modele'
@@ -11,11 +11,22 @@ const rowTypes = require('./rowTypes')
 
 export async function deconnexion () {
   store().commit('db/raz')
+  store().commit('ui/deconnexion')
   data.raz()
-  const s = session.ws
-  if (s) s.close()
-  const np = store().state.ui.org ? 'Login' : 'Org'
-  remplacePage(np)
+  if (session.ws) session.ws.close()
+  remplacePage(store().state.ui.org ? 'Login' : 'Org')
+}
+
+export async function reconnexion () {
+  // TODO
+}
+
+function debutsync () {
+  store().commit('ui/majsyncencours', true)
+}
+
+function finsync () {
+  store().commit('ui/majsyncencours', false)
 }
 
 /* On poste :
@@ -46,12 +57,14 @@ export async function creationCompte (mdp, ps, nom, quotas) {
   store().commit('db/setCompte', compte)
   let avatar = new Avatar().nouveau(nomAvatar)
   const rowAvatar = avatar.toRow
+  debutsync()
 
   let ret
   try {
     const args = { sessionId: s.sessionId, mdp64: mdp.mdp64, q1: quotas.q1, q2: quotas.q2, qm1: quotas.qm1, qm2: quotas.qm2, clePub: kp.publicKey, rowCompte, rowAvatar }
     ret = await post('m1', 'creationCompte', args, 'creation de compte sans parrain ...')
   } catch (e) {
+    finsync()
     deconnexion()
     throw e
   }
@@ -62,7 +75,7 @@ export async function creationCompte (mdp, ps, nom, quotas) {
   /*
   Le compte vient d'être créé,
   il est déjà dans le modèle et data.clek contient la clé
-  On peut désrialiser la liste d'items
+  On peut désérialiser la liste d'items
   */
   const rows = rowItemsToRows(ret.rowItems)
   for (const t in rows) {
@@ -77,22 +90,23 @@ export async function creationCompte (mdp, ps, nom, quotas) {
 
   // maj IDB
   if (store().getters['ui/modesync']) {
-    const nombase = org + '-' + compte.sid
-    const lstk = org + '-' + ps.dpbh
+    data.nombase = org + '-' + compte.sid
+    const lstk = org + '-' + data.ps.dpbh
     try {
-      deleteIDB(nombase)
+      deleteIDB(data.nombase)
       localStorage.setItem(lstk, compte.sid)
-      const db = new Idb(nombase)
-      await db.open()
+      const db = await getIDB()
       await db.commitRows([compte, avatar, cv])
     } catch (e) {
       console.log(e.toString())
-      deleteIDB(nombase)
+      finsync()
+      deleteIDB(data.nombase)
+      data.nombase = null
       localStorage.removeItem(lstk)
       throw e
     }
   }
-
+  finsync()
   affichermessage('Compte créé et connecté', false)
   remplacePage('Compte')
 }
@@ -137,6 +151,7 @@ export async function connexionCompte (ps) {
   store().commit('db/setCompte', compte)
 
   // TODO
+  /*
   if (store().getters['ui/modesync']) {
     const org = store().state.ui.org
     const nombase = org + '-' + compte.sid
@@ -150,6 +165,7 @@ export async function connexionCompte (ps) {
       throw e
     }
   }
+  */
 }
 
 async function connexionCompteAvion () {
@@ -158,38 +174,35 @@ async function connexionCompteAvion () {
   const lstk = org + '-' + data.ps.dpbh
   const idCompte = localStorage.getItem(lstk)
   if (!idCompte) {
-    throw new AppExc(100, 'Compte non enregistré localement', 'Aucune session synchronisée ne s\'est préalablement exécutée sur ce poste avec cette phrase secrète. Erreur dans la saisie de la ligne 1 de la phrase ?')
+    return throwAppExc(new AppExc(100, 'Compte non enregistré localement', 'Aucune session synchronisée ne s\'est préalablement exécutée sur ce poste avec cette phrase secrète. Erreur dans la saisie de la ligne 1 de la phrase ?'), false)
   }
-  const nombase = org + '-' + idCompte
+
   let db
   try {
-    db = new Idb(nombase)
-    await db.open()
+    db = await getIDB()
   } catch (e) {
-    console.log(e.toString())
-    throw e
+    return
   }
   const compte = await db.getCompte()
   if (!compte || compte.pcbh !== data.ps.pcbh) {
-    throw new AppExc(101, 'Compte non enregistré localement', 'Aucune session synchronisée ne s\'est préalablement exécutée sur ce poste avec cette phrase secrète. Erreur dans la saisie de la ligne 2 de la phrase ?')
+    db.close()
+    throwAppExc(new AppExc(101, 'Compte non enregistré localement', 'Aucune session synchronisée ne s\'est préalablement exécutée sur ce poste avec cette phrase secrète. Erreur dans la saisie de la ligne 2 de la phrase ?'), false)
   }
   data.clek = compte.k
   store().commit('db/setCompte', compte)
-  store().commit('ui/majsyncencours', true)
+  debutsync()
   remplacePage('Synchro')
 
-  let ok = true
   try {
     await db.chargementIdb()
+    store().commit('ui/majmodeleactif', true)
+    finsync()
+    affichermessage('Compte authentifié et connecté', true)
+    remplacePage('Compte')
   } catch (e) {
-    store().commit('ui/majsyncencours', false)
-    if (e.message === 'STOPCHARGT') {
-      ok = false
-    } else throw e
+    finsync()
+    db.close()
+    deconnexion()
+    throw e
   }
-
-  store().commit('ui/majmodeleactif', ok)
-  store().commit('ui/majsyncencours', true)
-  affichermessage('Compte authentifié et connecté' + (ok ? '' : ' mais données peut-être incomplètes'), ok)
-  remplacePage('Compte')
 }
