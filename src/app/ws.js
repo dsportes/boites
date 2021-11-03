@@ -31,7 +31,7 @@ export async function newSession () {
 }
 
 function onwserror (e) {
-  store().commit('ui/majsessionerreur', new AppExc(-998, 'WebSocket error'))
+  store().commit('ui/majsessionerreur', new AppExc(-998, 'Liaison rompue avec le serveur sur incident technique', 'WebSocket error'))
   session.sortie = 2
   if (session.ws) session.ws.close()
 }

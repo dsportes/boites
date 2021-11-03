@@ -149,8 +149,9 @@ export async function post (module, fonction, args, info) {
   } catch (e) {
     $store.commit('ui/finreq')
     razmessage()
-    if (e.message === 'RUPTURESESSION') throw e
-    if (SCID() !== scid) throw Error('RUPTURESESSION')
+    if (e.message === 'RUPTURESESSION') {
+      throwAppExc(store().state.ui.sessionerreur)
+    }
     const status = (e.response && e.response.status) || 0
     $store.commit('ui/majstatushttp', status)
     if (axios.isCancel(e)) throw new AppExc(-1000, "Interruption de l'opération par l'utilisateur")
@@ -175,6 +176,7 @@ function errNetSrv (e) {
   const x = new AppExc(-1002, 'Echec de l\'opération : BUG ou incident technique', m)
   throwAppExc(x) // Autres statuts : anomalie / bug / incident à afficher et traiter comme exception
 }
+
 /*
 Envoi une requête GET :
 - module : module invoqué
@@ -230,9 +232,11 @@ export async function ping () {
 }
 
 export function throwAppExc (appExc, nothrow) {
+  if (!(appExc instanceof AppExc)) {
+    appExc = new AppExc(-3000, 'Erreur inattendue, bug ou incident technique', appExc.message, appExc.stack)
+  }
   razmessage()
   store().commit('ui/majerreur', appExc)
-  console.log('test echo : ' + JSON.stringify(appExc))
   if (!nothrow) throw appExc
 }
 

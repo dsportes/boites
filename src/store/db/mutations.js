@@ -107,13 +107,18 @@ export function setInvitcts (state, val) { // val : array d'objets Invitct
 export function setInvitgrs (state, val) { // val : array d'objets Invitgr
   const x = state.invitgrs
   val.forEach(a => {
-    a.dernier = false
     const ids = crypt.id2s(a.id)
     const nis = crypt.id2s(a.ni)
-    let y = x[ids]
-    if (!y) { y = {}; x[ids] = y }
-    const a2 = y[nis]
-    if (!a2 || a2.v < a.v) { y[nis] = a; a.dernier = true }
+    if (a.st < 0) {
+      const d = x[ids]
+      if (d) delete d[nis]
+    } else {
+      a.dernier = false
+      let y = x[ids]
+      if (!y) { y = {}; x[ids] = y }
+      const a2 = y[nis]
+      if (!a2 || a2.v < a.v) { y[nis] = a; a.dernier = true }
+    }
   })
   state.invitgrs = { ...x }
 }

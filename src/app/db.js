@@ -14,8 +14,6 @@ export async function deleteIDB (nombase) {
 }
 
 export async function getIDB () {
-  // eslint-disable-next-line no-unused-vars
-  const d = data
   if (!data.idb) {
     let db
     try {
@@ -36,6 +34,16 @@ export function throwIdbErr (e) {
   store().commit('ui/majidberreur', ex)
   throw ex
 }
+
+const SECRET = 0
+const INVITGR = 1
+export const AVATAR = 2
+const CONTACT = 3
+const INVITCT = 4
+const RENCONTRE = 5
+const PARRAIN = 6
+export const GROUPE = 1
+const MEMBRE = 2
 
 export class Idb {
   static get STORES () {
@@ -102,6 +110,7 @@ export class Idb {
       vol += idb.data.length
       const x = new Avatar().fromIdb(crypt.decrypter(data.clek, idb.data), idb.vs)
       r.push(x)
+      data.setVerAv(x.sidav, AVATAR, x.v)
       this.refsAv.add(x.id)
       this.refsCv.add(x.id)
     })
@@ -115,6 +124,7 @@ export class Idb {
       vol += idb.data.length
       const x = new Invitgr().fromIdb(crypt.decrypter(data.clek, idb.data), idb.vs)
       r.push(x)
+      data.setVerAv(x.sidav, INVITGR, x.v)
       this.refsAv.add(x.id)
       this.refsCv.add(x.id)
       if (x.idg) this.refsGr.add(x.idg)
@@ -129,6 +139,7 @@ export class Idb {
       vol += idb.data.length
       const x = new Invitct().fromIdb(crypt.decrypter(data.clek, idb.data), idb.vs)
       r.push(x)
+      data.setVerAv(x.sidav, INVITCT, x.v)
       this.refsAv.add(x.id)
       this.refsCv.add(x.id)
       if (x.nact) this.refsCv.add(x.nact.id)
@@ -143,6 +154,7 @@ export class Idb {
       vol += idb.data.length
       const x = new Contact().fromIdb(crypt.decrypter(data.clek, idb.data), idb.vs)
       r.push(x)
+      data.setVerAv(x.sidav, CONTACT, x.v)
       this.refsAv.add(x.id)
       this.refsCv.add(x.id)
       if (x.nact) this.refsCv.add(x.nact.id)
@@ -157,6 +169,7 @@ export class Idb {
       vol += idb.data.length
       const x = new Parrain().fromIdb(crypt.decrypter(data.clek, idb.data), idb.vs)
       r.push(x)
+      data.setVerAv(x.sidav, PARRAIN, x.v)
       this.refsAv.add(x.id)
       this.refsCv.add(x.id)
     })
@@ -170,6 +183,7 @@ export class Idb {
       vol += idb.data.length
       const x = new Rencontre().fromIdb(crypt.decrypter(data.clek, idb.data), idb.vs)
       r.push(x)
+      data.setVerAv(x.sidav, RENCONTRE, x.v)
       this.refsAv.add(x.id)
       this.refsCv.add(x.id)
     })
@@ -182,6 +196,7 @@ export class Idb {
     await this.db.groupe.each(idb => {
       vol += idb.data.length
       const x = new Groupe().fromIdb(crypt.decrypter(data.clek, idb.data), idb.vs)
+      data.setVerGr(x.sidgr, GROUPE, x.v)
       r.push(x)
       this.refsGr.add(x.id)
     })
@@ -195,6 +210,7 @@ export class Idb {
       vol += idb.data.length
       const x = new Membre().fromIdb(crypt.decrypter(data.clek, idb.data), idb.vs)
       r.push(x)
+      data.setVerGr(x.sidgr, MEMBRE, x.v)
       this.refsGr.add(x.id)
       if (x.na) { this.refsAv.add(x.na); this.refsCv.add(x.na) }
     })
@@ -208,6 +224,11 @@ export class Idb {
       vol += idb.data.length
       const x = new Secret().fromIdb(crypt.decrypter(data.clek, idb.data), idb.vs)
       r.push(x)
+      if (x.estAv) {
+        data.setVerAv(x.sidavgr, SECRET, x.v)
+      } else {
+        data.setVerGr(x.sidavgr, SECRET, x.v)
+      }
       if (x.ts === 2) this.refsGr.add(x.id)
       else { this.refsAv.add(x.id); this.refsCv.add(x.id) }
     })
@@ -236,7 +257,7 @@ export class Idb {
     const dd = data
     data.stopChargt = false
     let objs, vol, t, nbp
-    // const d = 1000
+
     this.refsAv = new Set()
     this.refsGr = new Set()
     this.refsCv = new Set()
@@ -245,14 +266,11 @@ export class Idb {
     t = true; ({ objs, vol } = await this.getAvatars())
     store().commit('db/setAvatars', objs)
     store().commit('ui/majidblec', { table: 'avatar', st: t, vol: vol, nbl: objs.length })
-    // await sleep(d)
-
     if (data.stopChargt) throw Error('STOPCHARGT')
 
     t = true; ({ objs, vol } = await this.getInvitgrs())
     store().commit('db/setInvitgrs', objs)
     store().commit('ui/majidblec', { table: 'invitgr', st: t, vol: vol, nbl: objs.length })
-    // await sleep(d)
     if (data.stopChargt) throw Error('STOPCHARGT')
 
     t = true; ({ objs, vol } = await this.getContacts())
@@ -268,7 +286,6 @@ export class Idb {
     t = true; ({ objs, vol } = await this.getParrains())
     store().commit('db/setParrains', objs)
     store().commit('ui/majidblec', { table: 'parrain', st: t, vol: vol, nbl: objs.length })
-    // await sleep(d)
     if (data.stopChargt) throw Error('STOPCHARGT')
 
     t = true; ({ objs, vol } = await this.getRencontres())
@@ -289,7 +306,6 @@ export class Idb {
     t = true; ({ objs, vol } = await this.getSecrets())
     store().commit('db/setSecrets', objs)
     store().commit('ui/majidblec', { table: 'secret', st: t, vol: vol, nbl: objs.length })
-    // await sleep(d)
     if (data.stopChargt) throw Error('STOPCHARGT')
 
     // purge des avatars inutiles
@@ -299,7 +315,6 @@ export class Idb {
     nbp = await this.purgeAvatars(avInutiles)
     store().commit('db/purgeAvatars', avUtiles)
     store().commit('ui/majidblec', { table: 'purgeav', st: t, vol: 0, nbl: nbp })
-    if (data.stopChargt) throw Error('STOPCHARGT')
 
     // purge des groupes inutiles
     const grInutiles = new Set()
@@ -308,7 +323,6 @@ export class Idb {
     nbp = await this.purgeGroupes(grInutiles)
     store().commit('db/purgeGroupes', grUtiles)
     store().commit('ui/majidblec', { table: 'purgegr', st: t, vol: 0, nbl: nbp })
-    // await sleep(d)
     if (data.stopChargt) throw Error('STOPCHARGT')
 
     // chargement des CVs
@@ -326,11 +340,7 @@ export class Idb {
     store().commit('db/purgeCvs', cvUtiles)
     store().commit('ui/majidblec', { table: 'purgecv', st: t, vol: 0, nbl: nbp })
 
-    data.idbSetAvatars = data.setAvatars
-    data.idbSetGroupes = data.setGroupes
-    data.idbsetCvsUtiles = data.setCvsUtiles
     await sleep(1000)
-    if (data.stopChargt) throw Error('STOPCHARGT')
   }
 
   /*

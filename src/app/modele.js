@@ -116,20 +116,46 @@ export function onRuptureSession (appExc) { // TODO
   console.log('Rupture de session : ' + appExc.message)
 }
 
+const SIZEAV = 7
+const SIZEGR = 3
+
 /* état de session */
 export class Etat {
   constructor () {
     this.raz()
   }
 
-  raz () {
-    this.ps = null
+  raz (partiel) {
+    if (!partiel) this.ps = null
     this.clek = null
     this.cleg = {}
     this.clec = {} // {id, {ic... }}
     this.stopChargt = false
     this.syncqueue = []
     this.nombase = null
+    this.verAv = new Map()
+    this.verGr = new Map()
+    this.idbSetAvatars = null
+    this.idbSetGroupes = null
+    this.idbsetCvsUtiles = null
+  }
+
+  setVerAv (sid, idt, v) { // idt : Index de la table
+    let t
+    if (!this.verAv.has(sid)) {
+      t = new Array(SIZEAV).fill(0)
+      this.verAv.set(sid, t)
+    } else t = this.verAv(sid)
+    if (v > t[idt]) t[idt] = v
+  }
+
+  setVerGr (sid, idt, v) { // idt : Index de la table
+    let t
+    if (!this.verGr.has(sid)) {
+      t = new Array(SIZEGR).fill(0)
+      this.verGr.set(sid, t)
+    } else t = this.verGr(sid)
+    if (v > t[idt]) t[idt] = v
   }
 
   clegDe (sid) {
@@ -299,6 +325,8 @@ export function rowItemsToRows (rowItems) {
 const arrayStringType = avro.Type.forSchema({ type: 'array', items: 'string' })
 const arrayLongType = avro.Type.forSchema({ type: 'array', items: 'long' })
 const arrayIntType = avro.Type.forSchema({ type: 'array', items: 'int' })
+// const mapIntType = avro.Type.forSchema({ type: 'map', values: 'int' })
+// const mapArrayIntType = avro.Type.forSchema({ type: 'map', values: arrayIntType })
 
 /** Compte **********************************/
 const compteMacType = avro.Type.forSchema({ // map des avatars du compte
@@ -319,21 +347,6 @@ const compteMmcType = avro.Type.forSchema({ // map des avatars du compte
 })
 
 const idbCompte = avro.Type.forSchema({
-  name: 'idbCompte',
-  type: 'record',
-  fields: [
-    { name: 'id', type: 'long' },
-    { name: 'v', type: 'int' },
-    { name: 'dds', type: 'int' },
-    { name: 'dpbh', type: 'long' },
-    { name: 'pcbh', type: 'long' },
-    { name: 'k', type: 'bytes' },
-    { name: 'mac', type: compteMacType },
-    { name: 'mmc', type: compteMmcType }
-  ]
-})
-
-const idbCompte1 = avro.Type.forSchema({
   name: 'idbCompte',
   type: 'record',
   fields: [
@@ -373,6 +386,7 @@ export class Compte {
     this.dpbh = data.ps.dpbh
     this.pcbh = data.ps.pcbh
     this.k = crypt.random(32)
+    data.clek = this.k
     this.mac = { }
     this.mac[nomAvatar.sid] = { na: nomAvatar, cpriv: cpriv }
     this.mmc = {}
@@ -397,6 +411,7 @@ export class Compte {
     this.dpbh = row.dpbh
     this.pcbh = row.pcbh
     this.k = crypt.decrypter(data.ps.pcb, row.kx)
+    data.clek = this.k
     this.mmc = compteMmcType.fromBuffer(crypt.decrypter(this.k, row.mmck))
     this.mac = compteMacType.fromBuffer(crypt.decrypter(this.k, row.mack))
     for (const sid in this.mac) {
@@ -433,13 +448,13 @@ export class Compte {
       const x = this.mac[sid]
       x.nomc = x.na.nomc
     }
-    const idb = { id: 1, vs: 1, data: idbCompte1.toBuffer(this) }
+    const idb = { id: 1, vs: 0, data: idbCompte.toBuffer(this) }
     for (const sid in this.mac) delete this.mac[sid].nomc
     return idb
   }
 
   fromIdb (idb, vs) {
-    const sch = [idbCompte, idbCompte1][vs || 0]
+    const sch = [idbCompte][vs || 0]
     const row = sch.fromBuffer(idb)
     this.id = row.id
     this.v = row.v
@@ -447,6 +462,7 @@ export class Compte {
     this.dpbh = row.dpbh
     this.pcbh = row.pcbh
     this.k = row.k
+    data.clek = this.k
     this.mmc = row.mmc
     this.mac = row.mac
     this.memo = vs ? (row.memo || '') : ''
@@ -546,6 +562,8 @@ export class Avatar {
   }
 
   get sid () { return crypt.id2s(this.id) }
+
+  get sidav () { return crypt.id2s(this.id) }
 
   get pk () { return this.id }
 
@@ -692,6 +710,8 @@ const contactData = avro.Type.forSchema({ // map des avatars du compte
   })
 })
 
+const lcontactData = [contactData]
+
 const idbContact = avro.Type.forSchema({
   name: 'idbContact',
   type: 'record',
@@ -706,10 +726,11 @@ const idbContact = avro.Type.forSchema({
     { name: 'qm2', type: 'long' },
     { name: 'ard', type: 'string' },
     { name: 'icb', type: 'int' },
+    { name: 'vsd', type: 'int' },
     { name: 'data', type: contactData }
   ]
 })
-
+const lidbContact = [idbContact]
 /*
   name: 'rowContact',
   type: 'record',
@@ -740,6 +761,8 @@ const idbContact = avro.Type.forSchema({
 export class Contact {
   get table () { return 'contact' }
 
+  get sidav () { return crypt.id2s(this.id) }
+
   get sid () { return crypt.id2s(this.id) + '/' + this.ic }
 
   get pk () { return [this.id, this.ic] }
@@ -759,7 +782,10 @@ export class Contact {
     this.q2 = row.q2
     this.qm1 = row.qm1
     this.qm2 = row.qm2
-    this.data = row.datak ? contactData.fromBuffer(crypt.decrypter(data.clek, row.datak)) : null
+    const vsd = row.vsd || 0
+    this.data = row.datak ? lcontactData[vsd].fromBuffer(crypt.decrypter(data.clek, row.datak)) : null
+    // Mettre à niveau this.data en fonction de vsd et mettre this.vsd à la dernière version
+    this.vsd = lcontactData.length - 1
     this.majCc()
     this.ard = Buffer.from(crypt.decrypter(this.data.cc, row.ardc)).toString()
     this.icb = crypt.u8ToInt(crypt.decrypter(this.data.cc, row.icbc))
@@ -767,7 +793,7 @@ export class Contact {
   }
 
   get toRow () {
-    this.datak = crypt.crypter(data.clek, contactData.toBuffer(this.data))
+    this.datak = crypt.crypter(data.clek, lcontactData[this.vsd].toBuffer(this.data))
     this.ardc = crypt.crypter(this.data.cc, this.ard)
     this.icbc = crypt.crypter(this.data.cc, crypt.int2u8(this.icb))
     const buf = rowTypes.rowSchemas.contact.toBuffer(this)
@@ -778,11 +804,12 @@ export class Contact {
   }
 
   get toIdb () {
-    return { id: this.id, ic: this.ic, data: idbContact.toBuffer(this) }
+    const vs = 0
+    return { id: this.id, ic: this.ic, vs: vs, data: lidbContact[vs].toBuffer(this) }
   }
 
-  fromIdb (idb) {
-    const row = idbContact.fromBuffer(idb)
+  fromIdb (idb, vs) {
+    const row = lidbContact[vs || 0].fromBuffer(idb)
     this.id = row.id
     this.ic = row.ic
     this.v = row.v
@@ -791,7 +818,10 @@ export class Contact {
     this.q2 = row.q2
     this.qm1 = row.qm1
     this.qm2 = row.qm2
+    this.vsd = row.vsd
     this.data = row.data
+    // Mettre à jour this.data en fonction de row.vsd et mettre à jour this.vsd
+    this.vsd = lcontactData.length - 1
     this.majCc()
     this.ard = row.ard
     this.icb = row.icb
@@ -838,6 +868,8 @@ const idbGroupe = avro.Type.forSchema({
 
 export class Groupe {
   get table () { return 'groupe' }
+
+  get sidgr () { return crypt.id2s(this.id) }
 
   get sid () { return crypt.id2s(this.id) }
 
@@ -944,6 +976,8 @@ const idbInvitct = avro.Type.forSchema({
 
 export class Invitct {
   get table () { return 'invitct' }
+
+  get sidav () { return crypt.id2s(this.id) }
 
   get sid () { return crypt.id2s(this.id) + '/' + crypt.id2s(this.ni) }
 
@@ -1054,11 +1088,15 @@ const idbInvitgr = avro.Type.forSchema({
 export class Invitgr {
   get table () { return 'invitgr' }
 
+  get sidav () { return crypt.id2s(this.id) }
+
   get sid () { return crypt.id2s(this.id) + '/' + crypt.id2s(this.ni) }
 
   get pk () { return [this.id, this.ni] }
 
   get idg () { return this.data ? this.data.idg : null }
+
+  get sidg () { return this.data ? crypt.id2s(this.data.idg) : null }
 
   majCg () {
     if (this.data) data.cleg[crypt.id2s(this.id)] = this.data.cleg
@@ -1116,6 +1154,7 @@ export class Invitgr {
     { name: 'v', type: 'int' },
     { name: 'st', type: 'int' },
     { name: 'dlv', type: 'int' },
+    { name: 'vsd', type: 'int' },
     { name: 'datag', type: ['null', 'bytes'] },
     { name: 'ardg', type: ['null', 'bytes'] },
     { name: 'lmck', type: ['null', 'bytes'] }
@@ -1153,6 +1192,7 @@ const membreData = avro.Type.forSchema({ // map des avatars du compte
     ]
   })
 })
+const lmembreData = [membreData]
 
 const idbMembre = avro.Type.forSchema({
   name: 'idbMembre',
@@ -1168,9 +1208,12 @@ const idbMembre = avro.Type.forSchema({
     { name: 'lmc', type: ['null', 'bytes'] }
   ]
 })
+const lidbMembre = [idbMembre]
 
 export class Membre {
   get table () { return 'membre' }
+
+  get sidgr () { return crypt.id2s(this.id) }
 
   get sid () { return crypt.id2s(this.id) + '/' + this.im }
 
@@ -1186,7 +1229,10 @@ export class Membre {
     this.dlv = row.dlv
     const cg = row.datag || row.ardg || row.lmck ? data.cleg(this.id) : null
     const rowData = row.datag ? crypt.decrypter(cg, row.datag) : null
-    this.data = rowData ? invitgrData.fromBuffer(rowData) : null
+    const vsd = row.vsd
+    this.data = rowData ? lmembreData[vsd].fromBuffer(rowData) : null
+    // Mettre à jour this.data en fonction de vsd et mettre à jour this.vsd
+    this.vsd = lmembreData.length - 1
     this.ard = row.ardg ? Buffer.from(crypt.decrypter(cg, row.ardg)).toString() : null
     const lmc = row.lmck ? crypt.decrypter(data.clek, row.lmck) : null
     this.lmc = lmc ? arrayIntType.fromBuffer(lmc) : null
@@ -1195,7 +1241,7 @@ export class Membre {
 
   get toRow () {
     const cg = this.data || this.ard || this.lmc ? data.clegDe(this.sid) : null
-    this.datag = this.data ? crypt.crypter(cg, membreData.toBuffer(this.data)) : null
+    this.datag = this.data ? crypt.crypter(cg, lmembreData[this.vsd].toBuffer(this.data)) : null
     this.ardg = this.ard ? crypt.crypter(cg, this.ard) : null
     this.lmck = this.lmc ? crypt.crypter(data.clek, arrayIntType.toBuffer(this.lmc)) : null
     const buf = rowTypes.rowSchemas.membre.toBuffer(this)
@@ -1206,17 +1252,20 @@ export class Membre {
   }
 
   get toIdb () {
-    return { id: this.id, im: this.im, data: idbMembre.toBuffer(this) }
+    const vs = 0
+    return { id: this.id, im: this.im, vs: vs, data: lidbMembre[vs].toBuffer(this) }
   }
 
-  fromIdb (idb) {
-    const row = idbMembre.fromBuffer(idb)
+  fromIdb (idb, vs) {
+    const row = lidbMembre[vs].fromBuffer(idb)
     this.id = row.id
     this.im = row.im
     this.v = row.v
     this.dlv = row.dlv
     this.st = row.st
     this.data = row.data
+    // Mettre à jour this.data en fonction de row.vsd et mettre à jour this.vsd
+    this.vsd = lmembreData.length - 1
     this.ard = row.ard
     this.lmc = row.lmc
     return this
@@ -1303,6 +1352,8 @@ const idbParrain = avro.Type.forSchema({
 
 export class Parrain {
   get table () { return 'parrain' }
+
+  get sidav () { return crypt.id2s(this.id) }
 
   get sid () { return crypt.id2s(this.pph) }
 
@@ -1400,6 +1451,8 @@ const idbRencontre = avro.Type.forSchema({
 export class Rencontre {
   get table () { return 'rencontre' }
 
+  get sidav () { return crypt.id2s(this.id) }
+
   get sid () { return crypt.id2s(this.prh) }
 
   get pk () { return this.prh }
@@ -1454,6 +1507,7 @@ export class Rencontre {
     { name: 'st', type: 'int' },
     { name: 'txts', type: ['null', 'bytes'] },
     { name: 'mcs', type: ['null', 'bytes'] },
+    { name: 'vsd', type: 'int' },
     { name: 'aps', type: ['null', 'bytes'] },
     { name: 'dups', type: ['null', 'bytes'] }
   ]
@@ -1492,6 +1546,7 @@ const idbSecret = avro.Type.forSchema({
     { name: 'dupns', type: ['null', 'int'] }
   ]
 })
+const lidbSecret = [idbSecret]
 
 const secretAp = avro.Type.forSchema({
   type: 'map',
@@ -1508,9 +1563,14 @@ const secretAp = avro.Type.forSchema({
     ]
   })
 })
+const lsecretAp = [secretAp]
 
 export class Secret {
   get table () { return 'secret' }
+
+  get sidavgr () { return crypt.id2s(this.id) }
+
+  get estAv () { return (this.ns % 2) === 0 }
 
   get sid () { return crypt.id2s(this.id) + '/' + crypt.id2s(this.ns) }
 
@@ -1533,7 +1593,9 @@ export class Secret {
     const cles = this.cles
     this.txt = cles && row.txts ? Buffer.from(crypt.decrypter(cles, row.txts)).toString() : null
     this.mc = cles && row.mcs ? arrayIntType.fromBuffer(crypt.decrypter(cles, row.mcs)) : null
-    this.ap = cles && row.aps ? secretAp.fromBuffer(crypt.decrypter(cles, row.aps)) : null
+    this.ap = cles && row.aps ? lsecretAp[row.vsd].fromBuffer(crypt.decrypter(cles, row.aps)) : null
+    // Mettre à jour this.ap en fonction de row.vsd puis mettre à jour this.vsd
+    this.vsd = lsecretAp.length - 1
     const dup = cles && row.dups ? arrayLongType.fromBuffer(crypt.decrypter(cles, row.dups)) : [0, 0]
     this.dupid = dup[0]
     this.dupns = dup[1]
@@ -1544,7 +1606,7 @@ export class Secret {
     const cles = this.cles
     this.txts = cles && this.txt ? crypt.crypter(cles, this.txt) : null
     this.mcs = cles && this.mc ? crypt.crypter(cles, arrayIntType.toBuffer(this.mc)) : null
-    this.aps = cles && this.ap ? crypt.crypter(cles, secretAp.toBuffer(this.ap)) : null
+    this.aps = cles && this.ap ? crypt.crypter(cles, lsecretAp[this.vsd].toBuffer(this.ap)) : null
     this.dups = cles && this.dupid && this.dupns ? crypt.crypter(cles, arrayLongType.toBuffer([this.dupid, this.dupns])) : null
     const buf = rowTypes.rowSchemas.secret.toBuffer(this)
     delete this.txts
@@ -1555,11 +1617,12 @@ export class Secret {
   }
 
   get toIdb () {
-    return { id: this.id, ns: this.ns, data: idbSecret.toBuffer(this) }
+    const vs = 0
+    return { id: this.id, ns: this.ns, vs: vs, data: lidbSecret[vs].toBuffer(this) }
   }
 
-  fromIdb (idb) {
-    const row = idbSecret.fromBuffer(idb)
+  fromIdb (idb, vs) {
+    const row = lidbSecret[vs].fromBuffer(idb)
     this.id = row.id
     this.ns = row.ns
     this.ic = row.ic
@@ -1568,6 +1631,8 @@ export class Secret {
     this.txt = row.txt
     this.mc = row.mc
     this.ap = row.ap
+    // Mettre à jour this.ap en fonction row.vsd puis mettre à jour this.vsd
+    this.vsd = lsecretAp.length - 1
     this.dupid = row.dupid
     this.dupns = row.dupns
     return this
