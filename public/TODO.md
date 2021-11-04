@@ -1,8 +1,9 @@
 Gestion globale de l'état de synchro (vcv, dhsyncok ...) et du suivi par la page Synchro
 
-Rupture de session : récupération et changement des états
+Sur "exception", rupture de session, erreur IDB, interruption volontaire du chargement,
+- gérer un dialogue qui propose a) de déconnecter, b) de laisser la session se poursuivre en mode passif.
 
-IDB en exception : récupération et changement des états
+IDB en exception : récupération globale
 
 Nettoyage des IDB non joignables (sur Org ?)
 

@@ -158,13 +158,14 @@ export class Etat {
 
   raz (partiel) {
     if (!partiel) this.ps = null
+    this.dh = 0
     this.dhsyncok = 0
     this.dhdebutsync = 0
     this.vcv = 0
     this.clek = null
     this.cleg = {}
     this.clec = {} // {id, {ic... }}
-    this.stopChargt = false
+    this.stopChargt = 0 // 1: stop SANS déconnexion, 2: stop AVEC déconnexion
     this.syncqueue = []
     this.nombase = null
     this.verAv = new Map()

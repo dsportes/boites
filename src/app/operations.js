@@ -1,4 +1,4 @@
-import { store, post, affichermessage, throwAppExc /*, cfg */ } from './util'
+import { store, post, affichermessage, setErreur /*, cfg */ } from './util'
 import { newSession, session } from './ws'
 import { getIDB, deleteIDB, AVATAR, GROUPE } from './db.js'
 import { NomAvatar, Compte, Avatar, data, Cv, rowItemsToRows, remplacePage, Invitgr, SIZEAV, SIZEGR } from './modele'
@@ -20,11 +20,14 @@ export async function reconnexion () {
   store().commit('ui/deconnexion')
   data.raz(true)
   if (session.ws) session.ws.close()
+  affichermessage('Compte déconnecté', true)
   connexionCompte(data.ps)
 }
 
-function debutsync () {
+async function debutsync (db) {
   store().commit('ui/majsyncencours', true)
+  data.dhdebutsync = data.dh
+  if (db) await db.setEtat()
   remplacePage('Synchro')
 }
 
@@ -53,7 +56,7 @@ export async function creationCompte (mdp, ps, nom, quotas) {
   // Modes synchronisé et incognito
   const s = await newSession()
   if (!s) {
-    throwAppExc(new AppExc(-101, 'Serveur non joignable ou arrêté', 'Problème technique, soit de réseau, soit sur le site du serveur'), false)
+    setErreur(new AppExc(-101, 'Serveur non joignable ou arrêté', 'Problème technique, soit de réseau, soit sur le site du serveur'))
     return
   }
 
@@ -117,12 +120,17 @@ export async function creationCompte (mdp, ps, nom, quotas) {
 
 function onExc (e) {
   store().commit('ui/majmodeleactif', false)
-  throwAppExc(e, false)
+  setErreur(e)
 }
 
 function onStop () {
-  if (data.stopChargt) {
+  if (data.stopChargt === 1) {
     store.commit('ui/majmodeleactif', false)
+    affichermessage('Compte connecté MAIS ses données ne sont pas complètement chargées, incohérences possibles', true)
+    return true
+  }
+  if (data.stopChargt === 2) {
+    deconnexion()
     return true
   }
   return false
@@ -165,7 +173,7 @@ export async function connexionCompte (ps) {
   // Modes synchronisé et incognito
   const s = await newSession()
   if (!s) {
-    throwAppExc(new AppExc(-101, 'Serveur non joignable ou arrêté', 'Problème technique, soit de réseau, soit sur le site du serveur'), true)
+    setErreur(new AppExc(-101, 'Serveur non joignable ou arrêté', 'Problème technique, soit de réseau, soit sur le site du serveur'))
     return
   }
 
@@ -175,7 +183,7 @@ export async function connexionCompte (ps) {
       db = await getIDB()
     } catch (e) {
       // base inaccessible
-      throwAppExc(e, true)
+      setErreur(e)
       deconnexion()
       return
     }
@@ -186,7 +194,7 @@ export async function connexionCompte (ps) {
   if (compte === false) return
   store().commit('db/setCompte', compte)
 
-  debutsync()
+  debutsync(db)
   // eslint-disable-next-line no-unused-vars
   const d = data
 
@@ -195,7 +203,7 @@ export async function connexionCompte (ps) {
       await db.commitRows([compte])
       await db.chargementIdb()
     } catch (e) {
-      throwAppExc(e, true)
+      setErreur(e)
       return
     }
   }
@@ -205,11 +213,10 @@ export async function connexionCompte (ps) {
   data.idbsetCvsUtiles = data.setCvsUtiles
 
   if (db) {
-    /* Relecture du compte qui pourrait avoir changé durant le chargment IDB
+    /* Relecture du compte qui pourrait avoir changé durant le chargment IDB qui peut être long
     Si version postérieure :
-    - enregistrement du compte en modèle et IDB
-    - suppression des avatars obsolètes si le nouveau compte ne les référencent pas,
-    y compris dans la liste des versions
+    - ré-enregistrement du compte en modèle et IDB
+    - suppression des avatars obsolètes non référencés par la nouvelle version du compte, y compris dans la liste des versions
     */
     const compte2 = await lectureCompte('Vérification du compte')
     if (compte2 === false) return
@@ -230,7 +237,7 @@ export async function connexionCompte (ps) {
         await db.commitRows([compte])
         if (avInutiles.size) await db.purgeAvatars(avInutiles)
       } catch (e) {
-        throwAppExc(e, true)
+        setErreur(e)
         return
       }
       data.idbSetAvatars = avUtiles
@@ -242,7 +249,7 @@ export async function connexionCompte (ps) {
       data.setVerAv(crypt.id2s(id), AVATAR, 0)
     })
   }
-  // état chargé correspondant à l'état local (vide le cas échéant) - compte OK
+  // état chargé correspondant à l'état local (vide le cas échéant - incognito ou première synchro) - compte OK
 
   if (onStop()) return
   const grAPurger = new Set()
@@ -250,7 +257,7 @@ export async function connexionCompte (ps) {
   // pour obtenir la liste des groupes accédés
   try {
     const lvav = {}
-    data.verAv((value, key) => {
+    data.verAv.forEach((value, key) => {
       lvav[key] = value[AVATAR]
     })
     const ret = await post('m1', 'syncInvitgr', { sessionId: session.sessionId, lvav }, 'Recherche des groupes accédés')
@@ -290,7 +297,7 @@ export async function connexionCompte (ps) {
 
   if (onStop()) return
 
-  // Abonner la a session au compte, avatars et groupes
+  // Abonner la session au compte, avatars et groupes
   try {
     const ret = await post('m1', 'syncAbo', { sessionId: session.sessionId, idc: compte.id, lav, lgr }, 'Abonnement au compte, avatars et groupes')
     if (data.dh < ret.dh) data.dh = ret.dh
@@ -324,7 +331,7 @@ export async function connexionCompte (ps) {
     }
   }
 
-  // synchroniser les avatars
+  // synchroniser les groupes
   for (let i = 0; i < lgr.length; i++) {
     if (onStop()) return
 
@@ -360,7 +367,7 @@ export async function connexionCompte (ps) {
 async function connexionCompteAvion () {
   const idCompte = localStorage.getItem(store().state.ui.org + '-' + data.ps.dpbh)
   if (!idCompte) {
-    throwAppExc(new AppExc(100, 'Compte non enregistré localement', 'Aucune session synchronisée ne s\'est préalablement exécutée sur ce poste avec cette phrase secrète. Erreur dans la saisie de la ligne 1 de la phrase ?'), false)
+    setErreur(new AppExc(100, 'Compte non enregistré localement', 'Aucune session synchronisée ne s\'est préalablement exécutée sur ce poste avec cette phrase secrète. Erreur dans la saisie de la ligne 1 de la phrase ?'))
     return
   }
 
@@ -370,13 +377,13 @@ async function connexionCompteAvion () {
     const compte = await db.getCompte()
     if (!compte || compte.pcbh !== data.ps.pcbh) {
       db.close()
-      throwAppExc(new AppExc(101, 'Compte non enregistré localement', 'Aucune session synchronisée ne s\'est préalablement exécutée sur ce poste avec cette phrase secrète. Erreur dans la saisie de la ligne 2 de la phrase ?'), false)
+      setErreur(new AppExc(101, 'Compte non enregistré localement', 'Aucune session synchronisée ne s\'est préalablement exécutée sur ce poste avec cette phrase secrète. Erreur dans la saisie de la ligne 2 de la phrase ?'))
       return
     }
     store().commit('db/setCompte', compte)
   } catch (e) {
     // base inaccessible ou compte non trouvé
-    throwAppExc(e, true)
+    setErreur(e)
     deconnexion()
     return
   }

@@ -1,10 +1,9 @@
 import axios from 'axios'
 const api = require('./api')
-import { SCID } from './ws'
+import { SCID, WSERR } from './ws'
 const AppExc = require('./api').AppExc
 
 const headers = { 'x-api-version': api.version }
-// import * as CONST from '../store/constantes'
 
 let $cfg
 let globalProperties
@@ -96,6 +95,8 @@ export function dhtToString (dht) {
   return new Date(Math.floor(dht / 1000)).toISOString() + ' (' + (dht % 1000) + ')'
 }
 
+const CANCEL = new AppExc(-1000, "Interruption de l'opération par l'utilisateur")
+
 /*
 Envoi une requête POST :
 - module : module invoqué
@@ -104,12 +105,9 @@ Envoi une requête POST :
 - info : message d'information affiché
 Retour :
 - OK : l'objet retourné par la fonction demandée
-- KO : un objet ayant une propriété error : {c:..., m:..., d:..., s:...}
-c : code numétique
-m : message textuel
-d : détail (fac)
-s : stack (fac)
-l'erreur a déjà été affichée : le catch dans l'appel sert à différencier la suite du traitement.
+- KO : un AppExc ayant une propriété error : {code:..., message:..., detail:..., sstack:...}
+  - 400 : cet AppExc est retourné à l'application sans avoir été affiché
+  - tout autre cas AppExc a été affichée : le catch dans l'appel sert à différencier la suite du traitement.
 */
 export async function post (module, fonction, args, info) {
   const scid = SCID()
@@ -126,8 +124,7 @@ export async function post (module, fonction, args, info) {
     // console.log('Avant post : ' + scid)
     const r = await axios({ method: 'post', url: u, data: data, headers: headers, responseType: 'arraybuffer', cancelToken: cancelSourcePOST.token })
     cancelSourcePOST = null
-    // console.log('Après post : ' + SCID())
-    if (SCID() !== scid) throw Error('RUPTURESESSION')
+    SCID(scid)
     $store.commit('ui/finreq')
     $store.commit('ui/majstatushttp', r.status)
     razmessage()
@@ -149,32 +146,51 @@ export async function post (module, fonction, args, info) {
   } catch (e) {
     $store.commit('ui/finreq')
     razmessage()
-    if (e.message === 'RUPTURESESSION') {
-      throwAppExc(store().state.ui.sessionerreur)
-    }
+    if (e === WSERR) throw setErreur(WSERR)
+    if (axios.isCancel(e)) throw setErreur(CANCEL)
     const status = (e.response && e.response.status) || 0
     $store.commit('ui/majstatushttp', status)
-    if (axios.isCancel(e)) throw new AppExc(-1000, "Interruption de l'opération par l'utilisateur")
-    let x
-    if (status === 400 || status === 401) {
+    let appexc
+    if (status >= 400 && status <= 402) {
       try {
-        x = JSON.parse(Buffer.from(e.response.data).toString())
+        appexc = JSON.parse(Buffer.from(e.response.data).toString())
       } catch (e2) {
-        x = new AppExc(-1001, 'Retour en exception de la requête mal formé', 'JSON parse : ' + e2.message)
+        appexc = new AppExc(-1001, 'Retour en exception de la requête mal formé', 'JSON parse : ' + e2.message)
       }
-      if (status === 400) return x // 400 : anomalie fonctionnelle à traiter par l'application
-      $store.commit('ui/majerreur', x) // 401 : anomalie fonctionnelle à afficher et traiter comme exception
-      throw x
-    }
-    // Erreurs réseau / serveur inattendues
-    errNetSrv(e)
+      if (status === 400) { // 400 : anomalie fonctionnelle à traiter par l'application
+        return appexc
+      } else {
+        // 401 : anomalie fonctionnelle à afficher et traiter comme exception ou 402 : inattendue
+        $store.commit('ui/majerreur', appexc)
+        throw appexc
+      }
+    } else throw errNetSrv(e) // Erreurs réseau / serveur inattendues
+  }
+}
+
+export async function ping () {
+  try {
+    const u = $cfg.urlserveur + '/ping'
+    $store.commit('ui/debutreq')
+    affichermessage('ping - ' + u, false)
+    cancelSourceGET = axios.CancelToken.source()
+    const r = await axios({ method: 'get', url: u, responseType: 'text', cancelToken: cancelSourceGET.token })
+    cancelSourceGET = null
+    $store.commit('ui/finreq')
+    affichermessage(r.data)
+    $store.commit('ui/majstatushttp', r.status)
+    return r.data
+  } catch (e) {
+    $store.commit('ui/finreq')
+    throw errNetSrv(e)
   }
 }
 
 function errNetSrv (e) {
   const m = e.message === 'Network Error' ? 'Probable erreur de réseau' : e.message
   const x = new AppExc(-1002, 'Echec de l\'opération : BUG ou incident technique', m)
-  throwAppExc(x) // Autres statuts : anomalie / bug / incident à afficher et traiter comme exception
+  store().commit('ui/majerreur', x)
+  return x // Autres statuts : anomalie / bug / incident à afficher et traiter comme exception
 }
 
 /*
@@ -189,55 +205,27 @@ Retour :
 export async function get (module, fonction, args) {
   try {
     const u = $cfg.urlserveur + '/' + $store.state.ui.org + '/' + module + '/' + fonction
-    cancelSourceGET = axios.CancelToken.source()
-    const scid = SCID()
     const r = await axios({
       method: 'get',
       url: u,
       params: args,
       headers: headers,
       responseType: 'arraybuffer',
-      cancelToken: cancelSourceGET.token,
       timeout: $cfg.debug ? 500000 : 5000
     })
-    cancelSourceGET = null
-    if (SCID() !== scid) throw Error('RUPTURESESSION')
     return r.status === 200 ? r.data : null
   } catch (e) {
-    if (e.message !== 'RUPTURESESSION') throw e
-    console.log(e)
     return null
   }
 }
 
-export async function ping () {
-  try {
-    const u = $cfg.urlserveur + '/ping'
-    $store.commit('ui/debutreq')
-    affichermessage('ping - ' + u, false)
-    cancelSourceGET = axios.CancelToken.source()
-    const scid = SCID()
-    const r = await axios({ method: 'get', url: u, responseType: 'text', cancelToken: cancelSourceGET.token })
-    cancelSourceGET = null
-    if (SCID() !== scid) throw Error('RUPTURESESSION')
-    $store.commit('ui/finreq')
-    affichermessage(r.data)
-    $store.commit('ui/majstatushttp', r.status)
-    return r.data
-  } catch (e) {
-    $store.commit('ui/finreq')
-    if (e.message !== 'RUPTURESESSION') errNetSrv(e)
-    return null
-  }
-}
-
-export function throwAppExc (appExc, nothrow) {
+export function setErreur (appExc) {
   if (!(appExc instanceof AppExc)) {
     appExc = new AppExc(-3000, 'Erreur inattendue, bug ou incident technique', appExc.message, appExc.stack)
   }
   razmessage()
   store().commit('ui/majerreur', appExc)
-  if (!nothrow) throw appExc
+  return appExc
 }
 
 export async function testEcho (to) {
