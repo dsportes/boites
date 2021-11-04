@@ -67,6 +67,22 @@ export function purgeCvs (state, val) { // val : Set des ids des avatars utiles
   return s.size
 }
 
+export function setObjets (state, { table, lobj }) { // val : array d'objets Avatar
+  switch (table) {
+    case 'compte' : return setCompte(state, lobj)
+    case 'avatar' : return setAvatars(state, lobj)
+    case 'contact' : return setContacts(state, lobj)
+    case 'invitct' : return setInvitcts(state, lobj)
+    case 'invitgr' : return setInvitgrs(state, lobj)
+    case 'parrain' : return setParrains(state, lobj)
+    case 'rencontre' : return setRencontres(state, lobj)
+    case 'groupe' : return setGroupes(state, lobj)
+    case 'membre' : return setMembres(state, lobj)
+    case 'secret' : return setSecrets(state, lobj)
+    case 'cv' : return setCvs(state, lobj)
+  }
+}
+
 export function setAvatars (state, val) { // val : array d'objets Avatar
   const x = state.avatars
   val.forEach(a => {

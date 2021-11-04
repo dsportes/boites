@@ -1,3 +1,5 @@
+Gestion globale de l'état de synchro (vcv, dhsyncok ...) et du suivi par la page Synchro
+
 Rupture de session : récupération et changement des états
 
 IDB en exception : récupération et changement des états

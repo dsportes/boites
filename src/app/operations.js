@@ -1,7 +1,7 @@
 import { store, post, affichermessage, throwAppExc /*, cfg */ } from './util'
 import { newSession, session } from './ws'
 import { getIDB, deleteIDB, AVATAR, GROUPE } from './db.js'
-import { NomAvatar, Compte, Avatar, data, Cv, rowItemsToRows, remplacePage } from './modele'
+import { NomAvatar, Compte, Avatar, data, Cv, rowItemsToRows, remplacePage, Invitgr, SIZEAV, SIZEGR } from './modele'
 import { AppExc } from './api'
 
 const crypt = require('./crypto')
@@ -128,6 +128,29 @@ function onStop () {
   return false
 }
 
+async function lectureCompte (info) {
+  // obtention du compte depuis le serveur
+  let compte
+  try {
+    const args = { sessionId: session.sessionId, pcbh: data.ps.pcbh, dpbh: data.ps.dpbh }
+    const ret = await post('m1', 'connexionCompte', args, info || 'Connexion au compte')
+    // maj du modèle en mémoire
+    if (data.dh < ret.dh) data.dh = ret.dh
+    // construction de l'objet compte
+    ret.rowItems.forEach(item => {
+      if (item.table === 'compte') {
+        const rowCompte = rowTypes.fromBuffer('compte', item.serial)
+        compte = new Compte().fromRow(rowCompte)
+      }
+    })
+    return compte
+  } catch (e) {
+    // pas de compte authentifié et autres erreurs
+    deconnexion()
+    return false
+  }
+}
+
 /*
 Connexion à un compte par sa phrase secrète
 */
@@ -142,7 +165,7 @@ export async function connexionCompte (ps) {
   // Modes synchronisé et incognito
   const s = await newSession()
   if (!s) {
-    throwAppExc(new AppExc(-101, 'Serveur non joignable ou arrêté', 'Problème technique, soit de réseau, soit sur le site du serveur'), false)
+    throwAppExc(new AppExc(-101, 'Serveur non joignable ou arrêté', 'Problème technique, soit de réseau, soit sur le site du serveur'), true)
     return
   }
 
@@ -159,25 +182,9 @@ export async function connexionCompte (ps) {
   }
 
   // obtention du compte depuis le serveur
-  let compte
-  try {
-    const args = { sessionId: s.sessionId, pcbh: ps.pcbh, dpbh: ps.dpbh }
-    const ret = await post('m1', 'connexionCompte', args, 'Connexion compte ...')
-    // maj du modèle en mémoire
-    if (data.dh < ret.dh) data.dh = ret.dh
-    // construction de l'objet compte
-    ret.rowItems.forEach(item => {
-      if (item.table === 'compte') {
-        const rowCompte = rowTypes.fromBuffer('compte', item.serial)
-        compte = new Compte().fromRow(rowCompte)
-      }
-    })
-    store().commit('db/setCompte', compte)
-  } catch (e) {
-    // pas de compte authentifié et autres erreurs
-    deconnexion()
-    return
-  }
+  let compte = await lectureCompte()
+  if (compte === false) return
+  store().commit('db/setCompte', compte)
 
   debutsync()
   // eslint-disable-next-line no-unused-vars
@@ -192,35 +199,71 @@ export async function connexionCompte (ps) {
       return
     }
   }
+
   data.idbSetAvatars = data.setAvatars
   data.idbSetGroupes = data.setGroupes
   data.idbsetCvsUtiles = data.setCvsUtiles
-  const grAPurger = new Set()
-  if (!db) { // créer la liste des versions chargées pour les tables des avatars, cad 0 pour toutes
-    data.setAvatars.forEach((id) => {
+
+  if (db) {
+    /* Relecture du compte qui pourrait avoir changé durant le chargment IDB
+    Si version postérieure :
+    - enregistrement du compte en modèle et IDB
+    - suppression des avatars obsolètes si le nouveau compte ne les référencent pas,
+    y compris dans la liste des versions
+    */
+    const compte2 = await lectureCompte('Vérification du compte')
+    if (compte2 === false) return
+    if (compte2.v > compte.v) {
+      compte = compte2
+      store().commit('db/setCompte', compte)
+      const avInutiles = new Set()
+      const avUtiles = data.setAvatars
+      for (const id of data.idbSetAvatars) if (!avUtiles.has(id)) avInutiles.add(id)
+      if (avInutiles.size) {
+        store().commit('db/purgeAvatars', avUtiles)
+        for (const id of avInutiles) {
+          const sid = crypt.id2s(id)
+          delete data.verAv[sid]
+        }
+      }
+      try {
+        await db.commitRows([compte])
+        if (avInutiles.size) await db.purgeAvatars(avInutiles)
+      } catch (e) {
+        throwAppExc(e, true)
+        return
+      }
+      data.idbSetAvatars = avUtiles
+    }
+  } else {
+    // créer la liste des versions chargées pour les tables des avatars, cad 0 pour toutes
+    // cette liste a été créée par chargementIDB dans le mode synchro, mais pas en mode incognito
+    data.idbSetAvatars.forEach((id) => {
       data.setVerAv(crypt.id2s(id), AVATAR, 0)
     })
   }
   // état chargé correspondant à l'état local (vide le cas échéant) - compte OK
 
   if (onStop()) return
+  const grAPurger = new Set()
   // chargement des invitgrs ayant changé depuis l'état local (tous le cas échéant)
+  // pour obtenir la liste des groupes accédés
   try {
     const lvav = {}
     data.verAv((value, key) => {
       lvav[key] = value[AVATAR]
     })
-    const ret = await post('m1', 'syncInvitgr', { sessionId: session.sessionId, lvav })
+    const ret = await post('m1', 'syncInvitgr', { sessionId: session.sessionId, lvav }, 'Recherche des groupes accédés')
     if (data.dh < ret.dh) data.dh = ret.dh
     // traitement des invitgr reçus
     const maj = []
     ret.rowItems.forEach(item => {
       if (item.table === 'invitgr') {
-        const invitgr = rowTypes.fromBuffer('invitgr', item.serial)
+        const rowInvitgr = rowTypes.fromBuffer('invitgr', item.serial)
+        const invitgr = new Invitgr().fromRow(rowInvitgr)
         maj.push(invitgr)
         if (invitgr.st < 0) {
-          // Inscrire le groupe en inutile
-          // Le supprimer de la liste des groupes à synchroniser
+          // Inscrire le groupe en inutile et le supprimer de la liste des groupes à synchroniser
           grAPurger.add(invitgr.idg)
           if (data.verGr.has(invitgr.sidg)) {
             data.verGr.delete(invitgr.sidg)
@@ -233,16 +276,80 @@ export async function connexionCompte (ps) {
         }
       }
     })
-    store.commit('db/setInvitgrs', maj)
-    if (db && maj.length) {
-      db.commitRows(maj)
+    if (maj.length) {
+      store.commit('db/setInvitgrs', maj) // maj du modèle
+      if (db) db.commitRows(maj) // et de IDB
     }
   } catch (e) {
     return onExc(e)
   }
+  data.aboAv = data.setAvatars
+  data.aboGr = data.setGroupes
+  const lav = Array.from(data.aboAv)
+  const lgr = Array.from(data.setGroupes)
 
   if (onStop()) return
+
+  // Abonner la a session au compte, avatars et groupes
+  try {
+    const ret = await post('m1', 'syncAbo', { sessionId: session.sessionId, idc: compte.id, lav, lgr }, 'Abonnement au compte, avatars et groupes')
+    if (data.dh < ret.dh) data.dh = ret.dh
+  } catch (e) {
+    return onExc(e)
+  }
+
   // synchroniser les avatars
+  for (let i = 0; i < lav.length; i++) {
+    if (onStop()) return
+
+    let rows
+    const id = lav[i]
+    const sid = crypt.id2s(id)
+    const lv = data.verAv.get(sid) || new Array(SIZEAV).fill(0)
+    try {
+      const ret = await post('m1', 'syncAv', { sessionId: session.sessionId, avgr: id, lv }, 'Chargement des données de l\'avatar ' + sid)
+      if (data.dh < ret.dh) data.dh = ret.dh
+      rows = rowItemsToRows(ret.rowItems, true) // stockés en modele
+    } catch (e) {
+      return onExc(e)
+    }
+    if (db) {
+      const lobj = []
+      for (const t in rows) lobj.push(rows[t])
+      try {
+        await db.commitRows(lobj)
+      } catch (e) {
+        return onExc(e)
+      }
+    }
+  }
+
+  // synchroniser les avatars
+  for (let i = 0; i < lgr.length; i++) {
+    if (onStop()) return
+
+    let rows
+    const id = lgr[i]
+    const sid = crypt.id2s(id)
+    const lv = data.verGr.get(sid) || new Array(SIZEGR).fill(0)
+    try {
+      const ret = await post('m1', 'syncGr', { sessionId: session.sessionId, avgr: id, lv }, 'Chargement des données du groupe ' + sid)
+      if (data.dh < ret.dh) data.dh = ret.dh
+      rows = rowItemsToRows(ret.rowItems, true) // stockés en modele
+    } catch (e) {
+      return onExc(e)
+    }
+    if (db) {
+      const lobj = []
+      for (const t in rows) lobj.push(rows[t])
+      try {
+        await db.commitRows(lobj)
+      } catch (e) {
+        return onExc(e)
+      }
+    }
+  }
+
   // TODO
 
   finsync()

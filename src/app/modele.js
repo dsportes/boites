@@ -116,8 +116,39 @@ export function onRuptureSession (appExc) { // TODO
   console.log('Rupture de session : ' + appExc.message)
 }
 
-const SIZEAV = 7
-const SIZEGR = 3
+export function objetDeItem (item) {
+  const row = rowTypes.fromBuffer(item.table, item.serial)
+  switch (item.table) {
+    case 'compte' : return new Compte().fromRow(row)
+    case 'avatar' : return new Avatar().fromRow(row)
+    case 'contact' : return new Contact().fromRow(row)
+    case 'invitct' : return new Invitct().fromRow(row)
+    case 'invitgr' : return new Invitgr().fromRow(row)
+    case 'parrain' : return new Parrain().fromRow(row)
+    case 'rencontre' : return new Rencontre().fromRow(row)
+    case 'groupe' : return new Groupe().fromRow(row)
+    case 'membre' : return new Membre().fromRow(row)
+    case 'secret' : return new Secret().fromRow(row)
+    case 'cv' : return new Cv().fromRow(row)
+  }
+}
+
+export function rowItemsToRows (rowItems, commit) {
+  const rows = {}
+  rowItems.forEach(item => {
+    if (!rows[item.table]) rows[item.table] = []
+    rows[item.table].push(objetDeItem(item))
+  })
+  if (commit) {
+    for (const t in rows) {
+      store().commit('db/setObjets', { table: t, lobj: rows[t] })
+    }
+  }
+  return rows
+}
+
+export const SIZEAV = 7
+export const SIZEGR = 3
 
 /* état de session */
 export class Etat {
@@ -127,6 +158,9 @@ export class Etat {
 
   raz (partiel) {
     if (!partiel) this.ps = null
+    this.dhsyncok = 0
+    this.dhdebutsync = 0
+    this.vcv = 0
     this.clek = null
     this.cleg = {}
     this.clec = {} // {id, {ic... }}
@@ -302,23 +336,6 @@ export class Quotas {
     this.qm2 = 0
     return this
   }
-}
-
-export function rowItemsToRows (rowItems) {
-  const rows = {}
-  function addRow (row) {
-    if (!rows[row.table]) rows[row.table] = []
-    rows[row.table].push(row)
-  }
-  let rowBuf
-  rowItems.forEach(item => {
-    rowBuf = rowTypes.fromBuffer(item.table, item.serial)
-    switch (item.table) {
-      case 'compte' : { addRow(new Compte().fromRow(rowBuf)); break }
-      case 'avatar' : { addRow(new Avatar().fromRow(rowBuf)); break }
-    }
-  })
-  return rows
 }
 
 /** Schémas globaux *************************/

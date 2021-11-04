@@ -18,8 +18,9 @@ class AppExc {
 exports.AppExc = AppExc
 
 const arrayIntType = avro.Type.forSchema({ type: 'array', items: 'int' })
+const arrayLongType = avro.Type.forSchema({ type: 'array', items: 'long' })
 const mapIntType = avro.Type.forSchema({ type: 'map', values: 'int' })
-const mapArrayIntType = avro.Type.forSchema({ type: 'map', values: arrayIntType })
+// const mapArrayIntType = avro.Type.forSchema({ type: 'map', values: arrayIntType })
 
 const rowItem = avro.Type.forSchema({
   name: 'rowitem',
@@ -80,7 +81,7 @@ const respBase1 = avro.Type.forSchema({
     { name: 'status', type: 'int' },
     { name: 'sessionId', type: 'string' },
     { name: 'dh', type: 'long' },
-    { name: 'rowItems', type: { type: 'array', items: [rowItem] } }
+    { name: 'rowItems', type: ['null', { type: 'array', items: [rowItem] }], default: 'null' }
   ]
 })
 
@@ -114,8 +115,9 @@ const sync2 = avro.Type.forSchema({
   type: 'record',
   fields: [
     { name: 'sessionId', type: 'string' },
-    { name: 'lav', type: mapArrayIntType },
-    { name: 'lgr', type: mapArrayIntType }
+    { name: 'idc', type: 'long' },
+    { name: 'lav', type: arrayLongType },
+    { name: 'lgr', type: arrayIntType }
   ]
 })
 

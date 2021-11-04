@@ -94,8 +94,21 @@ export class Idb {
   }
 
   async getEtat () {
-    const etat = await this.db.etat.get(1)
-    return etat ? JSON.parse(etat.data) : {}
+    const obj = await this.db.etat.get(1)
+    let etat
+    try {
+      etat = JSON.parse(obj)
+    } catch (e) {
+      etat = { dhsyncok: 0, dhdebutsync: 0, vcv: 0 }
+    }
+    data.vcv = etat.vcv
+    data.dhsyncok = etat.dhsyncok
+    data.dhdebutsync = etat.dhdebutsync
+  }
+
+  async setEtat () {
+    const etat = { dhsyncok: data.dhsyncok, dhdebutsync: data.dhdebutsync, vcv: data.vcv }
+    await this.db.etat.set(1, JSON.stringify(etat))
   }
 
   async getCompte () {
