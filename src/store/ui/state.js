@@ -9,7 +9,7 @@ export default function () {
     dialoguetestping: false,
     diagnostic: null,
     menuouvert: false,
-    reqencours: false,
+    opencours: false,
     infomode: false,
     inforeseau: false,
     infoidb: false,

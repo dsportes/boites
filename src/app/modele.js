@@ -5,7 +5,10 @@ const rowTypes = require('./rowTypes')
 import { openIDB } from './db'
 import { openWS } from './ws'
 import { cfg, store, dhtToString /*, router */ } from './util'
-import { AppExc, types } from './api'
+const api = require('./api')
+const AppExc = require('./api').AppExc
+const types = require('./api').types
+
 import { useRouter, useRoute } from 'vue-router'
 import { ProcessQueue } from './operations'
 
@@ -145,8 +148,6 @@ export function rowItemsToRows (rowItems, commit) {
 
 export const SIZEAV = 7
 export const SIZEGR = 3
-export const excBREAK = new AppExc(-1, 'Interruption de l\'opération', 'Interruption de l\'opération')
-// export const excWS = new AppExc(-2, 'Liaison rompue avec le serveur sur incident technique', 'WebSocket error')
 
 /* état de session ************************************************************/
 class Session {
@@ -174,16 +175,24 @@ class Session {
       this.mode = this.modeInitial
     } else {
       this.mode = this.modeInitial
-      store().commit('ui/majmode', this.mode)
+    }
+    store().commit('ui/majmode', this.mode)
+    store().commit('ui/majmodeinitial', this.modeInitial)
+
+    if (this.mode === 1 || this.mode === 3) {
+      try {
+        await openIDB()
+      } catch (e) { // setErDB a déjà été appelé
+        return false
+      }
     }
 
-    const mode = store().state.ui.mode
-    if (mode === 1 || mode === 3) {
-      if (!(await openIDB())) return false // setErDB est appelé
-    }
-
-    if (mode === 1 || mode === 2) {
-      if (!(await openWS())) return false // setErWS est appelé
+    if (this.mode === 1 || this.mode === 2) {
+      try {
+        await openWS()
+      } catch (e) { // setErWS a déjà été appelé
+        return false
+      }
     }
 
     this.statut = 1
@@ -208,77 +217,78 @@ class Session {
   }
 
   degraderMode () {
-    const m = this.modeInitial
-    switch (m) {
-      case 0 : break
+    const mi = this.modeInitial
+    let nm
+    switch (mi) {
+      case 0 : { nm = mi; break }
       case 1 : {
-        if (this.erDB && !this.erWS) {
-          this.mode = 2
-          store().commit('ui/majmode', this.mode)
-          break
-        }
-        if (!this.erDB && this.erWS) {
-          this.mode = 3
-          store().commit('ui/majmode', this.mode)
-          break
-        }
-        if (this.erDB && this.erWS) {
-          this.mode = 4
-          store().commit('ui/majmode', this.mode)
-          break
-        }
+        if (this.erDB && !this.erWS) { nm = 2; break }
+        if (!this.erDB && this.erWS) { nm = 3; break }
+        if (this.erDB && this.erWS) { nm = 4; break }
+        nm = mi
         break
       }
       case 2 : { // incognito
-        if (this.erWS) {
-          this.mode = 4
-          store().commit('ui/majmode', this.mode)
-          break
-        }
+        if (this.erWS) { nm = 4; break }
+        nm = mi
         break
       }
       case 3 : { // avion
-        if (this.erDB) {
-          this.mode = 4
-          store().commit('ui/majmode', this.mode)
-          break
-        }
+        if (this.erDB) { nm = 4; break }
+        nm = mi
         break
       }
-      case 4 : break
+      case 4 : { nm = mi; break }
     }
+    if (nm === mi) return
+    if (this.mode === nm) return
+    store().commit('ui/majmode', nm)
+    store().commit('ui/majactionPRD', true) // Afficher la boîte de choix Poursuivre, Reconnecter, Déconnecter
   }
 
-  setErDB () { // prévention des signalements multiples
-    if (this.erDB === 0) this.erDB = 1
+  setErDB (e, nostop) { // prévention des signalements multiples
+    if (this.erDB === 0) {
+      if (!(e instanceof AppExc)) {
+        e = new AppExc(api.E_BRO, e.message, e.stack)
+      }
+      store().commit('ui/majerreur', e) // provoque son affichage
+      this.erDB = 1
+      if (this.db) {
+        this.db.close()
+      }
+    }
     if (this.erDB === 1) {
       this.erDB = 2
       this.degraderMode()
-      // TODO : ouvrir un dialogue avec option, degrader le mode
-      throw excBREAK
     }
+    if (!nostop) this.stopOp()
   }
 
-  setErWS () { // prévention des signalements multiples
-    if (this.erWS === 0) this.erWS = 1
+  setErWS (e, nostop) { // prévention des signalements multiples
+    if (this.erWS === 0) {
+      if (!(e instanceof AppExc)) {
+        e = new AppExc(api.E_SRV, e.message, e.stack)
+      }
+      store().commit('ui/majerreur', e) // provoque son affichage
+      this.erWS = 1
+      if (this.ws) {
+        this.ws.close()
+      }
+    }
     if (this.erWS === 1) {
       this.erWS = 2
       this.degraderMode()
-      // TODO : ouvrir un dialogue avec option, degrader le mode
-      throw excBREAK
     }
+    if (!nostop) this.stopOp()
   }
 
-  setBREAK () {
-    this.break = true
-  }
-
-  resetBREAK () {
-    this.break = false
-  }
-
-  testBREAK () {
-    if (data.break) throw excBREAK
+  stopOp () {
+    if (this.opUI) {
+      this.opUI.stop()
+    }
+    if (this.opWS) {
+      this.opWS.stop()
+    }
   }
 
   raz () {
@@ -297,7 +307,6 @@ class Session {
     this.cleg = {} // clés des groupes accédés
     this.clec = {} // clés C des contacts {id, {ic... }}
 
-    this.break = false // true : avorter l'opération UI en cours
     this.opWS = null // opération WS en cours
     this.opUI = null // opération UI en cours
 

@@ -1,23 +1,104 @@
 import { store, post, affichermessage, setErreur /*, cfg */ } from './util'
 import { getIDB, deleteIDB, AVATAR, GROUPE, idbSidCompte } from './db.js'
 import { NomAvatar, Compte, Avatar, data, Cv, rowItemsToRows, remplacePage, Invitgr, SIZEAV, SIZEGR } from './modele'
-import { AppExc } from './api'
+const AppExc = require('./api').AppExc
+const api = require('./api')
 
 const crypt = require('./crypto')
 const rowTypes = require('./rowTypes')
 
+const EXBRK = new AppExc(api.E_BRK, 'Interruption volontaire')
+
 export class Operation {
-  constructor (ws) {
-    this.ws = ws || false
-    if (ws) data.opWS = this; else data.opUI = this
+  constructor () {
+    this.cancelToken = null
+    this.break = false
+    store().commit('db/opencours', true)
   }
 
-  fin () {
-    if (this.ws) data.opWS = null; else data.opUI = null
+  EX1 (e) {
+    return new AppExc(api.E_BRO, 'Exception inattendue : ' + e.message, e.stack)
+  }
+
+  BRK () {
+    if (this.break) throw EXBRK
+  }
+
+  stop () {
+    if (this.cancelToken) {
+      this.cancelToken.cancel('Operation interrompue par l\'utilisateur.')
+      this.cancelToken = null
+    }
+    this.break = true
+  }
+
+  fin (e) {
+    data.opUI = null
+    store().commit('db/opencours', false)
   }
 }
 
-export class ProcessQueue extends Operation {
+export class OperationWS extends Operation {
+  constructor () {
+    super()
+    data.opWS = this
+  }
+
+  fin (e) { // Toute erreur provoque l'arrêt de la synchronisation
+    data.opWS = null
+    store().commit('db/opencours', false)
+    if (e) {
+      data.setErDB(e, true)
+    }
+    if (e) {
+      if (e instanceof AppExc) {
+        if (e.code === api.E_DB) {
+          data.setErDB(e, true)
+          return
+        }
+        if (e.code === api.E_WS) {
+          data.setErWS(e, true)
+          return
+        }
+      } else {
+        e = new AppExc(api.E_BRO, e.message, e.stack)
+      }
+      store().commit('ui/majerreur', e) // provoque son affichage
+      data.degraderMode()
+    }
+  }
+}
+
+export class OperationUI extends Operation {
+  constructor () {
+    super()
+    data.opUI = this
+  }
+
+  /* statut de la session
+  0: fantôme (pas de session)
+  1: session initiée non authentifiée
+  2: session authentifiée, données minimale en cours de chargement
+  3: session en partie chargée, utilisable en mode visio
+  4: session synchronisée / cohérente
+  5: session cohérente mais figée, non synchronisée
+  */
+  fin (e) {
+    data.opUI = null
+    store().commit('db/opencours', false)
+    if (e) {
+      if (e instanceof AppExc) {
+        if (e.code === api.E_DB) return
+        if (e.code === api.E_WS) return
+      } else {
+        e = new AppExc(api.E_BRO, e.message, e.stack)
+      }
+      store().commit('ui/majerreur', e) // provoque son affichage
+    }
+  }
+}
+
+export class ProcessQueue extends OperationWS {
   constructor () {
     super(true)
     this.nomOp = 'processqueue'
@@ -38,27 +119,12 @@ export class ProcessQueue extends Operation {
         await data.db.commitRows(items)
       }
       // TODO : compilation des rows, mettre à jour de l'état mémoire
-    } catch (e) { }
-    this.fin()
-  }
-}
-
-/*
-async function processqueue (q) {
-  const items = []
-  const db = Idb.idb
-  for (let i = 0; i < q.length; i++) {
-    const syncList = q[i]
-    for (let j = 0; j < syncList.rowItems.length; j++) {
-      const rowItem = syncList.rowItems[j]
-      rowTypes.deserialItem(rowItem)
-      items.push(rowItem)
+      this.fin()
+    } catch (e) {
+      this.fin(e)
     }
   }
-  await db.commitRows(items)
-  // TODO : compilation des rows, mettre à jour de l'état mémoire
 }
-*/
 
 async function debutsync (db) {
   store().commit('ui/majsyncencours', true)
@@ -87,71 +153,58 @@ Retour:
   compte
   avatar
 */
-export async function creationCompte (mdp, ps, nom, quotas) {
-  data.ps = ps
-  // Modes synchronisé et incognito
-  const s = await newSession()
-  if (!s) {
-    setErreur(new AppExc(-101, 'Serveur non joignable ou arrêté', 'Problème technique, soit de réseau, soit sur le site du serveur'))
-    return
-  }
-
-  const kp = await crypt.genKeyPair()
-  const nomAvatar = new NomAvatar(nom, true) // nouveau
-  let compte = new Compte().nouveau(nomAvatar, kp.privateKey)
-  const rowCompte = compte.toRow
-  store().commit('db/setCompte', compte)
-  let avatar = new Avatar().nouveau(nomAvatar)
-  const rowAvatar = avatar.toRow
-
-  try {
-    const args = { sessionId: s.sessionId, mdp64: mdp.mdp64, q1: quotas.q1, q2: quotas.q2, qm1: quotas.qm1, qm2: quotas.qm2, clePub: kp.publicKey, rowCompte, rowAvatar }
-    const ret = await post('m1', 'creationCompte', args, 'creation de compte sans parrain ...')
-    // maj du modèle en mémoire
-    if (data.dh < ret.dh) data.dh = ret.dh
-    /*
-    Le compte vient d'être créé et est déjà dans le modèle (clek enregistrée)
-    On peut désérialiser la liste d'items (compte et avatar)
-    */
-    const rows = rowItemsToRows(ret.rowItems)
-    for (const t in rows) {
-      if (t === 'compte') compte = rows[t][0]
-      if (t === 'avatar') avatar = rows[t][0]
-    }
-    store().commit('db/setCompte', compte)
-    store().commit('db/setAvatars', [avatar])
-  } catch (e) {
-    deconnexion()
-    return
-  }
-
-  debutsync()
-
-  const cv = new Cv().fromAvatar(avatar)
-  store().commit('db/setCvs', [cv])
-
-  // création de la base IDB et chargement des rows compte et avatar
-  if (store().getters['ui/modesync']) {
-    const org = store().state.ui.org
-    data.nombase = org + '-' + compte.sid
-    const lstk = org + '-' + data.ps.dpbh
+export class CreationCompte extends OperationUI {
+  async run (mdp, ps, nom, quotas) {
     try {
-      deleteIDB(data.nombase)
-      localStorage.setItem(lstk, compte.sid)
-      const db = await getIDB()
-      await db.commitRows([compte, avatar, cv])
+      data.ps = ps
+      if (data.mode === 1) {
+        deleteIDB(data.nombase)
+      }
+      if (!data.connexion()) return
+
+      const kp = await crypt.genKeyPair()
+      const nomAvatar = new NomAvatar(nom, true) // nouveau
+      let compte = new Compte().nouveau(nomAvatar, kp.privateKey)
+      const rowCompte = compte.toRow
+      store().commit('db/setCompte', compte)
+      let avatar = new Avatar().nouveau(nomAvatar)
+      const rowAvatar = avatar.toRow
+      data.statut = 2
+
+      const args = { sessionId: data.sessionId, mdp64: mdp.mdp64, q1: quotas.q1, q2: quotas.q2, qm1: quotas.qm1, qm2: quotas.qm2, clePub: kp.publicKey, rowCompte, rowAvatar }
+      const ret = await post(this, 'm1', 'creationCompte', args)
+      this.BRK()
+      // maj du modèle en mémoire
+      if (data.dh < ret.dh) data.dh = ret.dh
+      /*
+      Le compte vient d'être créé et est déjà dans le modèle (clek enregistrée)
+      On peut désérialiser la liste d'items (compte et avatar)
+      */
+      const rows = rowItemsToRows(ret.rowItems)
+      for (const t in rows) {
+        if (t === 'compte') compte = rows[t][0]
+        if (t === 'avatar') avatar = rows[t][0]
+      }
+      store().commit('db/setCompte', compte)
+      store().commit('db/setAvatars', [avatar])
+
+      const cv = new Cv().fromAvatar(avatar)
+      store().commit('db/setCvs', [cv])
+
+      // création de la base IDB et chargement des rows compte et avatar
+      if (data.mode === 1) {
+        this.BRK()
+        await data.db.commitRows([compte, avatar, cv])
+      }
+      data.statut = 4
+      affichermessage('Compte créé et connecté', false)
+      this.fin()
+      remplacePage('Compte')
     } catch (e) {
-      finsync()
-      deleteIDB(data.nombase)
-      data.nombase = null
-      localStorage.removeItem(lstk)
-      deconnexion()
-      return
+      data.statut = 0
+      this.fin(e)
     }
   }
-  finsync()
-  affichermessage('Compte créé et connecté', false)
-  remplacePage('Compte')
 }
 
 function onExc (e) {

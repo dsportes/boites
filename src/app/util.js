@@ -219,15 +219,6 @@ export async function get (module, fonction, args) {
   }
 }
 
-export function setErreur (appExc) {
-  if (!(appExc instanceof AppExc)) {
-    appExc = new AppExc(-3000, 'Erreur inattendue, bug ou incident technique', appExc.message, appExc.stack)
-  }
-  razmessage()
-  store().commit('ui/majerreur', appExc)
-  return appExc
-}
-
 export async function testEcho (to) {
   const r = await post('m1', 'echo', { a: 1, b: 'toto', to: to || 0 })
   console.log('test echo : ' + JSON.stringify(r))

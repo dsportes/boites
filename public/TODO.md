@@ -1,3 +1,5 @@
+data.statut : qu'en faire ???
+
 Gestion globale de l'état de synchro (vcv, dhsyncok ...) et du suivi par la page Synchro
 
 Sur "exception", rupture de session, erreur IDB, interruption volontaire du chargement,

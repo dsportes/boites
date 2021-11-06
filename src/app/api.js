@@ -3,11 +3,16 @@ const avro = require('avsc')
 const version = '1'
 exports.version = version
 
+exports.E_BRK = -1
+exports.E_WS = -2
+exports.E_DB = -3
+exports.E_BRO = -4
+exports.E_SRV = -5
+
 class AppExc {
-  constructor (code, message, detail, stack) {
+  constructor (code, message, stack) {
     this.code = code
     this.message = message || '?'
-    this.detail = detail || ''
     if (stack) this.stack = stack
   }
 

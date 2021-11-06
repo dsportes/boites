@@ -3,6 +3,8 @@ import Dexie from 'dexie'
 import { Avatar, Compte, Invitgr, Invitct, Contact, Parrain, Rencontre, Groupe, Membre, Secret, Cv, data, excBREAK } from './modele'
 import { store, cfg, sleep } from './util'
 const crypt = require('./crypto')
+const api = require('./api')
+const AppExc = require('./api').AppExc
 
 const SECRET = 0
 const INVITGR = 1
@@ -32,6 +34,14 @@ const STORES = {
 const TABLES = []
 for (const x in STORES) TABLES.push(x)
 
+function EX1 (e) {
+  return new AppExc(api.E_DB, 'Ouverture de la base locale impossible : ' + e.message)
+}
+
+function EX2 (e) {
+  return new AppExc(api.E_DB, 'Erreur en lecture / écriture sur la base locale : ' + e.message, e.stack)
+}
+
 function go () {
   if (!data.db || data.erDB) throw excBREAK
 }
@@ -50,8 +60,7 @@ export async function openIDB () {
     data.db = db
     return db
   } catch (e) {
-    data.setErDB()
-    closeIDB()
+    try { data.setErDB(EX1(e)) } catch (e) {}
     return null
   }
 }
@@ -63,8 +72,12 @@ export function closeIDB () {
   data.db = null
 }
 
-export async function deleteIDB (nombase) {
+export async function deleteIDB (lsKey) {
   try {
+    if (lsKey) {
+      localStorage.removeItem(store().state.ui.org + '-' + data.ps.dpbh)
+    }
+    const nombase = store().state.ui.org + '-' + idbSidCompte()
     await Dexie.delete(nombase)
   } catch (e) {
     console.log(e.toString())
@@ -85,7 +98,7 @@ export async function getEtat () {
     data.dhsyncok = etat.dhsyncok
     data.dhdebutsync = etat.dhdebutsync
   } catch (e) {
-    data.setErDB()
+    data.setErDB(EX2(e))
   }
 }
 
@@ -95,7 +108,7 @@ export async function setEtat () {
     const etat = { dhsyncok: data.dhsyncok, dhdebutsync: data.dhdebutsync, vcv: data.vcv }
     await this.db.etat.set(1, JSON.stringify(etat))
   } catch (e) {
-    data.setErDB()
+    data.setErDB(EX2(e))
   }
 }
 
@@ -105,7 +118,7 @@ export async function getCompte () {
     const idb = await data.db.compte.get(1)
     return new Compte().fromIdb(crypt.decrypter(data.ps.pcb, idb.data), idb.vs)
   } catch (e) {
-    data.setErDB()
+    data.setErDB(EX2(e))
   }
 }
 
@@ -124,7 +137,7 @@ export async function getAvatars () {
     })
     return { objs: r, vol: vol }
   } catch (e) {
-    data.setErDB()
+    data.setErDB(EX2(e))
   }
 }
 
@@ -144,7 +157,7 @@ export async function getInvitgrs () {
     })
     return { objs: r, vol: vol }
   } catch (e) {
-    data.setErDB()
+    data.setErDB(EX2(e))
   }
 }
 
@@ -164,7 +177,7 @@ export async function getInvitcts () {
     })
     return { objs: r, vol: vol }
   } catch (e) {
-    data.setErDB()
+    data.setErDB(EX2(e))
   }
 }
 
@@ -184,7 +197,7 @@ export async function getContacts () {
     })
     return { objs: r, vol: vol }
   } catch (e) {
-    data.setErDB()
+    data.setErDB(EX2(e))
   }
 }
 
@@ -203,7 +216,7 @@ export async function getParrains () {
     })
     return { objs: r, vol: vol }
   } catch (e) {
-    data.setErDB()
+    data.setErDB(EX2(e))
   }
 }
 
@@ -222,7 +235,7 @@ export async function getRencontres () {
     })
     return { objs: r, vol: vol }
   } catch (e) {
-    data.setErDB()
+    data.setErDB(EX2(e))
   }
 }
 
@@ -240,7 +253,7 @@ export async function getGroupes () {
     })
     return { objs: r, vol: vol }
   } catch (e) {
-    data.setErDB()
+    data.setErDB(EX2(e))
   }
 }
 
@@ -259,7 +272,7 @@ export async function getMembres () {
     })
     return { objs: r, vol: vol }
   } catch (e) {
-    data.setErDB()
+    data.setErDB(EX2(e))
   }
 }
 
@@ -282,7 +295,7 @@ export async function getSecrets () {
     })
     return { objs: r, vol: vol }
   } catch (e) {
-    data.setErDB()
+    data.setErDB(EX2(e))
   }
 }
 
@@ -299,7 +312,7 @@ export async function getCvs () {
     })
     return { objs: r, vol: vol }
   } catch (e) {
-    data.setErDB()
+    data.setErDB(EX2(e))
   }
 }
 
@@ -322,7 +335,7 @@ export async function purgeGroupes (lgr) {
     })
     return lgr.size
   } catch (e) {
-    data.setErDB()
+    data.setErDB(EX2(e))
   }
 }
 
@@ -344,7 +357,7 @@ export async function purgeAvatars (lav) {
     })
     return lav.size
   } catch (e) {
-    data.setErDB()
+    data.setErDB(EX2(e))
   }
 }
 
@@ -360,7 +373,7 @@ export async function purgeCvs (lcv) {
     })
     return lcv.size
   } catch (e) {
-    data.setErDB()
+    data.setErDB(EX2(e))
   }
 }
 
@@ -386,7 +399,7 @@ export async function commitRows (lobj) {
       }
     })
   } catch (e) {
-    data.setErDB()
+    data.setErDB(EX2(e))
   }
 }
 

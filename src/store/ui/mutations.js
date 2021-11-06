@@ -29,12 +29,8 @@ export function deconnexion (state) {
   state.idblec = IDBLEC_RAZ
 }
 
-export function debutreq (state) {
-  state.reqencours = true
-}
-
-export function finreq (state) {
-  state.reqencours = false
+export function opencours (state, val) {
+  state.opencours = val
 }
 
 export function majdiagnostic (state, val) {
