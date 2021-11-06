@@ -1,28 +1,64 @@
 import { store, post, affichermessage, setErreur /*, cfg */ } from './util'
-import { newSession, session } from './ws'
-import { getIDB, deleteIDB, AVATAR, GROUPE } from './db.js'
+import { getIDB, deleteIDB, AVATAR, GROUPE, idbSidCompte } from './db.js'
 import { NomAvatar, Compte, Avatar, data, Cv, rowItemsToRows, remplacePage, Invitgr, SIZEAV, SIZEGR } from './modele'
 import { AppExc } from './api'
 
 const crypt = require('./crypto')
 const rowTypes = require('./rowTypes')
 
-export async function deconnexion () {
-  store().commit('db/raz')
-  store().commit('ui/deconnexion')
-  data.raz()
-  if (session.ws) session.ws.close()
-  remplacePage(store().state.ui.org ? 'Login' : 'Org')
+export class Operation {
+  constructor (ws) {
+    this.ws = ws || false
+    if (ws) data.opWS = this; else data.opUI = this
+  }
+
+  fin () {
+    if (this.ws) data.opWS = null; else data.opUI = null
+  }
 }
 
-export async function reconnexion () {
-  store().commit('db/raz')
-  store().commit('ui/deconnexion')
-  data.raz(true)
-  if (session.ws) session.ws.close()
-  affichermessage('Compte déconnecté', true)
-  connexionCompte(data.ps)
+export class ProcessQueue extends Operation {
+  constructor () {
+    super(true)
+    this.nomOp = 'processqueue'
+  }
+
+  async run (q) {
+    try {
+      const items = []
+      for (let i = 0; i < q.length; i++) {
+        const syncList = q[i]
+        for (let j = 0; j < syncList.rowItems.length; j++) {
+          const rowItem = syncList.rowItems[j]
+          rowTypes.deserialItem(rowItem)
+          items.push(rowItem)
+        }
+      }
+      if (data.db) {
+        await data.db.commitRows(items)
+      }
+      // TODO : compilation des rows, mettre à jour de l'état mémoire
+    } catch (e) { }
+    this.fin()
+  }
 }
+
+/*
+async function processqueue (q) {
+  const items = []
+  const db = Idb.idb
+  for (let i = 0; i < q.length; i++) {
+    const syncList = q[i]
+    for (let j = 0; j < syncList.rowItems.length; j++) {
+      const rowItem = syncList.rowItems[j]
+      rowTypes.deserialItem(rowItem)
+      items.push(rowItem)
+    }
+  }
+  await db.commitRows(items)
+  // TODO : compilation des rows, mettre à jour de l'état mémoire
+}
+*/
 
 async function debutsync (db) {
   store().commit('ui/majsyncencours', true)
@@ -159,7 +195,7 @@ async function lectureCompte (info) {
   }
 }
 
-/*
+/**********************************************************
 Connexion à un compte par sa phrase secrète
 */
 export async function connexionCompte (ps) {
@@ -363,17 +399,15 @@ export async function connexionCompte (ps) {
   affichermessage('Compte connecté', false)
   remplacePage('Compte')
 }
-
+/* connexionCompteAvion ****************************************************/
 async function connexionCompteAvion () {
-  const idCompte = localStorage.getItem(store().state.ui.org + '-' + data.ps.dpbh)
-  if (!idCompte) {
+  if (!idbSidCompte()) {
     setErreur(new AppExc(100, 'Compte non enregistré localement', 'Aucune session synchronisée ne s\'est préalablement exécutée sur ce poste avec cette phrase secrète. Erreur dans la saisie de la ligne 1 de la phrase ?'))
     return
   }
 
-  let db
   try {
-    db = await getIDB()
+    await getIDB()
     const compte = await db.getCompte()
     if (!compte || compte.pcbh !== data.ps.pcbh) {
       db.close()

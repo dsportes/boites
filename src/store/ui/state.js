@@ -16,7 +16,7 @@ export default function () {
     syncencours: false,
     idberreur: null,
     modeleactif: false,
-    mode: 0, // 0:inconnu, 1:synchronise, 2:incognito, 3:avion
+    mode: 0, // 0:inconnu, 1:synchronise, 2:incognito, 3:avion 4:visio
     statushttp: 200,
     message: null,
     messageto: null,

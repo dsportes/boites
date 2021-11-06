@@ -2,11 +2,12 @@ const avro = require('avsc')
 const crypt = require('./crypto')
 const base64url = require('base64url')
 const rowTypes = require('./rowTypes')
-import { Idb } from './db'
-import { session } from './ws'
+import { openIDB } from './db'
+import { openWS } from './ws'
 import { cfg, store, dhtToString /*, router */ } from './util'
-import { types } from './api'
+import { AppExc, types } from './api'
 import { useRouter, useRoute } from 'vue-router'
+import { ProcessQueue } from './operations'
 
 let bootfait = false
 let $router
@@ -108,12 +109,7 @@ export function onBoot () {
 export async function remplacePage (page) {
   const x = { name: page }
   if (page !== 'Org') x.params = { org: store().state.ui.org }
-  // eslint-disable-next-line no-unused-vars
   await $router.replace(x)
-}
-
-export function onRuptureSession (appExc) { // TODO
-  console.log('Rupture de session : ' + appExc.message)
 }
 
 export function objetDeItem (item) {
@@ -149,30 +145,195 @@ export function rowItemsToRows (rowItems, commit) {
 
 export const SIZEAV = 7
 export const SIZEGR = 3
+export const excBREAK = new AppExc(-1, 'Interruption de l\'opération', 'Interruption de l\'opération')
+// export const excWS = new AppExc(-2, 'Liaison rompue avec le serveur sur incident technique', 'WebSocket error')
 
-/* état de session */
-export class Etat {
+/* état de session ************************************************************/
+class Session {
   constructor () {
     this.raz()
+    this.ps = null // phrase secrète d'authentification saisie
+    /* statut de la session
+    0: fantôme (pas de session)
+    1: session initiée non authentifiée
+    2: session authentifiée, données minimale en cours de chargement
+    3: session en partie chargée, utilisable en mode visio
+    4: session synchronisée / cohérente
+    5: session cohérente mais figée, non synchronisée
+    */
+    this.statut = 0
   }
 
-  raz (partiel) {
-    if (!partiel) this.ps = null
-    this.dh = 0
-    this.dhsyncok = 0
-    this.dhdebutsync = 0
-    this.vcv = 0
-    this.clek = null
-    this.cleg = {}
-    this.clec = {} // {id, {ic... }}
-    this.stopChargt = 0 // 1: stop SANS déconnexion, 2: stop AVEC déconnexion
-    this.syncqueue = []
+  async connexion (reconnexion) {
+    store().commit('db/raz')
+    this.raz()
+    this.sessionId = crypt.id2s(crypt.random(6))
+    if (!reconnexion) {
+      this.ps = null
+      this.modeInitial = store().state.ui.mode
+      this.mode = this.modeInitial
+    } else {
+      this.mode = this.modeInitial
+      store().commit('ui/majmode', this.mode)
+    }
+
+    const mode = store().state.ui.mode
+    if (mode === 1 || mode === 3) {
+      if (!(await openIDB())) return false // setErDB est appelé
+    }
+
+    if (mode === 1 || mode === 2) {
+      if (!(await openWS())) return false // setErWS est appelé
+    }
+
+    this.statut = 1
+    console.log(reconnexion ? 'Ré' : 'O' + 'uverture de session : ' + this.sessionId)
+    remplacePage('Synchro')
+    return true
+  }
+
+  async deconnexion () {
+    store().commit('db/raz')
+    store().commit('ui/deconnexion')
+    if (this.ws) this.ws.close()
+    if (this.db) this.db.close()
+    this.raz()
+    this.ps = null
+    this.statut = 0
+    await remplacePage(store().state.ui.org ? 'Login' : 'Org')
+  }
+
+  async reconnexion () {
+    await this.connexion(true)
+  }
+
+  degraderMode () {
+    const m = this.modeInitial
+    switch (m) {
+      case 0 : break
+      case 1 : {
+        if (this.erDB && !this.erWS) {
+          this.mode = 2
+          store().commit('ui/majmode', this.mode)
+          break
+        }
+        if (!this.erDB && this.erWS) {
+          this.mode = 3
+          store().commit('ui/majmode', this.mode)
+          break
+        }
+        if (this.erDB && this.erWS) {
+          this.mode = 4
+          store().commit('ui/majmode', this.mode)
+          break
+        }
+        break
+      }
+      case 2 : { // incognito
+        if (this.erWS) {
+          this.mode = 4
+          store().commit('ui/majmode', this.mode)
+          break
+        }
+        break
+      }
+      case 3 : { // avion
+        if (this.erDB) {
+          this.mode = 4
+          store().commit('ui/majmode', this.mode)
+          break
+        }
+        break
+      }
+      case 4 : break
+    }
+  }
+
+  setErDB () { // prévention des signalements multiples
+    if (this.erDB === 0) this.erDB = 1
+    if (this.erDB === 1) {
+      this.erDB = 2
+      this.degraderMode()
+      // TODO : ouvrir un dialogue avec option, degrader le mode
+      throw excBREAK
+    }
+  }
+
+  setErWS () { // prévention des signalements multiples
+    if (this.erWS === 0) this.erWS = 1
+    if (this.erWS === 1) {
+      this.erWS = 2
+      this.degraderMode()
+      // TODO : ouvrir un dialogue avec option, degrader le mode
+      throw excBREAK
+    }
+  }
+
+  setBREAK () {
+    this.break = true
+  }
+
+  resetBREAK () {
+    this.break = false
+  }
+
+  testBREAK () {
+    if (data.break) throw excBREAK
+  }
+
+  raz () {
+    this.db = null // IDB quand elle est ouverte
     this.nombase = null
-    this.verAv = new Map()
-    this.verGr = new Map()
-    this.idbSetAvatars = null
-    this.idbSetGroupes = null
-    this.idbsetCvsUtiles = null
+    this.erDB = 0 // 0:OK 1:IDB en erreur NON traitée 2:IDB en erreur traitée
+    this.ws = null // WebSocket quand il est ouvert
+    this.erWS = false // 0:OK 1:WS en erreur NON traitée 2:WS en erreur traitée
+
+    this.dh = 0 // plus haute date-heure retournée par un POST au serveur
+    this.dhsyncok = 0 // dernière date-heure de synchronisation complète
+    this.dhdebutsync = 0 // dernière date-heur de début de synchronisation
+    this.vcv = 0 // version des cartes de visite détenues
+
+    this.clek = null // clé K du compte authentifié
+    this.cleg = {} // clés des groupes accédés
+    this.clec = {} // clés C des contacts {id, {ic... }}
+
+    this.break = false // true : avorter l'opération UI en cours
+    this.opWS = null // opération WS en cours
+    this.opUI = null // opération UI en cours
+
+    this.syncqueue = [] // notifications reçues sur WS et en attente de traitement
+
+    this.verAv = new Map() // versions des tables relatives à chaque Avatar (par sid)
+    this.verGr = new Map() // versions des tables relatives à chaque Groupe (par sid)
+
+    // dans chargementIdb seulement
+    this.refsAv = null // id des avatars référencés détectées lors du chargement IDB
+    this.refsGr = null // id des groupes référencés détectées lors du chargement IDB
+    this.refsCv = null // id des CVs REFERENCEES détectées lors du chargement IDB
+    this.enregCvs = new Set() // id des CVs ENREGISTREES détectées lors du chargement IDB
+
+    this.idbSetAvatars = null // Set des ids des avatars chargés par IDB
+    this.idbSetGroupes = null // Set des ids des avatars chargés par IDB
+    this.idbsetCvsUtiles = null // Set des ids des avatars chargés par IDB
+  }
+
+  onsync (msgdata) {
+    const syncList = types.fromBuffer(msgdata)
+    if (cfg().debug) {
+      console.log('Liste sync reçue: ' + dhtToString(syncList.dh) +
+        ' status:' + syncList.status + ' sessionId:' + syncList.sessionId + ' nb rowItems:' + syncList.rowItems.length)
+    }
+    if (syncList.sessionId !== this.sessionId || this.erWS != null) return
+    data.syncqueue.push(syncList)
+    if (this.statut === 4 && this.opWS == null) {
+      // à traiter maintenant, toute la queue (pas seulment le dernier arrivé)
+      const q = data.syncqueue
+      data.syncqueue = []
+      try {
+        const op = new ProcessQueue()
+        op.run(q) // pas de await : on n'attend pas le résult et this.opWS protège d'une exécution en cours
+      } catch (e) { }
+    }
   }
 
   setVerAv (sid, idt, v) { // idt : Index de la table
@@ -301,7 +462,7 @@ export class Etat {
     return store().getters['db/cv'](id)
   }
 }
-export const data = new Etat()
+export const data = new Session()
 
 /** classes Phrase, MdpAdmin, Quotas ****************/
 export class Phrase {
@@ -1655,36 +1816,4 @@ export class Secret {
     this.dupns = row.dupns
     return this
   }
-}
-
-export async function onsync (msgdata) {
-  const syncList = types.fromBuffer(msgdata)
-  if (cfg().debug) {
-    console.log('Liste sync reçue: ' + dhtToString(syncList.dh) +
-      ' status:' + syncList.status + ' sessionId:' + syncList.sessionId + ' nb rowItems:' + syncList.rowItems.length)
-  }
-  if (syncList.sessionId !== session.sessionId) return
-  data.syncqueue.push(syncList)
-  if (store().state.ui.phasesync === 3) {
-    const q = data.syncqueue
-    data.syncqueue = []
-    try {
-      await processqueue(q)
-    } catch (e) { }
-  }
-}
-
-async function processqueue (q) {
-  const items = []
-  const db = Idb.idb
-  for (let i = 0; i < q.length; i++) {
-    const syncList = q[i]
-    for (let j = 0; j < syncList.rowItems.length; j++) {
-      const rowItem = syncList.rowItems[j]
-      rowTypes.deserialItem(rowItem)
-      items.push(rowItem)
-    }
-  }
-  await db.commitRows(items)
-  // TODO : compilation des rows, mettre à jour de l'état mémoire
 }
