@@ -1,6 +1,6 @@
 /* gestion WebSocket */
 
-import { cfg } from './util'
+import { cfg, store } from './util'
 import { data } from './modele'
 const api = require('./api')
 const AppExc = require('./api').AppExc
@@ -37,6 +37,7 @@ export async function openWS () {
         try {
           ws.send(data.sessionId)
           data.ws = ws
+          store().commit('ui/majstatutnet', 1)
           resolve(ws)
         } catch (e) {
           try { data.setErWS(EX2(e)) } catch (e) {}

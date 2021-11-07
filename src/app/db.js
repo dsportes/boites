@@ -62,6 +62,7 @@ export async function openIDB () {
     db.version(1).stores(STORES)
     await db.open()
     data.db = db
+    store().commit('ui/majstatutidb', 1)
   } catch (e) {
     throw data.setErDB(EX1(e))
   }

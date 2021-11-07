@@ -19,7 +19,7 @@ export class Operation {
     this.idb = idb === OUI ? true : (idb === NON ? false : (data.mode === 1 || data.mode === 3))
     this.cancelToken = null
     this.break = false
-    store().commit('db/majopencours', true)
+    store().commit('db/majopencours', this)
   }
 
   EX1 (e) {
@@ -244,6 +244,7 @@ Retour:
 export class CreationCompte extends OperationUI {
   constructor () {
     super('"Création de compte"', OUI, SELONMODE)
+    this.opsync = true
   }
 
   async run (mdp, ps, nom, quotas) {
@@ -300,6 +301,7 @@ export class CreationCompte extends OperationUI {
 export class ConnexionCompteAvion extends OperationUI {
   constructor () {
     super('"Connexion à un compte en mode avion"', NON, OUI)
+    this.opsync = true
   }
 
   async run (ps) {
@@ -332,6 +334,7 @@ export class ConnexionCompteAvion extends OperationUI {
 export class ConnexionCompte extends OperationUI {
   constructor () {
     super('"Connexion à un compte"', OUI, SELONMODE)
+    this.opsync = true
   }
 
   async run (ps) {

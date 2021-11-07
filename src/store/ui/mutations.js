@@ -72,6 +72,14 @@ export function majinfoidb (state, val) {
   state.infoidb = val
 }
 
+export function majstatutidb (state, val) {
+  state.statutidb = val
+}
+
+export function majstatutnet (state, val) {
+  state.statutnet = val
+}
+
 export function majorg (state, val) {
   state.org = val
 }

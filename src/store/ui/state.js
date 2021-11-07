@@ -3,6 +3,8 @@ export default function () {
   return {
     erreur: null,
     derniereerreur: null,
+    statutidb: 0,
+    statutnet: 0,
 
     dialoguecrypto: false,
     dialoguecreationcompte: false,
@@ -13,6 +15,7 @@ export default function () {
 
     infomode: false,
     inforeseau: false,
+    infoidb: false,
 
     opencours: false,
 

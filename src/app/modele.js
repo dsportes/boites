@@ -171,6 +171,14 @@ class Session {
 
   set modeInitial (val) { store().commit('ui/majmodeinitial', val) }
 
+  get statutnet () { return store().state.ui.statutnet }
+
+  set statutnet (val) { store().commit('ui/majstatutnet', val) }
+
+  get statutidb () { return store().state.ui.statutidb }
+
+  set statutidb (val) { store().commit('ui/majstatutidb', val) }
+
   async connexion (reconnexion) {
     store().commit('db/raz')
     this.raz()
@@ -252,6 +260,7 @@ class Session {
         e = new AppExc(api.E_BRO, e.message, e.stack)
       }
       this.exIDB = e
+      this.statutidb = 2
       store().commit('ui/majerreur', e) // provoque son affichage
       this.erDB = 1
       if (this.db) {
@@ -272,6 +281,7 @@ class Session {
         e = new AppExc(api.E_SRV, e.message, e.stack)
       }
       this.exNET = e
+      this.statutnet = 2
       store().commit('ui/majerreur', e) // provoque son affichage
       this.erWS = 1
       if (this.ws) {
@@ -300,6 +310,8 @@ class Session {
     this.ws = null // WebSocket quand il est ouvert
     this.erWS = false // 0:OK 1:WS en erreur NON traitée 2:WS en erreur traitée
     this.exNET = null // exception sur NET
+    this.statutnet = 0
+    this.statutidb = 0
 
     /* statut de la session
     0: fantôme : la session n'est pas encore active ou en attente de décision réconnexion / reconnexion
