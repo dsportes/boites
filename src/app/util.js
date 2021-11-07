@@ -1,6 +1,7 @@
 import axios from 'axios'
+import { data } from './modele'
 const api = require('./api')
-import { SCID, WSERR } from './ws'
+import { EXBRK } from './operations'
 const AppExc = require('./api').AppExc
 
 const headers = { 'x-api-version': api.version }
@@ -95,102 +96,78 @@ export function dhtToString (dht) {
   return new Date(Math.floor(dht / 1000)).toISOString() + ' (' + (dht % 1000) + ')'
 }
 
-const CANCEL = new AppExc(-1000, "Interruption de l'opération par l'utilisateur")
-
 /*
 Envoi une requête POST :
+- op : opération émettrice. Requise si interruptible, sinon facultative
 - module : module invoqué
 - fonction : code la fonction du module
 - args : objet avec les arguments qui seront transmis dans le body de la requête. Encodé par avro ou JSONStringify
-- info : message d'information affiché
 Retour :
-- OK : l'objet retourné par la fonction demandée
-- KO : un AppExc ayant une propriété error : {code:..., message:..., detail:..., sstack:...}
-  - 400 : cet AppExc est retourné à l'application sans avoir été affiché
-  - tout autre cas AppExc a été affichée : le catch dans l'appel sert à différencier la suite du traitement.
+- OK : l'objet retourné par la fonction demandée - HTTP 400 : le résultat est un AppExc
+Exception : un AppExc avec les propriétés code, message, stack
 */
-export async function post (module, fonction, args, info) {
-  const scid = SCID()
+export async function post (op, module, fonction, args) {
+  let buf, typeResp
   try {
-    if (!info) info = 'Requête'
+    if (op) op.BRK()
     const at = api.argTypes[fonction]
     const type = at && at.length > 0 ? at[0] : null
-    const typeResp = at && at.length > 1 ? at[1] : null
+    typeResp = at && at.length > 1 ? at[1] : null
     const data = type ? type.toBuffer(args).buffer : Buffer.from(JSON.stringify(args))
     const u = $cfg.urlserveur + '/' + $store.state.ui.org + '/' + module + '/' + fonction
     $store.commit('ui/debutreq')
-    affichermessage(info + ' - ' + u, false)
-    cancelSourcePOST = axios.CancelToken.source()
-    // console.log('Avant post : ' + scid)
-    const r = await axios({ method: 'post', url: u, data: data, headers: headers, responseType: 'arraybuffer', cancelToken: cancelSourcePOST.token })
-    cancelSourcePOST = null
-    SCID(scid)
-    $store.commit('ui/finreq')
-    $store.commit('ui/majstatushttp', r.status)
-    razmessage()
-    const buf = Buffer.from(r.data)
-    // les status HTTP non 2xx tombent en exception
-    if (typeResp) { // résultat normal sérialisé
-      try {
-        return typeResp.fromBuffer(buf)
-      } catch (e) { // Résultat mal formé
-        throw new AppExc(-1020, 'Retour de la requête mal formé', 'Désérialisation de la réponse à ' + fonction + ' : ' + e.message)
-      }
-    }
-    // sérialisé en JSON
-    try {
-      return JSON.parse(buf.toString())
-    } catch (e) { // Résultat mal formé
-      throw new AppExc(-1021, 'Retour de la requête mal formé', 'JSON parse : ' + e.message)
-    }
+    if (op) op.cancelToken = axios.CancelToken.source()
+    const par = { method: 'post', url: u, data: data, headers: headers, responseType: 'arraybuffer' }
+    if (op) par.cancelToken = op.cancelToken.token
+    const r = await axios(par)
+    if (op) op.cancelToken = null
+    if (op) op.BRK()
+    buf = Buffer.from(r.data)
   } catch (e) {
-    $store.commit('ui/finreq')
-    razmessage()
-    if (e === WSERR) throw setErreur(WSERR)
-    if (axios.isCancel(e)) throw setErreur(CANCEL)
+    // Exceptions jetées par le this.BRK au-dessus)
+    if ((e === data.exIDB) || (e === data.exNET) || (e === data.EXBRK)) throw e
+    if (axios.isCancel(e)) throw EXBRK
+
     const status = (e.response && e.response.status) || 0
-    $store.commit('ui/majstatushttp', status)
     let appexc
     if (status >= 400 && status <= 402) {
       try {
         appexc = JSON.parse(Buffer.from(e.response.data).toString())
       } catch (e2) {
-        appexc = new AppExc(-1001, 'Retour en exception de la requête mal formé', 'JSON parse : ' + e2.message)
+        throw new AppExc(api.E_BRO, 'Retour de la requête mal formé : JSON parse. ' + (op ? 'Opération: ' + op.nom : '') + ' Message: ' + e.message)
       }
-      if (status === 400) { // 400 : anomalie fonctionnelle à traiter par l'application
-        return appexc
-      } else {
-        // 401 : anomalie fonctionnelle à afficher et traiter comme exception ou 402 : inattendue
-        $store.commit('ui/majerreur', appexc)
-        throw appexc
-      }
-    } else throw errNetSrv(e) // Erreurs réseau / serveur inattendues
+      if (status === 400) return appexc // 400 : anomalie fonctionnelle à traiter par l'application (pas en exception)
+      // 401 : anomalie fonctionnelle à afficher et traiter comme exception ou 402 : inattendue
+      throw new AppExc(status === 401 ? api.F_SRV : api.E_SRV, e.message, e.stack)
+    } else throw new AppExc(api.E_SRV, e.message, e.stack)
+  }
+
+  // les status HTTP non 2xx sont tombés en exception
+  if (typeResp) { // résultat normal sérialisé
+    try {
+      return typeResp.fromBuffer(buf)
+    } catch (e) { // Résultat mal formé
+      throw new AppExc(api.E_BRO, 'Retour de la requête mal formé : désérialisation de la réponse. ' + (op ? 'Opération: ' + op.nom : '') + ' Message: ' + e.message)
+    }
+  }
+  // sérialisé en JSON
+  try {
+    return JSON.parse(buf.toString())
+  } catch (e) { // Résultat mal formé
+    throw new AppExc(api.E_BRO, 'Retour de la requête mal formé : JSON parse. ' + (op ? 'Opération: ' + op.nom : '') + ' Message: ' + e.message)
   }
 }
 
 export async function ping () {
   try {
     const u = $cfg.urlserveur + '/ping'
-    $store.commit('ui/debutreq')
-    affichermessage('ping - ' + u, false)
-    cancelSourceGET = axios.CancelToken.source()
-    const r = await axios({ method: 'get', url: u, responseType: 'text', cancelToken: cancelSourceGET.token })
-    cancelSourceGET = null
-    $store.commit('ui/finreq')
+    affichermessage('ping - ' + u)
+    const r = await axios({ method: 'get', url: u, responseType: 'text', timeout: $cfg.debug ? 500000 : 5000 })
     affichermessage(r.data)
-    $store.commit('ui/majstatushttp', r.status)
     return r.data
   } catch (e) {
-    $store.commit('ui/finreq')
-    throw errNetSrv(e)
+    store().commit('ui/majerreur', new AppExc(api.E_SRV, e.message, e.stack))
   }
-}
-
-function errNetSrv (e) {
-  const m = e.message === 'Network Error' ? 'Probable erreur de réseau' : e.message
-  const x = new AppExc(-1002, 'Echec de l\'opération : BUG ou incident technique', m)
-  store().commit('ui/majerreur', x)
-  return x // Autres statuts : anomalie / bug / incident à afficher et traiter comme exception
 }
 
 /*
@@ -219,9 +196,13 @@ export async function get (module, fonction, args) {
   }
 }
 
-export async function testEcho (to) {
-  const r = await post('m1', 'echo', { a: 1, b: 'toto', to: to || 0 })
-  console.log('test echo : ' + JSON.stringify(r))
+export async function testEcho (to) { // to : timeout
+  try {
+    const r = await post(null, 'm1', 'echo', { a: 1, b: 'toto', to: to || 0 })
+    console.log('test echo OK : ' + JSON.stringify(r))
+  } catch (e) {
+    console.log('test echo KO : ' + JSON.stringify(e))
+  }
 }
 
 export async function getBinPub (path) {

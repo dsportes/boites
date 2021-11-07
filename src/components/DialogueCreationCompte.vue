@@ -66,8 +66,8 @@ import { computed } from 'vue'
 import PhraseSecrete from './PhraseSecrete.vue'
 import MdpAdmin from './MdpAdmin.vue'
 import QuotasVolume from './QuotasVolume.vue'
-import { creationCompte } from '../app/operations'
-import { Quotas, remplacePage } from '../app/modele'
+import { CreationCompte } from '../app/operations'
+import { Quotas } from '../app/modele'
 
 export default ({
   name: 'DialogueCreationCompte',
@@ -109,13 +109,12 @@ export default ({
       this.step = 5
     },
     async confirmer () {
-      await creationCompte(this.mdp, this.ps, this.nom, this.quotas)
+      await new CreationCompte().run(this.mdp, this.ps, this.nom, this.quotas)
       this.ps = null
       this.mdp = null
       this.quotas = null
       this.nom = ''
       this.step = 1
-      remplacePage('Compte')
     },
     corriger () {
       this.step = 1

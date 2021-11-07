@@ -5,31 +5,24 @@ let nummessage = 1
 export function razdialogues (state) {
   razdiagnostic(state)
   razmessage(state)
-  finreq(state)
   razerreur(state)
+  majopencours(state, false)
   majdialoguecrypto(state, false)
+  majdialoguetestping(state, false)
   majmenuouvert(state, false)
   majinfomode(state, false)
   majinforeseau(state, false)
   majinfoidb(state, false)
-  majconfirmstopchargement(state, false)
+  majconfirmstopop(state, false)
   state.dialoguecreationcompte = false
 }
 
 export function deconnexion (state) {
-  razdiagnostic(state)
-  razmessage(state)
-  finreq(state)
-  razerreur(state)
-  state.reqencours = false
-  state.syncencours = false
-  state.idberreur = null
-  state.modeleactif = true
-  state.sessionerreur = null
+  razdialogues(state)
   state.idblec = IDBLEC_RAZ
 }
 
-export function opencours (state, val) {
+export function majopencours (state, val) {
   state.opencours = val
 }
 
@@ -63,8 +56,8 @@ export function razerreur (state) {
   state.erreur = null
 }
 
-export function majconfirmstopchargement (state, val) {
-  state.confirmstopchargement = val
+export function majconfirmstopop (state, val) {
+  state.confirmstopop = val
 }
 
 export function majinfomode (state, val) {
@@ -79,10 +72,6 @@ export function majinfoidb (state, val) {
   state.infoidb = val
 }
 
-export function majstatushttp (state, status) { // boolean
-  state.statushttp = status
-}
-
 export function majorg (state, val) {
   state.org = val
 }
@@ -95,8 +84,8 @@ export function majmode (state, val) {
   state.mode = val
 }
 
-export function majsessionerreur (state, val) {
-  state.sessionerreur = val
+export function majmodeinitial (state, val) {
+  state.modeinitial = val
 }
 
 export function majdialoguecrypto (state, val) {
@@ -115,10 +104,6 @@ export function majmenuouvert (state, val) {
   state.menuouvert = val
 }
 
-export function majsyncencours (state, val) {
-  state.syncencours = val
-}
-
 export function majidblec (state, { table, st, vol, nbl }) {
   const x = state.idblec
   x[table] = { st, vol, nbl }
@@ -129,10 +114,6 @@ export function razidblec (state) {
   state.idblec = { ...IDBLEC_RAZ }
 }
 
-export function majidberreur (state, val) {
-  state.idberreur = val
-}
-
-export function majmodeleactif (state, val) {
-  state.modeleactif = val
+export function majstatutsession (state, val) {
+  state.statutsession = val
 }

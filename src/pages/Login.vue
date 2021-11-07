@@ -32,7 +32,7 @@
 <script>
 import { computed } from 'vue'
 import { useStore } from 'vuex'
-import { connexionCompte } from '../app/operations'
+import { ConnexionCompte, ConnexionCompteAvion } from '../app/operations'
 import PhraseSecrete from '../components/PhraseSecrete.vue'
 import { onBoot } from '../app/modele'
 
@@ -47,7 +47,13 @@ export default ({
 
   methods: {
     async connecter (ps) {
-      if (ps) await connexionCompte(ps)
+      if (ps) {
+        if (this.$store.state.ui.mode === 3) {
+          await new ConnexionCompteAvion().run(ps)
+        } else {
+          await new ConnexionCompte().run(ps)
+        }
+      }
     }
   },
 

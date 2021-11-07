@@ -154,16 +154,22 @@ class Session {
   constructor () {
     this.raz()
     this.ps = null // phrase secrète d'authentification saisie
-    /* statut de la session
-    0: fantôme (pas de session)
-    1: session initiée non authentifiée
-    2: session authentifiée, données minimale en cours de chargement
-    3: session en partie chargée, utilisable en mode visio
-    4: session synchronisée / cohérente
-    5: session cohérente mais figée, non synchronisée
-    */
-    this.statut = 0
   }
+
+  get statut () { return this.vstatut }
+
+  set statut (val) {
+    this.vstatut = 0
+    store().commit('ui/majstatutsession', this.statut)
+  }
+
+  get mode () { return store().state.ui.mode }
+
+  set mode (val) { store().commit('ui/majmode', val) }
+
+  get modeInitial () { return store().state.ui.modeinitial }
+
+  set modeInitial (val) { store().commit('ui/majmodeinitial', val) }
 
   async connexion (reconnexion) {
     store().commit('db/raz')
@@ -171,37 +177,20 @@ class Session {
     this.sessionId = crypt.id2s(crypt.random(6))
     if (!reconnexion) {
       this.ps = null
-      this.modeInitial = store().state.ui.mode
-      this.mode = this.modeInitial
+      this.modeInitial = this.mode
     } else {
       this.mode = this.modeInitial
     }
-    store().commit('ui/majmode', this.mode)
-    store().commit('ui/majmodeinitial', this.modeInitial)
 
-    if (this.mode === 1 || this.mode === 3) {
-      try {
-        await openIDB()
-      } catch (e) { // setErDB a déjà été appelé
-        return false
-      }
-    }
+    if (this.mode === 1 || this.mode === 3) await openIDB()
 
-    if (this.mode === 1 || this.mode === 2) {
-      try {
-        await openWS()
-      } catch (e) { // setErWS a déjà été appelé
-        return false
-      }
-    }
+    if (this.mode === 1 || this.mode === 2) await openWS()
 
-    this.statut = 1
     console.log(reconnexion ? 'Ré' : 'O' + 'uverture de session : ' + this.sessionId)
     remplacePage('Synchro')
-    return true
   }
 
-  async deconnexion () {
+  deconnexion () {
     store().commit('db/raz')
     store().commit('ui/deconnexion')
     if (this.ws) this.ws.close()
@@ -209,7 +198,7 @@ class Session {
     this.raz()
     this.ps = null
     this.statut = 0
-    await remplacePage(store().state.ui.org ? 'Login' : 'Org')
+    remplacePage(store().state.ui.org ? 'Login' : 'Org')
   }
 
   async reconnexion () {
@@ -217,33 +206,44 @@ class Session {
   }
 
   degraderMode () {
-    const mi = this.modeInitial
-    let nm
-    switch (mi) {
-      case 0 : { nm = mi; break }
-      case 1 : {
-        if (this.erDB && !this.erWS) { nm = 2; break }
-        if (!this.erDB && this.erWS) { nm = 3; break }
-        if (this.erDB && this.erWS) { nm = 4; break }
-        nm = mi
+    if (this.statut === 0) {
+      this.mode = 0
+      // Afficher le choix Reconnecter / Déconnecter
+      store().commit('ui/majactionPRD', 1)
+      return
+    }
+    let nm = this.mode
+    switch (this.modeInitial) {
+      case 1 : { // synchronisé
+        if (this.erDB && !this.erWS) {
+          // IDB KO, peut passer en mode incogniti si toutes les données sont chargées, sinon visio
+          nm = this.statut === 2 ? 2 : 4
+          break
+        }
+        if (!this.erDB && this.erWS) {
+          // NET KO, peut passer en mode avion si toutes les données sont chargées, sinon visio
+          nm = this.statut === 2 ? 3 : 4
+          break
+        }
+        if (this.erDB && this.erWS) {
+          // NET et IDB KO : mode visio
+          nm = 4
+          break
+        }
         break
       }
       case 2 : { // incognito
         if (this.erWS) { nm = 4; break }
-        nm = mi
         break
       }
       case 3 : { // avion
         if (this.erDB) { nm = 4; break }
-        nm = mi
         break
       }
-      case 4 : { nm = mi; break }
     }
-    if (nm === mi) return
-    if (this.mode === nm) return
-    store().commit('ui/majmode', nm)
-    store().commit('ui/majactionPRD', true) // Afficher la boîte de choix Poursuivre, Reconnecter, Déconnecter
+    if (nm === this.mode) return // pas de dégradation à signaler / choisir
+    this.mode = nm
+    store().commit('ui/majactionPRD', 2) // Afficher la boîte de choix Poursuivre, Reconnecter, Déconnecter
   }
 
   setErDB (e, nostop) { // prévention des signalements multiples
@@ -251,6 +251,7 @@ class Session {
       if (!(e instanceof AppExc)) {
         e = new AppExc(api.E_BRO, e.message, e.stack)
       }
+      this.exIDB = e
       store().commit('ui/majerreur', e) // provoque son affichage
       this.erDB = 1
       if (this.db) {
@@ -262,6 +263,7 @@ class Session {
       this.degraderMode()
     }
     if (!nostop) this.stopOp()
+    return this.exIDB
   }
 
   setErWS (e, nostop) { // prévention des signalements multiples
@@ -269,6 +271,7 @@ class Session {
       if (!(e instanceof AppExc)) {
         e = new AppExc(api.E_SRV, e.message, e.stack)
       }
+      this.exNET = e
       store().commit('ui/majerreur', e) // provoque son affichage
       this.erWS = 1
       if (this.ws) {
@@ -280,14 +283,12 @@ class Session {
       this.degraderMode()
     }
     if (!nostop) this.stopOp()
+    return this.exNET
   }
 
   stopOp () {
     if (this.opUI) {
       this.opUI.stop()
-    }
-    if (this.opWS) {
-      this.opWS.stop()
     }
   }
 
@@ -295,8 +296,17 @@ class Session {
     this.db = null // IDB quand elle est ouverte
     this.nombase = null
     this.erDB = 0 // 0:OK 1:IDB en erreur NON traitée 2:IDB en erreur traitée
+    this.exIDB = null // exception sur IDB
     this.ws = null // WebSocket quand il est ouvert
     this.erWS = false // 0:OK 1:WS en erreur NON traitée 2:WS en erreur traitée
+    this.exNET = null // exception sur NET
+
+    /* statut de la session
+    0: fantôme : la session n'est pas encore active ou en attente de décision réconnexion / reconnexion
+    1: session en partie chargée, utilisable en mode visio
+    2: session totalement chargée / synchronisée et cohérente
+    */
+    this.statut = 0
 
     this.dh = 0 // plus haute date-heure retournée par un POST au serveur
     this.dhsyncok = 0 // dernière date-heure de synchronisation complète

@@ -3,26 +3,30 @@ export default function () {
   return {
     erreur: null,
     derniereerreur: null,
+
     dialoguecrypto: false,
     dialoguecreationcompte: false,
-    confirmstopchargement: false,
+    confirmstopop: false,
     dialoguetestping: false,
     diagnostic: null,
     menuouvert: false,
-    opencours: false,
+
     infomode: false,
     inforeseau: false,
-    infoidb: false,
-    syncencours: false,
-    idberreur: null,
-    modeleactif: false,
-    mode: 0, // 0:inconnu, 1:synchronise, 2:incognito, 3:avion 4:visio
-    statushttp: 200,
+
+    opencours: false,
+
+    mode: 0, // 0:inconnu, 1:synchronise, 2:incognito, 3:avion, 4:visio
+    modeinitial: 0,
+    statutsession: 0,
+
     message: null,
     messageto: null,
+
     org: null,
-    sessionerreur: null,
+
     idblec: IDBLEC_RAZ,
+
     page: 'Org'
   }
 }

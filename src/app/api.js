@@ -3,11 +3,14 @@ const avro = require('avsc')
 const version = '1'
 exports.version = version
 
-exports.E_BRK = -1
-exports.E_WS = -2
-exports.E_DB = -3
-exports.E_BRO = -4
-exports.E_SRV = -5
+exports.E_BRK = -1 // Interruption volontaire de l'opération
+exports.E_WS = -2 // Toutes erreurs de réseau
+exports.E_DB = -3 // Toutes erreurs d'accès à la base locale
+exports.E_BRO = -4 // Erreur inattendue trappée sur le browser
+exports.E_SRV = -5 // Erreur inattendue trappée sur le serveur
+exports.X_SRV = -6 // Erreur fonctionnelle trappée sur le serveur transmise en exception
+exports.F_BRO = 1 // Erreur fonctionnelle trappée sur le browser
+exports.F_SRV = 2 // Erreur fonctionnelle trappée sur le serveur transmise en résultat
 
 class AppExc {
   constructor (code, message, stack) {

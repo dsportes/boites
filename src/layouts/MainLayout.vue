@@ -216,7 +216,7 @@
       </q-card>
     </q-dialog>
 
-    <q-dialog v-model="reqencours" seamless position="top" persistent transition-show="scale" transition-hide="scale">
+    <q-dialog v-model="opencours" seamless position="top" persistent transition-show="scale" transition-hide="scale">
       <q-card class="reqencours row items-center justify-between no-wrap bg-amber-2 q-pa-sm">
         <div class="text-weight-bold">Annuler la requête</div>
         <q-spinner color="primary" size="2rem" :thickness="3" />
@@ -266,8 +266,7 @@ import { cancelRequest, ping /*, cfg */ } from '../app/util'
 import { useQuasar } from 'quasar'
 import { computed } from 'vue'
 import { useStore } from 'vuex'
-import { onRuptureSession, remplacePage, onBoot, data } from '../app/modele'
-import { deconnexion, reconnexion } from '../app/operations'
+import { remplacePage, onBoot, data } from '../app/modele'
 import DialogueCreationCompte from 'components/DialogueCreationCompte.vue'
 import DialogueTestPing from 'components/DialogueTestPing.vue'
 
@@ -292,7 +291,6 @@ export default {
     '$route.params': function (newp, oldp) {
       console.log(JSON.stringify(newp) + ' -- ' + JSON.stringify(oldp))
     },
-    */
     '$store.state.ui.sessionerreur': function (newp, oldp) {
       console.log('Session erreur : ' + (newp ? newp.message : 'x') + ' / ' + (oldp ? oldp.message : 'x'))
       if (newp) {
@@ -300,6 +298,7 @@ export default {
         onRuptureSession(newp)
       }
     }
+    */
   },
 
   methods: {
@@ -316,15 +315,15 @@ export default {
     },
 
     logout () {
-      deconnexion()
+      data.deconnexion()
     },
 
     reconnexion () {
-      reconnexion()
+      data.reconnexion()
     },
 
     stop () {
-      this.confirmstopchargement = true
+      this.confirmstopop = true
       data.stopChargt = true
     },
 

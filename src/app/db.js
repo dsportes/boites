@@ -1,7 +1,7 @@
 /* eslint-disable func-call-spacing */
 import Dexie from 'dexie'
-import { Avatar, Compte, Invitgr, Invitct, Contact, Parrain, Rencontre, Groupe, Membre, Secret, Cv, data, excBREAK } from './modele'
-import { store, cfg, sleep } from './util'
+import { Avatar, Compte, Invitgr, Invitct, Contact, Parrain, Rencontre, Groupe, Membre, Secret, Cv, data } from './modele'
+import { store, cfg } from './util'
 const crypt = require('./crypto')
 const api = require('./api')
 const AppExc = require('./api').AppExc
@@ -43,25 +43,27 @@ function EX2 (e) {
 }
 
 function go () {
-  if (!data.db || data.erDB) throw excBREAK
+  if (data.erDB) throw data.exIDB
 }
 
 export function idbSidCompte () {
   return localStorage.getItem(store().state.ui.org + '-' + data.ps.dpbh)
 }
 
+export function nombase () {
+  return store().state.ui.org + '-' + idbSidCompte()
+}
+
 export async function openIDB () {
   if (data.db) return
   try {
-    data.nombase = store().state.ui.org + '-' + idbSidCompte()
+    data.nombase = nombase()
     const db = new Dexie(data.nombase, { autoOpen: true })
     db.version(1).stores(STORES)
     await db.open()
     data.db = db
-    return db
   } catch (e) {
-    try { data.setErDB(EX1(e)) } catch (e) {}
-    return null
+    throw data.setErDB(EX1(e))
   }
 }
 
@@ -77,8 +79,7 @@ export async function deleteIDB (lsKey) {
     if (lsKey) {
       localStorage.removeItem(store().state.ui.org + '-' + data.ps.dpbh)
     }
-    const nombase = store().state.ui.org + '-' + idbSidCompte()
-    await Dexie.delete(nombase)
+    await Dexie.delete(nombase())
   } catch (e) {
     console.log(e.toString())
   }
@@ -98,7 +99,7 @@ export async function getEtat () {
     data.dhsyncok = etat.dhsyncok
     data.dhdebutsync = etat.dhdebutsync
   } catch (e) {
-    data.setErDB(EX2(e))
+    throw data.setErDB(EX2(e))
   }
 }
 
@@ -108,7 +109,7 @@ export async function setEtat () {
     const etat = { dhsyncok: data.dhsyncok, dhdebutsync: data.dhdebutsync, vcv: data.vcv }
     await this.db.etat.set(1, JSON.stringify(etat))
   } catch (e) {
-    data.setErDB(EX2(e))
+    throw data.setErDB(EX2(e))
   }
 }
 
@@ -118,7 +119,7 @@ export async function getCompte () {
     const idb = await data.db.compte.get(1)
     return new Compte().fromIdb(crypt.decrypter(data.ps.pcb, idb.data), idb.vs)
   } catch (e) {
-    data.setErDB(EX2(e))
+    throw data.setErDB(EX2(e))
   }
 }
 
@@ -137,7 +138,7 @@ export async function getAvatars () {
     })
     return { objs: r, vol: vol }
   } catch (e) {
-    data.setErDB(EX2(e))
+    throw data.setErDB(EX2(e))
   }
 }
 
@@ -157,7 +158,7 @@ export async function getInvitgrs () {
     })
     return { objs: r, vol: vol }
   } catch (e) {
-    data.setErDB(EX2(e))
+    throw data.setErDB(EX2(e))
   }
 }
 
@@ -177,7 +178,7 @@ export async function getInvitcts () {
     })
     return { objs: r, vol: vol }
   } catch (e) {
-    data.setErDB(EX2(e))
+    throw data.setErDB(EX2(e))
   }
 }
 
@@ -197,7 +198,7 @@ export async function getContacts () {
     })
     return { objs: r, vol: vol }
   } catch (e) {
-    data.setErDB(EX2(e))
+    throw data.setErDB(EX2(e))
   }
 }
 
@@ -216,7 +217,7 @@ export async function getParrains () {
     })
     return { objs: r, vol: vol }
   } catch (e) {
-    data.setErDB(EX2(e))
+    throw data.setErDB(EX2(e))
   }
 }
 
@@ -235,7 +236,7 @@ export async function getRencontres () {
     })
     return { objs: r, vol: vol }
   } catch (e) {
-    data.setErDB(EX2(e))
+    throw data.setErDB(EX2(e))
   }
 }
 
@@ -253,7 +254,7 @@ export async function getGroupes () {
     })
     return { objs: r, vol: vol }
   } catch (e) {
-    data.setErDB(EX2(e))
+    throw data.setErDB(EX2(e))
   }
 }
 
@@ -272,7 +273,7 @@ export async function getMembres () {
     })
     return { objs: r, vol: vol }
   } catch (e) {
-    data.setErDB(EX2(e))
+    throw data.setErDB(EX2(e))
   }
 }
 
@@ -295,7 +296,7 @@ export async function getSecrets () {
     })
     return { objs: r, vol: vol }
   } catch (e) {
-    data.setErDB(EX2(e))
+    throw data.setErDB(EX2(e))
   }
 }
 
@@ -312,7 +313,7 @@ export async function getCvs () {
     })
     return { objs: r, vol: vol }
   } catch (e) {
-    data.setErDB(EX2(e))
+    throw data.setErDB(EX2(e))
   }
 }
 
@@ -335,7 +336,7 @@ export async function purgeGroupes (lgr) {
     })
     return lgr.size
   } catch (e) {
-    data.setErDB(EX2(e))
+    throw data.setErDB(EX2(e))
   }
 }
 
@@ -357,7 +358,7 @@ export async function purgeAvatars (lav) {
     })
     return lav.size
   } catch (e) {
-    data.setErDB(EX2(e))
+    throw data.setErDB(EX2(e))
   }
 }
 
@@ -373,7 +374,7 @@ export async function purgeCvs (lcv) {
     })
     return lcv.size
   } catch (e) {
-    data.setErDB(EX2(e))
+    throw data.setErDB(EX2(e))
   }
 }
 
@@ -399,108 +400,6 @@ export async function commitRows (lobj) {
       }
     })
   } catch (e) {
-    data.setErDB(EX2(e))
+    throw data.setErDB(EX2(e))
   }
-}
-
-/* Chargement de la totalité de la base en mémoire :
-- détermine les avatars et groupes référencés dans les rows de Idb
-- supprime de la base comme de la mémoire les rows / objets inutiles
-- puis récupère les CVs et supprime celles non référencées
-*/
-export async function chargementIdb () {
-  let objs, vol, t, nbp
-
-  data.refsAv = new Set()
-  data.refsGr = new Set()
-  data.refsCv = new Set()
-  data.enregCvs = new Set()
-
-  store().commit('ui/razidblec')
-  data.testBREAK()
-  t = true; ({ objs, vol } = await getAvatars())
-  store().commit('db/setAvatars', objs)
-  store().commit('ui/majidblec', { table: 'avatar', st: t, vol: vol, nbl: objs.length })
-
-  data.testBREAK()
-  t = true; ({ objs, vol } = await getInvitgrs())
-  store().commit('db/setInvitgrs', objs)
-  store().commit('ui/majidblec', { table: 'invitgr', st: t, vol: vol, nbl: objs.length })
-
-  data.testBREAK()
-  t = true; ({ objs, vol } = await getContacts())
-  store().commit('db/setContacts', objs)
-  store().commit('ui/majidblec', { table: 'invcontactitgr', st: t, vol: vol, nbl: objs.length })
-
-  data.testBREAK()
-  t = true; ({ objs, vol } = await getInvitcts())
-  store().commit('db/setInvitcts', objs)
-  store().commit('ui/majidblec', { table: 'invitct', st: t, vol: vol, nbl: objs.length })
-
-  data.testBREAK()
-  t = true; ({ objs, vol } = await getParrains())
-  store().commit('db/setParrains', objs)
-  store().commit('ui/majidblec', { table: 'parrain', st: t, vol: vol, nbl: objs.length })
-
-  data.testBREAK()
-  t = true; ({ objs, vol } = await getRencontres())
-  store().commit('db/setRencontres', objs)
-  store().commit('ui/majidblec', { table: 'rencontre', st: t, vol: vol, nbl: objs.length })
-
-  data.testBREAK()
-  t = true; ({ objs, vol } = await getGroupes())
-  store().commit('db/setGroupes', objs)
-  store().commit('ui/majidblec', { table: 'groupe', st: t, vol: vol, nbl: objs.length })
-
-  data.testBREAK()
-  t = true; ({ objs, vol } = await getMembres())
-  store().commit('db/setMembres', objs)
-  store().commit('ui/majidblec', { table: 'membre', st: t, vol: vol, nbl: objs.length })
-
-  data.testBREAK()
-  t = true; ({ objs, vol } = await getSecrets())
-  store().commit('db/setSecrets', objs)
-  store().commit('ui/majidblec', { table: 'secret', st: t, vol: vol, nbl: objs.length })
-
-  // purge des avatars inutiles
-  data.testBREAK()
-  const avInutiles = new Set()
-  const avUtiles = new Set(data.setAvatars)
-  for (const id of data.refsAv) if (!avUtiles.has(id)) avInutiles.add(id)
-  nbp = await purgeAvatars(avInutiles)
-  store().commit('db/purgeAvatars', avUtiles)
-  store().commit('ui/majidblec', { table: 'purgeav', st: t, vol: 0, nbl: nbp })
-
-  // purge des groupes inutiles
-  data.testBREAK()
-  const grInutiles = new Set()
-  const grUtiles = new Set(data.setGroupes)
-  for (const id of data.refsGr) if (!grUtiles.has(id)) grInutiles.add(id)
-  nbp = await purgeGroupes(grInutiles)
-  store().commit('db/purgeGroupes', grUtiles)
-  store().commit('ui/majidblec', { table: 'purgegr', st: t, vol: 0, nbl: nbp })
-
-  // chargement des CVs
-  data.testBREAK()
-  t = true; ({ objs, vol } = await getCvs())
-  store().commit('db/setCvs', objs)
-  store().commit('ui/majidblec', { table: 'cv', st: t, vol: vol, nbl: objs.length })
-
-  // purge des CVs inutiles
-  data.testBREAK()
-  const cvInutiles = new Set()
-  const cvUtiles = new Set(data.setCvUtiles)
-  for (const id of data.enregCvs) if (!cvUtiles.has(id)) cvInutiles.add(id)
-  nbp = await purgeCvs(cvInutiles)
-  store().commit('db/purgeCvs', cvUtiles)
-  store().commit('ui/majidblec', { table: 'purgecv', st: t, vol: 0, nbl: nbp })
-
-  data.refsAv = null
-  data.refsGr = null
-  data.refsCv = null
-  data.enregCvs = null
-
-  if (cfg().debug) await sleep(1000)
-
-  data.testBREAK()
 }
