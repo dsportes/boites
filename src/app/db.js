@@ -118,7 +118,7 @@ export async function getCompte () {
   go()
   try {
     const idb = await data.db.compte.get(1)
-    return new Compte().fromIdb(crypt.decrypter(data.ps.pcb, idb.data), idb.vs)
+    return idb ? new Compte().fromIdb(crypt.decrypter(data.ps.pcb, idb.data), idb.vs) : null
   } catch (e) {
     throw data.setErDB(EX2(e))
   }
@@ -283,7 +283,7 @@ export async function getSecrets () {
   try {
     let vol = 0
     const r = []
-    await this.db.secret.each(idb => {
+    await data.db.secret.each(idb => {
       vol += idb.data.length
       const x = new Secret().fromIdb(crypt.decrypter(data.clek, idb.data), idb.vs)
       r.push(x)

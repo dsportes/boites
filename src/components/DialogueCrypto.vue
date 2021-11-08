@@ -5,8 +5,6 @@
           <div class="titre-2">Crytographie</div>
           <q-btn flat label="Lancer le test de crypto" color="primary" @click="testcrypto" />
           <q-btn flat label="Lancer le test courant" color="primary" @click="testEcho"/>
-          <q-btn flat label="new Session" color="primary" @click="testNewSession"/>
-          <q-btn flat label="Close session" color="primary" @click="testCloseSession"/>
         </q-card-section>
         <phrase-secrete class="q-ma-xs" v-on:ok-ps="okps" icon-valider="check" verif label-valider="OK"></phrase-secrete>
         <mdp-admin class="q-ma-xs" v-on:ok-mdp="okmdp"></mdp-admin>
@@ -35,8 +33,7 @@ import { computed } from 'vue'
 const crypt = require('../app/crypto')
 import PhraseSecrete from '../components/PhraseSecrete.vue'
 import MdpAdmin from '../components/MdpAdmin.vue'
-import { post, affichermessage, afficherdiagnostic, testEcho, sleep } from '../app/util'
-import { SCID, newSession, session } from '../app/ws'
+import { post, affichermessage, afficherdiagnostic, testEcho } from '../app/util'
 
 export default ({
   name: 'DialogueCrypto',
@@ -90,16 +87,6 @@ export default ({
     async testidb () {
       const l = await indexedDB.databases()
       l.forEach(db => { console.log(db) })
-    },
-    async testNewSession () {
-      const s = await newSession()
-      console.log(s.sessionId + ' / ' + SCID())
-    },
-    async testCloseSession () {
-      const s = session.ws
-      if (s) s.close()
-      await sleep(1)
-      console.log(session.sessionId + ' / ' + SCID())
     }
   },
 

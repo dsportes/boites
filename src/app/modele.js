@@ -4,7 +4,7 @@ const base64url = require('base64url')
 const rowTypes = require('./rowTypes')
 import { openIDB } from './db'
 import { openWS } from './ws'
-import { cfg, store, dhtToString /*, router */ } from './util'
+import { cfg, store, dhtToString, affichermessage } from './util'
 const api = require('./api')
 const AppExc = require('./api').AppExc
 const types = require('./api').types
@@ -148,20 +148,24 @@ export function rowItemsToRows (rowItems, commit) {
 
 export const SIZEAV = 7
 export const SIZEGR = 3
+export const MODES = ['inconnu', 'synchronisé', 'incognito', 'avion', 'visio']
 
 /* état de session ************************************************************/
 class Session {
   constructor () {
-    this.raz()
+    this.raz(true)
     this.ps = null // phrase secrète d'authentification saisie
   }
 
-  get statut () { return this.vstatut }
+  /* statut de la session
+    0: fantôme : la session n'a pas encore été ouverte par une opération de login / création compte
+    ou cette opération s'est interrompue. En attente de décision déconnexion / reconnexion OU opération en cours
+    1: session en partie chargée, utilisable en mode visio
+    2: session totalement chargée / synchronisée et cohérente
+  */
+  get statut () { return store().state.ui.statutsession }
 
-  set statut (val) {
-    this.vstatut = 0
-    store().commit('ui/majstatutsession', this.statut)
-  }
+  set statut (val) { store().commit('ui/majstatutsession', val) }
 
   get mode () { return store().state.ui.mode }
 
@@ -179,12 +183,15 @@ class Session {
 
   set statutidb (val) { store().commit('ui/majstatutidb', val) }
 
+  get sessionId () { return store().state.ui.sessionid }
+
+  set sessionId (val) { store().commit('ui/majsessionid', val) }
+
   async connexion (reconnexion) {
     store().commit('db/raz')
     this.raz()
     this.sessionId = crypt.id2s(crypt.random(6))
     if (!reconnexion) {
-      this.ps = null
       this.modeInitial = this.mode
     } else {
       this.mode = this.modeInitial
@@ -214,12 +221,7 @@ class Session {
   }
 
   degraderMode () {
-    if (this.statut === 0) {
-      this.mode = 0
-      // Afficher le choix Reconnecter / Déconnecter
-      store().commit('ui/majactionPRD', 1)
-      return
-    }
+    if (this.statut === 0) return
     let nm = this.mode
     switch (this.modeInitial) {
       case 1 : { // synchronisé
@@ -249,9 +251,10 @@ class Session {
         break
       }
     }
-    if (nm === this.mode) return // pas de dégradation à signaler / choisir
+    if (nm === this.mode) return // pas de dégradation
     this.mode = nm
-    store().commit('ui/majactionPRD', 2) // Afficher la boîte de choix Poursuivre, Reconnecter, Déconnecter
+    affichermessage('Un incident a conduit à dégrader le mode de "' +
+      MODES[this.modeInitial] + '" à "' + MODES[this.mode] + '". Plus d\'info en appuyant sur l\'icône "Mode" en haut à droite', true)
   }
 
   setErDB (e, nostop) { // prévention des signalements multiples
@@ -302,7 +305,7 @@ class Session {
     }
   }
 
-  raz () {
+  raz (init) {
     this.db = null // IDB quand elle est ouverte
     this.nombase = null
     this.erDB = 0 // 0:OK 1:IDB en erreur NON traitée 2:IDB en erreur traitée
@@ -310,15 +313,13 @@ class Session {
     this.ws = null // WebSocket quand il est ouvert
     this.erWS = false // 0:OK 1:WS en erreur NON traitée 2:WS en erreur traitée
     this.exNET = null // exception sur NET
-    this.statutnet = 0
-    this.statutidb = 0
 
-    /* statut de la session
-    0: fantôme : la session n'est pas encore active ou en attente de décision réconnexion / reconnexion
-    1: session en partie chargée, utilisable en mode visio
-    2: session totalement chargée / synchronisée et cohérente
-    */
-    this.statut = 0
+    if (!init) {
+      this.statutnet = 0
+      this.statutidb = 0
+      this.statut = 0
+      this.sessionId = null
+    }
 
     this.dh = 0 // plus haute date-heure retournée par un POST au serveur
     this.dhsyncok = 0 // dernière date-heure de synchronisation complète
@@ -356,8 +357,8 @@ class Session {
     }
     if (syncList.sessionId !== this.sessionId || this.erWS != null) return
     data.syncqueue.push(syncList)
-    if (this.statut === 4 && this.opWS == null) {
-      // à traiter maintenant, toute la queue (pas seulment le dernier arrivé)
+    if (this.statut === 2 && this.opWS == null) {
+      // à traiter maintenant, toute la queue (pas seulement le dernier arrivé)
       const q = data.syncqueue
       data.syncqueue = []
       try {

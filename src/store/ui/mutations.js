@@ -6,7 +6,7 @@ export function razdialogues (state) {
   razdiagnostic(state)
   razmessage(state)
   razerreur(state)
-  majopencours(state, false)
+  majopencours(state, null)
   majdialoguecrypto(state, false)
   majdialoguetestping(state, false)
   majmenuouvert(state, false)
@@ -74,6 +74,10 @@ export function majinfoidb (state, val) {
 
 export function majstatutidb (state, val) {
   state.statutidb = val
+}
+
+export function majsessionid (state, val) {
+  state.sessionid = val
 }
 
 export function majstatutnet (state, val) {

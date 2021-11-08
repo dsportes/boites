@@ -3,7 +3,10 @@
       <q-card class="q-ma-xs moyennelargeur">
         <q-card-section>
           <div class="titre-2">Les modes inconnu, synchronisé, incognito, avion, visio</div>
+          <div v-if="sessionId != null" class="titre-3">{{'Une session est en cours (#' + sessionId + ')'}})</div>
+          <div v-if="sessionId != null && mode !== 0 && mode !== modeInitial" class="titre-5 bg-warning">{{msgdegrade()}}</div>
         </q-card-section>
+
         <q-card-section>
           <q-icon size="md" name="info"/>
           <span :class="(mode === 0 ? 'text-bold text-primary ' : '') + 'titre-2 q-px-sm'">Inconnu :</span>
@@ -12,7 +15,7 @@
           </span>
         </q-card-section>
         <q-card-section>
-          <q-icon size="md" name="sync_alt"/>
+          <q-icon size="md" name="autorenew"/>
           <span :class="(mode === 1 ? 'text-bold text-primary ' : '') + 'titre-2 q-px-sm'">Synchronisé :</span>
           <span :class="mode === 1 ? 'text-bold text-primary' : ''">
             L'application accède au serveur central pour obtenir les données et les synchronise sur un stockage local crypté.
@@ -41,6 +44,14 @@
             On peut tenter de revenir au mode initial par une "reconnexion" (ou se déconnecter).
           </span>
         </q-card-section>
+        <q-card-actions  v-if="sessionId != null" align="left">
+          <q-btn dense size="md" color="warning"
+            icon="logout" label="Déconnexion du compte" @click="deconnexion" v-close-popup/>
+          <q-btn v-if="mode != 0 && mode != modeInitial" dense size="md" color="warning"
+            icon="logout" label="Tentative de reconnexion au compte" @click="reconnexion" v-close-popup/>
+          <q-btn v-if="mode != 0 && mode != modeInitial" dense size="md" color="primary"
+            label="Poursuivre la session dans le mode actuel" v-close-popup/>
+        </q-card-actions>
         <q-card-actions align="right">
           <q-btn flat label="J'ai lu" color="primary" v-close-popup />
         </q-card-actions>
@@ -51,6 +62,7 @@
 <script>
 import { useStore } from 'vuex'
 import { computed } from 'vue'
+import { MODES, data } from '../app/modele'
 
 export default ({
   name: 'DialogueInfoMode',
@@ -61,19 +73,35 @@ export default ({
   },
 
   methods: {
+    deconnexion () {
+      data.deconnexion()
+    },
+
+    reconnexion () {
+      data.reconnexion()
+    }
   },
 
   setup () {
     const $store = useStore()
+    const sessionId = computed(() => $store.state.ui.sessionId)
     const mode = computed(() => $store.state.ui.mode)
+    const modeInitial = computed(() => $store.state.ui.modeinitial)
     const infomode = computed({
       get: () => $store.state.ui.infomode,
       set: (val) => $store.commit('ui/majinfomode', val)
     })
+    function msgdegrade () {
+      return 'Un incident (réseau, accès à la base locale, interruption d\'une opération de connexion) a conduit à dégrader le mode de "' +
+      MODES[this.modeInitial] + '" à "' + MODES[this.mode] + '". Possibilité d\'actions : conserver le mode actuel, se reconnecter, se déconnecter.'
+    }
 
     return {
+      sessionId,
       mode,
-      infomode
+      modeInitial,
+      infomode,
+      msgdegrade
     }
   }
 })

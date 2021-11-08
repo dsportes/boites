@@ -1,6 +1,6 @@
 <template>
-  <q-dialog v-model="dialoguetestping" class="moyennelargeur">
-    <q-card class="q-ma-xs">
+  <q-dialog v-model="dialoguetestping">
+    <q-card class="q-ma-xs moyennelargeur">
       <q-card-section>
         <div class="titre-2">Accès au serveur distant</div>
         <div v-if="mode === 1 || mode === 2">
@@ -19,7 +19,7 @@
       </q-card-section>
       <q-card-section>
         <div class="titre-2">Accès à la base locale d'un compte</div>
-        <div v-if="(mode === 1 || mode === 3) && compte != null">
+        <div v-if="(mode === 1 || mode === 3) && sessionId != null">
           <q-btn dense label="Ping de la base locale" color="primary" @click="pingIDB"/>
           <div>{{ resultat3 }}</div>
         </div>
@@ -35,7 +35,7 @@
 import { ping, post } from '../app/util'
 import { computed } from 'vue'
 import { useStore } from 'vuex'
-import { getIDB, throwIdbErr } from '../app/db'
+import { data } from '../app/modele'
 
 export default ({
   name: 'DialogueTestPing',
@@ -57,18 +57,24 @@ export default ({
     async pingsrvdb () {
       this.resultat2 = '-'
       let ret = null
-      ret = await post('m1', 'pingdb', {})
-      this.resultat2 = ret ? 'OK : ' + new Date(ret.dhc / 1000).toISOString() : 'KO'
+      try {
+        ret = await post(null, 'm1', 'pingdb', {})
+        this.resultat2 = ret ? 'OK : ' + new Date(ret.dhc / 1000).toISOString() : 'KO'
+      } catch (e) {
+        this.resultat2 = 'KO : ' + e.message
+      }
     },
     async pingIDB () {
-      this.resultat3 = '-'
-      try {
-        const db = await getIDB()
-        await db.getEtat()
-        this.resultat3 = 'OK'
-      } catch (e) {
-        this.resultat3 = 'KO'
-        throwIdbErr(e)
+      if (!data.db) {
+        this.resultat3 = 'La base n\'est pas accessible avant connexion à un compte en mode synchronisé ou avion'
+      } else {
+        this.resultat3 = '-'
+        try {
+          await data.db.getEtat()
+          this.resultat3 = 'OK'
+        } catch (e) {
+          this.resultat3 = 'KO'
+        }
       }
     }
   },
@@ -80,10 +86,12 @@ export default ({
       set: (val) => $store.commit('ui/majdialoguetestping', val)
     })
     const mode = computed(() => $store.state.ui.mode)
+    const sessionId = computed(() => $store.state.ui.sessionid)
     const org = computed(() => $store.state.ui.org)
     const compte = computed(() => $store.state.db.compte)
     return {
       dialoguetestping,
+      sessionId,
       mode,
       org,
       compte

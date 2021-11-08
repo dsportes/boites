@@ -24,10 +24,6 @@
           </span>
         </q-card-section>
         <q-card-actions  align="left">
-          <q-btn v-if="statutnet !== 0" dense size="md" color="warning"
-            icon="logout" label="Déconnexion du compte" @click="deconnexion" v-close-popup/>
-          <q-btn v-if="statutnet === 2" dense size="md" color="warning"
-            icon="logout" label="Tentative de reconnexion au compte" @click="reconnexion" v-close-popup/>
           <q-btn v-if="(mode === 1 || mode === 2)" dense size="md" color="primary"
             icon="logout" label="Tests d'accès à la base et au serveur" @click="dialoguetestping = true" v-close-popup/>
         </q-card-actions>
@@ -41,7 +37,6 @@
 <script>
 import { useStore } from 'vuex'
 import { computed } from 'vue'
-import { data } from '../app/modele'
 
 export default ({
   name: 'DialogueInfoReseau',
@@ -52,18 +47,12 @@ export default ({
   },
 
   methods: {
-    deconnexion () {
-      data.deconnexion()
-    },
-
-    reconnexion () {
-      data.reconnexion()
-    }
   },
 
   setup () {
     const $store = useStore()
     const mode = computed(() => $store.state.ui.mode)
+    const statutnet = computed(() => $store.state.ui.statutnet)
     const inforeseau = computed({
       get: () => $store.state.ui.inforeseau,
       set: (val) => $store.commit('ui/majinforeseau', val)
@@ -76,6 +65,7 @@ export default ({
     return {
       mode,
       inforeseau,
+      statutnet,
       dialoguetestping
     }
   }

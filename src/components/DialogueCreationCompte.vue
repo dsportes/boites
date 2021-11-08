@@ -1,6 +1,6 @@
 <template>
-  <q-dialog v-model="dialoguecreationcompte" class="grandelargeur">
-  <q-card>
+  <q-dialog v-model="dialoguecreationcompte">
+  <q-card class="q-ma-xs petitelargeur">
     <q-card-section>
       <div class="titre-2 text-italic">Création d'un compte SANS parrain</div>
       <q-btn flat @click="close" color="primary" label="Renoncer" class="q-ml-sm" />

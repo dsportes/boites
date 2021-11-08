@@ -3,31 +3,31 @@
     <q-header reveal elevated>
       <q-toolbar>
         <q-toolbar-title>
-          <span :class="compte == null ? 'cursor-pointer' : 'no-pointer-events'" @click="toorg">
-            <q-avatar round size="sm">
+          <span :class="sessionId == null ? 'cursor-pointer' : 'no-pointer-events'" @click="toorg">
+            <q-avatar size="sm">
               <img :src="orgicon">
             </q-avatar>
             <span :class="orglabelclass">{{ orglabel }}</span>
             <q-tooltip>Changer d'organisation</q-tooltip>
           </span>
-          <span v-if="org != null && compte == null && page === 'Login'" class="q-px-sm"  @click="login">Connexion ...</span>
+          <span v-if="org != null && sessionId == null && page === 'Login'" class="q-px-sm"  @click="login">Connexion ...</span>
           <span v-if="org != null && compte != null" class="labeltitre q-px-sm">{{ compte.titre }}</span>
         </q-toolbar-title>
 
-        <q-btn v-if="org != null && compte != null" dense size="md" color="warning" icon="logout" @click="deconnexion">
+        <q-btn v-if="org != null && sessionId != null" dense size="md" color="warning" icon="logout" @click="deconnexion">
           <q-tooltip>Déconnexion du compte</q-tooltip>
         </q-btn>
 
         <div class="cursor-pointer q-px-xs" @click="infoidb = true">
-          <q-avatar v-if="mode === 0 || mode === 2 || !compte" round size="md">
-              <img :src="~assets/database_gris.svg">
+          <q-avatar v-if="mode === 0 || mode === 2 || sessionId == null" size="md">
+              <img src="~assets/database_gris.svg">
           </q-avatar>
           <div v-else>
-            <q-avatar v-if="modeleactif" round size="md">
+            <q-avatar v-if="(mode == 1 || mode == 3) && statutidb != 0 && sessionId != null" size="md">
               <img src="~assets/database_vert.svg">
             </q-avatar>
-            <q-avatar v-else round size="md">
-              <img src="~assets/database_rouge.svg">
+            <q-avatar v-else square size="md">
+              <img src="~assets/database_rouge.svg" class="bord">
             </q-avatar>
           </div>
         </div>
@@ -37,8 +37,12 @@
          </div>
 
         <div class="cursor-pointer q-px-xs" @click="infomode = true">
-          <q-avatar round size="md">
-            <img :src="idbs[statutidb]">
+          <q-avatar size="md" :color="mode !== 0 && sessionId != null && mode !== modeInitial ? 'warning' : 'primary'">
+            <q-icon v-if="mode === 0" size="md" name="info"/>
+            <q-icon v-if="mode === 1" size="md" name="autorenew"/>
+            <img v-if="mode === 2" src="~assets/incognito_blanc.svg">
+            <q-icon v-if="mode === 3" size="md" name="airplanemode_active"/>
+            <q-icon v-if="mode === 4" size="md" name="visibility"/>
           </q-avatar>
         </div>
 
@@ -48,11 +52,11 @@
           <span v-if="page === 'Synchro'" class="q-px-xs">Chargement / Synchronisation</span>
           <span v-if="page !== 'Synchro' && compte != null" class="cursor-pointer q-px-xs" @click="tocompte">Synthèse</span>
           <q-icon v-if="page !== 'Synchro' && (avatar != null || groupe != null)" class="q-px-xs" size="md" name="label_important"/>
-          <q-avatar v-if="page !== 'Synchro' && avatar != null" round size="md">
+          <q-avatar v-if="page !== 'Synchro' && avatar != null" size="md">
             <img v-if="avatar.icone.length !== 0" :src="avatar.icone">
             <q-icon v-else size="md" name="face"/>
           </q-avatar>
-          <q-avatar v-if="page !== 'Synchro' && groupe != null" round size="md">
+          <q-avatar v-if="page !== 'Synchro' && groupe != null" size="md">
             <img v-if="groupe.icone.length !== 0" :src="groupe.icone">
             <q-icon v-else size="md" name="group"/>
           </q-avatar>
@@ -75,26 +79,30 @@
       </router-view>
     </q-page-container>
 
-    <q-dialog v-model="opencours" seamless position="top" persistent transition-show="scale" transition-hide="scale">
-      <q-card class="opencours row items-center justify-between no-wrap bg-amber-2 q-pa-sm">
-        <div class="text-weight-bold">Interrompre l'opération</div>
-        <div class="text-weight-bold">{{opencours.nom}}</div>
-        <q-spinner color="primary" size="2rem" :thickness="3" />
-        <q-btn flat round icon="stop" class="text-red" @click="confirmstopop = true" />
-      </q-card>
-    </q-dialog>
-
     <q-dialog v-model="messagevisible" seamless position="bottom">
       <div :class="'q-pa-sm ' + ($store.state.ui.message.important ? 'msgimp' : 'msgstd')"  @click="$store.commit('ui/razmessage')">
         {{ $store.state.ui.message.texte }}
       </div>
     </q-dialog>
 
+    <q-dialog v-model="auneop" seamless position="top" persistent transition-show="scale" transition-hide="scale">
+      <q-card class="opencours row items-center justify-between no-wrap bg-amber-2 q-pa-sm">
+        <div class="text-weight-bold">Interrompre l'opération</div>
+        <div class="text-weight-bold">{{opencours.nom}}</div>
+        <q-spinner color="primary" size="2rem" :thickness="3" />
+        <q-btn flat round icon="stop" class="text-red" @click="confirmstopop = true;auneop = false" v-close-popup/>
+      </q-card>
+    </q-dialog>
+
     <q-dialog v-model="confirmstopop">
       <q-card>
-        <q-card-section class="q-pa-md diag">
-          Interrompre le chargement des données de la base locale affichera des données
-          incomplètes en mode avion et allongera la synchronisation en mode synchro.
+        <q-card-section v-if="opencours != null && opencours.sync" class="q-pa-md diag">
+          Interrompre l'opération de connexion qui charge les données de la base locale et/ou du serveur, affichera des données
+          incomplètes et passera la session en mode dégradé.
+        </q-card-section>
+        <q-card-section v-else class="q-pa-md diag">
+          Interrompre une opération n'est jamais souhaitable. Ne le faire que quand il y a suspicion
+          qu'elle ne se terminera pas normalement d'elle-même.
         </q-card-section>
         <q-card-actions align="right">
           <q-btn flat label="Confirmer l'interruption" color="warning" v-close-popup @click="stop"/>
@@ -186,9 +194,13 @@ export default {
       get: () => $store.state.ui.menuouvert,
       set: (val) => $store.commit('ui/majmenuouvert', val)
     })
-    const confirmstopchargement = computed({
-      get: () => $store.state.ui.confirmstopchargement,
-      set: (val) => $store.commit('ui/majconfirmstopchargement', val)
+    const auneop = computed({
+      get: () => $store.state.ui.opencours != null,
+      set: (val) => $store.commit('ui/majopencours', null)
+    })
+    const confirmstopop = computed({
+      get: () => $store.state.ui.confirmstopop,
+      set: (val) => $store.commit('ui/majconfirmstopop', val)
     })
     const infomode = computed({
       get: () => $store.state.ui.infomode,
@@ -218,18 +230,21 @@ export default {
     const avatar = computed(() => $store.state.db.avatar)
     const groupe = computed(() => $store.state.db.groupe)
     const mode = computed(() => $store.state.ui.mode)
+    const modeInitial = computed(() => $store.state.ui.modeinitial)
     const messagevisible = computed(() => $store.getters['ui/messagevisible'])
     const diagnosticvisible = computed(() => $store.getters['ui/diagnosticvisible'])
     const opencours = computed(() => $store.state.ui.opencours)
+    const statutnet = computed(() => $store.state.ui.statutnet)
+    const statutidb = computed(() => $store.state.ui.statutidb)
+    const sessionId = computed(() => $store.state.ui.sessionid)
 
-    console.log('Page:' + page.value)
     return {
       page,
       menuouvert,
       infomode,
       inforeseau,
       infoidb,
-      confirmstopchargement,
+      confirmstopop,
       dialoguetestping,
       org,
       orgicon,
@@ -239,9 +254,14 @@ export default {
       avatar,
       groupe,
       mode,
+      modeInitial,
       messagevisible,
       diagnosticvisible,
-      opencours
+      opencours,
+      auneop,
+      statutnet,
+      statutidb,
+      sessionId
     }
   }
 }
@@ -301,4 +321,7 @@ export default {
 .q-toolbar
   padding: 2px !important
   min-height: 0 !important
+
+.bord
+  border: 2px solid warning
 </style>

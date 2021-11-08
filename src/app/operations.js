@@ -1,5 +1,9 @@
 import { store, post, affichermessage, cfg, sleep } from './util'
-import { deleteIDB, AVATAR, GROUPE, idbSidCompte } from './db.js'
+import {
+  deleteIDB, AVATAR, GROUPE, idbSidCompte, commitRows, getCompte, getAvatars, getContacts, getCvs,
+  getGroupes, getInvitcts, getInvitgrs, getMembres, getParrains, getRencontres, getSecrets,
+  purgeAvatars, purgeCvs, purgeGroupes
+} from './db.js'
 import { NomAvatar, Compte, Avatar, data, Cv, rowItemsToRows, remplacePage, Invitgr, SIZEAV, SIZEGR } from './modele'
 const AppExc = require('./api').AppExc
 const api = require('./api')
@@ -19,7 +23,7 @@ export class Operation {
     this.idb = idb === OUI ? true : (idb === NON ? false : (data.mode === 1 || data.mode === 3))
     this.cancelToken = null
     this.break = false
-    store().commit('db/majopencours', this)
+    store().commit('ui/majopencours', this)
   }
 
   EX1 (e) {
@@ -42,12 +46,12 @@ export class Operation {
 
   fin (e) {
     if (this instanceof OperationUI) data.opUI = null; else data.opWS = null
-    store().commit('db/majopencours', false)
+    store().commit('ui/majopencours', null)
     if (!e) {
-      if (this instanceof OperationUI) affichermessage('Opération ' + this.nom + 'terminée avec succès')
+      if (this instanceof OperationUI) affichermessage('Opération "' + this.nom + '" terminée avec succès')
       return
     }
-    if (this instanceof OperationUI) affichermessage('Opération ' + this.nom + 'interrompue sur erreur', true)
+    if (this instanceof OperationUI) affichermessage('Opération "' + this.nom + '" interrompue sur erreur', true)
     if (e instanceof AppExc) {
       if (e.code === api.E_DB) {
         data.setErDB(e, true) // affiché (éventuelement) ici
@@ -79,47 +83,47 @@ export class Operation {
 
     store().commit('ui/razidblec')
     this.BRK()
-    t = true; ({ objs, vol } = await data.db.getAvatars())
+    t = true; ({ objs, vol } = await getAvatars())
     store().commit('db/setAvatars', objs)
     store().commit('ui/majidblec', { table: 'avatar', st: t, vol: vol, nbl: objs.length })
 
     this.BRK()
-    t = true; ({ objs, vol } = await data.db.getInvitgrs())
+    t = true; ({ objs, vol } = await getInvitgrs())
     store().commit('db/setInvitgrs', objs)
     store().commit('ui/majidblec', { table: 'invitgr', st: t, vol: vol, nbl: objs.length })
 
     this.BRK()
-    t = true; ({ objs, vol } = await data.db.getContacts())
+    t = true; ({ objs, vol } = await getContacts())
     store().commit('db/setContacts', objs)
     store().commit('ui/majidblec', { table: 'invcontactitgr', st: t, vol: vol, nbl: objs.length })
 
     this.BRK()
-    t = true; ({ objs, vol } = await data.db.getInvitcts())
+    t = true; ({ objs, vol } = await getInvitcts())
     store().commit('db/setInvitcts', objs)
     store().commit('ui/majidblec', { table: 'invitct', st: t, vol: vol, nbl: objs.length })
 
     this.BRK()
-    t = true; ({ objs, vol } = await data.db.getParrains())
+    t = true; ({ objs, vol } = await getParrains())
     store().commit('db/setParrains', objs)
     store().commit('ui/majidblec', { table: 'parrain', st: t, vol: vol, nbl: objs.length })
 
     this.BRK()
-    t = true; ({ objs, vol } = await data.db.getRencontres())
+    t = true; ({ objs, vol } = await getRencontres())
     store().commit('db/setRencontres', objs)
     store().commit('ui/majidblec', { table: 'rencontre', st: t, vol: vol, nbl: objs.length })
 
-    data.testBREAK()
-    t = true; ({ objs, vol } = await data.db.getGroupes())
+    this.BRK()
+    t = true; ({ objs, vol } = await getGroupes())
     store().commit('db/setGroupes', objs)
     store().commit('ui/majidblec', { table: 'groupe', st: t, vol: vol, nbl: objs.length })
 
     this.BRK()
-    t = true; ({ objs, vol } = await data.db.getMembres())
+    t = true; ({ objs, vol } = await getMembres())
     store().commit('db/setMembres', objs)
     store().commit('ui/majidblec', { table: 'membre', st: t, vol: vol, nbl: objs.length })
 
     this.BRK()
-    t = true; ({ objs, vol } = await data.db.getSecrets())
+    t = true; ({ objs, vol } = await getSecrets())
     store().commit('db/setSecrets', objs)
     store().commit('ui/majidblec', { table: 'secret', st: t, vol: vol, nbl: objs.length })
 
@@ -128,7 +132,7 @@ export class Operation {
     const avInutiles = new Set()
     const avUtiles = new Set(data.setAvatars)
     for (const id of data.refsAv) if (!avUtiles.has(id)) avInutiles.add(id)
-    nbp = await data.db.purgeAvatars(avInutiles)
+    nbp = await purgeAvatars(avInutiles)
     store().commit('db/purgeAvatars', avUtiles)
     store().commit('ui/majidblec', { table: 'purgeav', st: t, vol: 0, nbl: nbp })
 
@@ -137,13 +141,13 @@ export class Operation {
     const grInutiles = new Set()
     const grUtiles = new Set(data.setGroupes)
     for (const id of data.refsGr) if (!grUtiles.has(id)) grInutiles.add(id)
-    nbp = await data.db.purgeGroupes(grInutiles)
+    nbp = await purgeGroupes(grInutiles)
     store().commit('db/purgeGroupes', grUtiles)
     store().commit('ui/majidblec', { table: 'purgegr', st: t, vol: 0, nbl: nbp })
 
     // chargement des CVs
     this.BRK()
-    t = true; ({ objs, vol } = await data.db.getCvs())
+    t = true; ({ objs, vol } = await getCvs())
     store().commit('db/setCvs', objs)
     store().commit('ui/majidblec', { table: 'cv', st: t, vol: vol, nbl: objs.length })
 
@@ -152,7 +156,7 @@ export class Operation {
     const cvInutiles = new Set()
     const cvUtiles = new Set(data.setCvUtiles)
     for (const id of data.enregCvs) if (!cvUtiles.has(id)) cvInutiles.add(id)
-    nbp = await data.db.purgeCvs(cvInutiles)
+    nbp = await purgeCvs(cvInutiles)
     store().commit('db/purgeCvs', cvUtiles)
     store().commit('ui/majidblec', { table: 'purgecv', st: t, vol: 0, nbl: nbp })
 
@@ -200,7 +204,7 @@ export class OperationWS extends Operation {
 
 export class ProcessQueue extends OperationWS {
   constructor () {
-    super('"Traitement des notifications de synchronisation"')
+    super('Traitement des notifications de synchronisation')
   }
 
   async run (q) {
@@ -243,7 +247,7 @@ Retour:
 */
 export class CreationCompte extends OperationUI {
   constructor () {
-    super('"Création de compte"', OUI, SELONMODE)
+    super('Création de compte', OUI, SELONMODE)
     this.opsync = true
   }
 
@@ -286,7 +290,7 @@ export class CreationCompte extends OperationUI {
       // création de la base IDB et chargement des rows compte et avatar
       if (data.db) {
         this.BRK()
-        await data.db.commitRows([compte, avatar, cv])
+        await commitRows([compte, avatar, cv])
       }
       data.statut = 2
       this.fin()
@@ -300,7 +304,7 @@ export class CreationCompte extends OperationUI {
 /* connexionCompteAvion ****************************************************/
 export class ConnexionCompteAvion extends OperationUI {
   constructor () {
-    super('"Connexion à un compte en mode avion"', NON, OUI)
+    super('Connexion à un compte en mode avion', NON, OUI)
     this.opsync = true
   }
 
@@ -313,7 +317,7 @@ export class ConnexionCompteAvion extends OperationUI {
       await data.connexion()
       this.BRK()
 
-      const compte = await data.db.getCompte()
+      const compte = await getCompte()
       if (!compte || compte.pcbh !== data.ps.pcbh) {
         throw new AppExc(api.F_BRO, 'Compte non enregistré localement : aucune session synchronisée ne s\'est préalablement exécutée sur ce poste avec cette phrase secrète. Erreur dans la saisie de la ligne 2 de la phrase ?')
       }
@@ -333,7 +337,7 @@ export class ConnexionCompteAvion extends OperationUI {
 /* Connexion à un compte par sa phrase secrète ********************************/
 export class ConnexionCompte extends OperationUI {
   constructor () {
-    super('"Connexion à un compte"', OUI, SELONMODE)
+    super('Connexion à un compte', OUI, SELONMODE)
     this.opsync = true
   }
 

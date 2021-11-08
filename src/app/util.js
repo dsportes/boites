@@ -21,9 +21,11 @@ export function setstore (store) {
   $store = store
 }
 
-export function cfg () { return $cfg }
+export function store () {
+  return $store
+}
 
-export function store () { return $store }
+export function cfg () { return $cfg }
 
 export function gp () { return globalProperties }
 
@@ -115,7 +117,6 @@ export async function post (op, module, fonction, args) {
     typeResp = at && at.length > 1 ? at[1] : null
     const data = type ? type.toBuffer(args).buffer : Buffer.from(JSON.stringify(args))
     const u = $cfg.urlserveur + '/' + $store.state.ui.org + '/' + module + '/' + fonction
-    $store.commit('ui/debutreq')
     if (op) op.cancelToken = axios.CancelToken.source()
     const par = { method: 'post', url: u, data: data, headers: headers, responseType: 'arraybuffer' }
     if (op) par.cancelToken = op.cancelToken.token
@@ -132,14 +133,17 @@ export async function post (op, module, fonction, args) {
     let appexc
     if (status >= 400 && status <= 402) {
       try {
-        appexc = JSON.parse(Buffer.from(e.response.data).toString())
+        const x = JSON.parse(Buffer.from(e.response.data).toString())
+        appexc = new AppExc(x.code, x.message)
       } catch (e2) {
         throw new AppExc(api.E_BRO, 'Retour de la requête mal formé : JSON parse. ' + (op ? 'Opération: ' + op.nom : '') + ' Message: ' + e.message)
       }
-      if (status === 400) return appexc // 400 : anomalie fonctionnelle à traiter par l'application (pas en exception)
-      // 401 : anomalie fonctionnelle à afficher et traiter comme exception ou 402 : inattendue
-      throw new AppExc(status === 401 ? api.F_SRV : api.E_SRV, e.message, e.stack)
-    } else throw new AppExc(api.E_SRV, e.message, e.stack)
+      // 400 : anomalie fonctionnelle à traiter par l'application (pas en exception)
+      if (status === 400) return appexc
+      // 401 : anomalie fonctionnelle à afficher et traiter comme exception
+      // 402 : inattendue, récuprée sur le serveur
+      throw appexc
+    } else throw new AppExc(api.E_SRV, e.message, e.stack) // inattendue, pas mise en forme
   }
 
   // les status HTTP non 2xx sont tombés en exception
