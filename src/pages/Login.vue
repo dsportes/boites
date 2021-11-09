@@ -46,12 +46,12 @@ export default ({
   },
 
   methods: {
-    async connecter (ps) {
+    connecter (ps) {
       if (ps) {
         if (this.$store.state.ui.mode === 3) {
-          await new ConnexionCompteAvion().run(ps)
+          new ConnexionCompteAvion().run(ps)
         } else {
-          await new ConnexionCompte().run(ps)
+          new ConnexionCompte().run(ps)
         }
       }
     }

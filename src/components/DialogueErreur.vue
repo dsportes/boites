@@ -7,15 +7,15 @@
         <q-card-section>
           <div class="msg">{{erreur.message}}</div>
         </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat label="J'ai lu" color="primary" @click="fermererreur" />
+        </q-card-actions>
         <q-card-section class="q-pt-none">
           <div v-if="erreur.stack">
             Stack <q-toggle v-model="errstack"/>
             <q-input v-if="errstack" type="textarea" autogrow v-model="erreur.stack" class="stackclass"/>
           </div>
         </q-card-section>
-        <q-card-actions align="right">
-          <q-btn flat label="J'ai lu" color="primary" @click="fermererreur" />
-        </q-card-actions>
       </q-card>
     </q-dialog>
 </template>
@@ -51,7 +51,7 @@ export default ({
     exports.F_SRV = 2 // Erreur fonctionnelle trappée sur le serveur transmise en résultat
     */
     const labels = {
-      'x-1': 'Interruption volontaire (ppui sur le bouton rouge',
+      'x-1': 'Interruption volontaire (appui sur le bouton rouge)',
       'x-2': 'Erreur d`accès au serveur, réseau indisponible ?',
       'x-3': 'Erreur d\'accès à la base locale',
       'x-4': 'Erreur inattendue survenue dans l\'exécution sur le poste',

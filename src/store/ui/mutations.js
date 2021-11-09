@@ -5,7 +5,7 @@ let nummessage = 1
 export function razdialogues (state) {
   razdiagnostic(state)
   razmessage(state)
-  razerreur(state)
+  majconfirmerdrc(state, false)
   majopencours(state, null)
   majdialoguecrypto(state, false)
   majdialoguetestping(state, false)
@@ -102,6 +102,10 @@ export function majmodeinitial (state, val) {
 
 export function majdialoguecrypto (state, val) {
   state.dialoguecrypto = val
+}
+
+export function majconfirmerdrc (state, val) {
+  state.confirmerdrc = val
 }
 
 export function majdialoguecreationcompte (state, val) {

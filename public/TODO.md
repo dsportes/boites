@@ -1,4 +1,4 @@
-Fin des opérations opsync : revoir la sortie en exception pour le statut (seules les 3 exc std permettent d'avoir une dégradation du mode ?)
+PING / PONG à gérer
 
 Gestion globale de l'état de synchro (vcv, dhsyncok ...) et du suivi par la page Synchro
 

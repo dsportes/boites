@@ -10,7 +10,7 @@ const AppExc = require('./api').AppExc
 const types = require('./api').types
 
 import { useRouter, useRoute } from 'vue-router'
-import { ProcessQueue } from './operations'
+import { ProcessQueue, ConnexionCompteAvion, ConnexionCompte } from './operations'
 
 let bootfait = false
 let $router
@@ -154,7 +154,8 @@ export const MODES = ['inconnu', 'synchronisé', 'incognito', 'avion', 'visio']
 class Session {
   constructor () {
     this.raz(true)
-    this.ps = null // phrase secrète d'authentification saisie
+    this.nbreconnexion = 0
+    this.ps = null
   }
 
   /* statut de la session
@@ -187,37 +188,44 @@ class Session {
 
   set sessionId (val) { store().commit('ui/majsessionid', val) }
 
-  async connexion (reconnexion) {
-    store().commit('db/raz')
+  async connexion (sansidb) { // Depuis l'opération de connexion
     this.raz()
-    this.sessionId = crypt.id2s(crypt.random(6))
-    if (!reconnexion) {
+    store().commit('db/raz')
+    if (this.nbreconnexion === 0) {
       this.modeInitial = this.mode
-    } else {
-      this.mode = this.modeInitial
     }
-
-    if (this.mode === 1 || this.mode === 3) await openIDB()
-
+    this.sessionId = crypt.id2s(crypt.random(6))
+    if (!sansidb && (this.mode === 1 || this.mode === 3)) await openIDB()
     if (this.mode === 1 || this.mode === 2) await openWS()
-
-    console.log(reconnexion ? 'Ré' : 'O' + 'uverture de session : ' + this.sessionId)
+    console.log('Ouverture de session : ' + this.sessionId)
     remplacePage('Synchro')
   }
 
-  deconnexion () {
+  deconnexion (avantreconnexion) { // Depuis un bouton
     store().commit('db/raz')
     store().commit('ui/deconnexion')
     if (this.ws) this.ws.close()
     if (this.db) this.db.close()
     this.raz()
-    this.ps = null
     this.statut = 0
-    remplacePage(store().state.ui.org ? 'Login' : 'Org')
+    if (!avantreconnexion) {
+      this.nbreconnexion = 0
+      this.ps = null
+      remplacePage(store().state.ui.org ? 'Login' : 'Org')
+    } else {
+      this.nbreconnexion++
+    }
   }
 
-  async reconnexion () {
-    await this.connexion(true)
+  reconnexion () { // Depuis un bouton
+    const ps = data.ps
+    this.deconnexion(true)
+    data.mode = data.modeInitial
+    if (data.mode === 3) {
+      new ConnexionCompteAvion().run(ps)
+    } else {
+      new ConnexionCompte().run(ps)
+    }
   }
 
   degraderMode () {
@@ -305,13 +313,13 @@ class Session {
     }
   }
 
-  raz (init) {
+  raz (init) { // init : l'objet data (Session) est créé à un moment où le store vuex n'est pas prêt
     this.db = null // IDB quand elle est ouverte
     this.nombase = null
     this.erDB = 0 // 0:OK 1:IDB en erreur NON traitée 2:IDB en erreur traitée
     this.exIDB = null // exception sur IDB
     this.ws = null // WebSocket quand il est ouvert
-    this.erWS = false // 0:OK 1:WS en erreur NON traitée 2:WS en erreur traitée
+    this.erWS = 0 // 0:OK 1:WS en erreur NON traitée 2:WS en erreur traitée
     this.exNET = null // exception sur NET
 
     if (!init) {
@@ -349,22 +357,24 @@ class Session {
     this.idbsetCvsUtiles = null // Set des ids des avatars chargés par IDB
   }
 
-  onsync (msgdata) {
+  async onsync (msgdata) {
+    if (data.sessionId == null || data.erWS != null) return
     const syncList = types.fromBuffer(msgdata)
     if (cfg().debug) {
       console.log('Liste sync reçue: ' + dhtToString(syncList.dh) +
         ' status:' + syncList.status + ' sessionId:' + syncList.sessionId + ' nb rowItems:' + syncList.rowItems.length)
     }
-    if (syncList.sessionId !== this.sessionId || this.erWS != null) return
+    if (syncList.sessionId !== data.sessionId) return
     data.syncqueue.push(syncList)
-    if (this.statut === 2 && this.opWS == null) {
-      // à traiter maintenant, toute la queue (pas seulement le dernier arrivé)
-      const q = data.syncqueue
-      data.syncqueue = []
-      try {
-        const op = new ProcessQueue()
-        op.run(q) // pas de await : on n'attend pas le résult et this.opWS protège d'une exécution en cours
-      } catch (e) { }
+    if (data.statut === 2 && data.opWS == null) {
+      setTimeout(async () => {
+        while (data.sessionId != null && data.syncqueue.length) {
+          const q = data.syncqueue
+          data.syncqueue = []
+          const op = new ProcessQueue()
+          await op.run(q) // ne sort jamais en exception
+        }
+      }, 1)
     }
   }
 

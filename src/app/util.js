@@ -151,14 +151,14 @@ export async function post (op, module, fonction, args) {
     try {
       return typeResp.fromBuffer(buf)
     } catch (e) { // Résultat mal formé
-      throw new AppExc(api.E_BRO, 'Retour de la requête mal formé : désérialisation de la réponse. ' + (op ? 'Opération: ' + op.nom : '') + ' Message: ' + e.message)
+      throw new AppExc(api.E_BRO, 'Retour de la requête mal formé : désérialisation de la réponse. ' + (op ? 'Opération: ' + op.nom : ''), e.message)
     }
   }
   // sérialisé en JSON
   try {
     return JSON.parse(buf.toString())
   } catch (e) { // Résultat mal formé
-    throw new AppExc(api.E_BRO, 'Retour de la requête mal formé : JSON parse. ' + (op ? 'Opération: ' + op.nom : '') + ' Message: ' + e.message)
+    throw new AppExc(api.E_BRO, 'Retour de la requête mal formé : JSON parse. ' + (op ? 'Opération: ' + op.nom : ''), e.message)
   }
 }
 

@@ -3,7 +3,7 @@
       <q-card class="q-ma-xs moyennelargeur">
         <q-card-section>
           <div class="titre-2">Les modes inconnu, synchronisé, incognito, avion, visio</div>
-          <div v-if="sessionId != null" class="titre-3">{{'Une session est en cours (#' + sessionId + ')'}})</div>
+          <div v-if="sessionId != null" class="titre-3">{{'Une session est en cours (#' + sessionId + ')'}}</div>
           <div v-if="sessionId != null && mode !== 0 && mode !== modeInitial" class="titre-5 bg-warning">{{msgdegrade()}}</div>
         </q-card-section>
 
@@ -84,7 +84,7 @@ export default ({
 
   setup () {
     const $store = useStore()
-    const sessionId = computed(() => $store.state.ui.sessionId)
+    const sessionId = computed(() => $store.state.ui.sessionid)
     const mode = computed(() => $store.state.ui.mode)
     const modeInitial = computed(() => $store.state.ui.modeinitial)
     const infomode = computed({
@@ -93,7 +93,7 @@ export default ({
     })
     function msgdegrade () {
       return 'Un incident (réseau, accès à la base locale, interruption d\'une opération de connexion) a conduit à dégrader le mode de "' +
-      MODES[this.modeInitial] + '" à "' + MODES[this.mode] + '". Possibilité d\'actions : conserver le mode actuel, se reconnecter, se déconnecter.'
+      MODES[data.modeInitial] + '" à "' + MODES[data.mode] + '". Possibilité d\'actions : conserver le mode actuel, se reconnecter, se déconnecter.'
     }
 
     return {

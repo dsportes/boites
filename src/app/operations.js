@@ -2,7 +2,7 @@ import { store, post, affichermessage, cfg, sleep } from './util'
 import {
   deleteIDB, AVATAR, GROUPE, idbSidCompte, commitRows, getCompte, getAvatars, getContacts, getCvs,
   getGroupes, getInvitcts, getInvitgrs, getMembres, getParrains, getRencontres, getSecrets,
-  purgeAvatars, purgeCvs, purgeGroupes
+  purgeAvatars, purgeCvs, purgeGroupes, openIDB, enregLScompte
 } from './db.js'
 import { NomAvatar, Compte, Avatar, data, Cv, rowItemsToRows, remplacePage, Invitgr, SIZEAV, SIZEGR } from './modele'
 const AppExc = require('./api').AppExc
@@ -23,17 +23,17 @@ export class Operation {
     this.idb = idb === OUI ? true : (idb === NON ? false : (data.mode === 1 || data.mode === 3))
     this.cancelToken = null
     this.break = false
-    store().commit('ui/majopencours', this)
+    this.sessionId = data.sessionId
   }
 
   EX1 (e) {
-    return new AppExc(api.E_BRO, 'Exception inattendue : ' + e.message, e.stack)
+    return new AppExc(api.E_BRO, 'Exception inattendue', e.message + '\n' + e.stack)
   }
 
   BRK () {
     if (data.exIDB && this.idb) throw data.exIDB
     if (data.exNET && this.net) throw data.exNET
-    if (this.break) throw EXBRK
+    if (this.break || (!this.opsync && data.sessionId !== this.sessionId)) throw EXBRK
   }
 
   stop () {
@@ -42,30 +42,6 @@ export class Operation {
       this.cancelToken = null
     }
     this.break = true
-  }
-
-  fin (e) {
-    if (this instanceof OperationUI) data.opUI = null; else data.opWS = null
-    store().commit('ui/majopencours', null)
-    if (!e) {
-      if (this instanceof OperationUI) affichermessage('Opération "' + this.nom + '" terminée avec succès')
-      return
-    }
-    if (this instanceof OperationUI) affichermessage('Opération "' + this.nom + '" interrompue sur erreur', true)
-    if (e instanceof AppExc) {
-      if (e.code === api.E_DB) {
-        data.setErDB(e, true) // affiché (éventuelement) ici
-        return
-      }
-      if (e.code === api.E_WS) {
-        data.setErWS(e, true) // affiché (éventuelement) ici
-        return
-      }
-    } else { // toute exception inattendu (pas en AppExc)
-      e = new AppExc(api.E_BRO, e.message, e.stack)
-    }
-    store().commit('ui/majerreur', e) // affichage de l'erreur
-    data.degraderMode()
   }
 
   /* Chargement de la totalité de la base en mémoire :
@@ -192,6 +168,31 @@ export class OperationUI extends Operation {
   constructor (nomop, net, idb) {
     super(nomop, net, idb)
     data.opUI = this
+    store().commit('ui/majopencours', this)
+  }
+
+  fin (e) {
+    data.opUI = null
+    store().commit('ui/majopencours', null)
+    if (!e) {
+      affichermessage('Opération "' + this.nom + '" terminée avec succès')
+      return
+    }
+    affichermessage('Opération "' + this.nom + '" interrompue sur erreur', true)
+    if (e instanceof AppExc) {
+      if (e.code === api.E_DB) {
+        data.setErDB(e, true) // affiché (éventuellement) ici
+        return
+      }
+      if (e.code === api.E_WS) {
+        data.setErWS(e, true) // affiché (éventuellement) ici
+        return
+      }
+    } else { // toute exception inattendue (pas en AppExc)
+      e = new AppExc(api.E_BRO, e.message, e.stack)
+    }
+    store().commit('ui/majerreur', e) // affichage de l'erreur
+    data.degraderMode()
   }
 }
 
@@ -199,6 +200,27 @@ export class OperationWS extends Operation {
   constructor (nomop) {
     super(nomop, OUI, SELONMODE)
     data.opWS = this
+  }
+
+  fin (e) {
+    data.opWS = null
+    if (!e) return
+    let aff = false
+    if (e instanceof AppExc) {
+      if (e.code === api.E_DB) {
+        data.setErDB(e, true) // affiché (éventuelement) ici
+        aff = true
+      }
+      if (e.code === api.E_WS) {
+        data.setErWS(e, true) // affiché (éventuelement) ici
+        aff = true
+      }
+      if (e === EXBRK) aff = true
+    } else { // toute exception inattendue (pas en AppExc)
+      e = new AppExc(api.E_BRO, e.message, e.stack)
+    }
+    if (!aff) store().commit('ui/majerreur', e) // affichage de l'erreur
+    data.degraderMode()
   }
 }
 
@@ -253,19 +275,19 @@ export class CreationCompte extends OperationUI {
 
   async run (mdp, ps, nom, quotas) {
     try {
+      // eslint-disable-next-line no-unused-vars
+      const d = data
       data.ps = ps
-      if (data.mode === 1) {
-        deleteIDB()
-      }
-      await data.connexion()
+
+      await data.connexion(true) // On force A NE PAS OUVRIR IDB (compte pas encore connu)
 
       this.BRK()
       const kp = await crypt.genKeyPair()
       const nomAvatar = new NomAvatar(nom, true) // nouveau
-      let compte = new Compte().nouveau(nomAvatar, kp.privateKey)
+      const compte = new Compte().nouveau(nomAvatar, kp.privateKey)
       const rowCompte = compte.toRow
       store().commit('db/setCompte', compte)
-      let avatar = new Avatar().nouveau(nomAvatar)
+      const avatar = new Avatar().nouveau(nomAvatar)
       const rowAvatar = avatar.toRow
 
       const args = { sessionId: data.sessionId, mdp64: mdp.mdp64, q1: quotas.q1, q2: quotas.q2, qm1: quotas.qm1, qm2: quotas.qm2, clePub: kp.publicKey, rowCompte, rowAvatar }
@@ -276,27 +298,38 @@ export class CreationCompte extends OperationUI {
       Le compte vient d'être créé et est déjà dans le modèle (clek enregistrée)
       On peut désérialiser la liste d'items (compte et avatar)
       */
+      let compte2, avatar2
       const rows = rowItemsToRows(ret.rowItems)
       for (const t in rows) {
-        if (t === 'compte') compte = rows[t][0]
-        if (t === 'avatar') avatar = rows[t][0]
+        if (t === 'compte') compte2 = rows[t][0]
+        if (t === 'avatar') avatar2 = rows[t][0]
       }
-      store().commit('db/setCompte', compte)
-      store().commit('db/setAvatars', [avatar])
+      store().commit('db/setCompte', compte2)
+      store().commit('db/setAvatars', [avatar2])
 
-      const cv = new Cv().fromAvatar(avatar)
+      const cv = new Cv().fromAvatar(avatar2)
       store().commit('db/setCvs', [cv])
 
       // création de la base IDB et chargement des rows compte et avatar
-      if (data.db) {
+      if (data.mode === 1) { // synchronisé : il faut ouvrir IDB
         this.BRK()
-        await commitRows([compte, avatar, cv])
+        enregLScompte(compte2.sid)
+        await deleteIDB()
+        try {
+          await openIDB()
+        } catch (e) {
+          await deleteIDB(true)
+          throw e
+        }
+        await commitRows([compte2, avatar2, cv])
       }
+
       data.statut = 2
       this.fin()
       remplacePage('Compte')
     } catch (e) {
       this.fin(e)
+      if (data.statut === 0) data.deconnexion()
     }
   }
 }
@@ -330,6 +363,7 @@ export class ConnexionCompteAvion extends OperationUI {
       remplacePage('Compte')
     } catch (e) {
       this.fin(e)
+      if (data.statut === 0) data.deconnexion()
     }
   }
 }
@@ -477,13 +511,24 @@ export class ConnexionCompte extends OperationUI {
         }
       }
 
-      // TODO
+      // TODO gérer les CVs ...
+
+      // Traiter les notifications éventuellement arrivées
+      while (data.syncqueue.length) {
+        const q = data.syncqueue
+        data.syncqueue = []
+        const op = new ProcessQueue()
+        await op.run(q) // ne sort jamais en exception
+      }
+
+      // TODO : enregistrer l'état de synchro
 
       data.statut = 2
       this.fin()
       remplacePage('Compte')
     } catch (e) {
       this.fin(e)
+      if (data.statut === 0) data.deconnexion()
     }
   }
 }

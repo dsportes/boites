@@ -14,8 +14,8 @@
           <span v-if="org != null && compte != null" class="labeltitre q-px-sm">{{ compte.titre }}</span>
         </q-toolbar-title>
 
-        <q-btn v-if="org != null && sessionId != null" dense size="md" color="warning" icon="logout" @click="deconnexion">
-          <q-tooltip>Déconnexion du compte</q-tooltip>
+        <q-btn v-if="org != null && sessionId != null" dense size="md" color="warning" icon="logout" @click="confirmerdrc = true">
+          <q-tooltip>Déconnexion / Reconnexion du compte</q-tooltip>
         </q-btn>
 
         <div class="cursor-pointer q-px-xs" @click="infoidb = true">
@@ -79,6 +79,23 @@
       </router-view>
     </q-page-container>
 
+    <q-dialog v-model="confirmerdrc">
+      <q-card  class="q-ma-xs moyennelargeur">
+        <q-card-section>
+            <div class="titre-2">Déconnexion / <span v-if="sessionId != null && mode !== 0 && mode !== modeInitial">Reconnexion /</span>Continuation</div>
+            <div v-if="sessionId != null && mode !== 0 && mode !== modeInitial" class="titre-5 bg-warning">{{msgdegrade()}}</div>
+        </q-card-section>
+        <q-card-actions  v-if="sessionId != null" align="center">
+          <q-btn class="q-ma-xs" dense size="md" color="warning"
+            icon="logout" label="Déconnexion du compte" @click="deconnexion" v-close-popup/>
+          <q-btn class="q-ma-xs" v-if="sessionId != null && mode !== 0 && mode !== modeInitial" dense size="md" color="warning"
+            icon="logout" label="Tentative de reconnexion au compte" @click="reconnexion" v-close-popup/>
+          <q-btn class="q-ma-xs" dense size="md" color="primary"
+            label="J'ai lu, la session continue" v-close-popup/>
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
     <q-dialog v-model="messagevisible" seamless position="bottom">
       <div :class="'q-pa-sm ' + ($store.state.ui.message.important ? 'msgimp' : 'msgstd')"  @click="$store.commit('ui/razmessage')">
         {{ $store.state.ui.message.texte }}
@@ -135,7 +152,7 @@
 import { useQuasar } from 'quasar'
 import { computed } from 'vue'
 import { useStore } from 'vuex'
-import { remplacePage, onBoot, data } from '../app/modele'
+import { remplacePage, onBoot, data, MODES } from '../app/modele'
 import DialogueCreationCompte from 'components/DialogueCreationCompte.vue'
 import DialogueInfoMode from 'components/DialogueInfoMode.vue'
 import DialogueInfoReseau from 'components/DialogueInfoReseau.vue'
@@ -214,6 +231,10 @@ export default {
       get: () => $store.state.ui.infoidb,
       set: (val) => $store.commit('ui/majinfoidb', val)
     })
+    const confirmerdrc = computed({
+      get: () => $store.state.ui.confirmerdrc,
+      set: (val) => $store.commit('ui/majconfirmerdrc', val)
+    })
     const dialoguetestping = computed({
       get: () => $store.state.ui.dialoguetestping,
       set: (val) => $store.commit('ui/majdialoguetestping', val)
@@ -238,9 +259,15 @@ export default {
     const statutidb = computed(() => $store.state.ui.statutidb)
     const sessionId = computed(() => $store.state.ui.sessionid)
 
+    function msgdegrade () {
+      return 'Un incident (réseau, accès à la base locale, interruption d\'une opération de connexion) a conduit à dégrader le mode de "' +
+      MODES[data.modeInitial] + '" à "' + MODES[data.mode] + '". Possibilité d\'actions : conserver le mode actuel, se reconnecter, se déconnecter.'
+    }
+
     return {
       page,
       menuouvert,
+      confirmerdrc,
       infomode,
       inforeseau,
       infoidb,
@@ -261,7 +288,8 @@ export default {
       auneop,
       statutnet,
       statutidb,
-      sessionId
+      sessionId,
+      msgdegrade
     }
   }
 }

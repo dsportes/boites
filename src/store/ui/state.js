@@ -3,7 +3,7 @@ export default function () {
   return {
     erreur: null,
     derniereerreur: null,
-    statutidb: 0,
+    statutidb: 0, // 0:inconnu 1:idb accessible 2:idb inaccessible (a rencontré une erreur)
     statutnet: 0,
 
     dialoguecrypto: false,
@@ -12,6 +12,7 @@ export default function () {
     dialoguetestping: false,
     diagnostic: null,
     menuouvert: false,
+    confirmerdrc: false,
 
     infomode: false,
     inforeseau: false,

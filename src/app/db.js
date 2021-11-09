@@ -35,11 +35,11 @@ const TABLES = []
 for (const x in STORES) TABLES.push(x)
 
 function EX1 (e) {
-  return new AppExc(api.E_DB, 'Ouverture de la base locale impossible : ' + e.message)
+  return new AppExc(api.E_DB, 'Ouverture de la base locale impossible', e.message + (e.stack ? '\n' + e.stack : ''))
 }
 
 function EX2 (e) {
-  return new AppExc(api.E_DB, 'Erreur en lecture / écriture sur la base locale : ' + e.message, e.stack)
+  return new AppExc(api.E_DB, 'Erreur en lecture / écriture sur la base locale', e.message + '\n' + e.stack)
 }
 
 function go () {
@@ -47,14 +47,23 @@ function go () {
 }
 
 export function idbSidCompte () {
-  return localStorage.getItem(store().state.ui.org + '-' + data.ps.dpbh)
+  const k = store().state.ui.org + '-' + data.ps.dpbh
+  return localStorage.getItem(k)
+}
+
+export function enregLScompte (sid) {
+  const k = store().state.ui.org + '-' + data.ps.dpbh
+  localStorage.setItem(k, sid)
 }
 
 export function nombase () {
-  return store().state.ui.org + '-' + idbSidCompte()
+  const idc = idbSidCompte()
+  return idc ? store().state.ui.org + '-' + idc : null
 }
 
 export async function openIDB () {
+  // eslint-disable-next-line no-unused-vars
+  const d = data
   if (data.db) return
   try {
     data.nombase = nombase()
@@ -80,7 +89,8 @@ export async function deleteIDB (lsKey) {
     if (lsKey) {
       localStorage.removeItem(store().state.ui.org + '-' + data.ps.dpbh)
     }
-    await Dexie.delete(nombase())
+    const nb = nombase()
+    if (nb) await Dexie.delete(nb)
   } catch (e) {
     console.log(e.toString())
   }
