@@ -4,13 +4,12 @@ const base64url = require('base64url')
 const rowTypes = require('./rowTypes')
 import { openIDB } from './db'
 import { openWS } from './ws'
-import { cfg, store, dhtToString, affichermessage } from './util'
+import { cfg, store, affichermessage } from './util'
 const api = require('./api')
 const AppExc = require('./api').AppExc
-const types = require('./api').types
 
 import { useRouter, useRoute } from 'vue-router'
-import { ProcessQueue, ConnexionCompteAvion, ConnexionCompte } from './operations'
+import { ConnexionCompteAvion, ConnexionCompte } from './operations'
 
 let bootfait = false
 let $router
@@ -355,27 +354,6 @@ class Session {
     this.idbSetAvatars = null // Set des ids des avatars chargés par IDB
     this.idbSetGroupes = null // Set des ids des avatars chargés par IDB
     this.idbsetCvsUtiles = null // Set des ids des avatars chargés par IDB
-  }
-
-  async onsync (msgdata) {
-    if (data.sessionId == null || data.erWS != null) return
-    const syncList = types.fromBuffer(msgdata)
-    if (cfg().debug) {
-      console.log('Liste sync reçue: ' + dhtToString(syncList.dh) +
-        ' status:' + syncList.status + ' sessionId:' + syncList.sessionId + ' nb rowItems:' + syncList.rowItems.length)
-    }
-    if (syncList.sessionId !== data.sessionId) return
-    data.syncqueue.push(syncList)
-    if (data.statut === 2 && data.opWS == null) {
-      setTimeout(async () => {
-        while (data.sessionId != null && data.syncqueue.length) {
-          const q = data.syncqueue
-          data.syncqueue = []
-          const op = new ProcessQueue()
-          await op.run(q) // ne sort jamais en exception
-        }
-      }, 1)
-    }
   }
 
   setVerAv (sid, idt, v) { // idt : Index de la table

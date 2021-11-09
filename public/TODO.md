@@ -1,4 +1,4 @@
-PING / PONG à gérer
+PING / PONG : tester l'absence de pong par le serveur
 
 Gestion globale de l'état de synchro (vcv, dhsyncok ...) et du suivi par la page Synchro
 

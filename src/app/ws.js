@@ -1,7 +1,8 @@
 /* gestion WebSocket */
 
-import { cfg, store } from './util'
+import { cfg, store, dhtToString } from './util'
 import { data } from './modele'
+import { ProcessQueue } from './operations'
 const api = require('./api')
 const AppExc = require('./api').AppExc
 
@@ -33,9 +34,7 @@ export async function openWS () {
         data.ws = null
         if (data.to) clearTimeout(data.to)
       }
-      ws.onmessage = (m) => {
-        data.onsync(m.data)
-      }
+      ws.onmessage = onmessage
       ws.onopen = (event) => {
         try {
           ws.send(data.sessionId)
@@ -57,10 +56,44 @@ export async function openWS () {
   })
 }
 
+let pongrecu = false
+
+async function onmessage (m) {
+  // eslint-disable-next-line no-unused-vars
+  const d = data
+  const ab = await m.data.arrayBuffer()
+  const syncList = api.types.synclist.fromBuffer(Buffer.from(ab))
+  const pong = !syncList.rowItems
+  if (cfg().debug) {
+    console.log(data.sessionId)
+    console.log('Liste sync reçue: ' + dhtToString(syncList.dh) + ' sessionId:' + syncList.sessionId + (!pong ? ' nb rowItems:' + syncList.rowItems.length : ' - pong'))
+  }
+  if (syncList.sessionId !== data.sessionId) return
+
+  if (pong) {
+    pongrecu = true
+    return
+  }
+
+  data.syncqueue.push(syncList)
+  if (data.statut === 2 && data.opWS == null) {
+    setTimeout(async () => {
+      while (data.sessionId != null && data.syncqueue.length) {
+        const q = data.syncqueue
+        data.syncqueue = []
+        const op = new ProcessQueue()
+        await op.run(q) // ne sort jamais en exception
+      }
+    }, 1)
+  }
+}
+
 function heartBeat (sid) {
   data.to = setTimeout(() => {
     if (data.ws && data.sessionId === sid) {
       try {
+        if (!pongrecu) throw Error('ping / pong : pong non reçu')
+        pongrecu = false
         data.ws.send(sid)
         heartBeat(sid)
       } catch (e) {
@@ -68,5 +101,5 @@ function heartBeat (sid) {
         data.ws.close()
       }
     }
-  }, 10000)
+  }, 30000)
 }
