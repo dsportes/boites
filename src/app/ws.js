@@ -92,7 +92,9 @@ function heartBeat (sid) {
   data.to = setTimeout(() => {
     if (data.ws && data.sessionId === sid) {
       try {
-        if (!pongrecu) throw Error('ping / pong : pong non reçu')
+        if (!pongrecu) {
+          throw Error('ping / pong : pong non reçu')
+        }
         pongrecu = false
         data.ws.send(sid)
         heartBeat(sid)
@@ -101,5 +103,5 @@ function heartBeat (sid) {
         data.ws.close()
       }
     }
-  }, 30000)
+  }, api.PINGTO * 1000)
 }

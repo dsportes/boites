@@ -44,13 +44,13 @@
             On peut tenter de revenir au mode initial par une "reconnexion" (ou se déconnecter).
           </span>
         </q-card-section>
-        <q-card-actions  v-if="sessionId != null" align="left">
-          <q-btn dense size="md" color="warning"
-            icon="logout" label="Déconnexion du compte" @click="deconnexion" v-close-popup/>
-          <q-btn v-if="mode != 0 && mode != modeInitial" dense size="md" color="warning"
-            icon="logout" label="Tentative de reconnexion au compte" @click="reconnexion" v-close-popup/>
-          <q-btn v-if="mode != 0 && mode != modeInitial" dense size="md" color="primary"
-            label="Poursuivre la session dans le mode actuel" v-close-popup/>
+        <q-card-actions  v-if="sessionId != null" align="center">
+          <q-btn dense size="md" color="warning" class="q-ma-xs"
+            icon="logout" label="Déconnecter le compte" @click="deconnexion" v-close-popup/>
+          <q-btn v-if="mode != 0 && mode != modeInitial" dense size="md" color="warning" class="q-ma-xs"
+            icon="autorenew" label="Tenter de reconnecter le compte" @click="reconnexion" v-close-popup/>
+          <q-btn v-if="mode != 0 && mode != modeInitial" dense size="md" color="primary" class="q-ma-xs"
+            icon="done" label="Continuer dans le mode actuel" v-close-popup/>
         </q-card-actions>
         <q-card-actions align="right">
           <q-btn flat label="J'ai lu" color="primary" v-close-popup />

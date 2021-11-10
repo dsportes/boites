@@ -6,16 +6,6 @@ const crypt = require('./crypto')
 const api = require('./api')
 const AppExc = require('./api').AppExc
 
-const SECRET = 0
-const INVITGR = 1
-export const AVATAR = 2
-const CONTACT = 3
-const INVITCT = 4
-const RENCONTRE = 5
-const PARRAIN = 6
-export const GROUPE = 1
-const MEMBRE = 2
-
 const STORES = {
   etat: 'id',
   compte: 'id',
@@ -143,7 +133,7 @@ export async function getAvatars () {
       vol += idb.data.length
       const x = new Avatar().fromIdb(crypt.decrypter(data.clek, idb.data), idb.vs)
       r.push(x)
-      data.setVerAv(x.sidav, AVATAR, x.v)
+      data.setVerAv(x.sidav, api.AVATAR, x.v)
       this.refsAv.add(x.id)
       this.refsCv.add(x.id)
     })
@@ -162,7 +152,7 @@ export async function getInvitgrs () {
       vol += idb.data.length
       const x = new Invitgr().fromIdb(crypt.decrypter(data.clek, idb.data), idb.vs)
       r.push(x)
-      data.setVerAv(x.sidav, INVITGR, x.v)
+      data.setVerAv(x.sidav, api.INVITGR, x.v)
       this.refsAv.add(x.id)
       this.refsCv.add(x.id)
       if (x.idg) this.refsGr.add(x.idg)
@@ -182,7 +172,7 @@ export async function getInvitcts () {
       vol += idb.data.length
       const x = new Invitct().fromIdb(crypt.decrypter(data.clek, idb.data), idb.vs)
       r.push(x)
-      data.setVerAv(x.sidav, INVITCT, x.v)
+      data.setVerAv(x.sidav, api.INVITCT, x.v)
       data.refsAv.add(x.id)
       data.refsCv.add(x.id)
       if (x.nact) this.refsCv.add(x.nact.id)
@@ -202,7 +192,7 @@ export async function getContacts () {
       vol += idb.data.length
       const x = new Contact().fromIdb(crypt.decrypter(data.clek, idb.data), idb.vs)
       r.push(x)
-      data.setVerAv(x.sidav, CONTACT, x.v)
+      data.setVerAv(x.sidav, api.CONTACT, x.v)
       data.refsAv.add(x.id)
       data.refsCv.add(x.id)
       if (x.nact) data.refsCv.add(x.nact.id)
@@ -222,7 +212,7 @@ export async function getParrains () {
       vol += idb.data.length
       const x = new Parrain().fromIdb(crypt.decrypter(data.clek, idb.data), idb.vs)
       r.push(x)
-      data.setVerAv(x.sidav, PARRAIN, x.v)
+      data.setVerAv(x.sidav, api.PARRAIN, x.v)
       data.refsAv.add(x.id)
       data.refsCv.add(x.id)
     })
@@ -241,7 +231,7 @@ export async function getRencontres () {
       vol += idb.data.length
       const x = new Rencontre().fromIdb(crypt.decrypter(data.clek, idb.data), idb.vs)
       r.push(x)
-      data.setVerAv(x.sidav, RENCONTRE, x.v)
+      data.setVerAv(x.sidav, api.RENCONTRE, x.v)
       data.refsAv.add(x.id)
       data.refsCv.add(x.id)
     })
@@ -259,7 +249,7 @@ export async function getGroupes () {
     await data.db.groupe.each(idb => {
       vol += idb.data.length
       const x = new Groupe().fromIdb(crypt.decrypter(data.clek, idb.data), idb.vs)
-      data.setVerGr(x.sidgr, GROUPE, x.v)
+      data.setVerGr(x.sidgr, api.GROUPE, x.v)
       r.push(x)
       data.refsGr.add(x.id)
     })
@@ -278,7 +268,7 @@ export async function getMembres () {
       vol += idb.data.length
       const x = new Membre().fromIdb(crypt.decrypter(data.clek, idb.data), idb.vs)
       r.push(x)
-      data.setVerGr(x.sidgr, MEMBRE, x.v)
+      data.setVerGr(x.sidgr, api.MEMBRE, x.v)
       data.refsGr.add(x.id)
       if (x.na) { data.refsAv.add(x.na); data.refsCv.add(x.na) }
     })
@@ -298,9 +288,9 @@ export async function getSecrets () {
       const x = new Secret().fromIdb(crypt.decrypter(data.clek, idb.data), idb.vs)
       r.push(x)
       if (x.estAv) {
-        data.setVerAv(x.sidavgr, SECRET, x.v)
+        data.setVerAv(x.sidavgr, api.SECRET, x.v)
       } else {
-        data.setVerGr(x.sidavgr, SECRET, x.v)
+        data.setVerGr(x.sidavgr, api.SECRET, x.v)
       }
       if (x.ts === 2) data.refsGr.add(x.id)
       else { data.refsAv.add(x.id); data.refsCv.add(x.id) }

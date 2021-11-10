@@ -1,6 +1,6 @@
 import { store, post, affichermessage, cfg, sleep } from './util'
 import {
-  deleteIDB, AVATAR, GROUPE, idbSidCompte, commitRows, getCompte, getAvatars, getContacts, getCvs,
+  deleteIDB, idbSidCompte, commitRows, getCompte, getAvatars, getContacts, getCvs,
   getGroupes, getInvitcts, getInvitgrs, getMembres, getParrains, getRencontres, getSecrets,
   purgeAvatars, purgeCvs, purgeGroupes, openIDB, enregLScompte
 } from './db.js'
@@ -42,6 +42,38 @@ export class Operation {
       this.cancelToken = null
     }
     this.break = true
+  }
+}
+
+export class OperationUI extends Operation {
+  constructor (nomop, net, idb) {
+    super(nomop, net, idb)
+    data.opUI = this
+    store().commit('ui/majopencours', this)
+  }
+
+  fin (e) {
+    data.opUI = null
+    store().commit('ui/majopencours', null)
+    if (!e) {
+      affichermessage('Opération "' + this.nom + '" terminée avec succès')
+      return
+    }
+    affichermessage('Opération "' + this.nom + '" interrompue sur erreur', true)
+    if (e instanceof AppExc) {
+      if (e.code === api.E_DB) {
+        data.setErDB(e, true) // affiché (éventuellement) ici
+        return
+      }
+      if (e.code === api.E_WS) {
+        data.setErWS(e, true) // affiché (éventuellement) ici
+        return
+      }
+    } else { // toute exception inattendue (pas en AppExc)
+      e = new AppExc(api.E_BRO, e.message, e.stack)
+    }
+    store().commit('ui/majerreur', e) // affichage de l'erreur
+    data.degraderMode()
   }
 
   /* Chargement de la totalité de la base en mémoire :
@@ -161,38 +193,6 @@ export class Operation {
       }
     })
     return compte
-  }
-}
-
-export class OperationUI extends Operation {
-  constructor (nomop, net, idb) {
-    super(nomop, net, idb)
-    data.opUI = this
-    store().commit('ui/majopencours', this)
-  }
-
-  fin (e) {
-    data.opUI = null
-    store().commit('ui/majopencours', null)
-    if (!e) {
-      affichermessage('Opération "' + this.nom + '" terminée avec succès')
-      return
-    }
-    affichermessage('Opération "' + this.nom + '" interrompue sur erreur', true)
-    if (e instanceof AppExc) {
-      if (e.code === api.E_DB) {
-        data.setErDB(e, true) // affiché (éventuellement) ici
-        return
-      }
-      if (e.code === api.E_WS) {
-        data.setErWS(e, true) // affiché (éventuellement) ici
-        return
-      }
-    } else { // toute exception inattendue (pas en AppExc)
-      e = new AppExc(api.E_BRO, e.message, e.stack)
-    }
-    store().commit('ui/majerreur', e) // affichage de l'erreur
-    data.degraderMode()
   }
 }
 
@@ -377,6 +377,9 @@ export class ConnexionCompte extends OperationUI {
 
   async run (ps) {
     try {
+      // eslint-disable-next-line no-unused-vars
+      const d = data
+
       data.ps = ps
       await data.connexion()
       this.BRK()
@@ -386,6 +389,7 @@ export class ConnexionCompte extends OperationUI {
       store().commit('db/setCompte', compte)
 
       if (data.db) {
+        enregLScompte(compte.sid) // La phrase secrète a pu changer : celle du serveur est installée
         await data.db.commitRows([compte])
         this.BRK()
         await data.db.chargementIdb()
@@ -404,7 +408,7 @@ export class ConnexionCompte extends OperationUI {
         const compte2 = await this.lectureCompte()
         if (compte2.v > compte.v) {
           compte = compte2
-          store().commit('db/setCompte', compte)
+          store().commit('db/setCompte', compte2)
           const avInutiles = new Set()
           const avUtiles = data.setAvatars
           for (const id of data.idbSetAvatars) if (!avUtiles.has(id)) avInutiles.add(id)
@@ -426,7 +430,7 @@ export class ConnexionCompte extends OperationUI {
         // créer la liste des versions chargées pour les tables des avatars, cad 0 pour toutes
         // cette liste a été créée par chargementIDB dans le mode synchro, mais pas en mode incognito
         data.idbSetAvatars.forEach((id) => {
-          data.setVerAv(crypt.id2s(id), AVATAR, 0)
+          data.setVerAv(crypt.id2s(id), api.AVATAR, 0)
         })
       }
 
@@ -438,7 +442,7 @@ export class ConnexionCompte extends OperationUI {
       // pour obtenir la liste des groupes accédés
       const lvav = {}
       data.verAv.forEach((value, key) => {
-        lvav[key] = value[AVATAR]
+        lvav[key] = value[api.AVATAR]
       })
       let ret = await post(this, 'm1', 'syncInvitgr', { sessionId: data.sessionId, lvav })
       if (data.dh < ret.dh) data.dh = ret.dh
@@ -458,7 +462,7 @@ export class ConnexionCompte extends OperationUI {
           } else {
             // Inscrire le groupe dans la liste de ceux à synchroniser s'il n'y était pas
             if (!data.verGr.has(invitgr.sidg)) {
-              data.setVerGr(invitgr.sidg, GROUPE, 0)
+              data.setVerGr(invitgr.sidg, api.GROUPE, 0)
             }
           }
         }
