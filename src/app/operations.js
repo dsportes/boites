@@ -86,14 +86,22 @@ export class OperationUI extends Operation {
 
     data.refsAv = new Set()
     data.refsGr = new Set()
-    data.refsCv = new Set()
-    data.enregCvs = new Set()
 
     store().commit('ui/razidblec')
     this.BRK()
     t = true; ({ objs, vol } = await getAvatars())
     store().commit('db/setAvatars', objs)
     store().commit('ui/majidblec', { table: 'avatar', st: t, vol: vol, nbl: objs.length })
+
+    // chargement des CVs. Au début pour avoir le moins de fake possible dans le répertoire
+    this.BRK()
+    t = true; ({ objs, vol } = await getCvs())
+    if (objs && objs.length) {
+      objs.forEach((cv) => {
+        data.repertoire[cv.sid] = cv
+      })
+    }
+    store().commit('ui/majidblec', { table: 'cv', st: t, vol: vol, nbl: objs.length })
 
     this.BRK()
     t = true; ({ objs, vol } = await getInvitgrs())
@@ -102,11 +110,23 @@ export class OperationUI extends Operation {
 
     this.BRK()
     t = true; ({ objs, vol } = await getContacts())
+    if (objs && objs.length) {
+      objs.forEach((c) => {
+        const na = new NomAvatar(c.data.nomc)
+        data.cvPlusCtc(na, c.id)
+      })
+    }
     store().commit('db/setContacts', objs)
     store().commit('ui/majidblec', { table: 'invcontactitgr', st: t, vol: vol, nbl: objs.length })
 
     this.BRK()
     t = true; ({ objs, vol } = await getInvitcts())
+    if (objs && objs.length) {
+      objs.forEach((i) => {
+        const na = new NomAvatar(i.data.nomc)
+        data.cvPlusCtc(na, i.id)
+      })
+    }
     store().commit('db/setInvitcts', objs)
     store().commit('ui/majidblec', { table: 'invitct', st: t, vol: vol, nbl: objs.length })
 
@@ -127,6 +147,12 @@ export class OperationUI extends Operation {
 
     this.BRK()
     t = true; ({ objs, vol } = await getMembres())
+    if (objs && objs.length) {
+      objs.forEach((m) => {
+        const na = new NomAvatar(m.data.nomc)
+        data.cvPlusMbr(na, m.id)
+      })
+    }
     store().commit('db/setMembres', objs)
     store().commit('ui/majidblec', { table: 'membre', st: t, vol: vol, nbl: objs.length })
 
@@ -153,25 +179,17 @@ export class OperationUI extends Operation {
     store().commit('db/purgeGroupes', grUtiles)
     store().commit('ui/majidblec', { table: 'purgegr', st: t, vol: 0, nbl: nbp })
 
-    // chargement des CVs
-    this.BRK()
-    t = true; ({ objs, vol } = await getCvs())
-    store().commit('db/setCvs', objs)
-    store().commit('ui/majidblec', { table: 'cv', st: t, vol: vol, nbl: objs.length })
-
     // purge des CVs inutiles
     this.BRK()
-    const cvInutiles = new Set()
-    const cvUtiles = new Set(data.setCvUtiles)
-    for (const id of data.enregCvs) if (!cvUtiles.has(id)) cvInutiles.add(id)
-    nbp = await purgeCvs(cvInutiles)
-    store().commit('db/purgeCvs', cvUtiles)
+    nbp = await purgeCvs(data.setCvInutiles)
+    data.setCvsInutiles.forEach((sid) => {
+      delete data.repertoire[sid]
+    })
+    data.commitRepertoire()
     store().commit('ui/majidblec', { table: 'purgecv', st: t, vol: 0, nbl: nbp })
 
     data.refsAv = null
     data.refsGr = null
-    data.refsCv = null
-    data.enregCvs = null
 
     if (cfg().debug) await sleep(1000)
 

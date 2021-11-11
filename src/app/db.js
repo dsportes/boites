@@ -135,7 +135,6 @@ export async function getAvatars () {
       r.push(x)
       data.setVerAv(x.sidav, api.AVATAR, x.v)
       this.refsAv.add(x.id)
-      this.refsCv.add(x.id)
     })
     return { objs: r, vol: vol }
   } catch (e) {
@@ -154,7 +153,6 @@ export async function getInvitgrs () {
       r.push(x)
       data.setVerAv(x.sidav, api.INVITGR, x.v)
       this.refsAv.add(x.id)
-      this.refsCv.add(x.id)
       if (x.idg) this.refsGr.add(x.idg)
     })
     return { objs: r, vol: vol }
@@ -174,8 +172,6 @@ export async function getInvitcts () {
       r.push(x)
       data.setVerAv(x.sidav, api.INVITCT, x.v)
       data.refsAv.add(x.id)
-      data.refsCv.add(x.id)
-      if (x.nact) this.refsCv.add(x.nact.id)
     })
     return { objs: r, vol: vol }
   } catch (e) {
@@ -194,8 +190,6 @@ export async function getContacts () {
       r.push(x)
       data.setVerAv(x.sidav, api.CONTACT, x.v)
       data.refsAv.add(x.id)
-      data.refsCv.add(x.id)
-      if (x.nact) data.refsCv.add(x.nact.id)
     })
     return { objs: r, vol: vol }
   } catch (e) {
@@ -214,7 +208,6 @@ export async function getParrains () {
       r.push(x)
       data.setVerAv(x.sidav, api.PARRAIN, x.v)
       data.refsAv.add(x.id)
-      data.refsCv.add(x.id)
     })
     return { objs: r, vol: vol }
   } catch (e) {
@@ -233,7 +226,6 @@ export async function getRencontres () {
       r.push(x)
       data.setVerAv(x.sidav, api.RENCONTRE, x.v)
       data.refsAv.add(x.id)
-      data.refsCv.add(x.id)
     })
     return { objs: r, vol: vol }
   } catch (e) {
@@ -270,7 +262,7 @@ export async function getMembres () {
       r.push(x)
       data.setVerGr(x.sidgr, api.MEMBRE, x.v)
       data.refsGr.add(x.id)
-      if (x.na) { data.refsAv.add(x.na); data.refsCv.add(x.na) }
+      if (x.na) data.refsAv.add(x.na)
     })
     return { objs: r, vol: vol }
   } catch (e) {
@@ -293,7 +285,7 @@ export async function getSecrets () {
         data.setVerGr(x.sidavgr, api.SECRET, x.v)
       }
       if (x.ts === 2) data.refsGr.add(x.id)
-      else { data.refsAv.add(x.id); data.refsCv.add(x.id) }
+      else { data.refsAv.add(x.id) }
     })
     return { objs: r, vol: vol }
   } catch (e) {
@@ -310,7 +302,6 @@ export async function getCvs () {
       vol += idb.data.length
       const x = new Cv().fromIdb(crypt.decrypter(data.clek, idb.data), idb.vs)
       r.push(x)
-      data.enregCvs.add(x.id)
     })
     return { objs: r, vol: vol }
   } catch (e) {

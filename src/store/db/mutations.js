@@ -17,6 +17,10 @@ export function raz (state) {
   state.cvs = {}
 }
 
+export function commitRepertoire (state, data) {
+  state.cvs = { ...data.repertoire }
+}
+
 export function majavatar (state, val) {
   state.avatar = val
 }

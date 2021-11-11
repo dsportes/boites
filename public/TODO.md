@@ -1,4 +1,6 @@
-PING / PONG : tester l'absence de pong par le serveur
+Révision complète de operations (gestion du répertoire, CV utiles ...)
+
+Connexion en cours (CVs, gestion abo)
 
 Gestion globale de l'état de synchro (vcv, dhsyncok ...) et du suivi par la page Synchro
 

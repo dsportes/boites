@@ -320,6 +320,7 @@ class Session {
     this.ws = null // WebSocket quand il est ouvert
     this.erWS = 0 // 0:OK 1:WS en erreur NON traitée 2:WS en erreur traitée
     this.exNET = null // exception sur NET
+    this.repertoire = {}
 
     if (!init) {
       this.statutnet = 0
@@ -348,8 +349,6 @@ class Session {
     // dans chargementIdb seulement
     this.refsAv = null // id des avatars référencés détectées lors du chargement IDB
     this.refsGr = null // id des groupes référencés détectées lors du chargement IDB
-    this.refsCv = null // id des CVs REFERENCEES détectées lors du chargement IDB
-    this.enregCvs = new Set() // id des CVs ENREGISTREES détectées lors du chargement IDB
 
     this.idbSetAvatars = null // Set des ids des avatars chargés par IDB
     this.idbSetGroupes = null // Set des ids des avatars chargés par IDB
@@ -410,35 +409,26 @@ class Session {
   }
 
   get setCvsUtiles () {
-    const s = this.setAvatars
-    let l1
-    l1 = store().state.db.invitcts
-    for (const ids in l1) {
-      const l2 = l1[ids]
-      for (const nis in l2) {
-        const c = l2[nis]
-        if (c.st >= 0) { s.add(c.id); break }
-      }
-    }
-    l1 = store().state.db.contacts
-    for (const ids in l1) {
-      const l2 = l1[ids]
-      for (const ic in l2) {
-        const c = l2[ic]
-        if (c.st >= 0) { s.add(c.id); break }
-      }
-    }
-    l1 = store().state.db.membres
-    for (const ids in l1) {
-      const l2 = l1[ids]
-      for (const im in l2) {
-        const m = l2[im]
-        if (m.st >= 0) {
-          const na = m.na
-          if (na) { s.add(na.id); break }
-        }
-      }
-    }
+    const s = new Set()
+    this.repertoire.forEach((cv, sid) => {
+      if (cv.lctc.length || cv.lmbr.length) s.add(sid)
+    })
+    return s
+  }
+
+  get setCvsManquantes () {
+    const s = new Set()
+    this.repertoire.forEach((cv, sid) => {
+      if (cv.fake && (cv.lctc.length || cv.lmbr.length)) s.add(sid)
+    })
+    return s
+  }
+
+  get setCvsInutiles () {
+    const s = new Set()
+    this.repertoire.forEach((cv, sid) => {
+      if (!cv.lctc.length && !cv.lmbr.length) s.add(sid)
+    })
     return s
   }
 
@@ -479,7 +469,72 @@ class Session {
   }
 
   cv (id) {
-    return store().getters['db/cv'](id)
+    return this.repertoire[id]
+  }
+
+  commitRepertoire () {
+    store().commit('db/commitRepertoire', this)
+  }
+
+  cvPlusCtc (naCtc, id) { // na du contact, id de l'avatar du compte
+    const cv = this.repertoire[naCtc.sid]
+    if (cv && cv.lctc.indexOf(id) !== -1) return null // y était déja
+    let cl
+    if (cv) {
+      cl = cv.clone()
+    } else {
+      cl = new Cv().nouveau(naCtc.id, 0, 0, naCtc.nomc, '', naCtc.nomc)
+      cl.fake = true
+    }
+    cl.lctc.push(naCtc.id)
+    this.repertoire[naCtc.sid] = cl
+    return cl
+  }
+
+  cvMoinsCtc (sid, idc) {
+    const cv = this.repertoire[sid]
+    const idx = cv ? cv.lctc.indexOf(idc) : -1
+    if (idx === -1) return null // n'y était pas
+    const cl = cv.clone()
+    cl.lctc.splice(idx, 1)
+    this.repertoire[sid] = cl
+    return cl
+  }
+
+  cvPlusMbr (naCtc, id) { // na du membre, id : du groupe
+    const cv = this.repertoire[naCtc.sid]
+    if (cv && cv.lmbr.indexOf(id) !== -1) return null // y était déja
+    let cl
+    if (cv) {
+      cl = cv.clone()
+    } else {
+      cl = new Cv().nouveau(naCtc.id, 0, 0, naCtc.nomc, '', naCtc.nomc)
+      cl.fake = true
+    }
+    cl.lmbr.push(naCtc.id)
+    this.repertoire[naCtc.sid] = cl
+    return cl
+  }
+
+  cvMoinsMbr (sid, id) { // sid du membre, id du groupe
+    const cv = this.repertoire[sid]
+    const idx = cv ? cv.lmbr.indexOf(id) : -1
+    if (idx === -1) return null // n'y était pas
+    const cl = cv.clone()
+    cl.lctc.splice(idx, 1)
+    this.repertoire[sid] = cl
+    return cl
+  }
+
+  cvFusionCV (cv) {
+    const c = this.repertoire[cv.sid]
+    if (c && !c.fake && c.vcv > cv.vcv) return null // existante plus récente
+    if (c) {
+      cv.lctc = c.lctc
+      cv.lmbr = c.lmbr
+    }
+    this.repertoire[cv.sid] = cv
+    return cv
   }
 }
 export const data = new Session()
@@ -817,6 +872,25 @@ const cvIdb = avro.Type.forSchema({
 })
 
 export class Cv {
+  constructor () {
+    this.lctc = []
+    this.lmbr = []
+    this.fake = false
+  }
+
+  clone () {
+    const cl = new Cv()
+    cl.id = this.id
+    cl.vcv = this.vcv
+    cl.st = this.st
+    cl.na = this.na
+    cl.photo = this.photo
+    cl.info = this.info
+    this.lctc.forEach((x) => cl.lctc.push(x))
+    this.lmbr.forEach((x) => cl.lmbr.push(x))
+    return cl
+  }
+
   get table () { return 'cv' }
 
   nouveau (id, vcv, st, nomc, photo, info) {
