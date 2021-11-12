@@ -4,7 +4,7 @@ import {
   getGroupes, getInvitcts, getInvitgrs, getMembres, getParrains, getRencontres, getSecrets,
   purgeAvatars, purgeCvs, purgeGroupes, openIDB, enregLScompte
 } from './db.js'
-import { NomAvatar, Compte, Avatar, data, Cv, rowItemsToRows, remplacePage, Invitgr, SIZEAV, SIZEGR } from './modele'
+import { NomAvatar, Compte, Avatar, data, remplacePage, Invitgr, rowItemsToMapObjets, commitMapObjets, SIZEAV, SIZEGR } from './modele'
 const AppExc = require('./api').AppExc
 const api = require('./api')
 
@@ -42,6 +42,32 @@ export class Operation {
       this.cancelToken = null
     }
     this.break = true
+  }
+
+  async traiteQueue (q) {
+    const items = []
+    let dhc = 0
+    q.forEach((syncList) => {
+      if (syncList.dhc > dhc) dhc = syncList.dhc
+      if (syncList.rowItems) {
+        syncList.rowItems.forEach((rowItem) => {
+          const item = rowTypes.deserialItem(rowItem)
+          items.push(item)
+        })
+      }
+    })
+
+    const mapObj = data.rowItemsToMapObjets(items)
+
+    const [objets, vcv] = data.commitMapObjets(mapObj)
+
+    // TODO : avatars, groupes cv inutiles. avatars groupes manquants. CVs manquantes
+
+    if (data.db) {
+      await data.db.commitRows(objets)
+    }
+
+    return [dhc, vcv]
   }
 }
 
@@ -82,111 +108,135 @@ export class OperationUI extends Operation {
   - puis récupère les CVs et supprime celles non référencées
   */
   async chargementIdb () {
-    let objs, vol, t, nbp
-
     data.refsAv = new Set()
     data.refsGr = new Set()
 
     store().commit('ui/razidblec')
     this.BRK()
-    t = true; ({ objs, vol } = await getAvatars())
-    store().commit('db/setAvatars', objs)
-    store().commit('ui/majidblec', { table: 'avatar', st: t, vol: vol, nbl: objs.length })
+    {
+      const { objs, vol } = await getAvatars()
+      store().commit('db/setAvatars', objs)
+      store().commit('ui/majidblec', { table: 'avatar', st: true, vol: vol, nbl: objs.length })
+    }
 
     // chargement des CVs. Au début pour avoir le moins de fake possible dans le répertoire
     this.BRK()
-    t = true; ({ objs, vol } = await getCvs())
-    if (objs && objs.length) {
-      objs.forEach((cv) => {
-        data.repertoire[cv.sid] = cv
-      })
+    {
+      const { objs, vol } = await getCvs()
+      if (objs && objs.length) {
+        objs.forEach((cv) => {
+          data.repertoire[cv.sid] = cv
+        })
+      }
+      store().commit('ui/majidblec', { table: 'cv', st: true, vol: vol, nbl: objs.length })
     }
-    store().commit('ui/majidblec', { table: 'cv', st: t, vol: vol, nbl: objs.length })
 
     this.BRK()
-    t = true; ({ objs, vol } = await getInvitgrs())
-    store().commit('db/setInvitgrs', objs)
-    store().commit('ui/majidblec', { table: 'invitgr', st: t, vol: vol, nbl: objs.length })
-
-    this.BRK()
-    t = true; ({ objs, vol } = await getContacts())
-    if (objs && objs.length) {
-      objs.forEach((c) => {
-        const na = new NomAvatar(c.data.nomc)
-        data.cvPlusCtc(na, c.id)
-      })
+    {
+      const { objs, vol } = await getInvitgrs()
+      store().commit('db/setInvitgrs', objs)
+      store().commit('ui/majidblec', { table: 'invitgr', st: true, vol: vol, nbl: objs.length })
     }
-    store().commit('db/setContacts', objs)
-    store().commit('ui/majidblec', { table: 'invcontactitgr', st: t, vol: vol, nbl: objs.length })
 
     this.BRK()
-    t = true; ({ objs, vol } = await getInvitcts())
-    if (objs && objs.length) {
-      objs.forEach((i) => {
-        const na = new NomAvatar(i.data.nomc)
-        data.cvPlusCtc(na, i.id)
-      })
+    {
+      const { objs, vol } = await getContacts()
+      if (objs && objs.length) {
+        objs.forEach((c) => {
+          const na = new NomAvatar(c.data.nomc)
+          data.cvPlusCtc(na, c.id)
+        })
+      }
+      store().commit('db/setContacts', objs)
+      store().commit('ui/majidblec', { table: 'invcontactitgr', st: true, vol: vol, nbl: objs.length })
     }
-    store().commit('db/setInvitcts', objs)
-    store().commit('ui/majidblec', { table: 'invitct', st: t, vol: vol, nbl: objs.length })
 
     this.BRK()
-    t = true; ({ objs, vol } = await getParrains())
-    store().commit('db/setParrains', objs)
-    store().commit('ui/majidblec', { table: 'parrain', st: t, vol: vol, nbl: objs.length })
-
-    this.BRK()
-    t = true; ({ objs, vol } = await getRencontres())
-    store().commit('db/setRencontres', objs)
-    store().commit('ui/majidblec', { table: 'rencontre', st: t, vol: vol, nbl: objs.length })
-
-    this.BRK()
-    t = true; ({ objs, vol } = await getGroupes())
-    store().commit('db/setGroupes', objs)
-    store().commit('ui/majidblec', { table: 'groupe', st: t, vol: vol, nbl: objs.length })
-
-    this.BRK()
-    t = true; ({ objs, vol } = await getMembres())
-    if (objs && objs.length) {
-      objs.forEach((m) => {
-        const na = new NomAvatar(m.data.nomc)
-        data.cvPlusMbr(na, m.id)
-      })
+    {
+      const { objs, vol } = await getInvitcts()
+      if (objs && objs.length) {
+        objs.forEach((i) => {
+          const na = new NomAvatar(i.data.nomc)
+          data.cvPlusCtc(na, i.id)
+        })
+      }
+      store().commit('db/setInvitcts', objs)
+      store().commit('ui/majidblec', { table: 'invitct', st: true, vol: vol, nbl: objs.length })
     }
-    store().commit('db/setMembres', objs)
-    store().commit('ui/majidblec', { table: 'membre', st: t, vol: vol, nbl: objs.length })
 
     this.BRK()
-    t = true; ({ objs, vol } = await getSecrets())
-    store().commit('db/setSecrets', objs)
-    store().commit('ui/majidblec', { table: 'secret', st: t, vol: vol, nbl: objs.length })
+    {
+      const { objs, vol } = await getParrains()
+      store().commit('db/setParrains', objs)
+      store().commit('ui/majidblec', { table: 'parrain', st: true, vol: vol, nbl: objs.length })
+    }
+
+    this.BRK()
+    {
+      const { objs, vol } = await getRencontres()
+      store().commit('db/setRencontres', objs)
+      store().commit('ui/majidblec', { table: 'rencontre', st: true, vol: vol, nbl: objs.length })
+    }
+
+    this.BRK()
+    {
+      const { objs, vol } = await getGroupes()
+      store().commit('db/setGroupes', objs)
+      store().commit('ui/majidblec', { table: 'groupe', st: true, vol: vol, nbl: objs.length })
+    }
+
+    this.BRK()
+    {
+      const { objs, vol } = await getMembres()
+      if (objs && objs.length) {
+        objs.forEach((m) => {
+          const na = new NomAvatar(m.data.nomc)
+          data.cvPlusMbr(na, m.id)
+        })
+      }
+      store().commit('db/setMembres', objs)
+      store().commit('ui/majidblec', { table: 'membre', st: true, vol: vol, nbl: objs.length })
+    }
+
+    this.BRK()
+    {
+      const { objs, vol } = await getSecrets()
+      store().commit('db/setSecrets', objs)
+      store().commit('ui/majidblec', { table: 'secret', st: true, vol: vol, nbl: objs.length })
+    }
 
     // purge des avatars inutiles
     this.BRK()
-    const avInutiles = new Set()
-    const avUtiles = new Set(data.setAvatars)
-    for (const id of data.refsAv) if (!avUtiles.has(id)) avInutiles.add(id)
-    nbp = await purgeAvatars(avInutiles)
-    store().commit('db/purgeAvatars', avUtiles)
-    store().commit('ui/majidblec', { table: 'purgeav', st: t, vol: 0, nbl: nbp })
+    {
+      const avInutiles = new Set()
+      const avUtiles = new Set(data.setAvatars)
+      for (const id of data.refsAv) if (!avUtiles.has(id)) avInutiles.add(id)
+      const nbp = await purgeAvatars(avInutiles)
+      store().commit('db/purgeAvatars', avUtiles)
+      store().commit('ui/majidblec', { table: 'purgeav', st: true, vol: 0, nbl: nbp })
+    }
 
     // purge des groupes inutiles
     this.BRK()
-    const grInutiles = new Set()
-    const grUtiles = new Set(data.setGroupes)
-    for (const id of data.refsGr) if (!grUtiles.has(id)) grInutiles.add(id)
-    nbp = await purgeGroupes(grInutiles)
-    store().commit('db/purgeGroupes', grUtiles)
-    store().commit('ui/majidblec', { table: 'purgegr', st: t, vol: 0, nbl: nbp })
+    {
+      const grInutiles = new Set()
+      const grUtiles = new Set(data.setGroupes)
+      for (const id of data.refsGr) if (!grUtiles.has(id)) grInutiles.add(id)
+      const nbp = await purgeGroupes(grInutiles)
+      store().commit('db/purgeGroupes', grUtiles)
+      store().commit('ui/majidblec', { table: 'purgegr', st: true, vol: 0, nbl: nbp })
+    }
 
     // purge des CVs inutiles
     this.BRK()
-    nbp = await purgeCvs(data.setCvInutiles)
-    data.setCvsInutiles.forEach((sid) => {
-      delete data.repertoire[sid]
-    })
-    data.commitRepertoire()
-    store().commit('ui/majidblec', { table: 'purgecv', st: t, vol: 0, nbl: nbp })
+    {
+      const nbp = await purgeCvs(data.setCvInutiles)
+      data.setCvsInutiles.forEach((sid) => {
+        delete data.repertoire[sid]
+      })
+      data.commitRepertoire()
+      store().commit('ui/majidblec', { table: 'purgecv', st: true, vol: 0, nbl: nbp })
+    }
 
     data.refsAv = null
     data.refsGr = null
@@ -249,19 +299,7 @@ export class ProcessQueue extends OperationWS {
 
   async run (q) {
     try {
-      const items = []
-      for (let i = 0; i < q.length; i++) {
-        const syncList = q[i]
-        for (let j = 0; j < syncList.rowItems.length; j++) {
-          const rowItem = syncList.rowItems[j]
-          rowTypes.deserialItem(rowItem)
-          items.push(rowItem)
-        }
-      }
-      if (data.db) {
-        await data.db.commitRows(items)
-      }
-      // TODO : compilation des rows, mettre à jour de l'état mémoire
+      await this.traiteQueue(q)
       this.fin()
     } catch (e) {
       this.fin(e)
@@ -316,17 +354,9 @@ export class CreationCompte extends OperationUI {
       Le compte vient d'être créé et est déjà dans le modèle (clek enregistrée)
       On peut désérialiser la liste d'items (compte et avatar)
       */
-      let compte2, avatar2
-      const rows = rowItemsToRows(ret.rowItems)
-      for (const t in rows) {
-        if (t === 'compte') compte2 = rows[t][0]
-        if (t === 'avatar') avatar2 = rows[t][0]
-      }
-      store().commit('db/setCompte', compte2)
-      store().commit('db/setAvatars', [avatar2])
-
-      const cv = new Cv().fromAvatar(avatar2)
-      store().commit('db/setCvs', [cv])
+      const rows = commitMapObjets(rowItemsToMapObjets(ret.rowItems))
+      const compte2 = rows.compte[0]
+      const avatar2 = rows.avatar[0]
 
       // création de la base IDB et chargement des rows compte et avatar
       if (data.mode === 1) { // synchronisé : il faut ouvrir IDB
@@ -339,7 +369,7 @@ export class CreationCompte extends OperationUI {
           await deleteIDB(true)
           throw e
         }
-        await commitRows([compte2, avatar2, cv])
+        await commitRows([compte2, avatar2])
       }
 
       data.statut = 2
@@ -367,6 +397,10 @@ export class ConnexionCompteAvion extends OperationUI {
       }
       await data.connexion()
       this.BRK()
+
+      if (data.db) {
+        await data.db.getEtat()
+      }
 
       const compte = await getCompte()
       if (!compte || compte.pcbh !== data.ps.pcbh) {
@@ -455,41 +489,41 @@ export class ConnexionCompte extends OperationUI {
       // état chargé correspondant à l'état local (vide le cas échéant - incognito ou première synchro) - compte OK
       data.statut = 1
 
-      const grAPurger = new Set()
-      // chargement des invitgrs ayant changé depuis l'état local (tous le cas échéant)
-      // pour obtenir la liste des groupes accédés
-      const lvav = {}
-      data.verAv.forEach((value, key) => {
-        lvav[key] = value[api.AVATAR]
-      })
-      let ret = await post(this, 'm1', 'syncInvitgr', { sessionId: data.sessionId, lvav })
-      if (data.dh < ret.dh) data.dh = ret.dh
-      // traitement des invitgr reçus
-      const maj = []
-      ret.rowItems.forEach(item => {
-        if (item.table === 'invitgr') {
-          const rowInvitgr = rowTypes.fromBuffer('invitgr', item.serial)
-          const invitgr = new Invitgr().fromRow(rowInvitgr)
-          maj.push(invitgr)
-          if (invitgr.st < 0) {
-            // Inscrire le groupe en inutile et le supprimer de la liste des groupes à synchroniser
-            grAPurger.add(invitgr.idg)
-            if (data.verGr.has(invitgr.sidg)) {
-              data.verGr.delete(invitgr.sidg)
-            }
-          } else {
-            // Inscrire le groupe dans la liste de ceux à synchroniser s'il n'y était pas
-            if (!data.verGr.has(invitgr.sidg)) {
-              data.setVerGr(invitgr.sidg, api.GROUPE, 0)
+      {
+        const grAPurger = new Set()
+        // chargement des invitgrs ayant changé depuis l'état local (tous le cas échéant)
+        // pour obtenir la liste des groupes accédés
+        const lvav = {}
+        data.verAv.forEach((lv, sid) => { lvav[sid] = lv[api.AVATAR] })
+        const ret = await post(this, 'm1', 'syncInvitgr', { sessionId: data.sessionId, lvav })
+        if (data.dh < ret.dh) data.dh = ret.dh
+        // traitement des invitgr reçus
+        const maj = []
+        ret.rowItems.forEach(item => {
+          if (item.table === 'invitgr') {
+            const rowInvitgr = rowTypes.fromBuffer('invitgr', item.serial)
+            const invitgr = new Invitgr().fromRow(rowInvitgr)
+            maj.push(invitgr)
+            if (invitgr.st < 0) {
+              // Inscrire le groupe en inutile et le supprimer de la liste des groupes à synchroniser
+              grAPurger.add(invitgr.idg)
+              if (data.verGr.has(invitgr.sidg)) {
+                data.verGr.delete(invitgr.sidg)
+              }
+            } else {
+              // Inscrire le groupe dans la liste de ceux à synchroniser s'il n'y était pas
+              if (!data.verGr.has(invitgr.sidg)) {
+                data.setVerGr(invitgr.sidg, api.GROUPE, 0)
+              }
             }
           }
-        }
-      })
-      if (maj.length) {
-        store.commit('db/setInvitgrs', maj) // maj du modèle
-        if (data.db) {
-          await data.db.commitRows(maj) // et de IDB
-          this.BRK()
+        })
+        if (maj.length) {
+          store.commit('db/setInvitgrs', maj) // maj du modèle
+          if (data.db) {
+            await data.db.commitRows(maj) // et de IDB
+            this.BRK()
+          }
         }
       }
 
@@ -498,9 +532,12 @@ export class ConnexionCompte extends OperationUI {
       const lav = Array.from(data.aboAv)
       const lgr = Array.from(data.setGroupes)
 
-      // Abonner la session au compte, avatars et groupes
-      ret = await post(this, 'm1', 'syncAbo', { sessionId: data.sessionId, idc: compte.id, lav, lgr })
-      if (data.dh < ret.dh) data.dh = ret.dh
+      {
+        // Abonner la session au compte, avatars et groupes
+        const args = { sessionId: data.sessionId, idc: compte.id, lav, lgr }
+        const ret = await post(this, 'm1', 'syncAbo', args)
+        if (data.dh < ret.dh) data.dh = ret.dh
+      }
 
       // synchroniser les avatars
       for (let i = 0; i < lav.length; i++) {
@@ -509,11 +546,9 @@ export class ConnexionCompte extends OperationUI {
         const lv = data.verAv.get(sid) || new Array(SIZEAV).fill(0)
         const ret = await post(this, 'm1', 'syncAv', { sessionId: data.sessionId, avgr: id, lv })
         if (data.dh < ret.dh) data.dh = ret.dh
-        const rows = rowItemsToRows(ret.rowItems, true) // stockés en modele
+        const [objets] = commitMapObjets(rowItemsToMapObjets(ret.rowItems)) // stockés en modele
         if (data.db) {
-          const lobj = []
-          for (const t in rows) lobj.push(rows[t])
-          await data.db.commitRows(lobj)
+          await data.db.commitRows(objets)
           this.BRK()
         }
       }
@@ -525,25 +560,49 @@ export class ConnexionCompte extends OperationUI {
         const lv = data.verGr.get(sid) || new Array(SIZEGR).fill(0)
         const ret = await post(this, 'm1', 'syncGr', { sessionId: data.sessionId, avgr: id, lv })
         if (data.dh < ret.dh) data.dh = ret.dh
-        const rows = rowItemsToRows(ret.rowItems, true) // stockés en modele
+        const [objets] = commitMapObjets(rowItemsToMapObjets(ret.rowItems)) // stockés en modele
         if (data.db) {
-          const lobj = []
-          for (const t in rows) lobj.push(rows[t])
-          await data.db.commitRows(lobj)
+          await data.db.commitRows(objets)
+          this.BRK()
         }
       }
 
-      // TODO gérer les CVs ...
+      // Synchroniser les CVs (et s'abonner)
+      let nvvcv = data.vcv
+      {
+        data.setCvsInutiles.forEach((sid) => {
+          delete data.repertoire[sid]
+        })
+        const lcvmaj = Array.from(data.setCvsUtiles)
+        const lcvchargt = Array.from(data.setCvsManquantes)
+        const args = { sessionId: data.sessionId, vcv: data.vcv, lcvmaj, lcvchargt }
+        const ret = await post(this, 'm1', 'chargtCVs', args)
+        if (data.dh < ret.dh) data.dh = ret.dh
+        const [objets, vcv] = commitMapObjets(rowItemsToMapObjets(ret.rowItems)) // stockés en modele
+        if (vcv > nvvcv) nvvcv = vcv
+        if (data.db) {
+          await data.db.commitRows(objets)
+          this.BRK()
+        }
+      }
 
       // Traiter les notifications éventuellement arrivées
       while (data.syncqueue.length) {
         const q = data.syncqueue
         data.syncqueue = []
-        const op = new ProcessQueue()
-        await op.run(q) // ne sort jamais en exception
+        const [dhc, vcv] = await this.traiteQueue(q)
+        if (dhc > data.dh) data.dh = dhc
+        if (vcv > nvvcv) nvvcv = vcv
       }
 
-      // TODO : enregistrer l'état de synchro
+      // Enregistrer l'état de synchro (nvdhc et nvvcv)
+      // { dhsyncok: data.dhsyncok, dhdebutsync: data.dhdebutsync, vcv: data.vcv }
+      if (data.dh > data.dhsyncok) data.dhsyncok = data.dh
+      data.dhdebutsync = 0
+      if (data.vcv < nvvcv) data.vcv = nvvcv
+      if (data.db) {
+        await data.db.setEtat()
+      }
 
       data.statut = 2
       this.fin()

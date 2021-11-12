@@ -131,18 +131,99 @@ export function objetDeItem (item) {
   }
 }
 
-export function rowItemsToRows (rowItems, commit) {
-  const rows = {}
+export function rowItemsToMapObjets (rowItems) {
+  const res = {}
   rowItems.forEach(item => {
-    if (!rows[item.table]) rows[item.table] = []
-    rows[item.table].push(objetDeItem(item))
+    if (!res[item.table]) res[item.table] = []
+    res[item.table].push(objetDeItem(item))
   })
-  if (commit) {
-    for (const t in rows) {
-      store().commit('db/setObjets', { table: t, lobj: rows[t] })
-    }
+  return res
+}
+
+export function commitMapObjets (mapObj) { // SAUF compte
+  const objets = []
+  let vcv = 0
+  if (mapObj.avatar) {
+    store().commit('db/setAvatars', mapObj.avatar)
+    objets.push(mapObj.avatar)
   }
-  return rows
+
+  if (mapObj.contact) {
+    mapObj.idbContact.forEach((x) => {
+      if (x.st < 0) {
+        const avant = this.contact(x.id, x.ic)
+        if (avant) this.cvMoinsCtc(avant.data.na.sid, x.id)
+      } else {
+        this.cvPlusCtc(x.data.na, x.id)
+      }
+    })
+    store().commit('db/setContacts', mapObj.contact)
+    objets.push(mapObj.contact)
+  }
+
+  if (mapObj.invitct) {
+    mapObj.invitct.forEach((x) => {
+      if (x.st < 0) {
+        const avant = this.invitct(x.id, x.ic)
+        if (avant) this.cvMoinsCtc(avant.data.na.sid, x.id)
+      } else {
+        this.cvPlusCtc(x.data.na, x.id)
+      }
+    })
+    store().commit('db/setInvitCts', mapObj.invitct)
+    objets.push(mapObj.contact)
+  }
+
+  if (mapObj.invitgr) {
+    store().commit('db/setInvitGrs', mapObj.invitgr)
+    objets.push(mapObj.invitgr)
+  }
+
+  if (mapObj.parrain) {
+    store().commit('db/setParrains', mapObj.parrain)
+    objets.push(mapObj.parrain)
+  }
+
+  if (mapObj.rencontre) {
+    store().commit('db/setRencontres', mapObj.rencontre)
+    objets.push(mapObj.rencontre)
+  }
+
+  if (mapObj.groupe) {
+    store().commit('db/setGroupes', mapObj.groupe)
+    objets.push(mapObj.groupe)
+  }
+
+  if (mapObj.membre) {
+    mapObj.membre.forEach((x) => {
+      if (x.st < 0) {
+        const avant = this.membre(x.id, x.im)
+        if (avant) this.cvMoinsMbr(avant.data.na.sid, x.id)
+      } else {
+        this.cvPlusMbr(x.data.na, x.id)
+      }
+    })
+    store().commit('db/setMembres', mapObj.membre)
+    objets.push(mapObj.membre)
+  }
+
+  if (mapObj.secret) {
+    store().commit('db/setSecrets', mapObj.secret)
+    objets.push(mapObj.secret)
+  }
+
+  if (mapObj.cv) {
+    mapObj.cv.forEach((x) => {
+      if (x.st >= 0) {
+        this.cvFusionCV(x)
+        if (x.vcv > vcv) vcv = x.vcv
+      }
+    })
+    store().commit('db/setCvs', mapObj.cv)
+    objets.push(mapObj.secret)
+  }
+  this.commitRepertoire()
+  return [objets, vcv]
 }
 
 export const SIZEAV = 7
@@ -491,9 +572,9 @@ class Session {
     return cl
   }
 
-  cvMoinsCtc (sid, idc) {
+  cvMoinsCtc (sid, id) { // sid du contact, id de l'avatar du compte
     const cv = this.repertoire[sid]
-    const idx = cv ? cv.lctc.indexOf(idc) : -1
+    const idx = cv ? cv.lctc.indexOf(id) : -1
     if (idx === -1) return null // n'y était pas
     const cl = cv.clone()
     cl.lctc.splice(idx, 1)
