@@ -1,8 +1,8 @@
-Révision complète de operations (gestion du répertoire, CV utiles ...)
+Opération chargtCVs à écrire
 
-Connexion en cours (CVs, gestion abo)
+Suivi par la page Synchro
 
-Gestion globale de l'état de synchro (vcv, dhsyncok ...) et du suivi par la page Synchro
+Pong : dhpong
 
 Nettoyage des IDB non joignables (sur Org ?)
 

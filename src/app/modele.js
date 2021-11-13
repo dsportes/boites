@@ -117,7 +117,7 @@ export async function remplacePage (page) {
 export function objetDeItem (item) {
   const row = rowTypes.fromBuffer(item.table, item.serial)
   switch (item.table) {
-    case 'compte' : return new Compte().fromRow(row)
+    case 'compte' : return row
     case 'avatar' : return new Avatar().fromRow(row)
     case 'contact' : return new Contact().fromRow(row)
     case 'invitct' : return new Invitct().fromRow(row)
@@ -131,11 +131,20 @@ export function objetDeItem (item) {
   }
 }
 
+/*
+Retourne une map avec une entrée pour chaque table et en valeur,
+- pour compte : LE dernier ROW (pas objet) reçu en notification
+- pour les autres, l'array des objets
+*/
 export function rowItemsToMapObjets (rowItems) {
   const res = {}
   rowItems.forEach(item => {
-    if (!res[item.table]) res[item.table] = []
-    res[item.table].push(objetDeItem(item))
+    if (item.table === 'compte') {
+      res.compte = objetDeItem(item)
+    } else {
+      if (!res[item.table]) res[item.table] = []
+      res[item.table].push(objetDeItem(item))
+    }
   })
   return res
 }
@@ -466,6 +475,10 @@ class Session {
     return store().state.db.compte
   }
 
+  setCompte (compte) {
+    store().commit('db/setcompte', compte)
+  }
+
   avc (id) {
     return this.compte().av(id)
   }
@@ -744,8 +757,8 @@ export class Compte {
     this.v = row.v
     this.dds = row.dds
     this.dpbh = row.dpbh
-    this.pcbh = row.pcbh
     this.k = crypt.decrypter(data.ps.pcb, row.kx)
+    this.pcbh = row.pcbh
     data.clek = this.k
     this.mmc = compteMmcType.fromBuffer(crypt.decrypter(this.k, row.mmck))
     this.mac = compteMacType.fromBuffer(crypt.decrypter(this.k, row.mack))
