@@ -107,7 +107,7 @@ export async function getEtat () {
 export async function setEtat () {
   go()
   try {
-    const etat = { dhsyncok: data.dhsyncok, dhdebutsync: data.dhdebutsync, vcv: data.vcv }
+    const etat = { dhsyncok: data.dhsyncok, dhdebutsync: data.dhdebutsync, dhpong: data.dhpong, vcv: data.vcv }
     await this.db.etat.set(1, JSON.stringify(etat))
   } catch (e) {
     throw data.setErDB(EX2(e))

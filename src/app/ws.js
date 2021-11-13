@@ -72,6 +72,8 @@ async function onmessage (m) {
 
   if (pong) {
     pongrecu = true
+    if (data.dhpong < syncList.dh) data.dhpong = syncList.dh
+    if (data.db) await data.db.setEtat()
     return
   }
 

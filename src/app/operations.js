@@ -64,14 +64,21 @@ export class Operation {
   }
 
   async chargerAvGr (lav, lgr, manquants) {
+    const estws = this instanceof OperationWS
     // synchroniser les avatars
     if (lav && lav.size) {
       lav.forEach(async (id) => {
         const sid = crypt.id2s(id)
-        const lv = !manquants && data.verAv.get(sid) ? data.verAv.get(sid) : new Array(SIZEAV).fill(0)
+        const lv = !estws && data.verAv.get(sid) ? data.verAv.get(sid) : new Array(SIZEAV).fill(0)
         const ret = await post(this, 'm1', 'syncAv', { sessionId: data.sessionId, avgr: id, lv })
         if (data.dh < ret.dh) data.dh = ret.dh
         const [objets] = commitMapObjets(rowItemsToMapObjets(ret.rowItems)) // stockés en modele
+        if (!estws) {
+          const av = data.avatar(id)
+          store().commit('ui/majsynclec', {
+            st: 1, sid: sid, nom: 'Avatar ' + av.na.nomc, nbl: objets.length
+          })
+        }
         if (data.db) {
           await data.db.commitRows(objets)
           this.BRK()
@@ -87,6 +94,12 @@ export class Operation {
         const ret = await post(this, 'm1', 'syncGr', { sessionId: data.sessionId, avgr: id, lv })
         if (data.dh < ret.dh) data.dh = ret.dh
         const [objets] = commitMapObjets(rowItemsToMapObjets(ret.rowItems)) // stockés en modele
+        if (!estws) {
+          const gr = data.groupe(id)
+          store().commit('ui/majsynclec', {
+            st: 1, sid: sid, nom: 'Groupe ' + gr.info, nbl: objets.length
+          })
+        }
         if (data.db) {
           await data.db.commitRows(objets)
           this.BRK()
@@ -95,8 +108,9 @@ export class Operation {
     }
   }
 
-  // Synchronisation et abonnements des    CVs
+  // Synchronisation et abonnements des CVs
   async syncCVs (nvvcv) {
+    const estws = this instanceof OperationWS
     data.setCvsInutiles.forEach((sid) => {
       delete data.repertoire[sid]
     })
@@ -107,6 +121,11 @@ export class Operation {
     if (data.dh < ret.dh) data.dh = ret.dh
     const [objets, vcv] = commitMapObjets(rowItemsToMapObjets(ret.rowItems)) // stockés en modele
     if (vcv > nvvcv) nvvcv = vcv
+    if (!estws) {
+      store().commit('ui/majsynclec', {
+        st: 1, sid: '$CV', nom: 'Cartes de visite', nbl: objets.length
+      })
+    }
     if (data.db) {
       await data.db.commitRows(objets)
       this.BRK()
@@ -114,7 +133,7 @@ export class Operation {
     return nvvcv
   }
 
-  async traiteQueue (q, notif) {
+  async traiteQueue (q) {
     const lavAvant = data.setAvatars
     const lgrAvant = data.setGroupes
 
@@ -177,16 +196,11 @@ export class Operation {
     if (chg) await this.abonnements()
 
     // Traitements des avatars / groupes manquants
-    await this.chargerAvGr(lavManquants, lgrManquants, true)
+    await this.chargerAvGr(lavManquants, lgrManquants)
 
     // Synchroniser les CVs (et s'abonner)
     const nvvcv = await this.syncCVs(data.vcv)
-    if (notif) {
-      if (data.vcv < nvvcv) data.vcv = nvvcv
-      if (data.db) {
-        await data.db.setEtat()
-      }
-    }
+
     return [dhc, nvvcv]
   }
 }
@@ -661,6 +675,22 @@ export class ConnexionCompte extends OperationUI {
           }
         }
       }
+
+      compte.mac.forEach((mac, sid) => {
+        store().commit('ui/majsynclec', {
+          st: 0, sid: sid, nom: 'Avatar ' + mac.na.nomc, nbl: 0
+        })
+      })
+      const mgr = store().state.getInvitgrs
+      mgr.forEach((av) => {
+        const sidg = crypt.id2s(av.data.idg)
+        store().commit('ui/majsynclec', {
+          st: 0, sid: sidg, nom: 'Groupe ' + sidg, nbl: 0
+        })
+      })
+      store().commit('ui/majsynclec', {
+        st: 0, sid: '$CV', nom: 'Cartes de visite', nbl: 0
+      })
 
       const [lav, lgr] = await this.abonnements(compte)
 

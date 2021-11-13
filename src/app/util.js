@@ -11,10 +11,12 @@ let globalProperties
 let cancelSourceGET
 let cancelSourcePOST
 let $store
+let dtf
 
 export function setup (gp, appconfig) {
   $cfg = appconfig
   globalProperties = gp
+  dtf = new Intl.DateTimeFormat($cfg.locale, $cfg.datetimeformat)
 }
 
 export function setstore (store) {
@@ -30,6 +32,10 @@ export function cfg () { return $cfg }
 export function gp () { return globalProperties }
 
 export function router () { return globalProperties.$router }
+
+export function dhstring (date) {
+  return dtf.format(date)
+}
 
 export function sleep (delai) {
   if (delai <= 0) return

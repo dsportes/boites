@@ -417,12 +417,15 @@ class Session {
       this.statutidb = 0
       this.statut = 0
       this.sessionId = null
+      store().commit('ui/razidblec')
+      store().commit('ui/razsynclec')
     }
 
     this.dh = 0 // plus haute date-heure retournée par un POST au serveur
     this.dhsyncok = 0 // dernière date-heure de synchronisation complète
     this.dhdebutsync = 0 // dernière date-heur de début de synchronisation
     this.vcv = 0 // version des cartes de visite détenues
+    this.dhpong = 0 // plus haute date-heure recue sur pong
 
     this.clek = null // clé K du compte authentifié
     this.cleg = {} // clés des groupes accédés

@@ -133,3 +133,21 @@ export function razidblec (state) {
 export function majstatutsession (state, val) {
   state.statutsession = val
 }
+
+export function majdialoguesynchro (state, val) {
+  state.dialoguesynchro = val
+}
+
+export function razdialoguesynchro (state) {
+  state.dialoguesynchro = false
+}
+
+export function majsynclec (state, { st, sid, nom, nbl }) {
+  const x = state.majsynclec
+  x[sid] = { st, sid, nom, nbl }
+  state.synclec = { ...x }
+}
+
+export function razsynclec (state) {
+  state.synclec = { }
+}

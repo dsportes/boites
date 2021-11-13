@@ -10,6 +10,7 @@ export default function () {
     dialoguecreationcompte: false,
     confirmstopop: false,
     dialoguetestping: false,
+    dialoguesynchro: false,
     diagnostic: null,
     menuouvert: false,
     confirmerdrc: false,
@@ -36,6 +37,7 @@ export default function () {
     org: null,
 
     idblec: IDBLEC_RAZ,
+    synclec: {},
 
     page: 'Org'
   }

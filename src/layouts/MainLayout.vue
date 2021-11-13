@@ -137,6 +137,10 @@
       </q-card>
     </q-dialog>
 
+    <q-dialog v-model="rapportsynchro">
+      <rapport-synchro jailu></rapport-synchro>
+    </q-dialog>
+
     <dialogue-crypto></dialogue-crypto>
     <dialogue-erreur></dialogue-erreur>
     <dialogue-test-ping></dialogue-test-ping>
@@ -161,12 +165,13 @@ import DialogueTestPing from 'components/DialogueTestPing.vue'
 import PanelMenu from 'components/PanelMenu.vue'
 import DialogueErreur from 'components/DialogueErreur.vue'
 import DialogueCrypto from 'components/DialogueCrypto.vue'
+import RapportSynchro from 'components/RapportSynchro.vue'
 
 export default {
   name: 'MainLayout',
 
   components: {
-    PanelMenu, DialogueErreur, DialogueCrypto, DialogueCreationCompte, DialogueTestPing, DialogueInfoMode, DialogueInfoReseau, DialogueInfoIdb
+    RapportSynchro, PanelMenu, DialogueErreur, DialogueCrypto, DialogueCreationCompte, DialogueTestPing, DialogueInfoMode, DialogueInfoReseau, DialogueInfoIdb
   },
 
   data () {
@@ -239,6 +244,10 @@ export default {
       get: () => $store.state.ui.dialoguetestping,
       set: (val) => $store.commit('ui/majdialoguetestping', val)
     })
+    const dialoguesynchro = computed({
+      get: () => $store.state.ui.dialoguetesynchro,
+      set: (val) => $store.commit('ui/majdialoguesynchro', val)
+    })
     const org = computed({
       get: () => $store.state.ui.org,
       set: (val) => $store.commit('ui/majorg', val)
@@ -273,6 +282,7 @@ export default {
       infoidb,
       confirmstopop,
       dialoguetestping,
+      dialoguesynchro,
       org,
       orgicon,
       orglabel,
