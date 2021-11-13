@@ -95,7 +95,7 @@ export class Operation {
     }
   }
 
-  // Synchronisation et abonnements des CVs
+  // Synchronisation et abonnements des    CVs
   async syncCVs (nvvcv) {
     data.setCvsInutiles.forEach((sid) => {
       delete data.repertoire[sid]

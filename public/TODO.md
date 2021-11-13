@@ -2,7 +2,7 @@ Opération chargtCVs à écrire
 
 Suivi par la page Synchro
 
-Pong : dhpong
+Pong : dhpong  
 
 Nettoyage des IDB non joignables (sur Org ?)
 
