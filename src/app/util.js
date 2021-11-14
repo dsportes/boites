@@ -141,6 +141,7 @@ export async function post (op, module, fonction, args) {
       try {
         const x = JSON.parse(Buffer.from(e.response.data).toString())
         appexc = new AppExc(x.code, x.message)
+        if (status === 402 && x.stack) appexc.stack = x.stack
       } catch (e2) {
         throw new AppExc(api.E_BRO, 'Retour de la requête mal formé : JSON parse. ' + (op ? 'Opération: ' + op.nom : '') + ' Message: ' + e.message)
       }

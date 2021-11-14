@@ -18,6 +18,14 @@ function EX3 (e) {
   return new AppExc(api.E_WS, 'Rupture de la liaison avec le serveur par le serveur', e.message)
 }
 
+let ondeconnexion = false
+export function closeWS () {
+  if (data.ws) {
+    ondeconnexion = true
+    data.ws.close()
+  }
+}
+
 export async function openWS () {
   return new Promise((resolve) => {
     try {
@@ -30,7 +38,10 @@ export async function openWS () {
         if (ws) ws.close()
       }
       ws.onclose = () => {
-        try { data.setErWS(EX2('Fermeture')) } catch (e) {}
+        if (!ondeconnexion) {
+          try { data.setErWS(EX2('Fermeture')) } catch (e) {}
+        }
+        ondeconnexion = false
         data.ws = null
         if (data.to) clearTimeout(data.to)
       }
@@ -59,32 +70,38 @@ export async function openWS () {
 let pongrecu = false
 
 async function onmessage (m) {
-  // eslint-disable-next-line no-unused-vars
-  const d = data
+  if (!data.ws) return
   const ab = await m.data.arrayBuffer()
   const syncList = api.types.synclist.fromBuffer(Buffer.from(ab))
+  if (syncList.sessionId !== data.sessionId) return
+  if (data.dh < syncList.dh) data.dh = syncList.dh
   const pong = !syncList.rowItems
+  const sessionId = data.sessionId
   if (cfg().debug) {
-    console.log(data.sessionId)
     console.log('Liste sync reçue: ' + dhtToString(syncList.dh) + ' sessionId:' + syncList.sessionId + (!pong ? ' nb rowItems:' + syncList.rowItems.length : ' - pong'))
   }
-  if (syncList.sessionId !== data.sessionId) return
 
   if (pong) {
     pongrecu = true
-    if (data.dhpong < syncList.dh) data.dhpong = syncList.dh
-    if (data.db) await data.db.setEtat()
+    if (data.dhsync < data.dh) data.dhsync = data.dh
+    if (data.db) {
+      await data.db.setEtat()
+    }
     return
   }
 
   data.syncqueue.push(syncList)
   if (data.statut === 2 && data.opWS == null) {
     setTimeout(async () => {
-      while (data.sessionId != null && data.syncqueue.length) {
+      while (data.sessionId === sessionId && data.ws && data.syncqueue.length) {
         const q = data.syncqueue
         data.syncqueue = []
         const op = new ProcessQueue()
         await op.run(q) // ne sort jamais en exception
+        if (data.dhsync < data.dh) data.dhsync = data.dh
+        if (data.db) {
+          await data.db.setEtat()
+        }
       }
     }, 1)
   }
@@ -93,17 +110,13 @@ async function onmessage (m) {
 function heartBeat (sid) {
   data.to = setTimeout(() => {
     if (data.ws && data.sessionId === sid) {
-      try {
-        if (!pongrecu) {
-          throw Error('ping / pong : pong non reçu')
-        }
-        pongrecu = false
-        data.ws.send(sid)
-        heartBeat(sid)
-      } catch (e) {
-        try { data.setErWS(EX3(e)) } catch (e) {}
-        data.ws.close()
+      if (!pongrecu) {
+        try { data.setErWS(EX3({ message: 'ping / pong : pong non reçu' })) } catch (e) {}
+        return
       }
+      pongrecu = false
+      data.ws.send(sid) // ping
+      heartBeat(sid)
     }
   }, api.PINGTO * 1000)
 }

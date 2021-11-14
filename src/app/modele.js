@@ -2,8 +2,8 @@ const avro = require('avsc')
 const crypt = require('./crypto')
 const base64url = require('base64url')
 const rowTypes = require('./rowTypes')
-import { openIDB } from './db'
-import { openWS } from './ws'
+import { openIDB, closeIDB } from './db'
+import { openWS, closeWS } from './ws'
 import { cfg, store, affichermessage } from './util'
 const api = require('./api')
 const AppExc = require('./api').AppExc
@@ -293,8 +293,8 @@ class Session {
   deconnexion (avantreconnexion) { // Depuis un bouton
     store().commit('db/raz')
     store().commit('ui/deconnexion')
-    if (this.ws) this.ws.close()
-    if (this.db) this.db.close()
+    closeWS()
+    closeIDB()
     this.raz()
     this.statut = 0
     if (!avantreconnexion) {
@@ -323,7 +323,7 @@ class Session {
     switch (this.modeInitial) {
       case 1 : { // synchronisé
         if (this.erDB && !this.erWS) {
-          // IDB KO, peut passer en mode incogniti si toutes les données sont chargées, sinon visio
+          // IDB KO, peut passer en mode incognito si toutes les données sont chargées, sinon visio
           nm = this.statut === 2 ? 2 : 4
           break
         }
@@ -415,6 +415,11 @@ class Session {
     if (!init) {
       this.statutnet = 0
       this.statutidb = 0
+      /* statut de la session
+      0: fantôme : la session n'a pas encore été ouverte par une opération de login / création compte
+      1: session en partie chargée, utilisable en mode visio
+      2: session totalement chargée / synchronisée et cohérente
+      */
       this.statut = 0
       this.sessionId = null
       store().commit('ui/razidblec')
@@ -422,10 +427,7 @@ class Session {
     }
 
     this.dh = 0 // plus haute date-heure retournée par un POST au serveur
-    this.dhsyncok = 0 // dernière date-heure de synchronisation complète
-    this.dhdebutsync = 0 // dernière date-heur de début de synchronisation
     this.vcv = 0 // version des cartes de visite détenues
-    this.dhpong = 0 // plus haute date-heure recue sur pong
 
     this.clek = null // clé K du compte authentifié
     this.cleg = {} // clés des groupes accédés
@@ -479,7 +481,7 @@ class Session {
   }
 
   setCompte (compte) {
-    store().commit('db/setcompte', compte)
+    store().commit('db/setCompte', compte)
   }
 
   avc (id) {
@@ -570,7 +572,7 @@ class Session {
   }
 
   commitRepertoire () {
-    store().commit('db/commitRepertoire', this)
+    store().commit('db/commitRepertoire', this.repertoire)
   }
 
   cvPlusCtc (naCtc, id) { // na du contact, id de l'avatar du compte

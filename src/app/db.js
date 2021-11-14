@@ -90,15 +90,11 @@ export async function getEtat () {
   go()
   try {
     const obj = await data.db.etat.get(1)
-    let etat
     try {
-      etat = JSON.parse(obj)
+      return JSON.parse(obj)
     } catch (e) {
-      etat = { dhsyncok: 0, dhdebutsync: 0, vcv: 0 }
+      return { dhsync: 0, statut: 0, vcv: 0 }
     }
-    data.vcv = etat.vcv
-    data.dhsyncok = etat.dhsyncok
-    data.dhdebutsync = etat.dhdebutsync
   } catch (e) {
     throw data.setErDB(EX2(e))
   }
@@ -107,7 +103,7 @@ export async function getEtat () {
 export async function setEtat () {
   go()
   try {
-    const etat = { dhsyncok: data.dhsyncok, dhdebutsync: data.dhdebutsync, dhpong: data.dhpong, vcv: data.vcv }
+    const etat = { dhsync: data.dhsync, statut: data.statut, vcv: data.vcv }
     await this.db.etat.set(1, JSON.stringify(etat))
   } catch (e) {
     throw data.setErDB(EX2(e))

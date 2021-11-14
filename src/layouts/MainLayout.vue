@@ -137,7 +137,7 @@
       </q-card>
     </q-dialog>
 
-    <q-dialog v-model="rapportsynchro">
+    <q-dialog v-model="dialoguesynchro">
       <rapport-synchro jailu></rapport-synchro>
     </q-dialog>
 

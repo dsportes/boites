@@ -200,8 +200,7 @@ export class Operation {
 
     // Synchroniser les CVs (et s'abonner)
     const nvvcv = await this.syncCVs(data.vcv)
-
-    return [dhc, nvvcv]
+    if (data.vcv < nvvcv) data.vcv = nvvcv
   }
 }
 
@@ -472,7 +471,7 @@ export class CreationCompte extends OperationUI {
       const nomAvatar = new NomAvatar(nom, true) // nouveau
       const compte = new Compte().nouveau(nomAvatar, kp.privateKey)
       const rowCompte = compte.toRow
-      data.setcompte(compte)
+      data.setCompte(compte)
       const avatar = new Avatar().nouveau(nomAvatar)
       const rowAvatar = avatar.toRow
 
@@ -489,7 +488,7 @@ export class CreationCompte extends OperationUI {
       const avatar2 = rows.avatar[0]
 
       // création de la base IDB et chargement des rows compte et avatar
-      if (data.mode === 1) { // synchronisé : il faut ouvrir IDB
+      if (data.mode === 1) { // synchronisé : IL FAUT OUVRIR IDB (et écrire dedans)
         this.BRK()
         enregLScompte(compte2.sid)
         await deleteIDB()
@@ -503,6 +502,10 @@ export class CreationCompte extends OperationUI {
       }
 
       data.statut = 2
+      data.dhsync = data.dh
+      if (data.db) {
+        await data.db.setEtat()
+      }
       this.fin()
       remplacePage('Compte')
     } catch (e) {
@@ -528,9 +531,9 @@ export class ConnexionCompteAvion extends OperationUI {
       await data.connexion()
       this.BRK()
 
-      if (data.db) {
-        await data.db.getEtat()
-      }
+      const etat = await data.db.getEtat()
+      data.dhsync = etat.dhsync
+      data.statut = etat.statut
 
       const compte = await getCompte()
       if (!compte || compte.pcbh !== data.ps.pcbh) {
@@ -540,7 +543,6 @@ export class ConnexionCompteAvion extends OperationUI {
 
       await this.chargementIdb()
 
-      data.statut = 2
       this.fin()
       remplacePage('Compte')
     } catch (e) {
@@ -631,6 +633,12 @@ export class ConnexionCompte extends OperationUI {
 
       // état chargé correspondant à l'état local (vide le cas échéant - incognito ou première synchro) - compte OK
       data.statut = 1
+      data.dhsync = data.dh
+      if (data.db) {
+        const etat = data.db.getEtat()
+        data.vsv = etat.vsv
+        data.db.setEtat()
+      }
 
       {
         const grAPurger = new Set()
@@ -698,27 +706,23 @@ export class ConnexionCompte extends OperationUI {
       await this.chargerAvGr(lav, lgr)
 
       // Synchroniser les CVs (et s'abonner)
-      let nvvcv = await this.syncCVs(data.vcv)
+      const nvvcv = await this.syncCVs(data.vcv)
+      if (data.vcv < nvvcv) data.vcv = nvvcv
 
       // Traiter les notifications éventuellement arrivées
       while (data.syncqueue.length) {
         const q = data.syncqueue
         data.syncqueue = []
-        const [dhc, vcv] = await this.traiteQueue(q)
-        if (dhc > data.dh) data.dh = dhc
-        if (vcv > nvvcv) nvvcv = vcv
+        await this.traiteQueue(q)
       }
 
-      // Enregistrer l'état de synchro (nvdhc et nvvcv)
-      // { dhsyncok: data.dhsyncok, dhdebutsync: data.dhdebutsync, vcv: data.vcv }
-      if (data.dh > data.dhsyncok) data.dhsyncok = data.dh
-      data.dhdebutsync = 0
-      if (data.vcv < nvvcv) data.vcv = nvvcv
-      if (data.db) {
-        await data.db.setEtat()
-      }
-
+      // Enregistrer l'état de synchro
       data.statut = 2
+      if (data.dhsync < data.dh) data.dhsync = data.dh
+      if (data.db) {
+        data.db.setEtat()
+      }
+
       this.fin()
       remplacePage('Compte')
     } catch (e) {

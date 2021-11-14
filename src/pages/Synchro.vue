@@ -6,7 +6,7 @@
 
 <script>
 import { onBoot } from '../app/modele'
-import { RapportSynchro } from '../components/RapportSynchro.vue'
+import RapportSynchro from '../components/RapportSynchro.vue'
 
 export default ({
   name: 'Synchro',
