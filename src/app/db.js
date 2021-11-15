@@ -91,7 +91,7 @@ export async function getEtat () {
   try {
     const obj = await data.db.etat.get(1)
     try {
-      return JSON.parse(obj)
+      return JSON.parse(obj.data)
     } catch (e) {
       return { dhsync: 0, statut: 0, vcv: 0 }
     }
@@ -104,7 +104,7 @@ export async function setEtat () {
   go()
   try {
     const etat = { dhsync: data.dhsync, statut: data.statut, vcv: data.vcv }
-    await this.db.etat.set(1, JSON.stringify(etat))
+    await data.db.etat.put({ id: 1, data: JSON.stringify(etat) })
   } catch (e) {
     throw data.setErDB(EX2(e))
   }
@@ -373,16 +373,17 @@ export async function commitRows (lobj) {
   go()
   try {
     if (!lobj || !lobj.length) return
-    await data.db.transaction('rw', TABLES, async () => {
+    const d = data
+    await d.db.transaction('rw', TABLES, async () => {
       for (let i = 0; i < lobj.length; i++) {
         const obj = lobj[i]
         const suppr = obj.st !== undefined && obj.st < 0
         const idb = obj.toIdb
         if (!suppr) {
-          idb.data = crypt.crypter(obj.table === 'compte' ? data.ps.pcb : data.clek, idb.data)
-          await data.db[obj.table].put(idb)
+          idb.data = crypt.crypter(obj.table === 'compte' ? d.ps.pcb : d.clek, idb.data)
+          await d.db[obj.table].put(idb)
         } else {
-          await data.db[obj.table].delete(obj.pk)
+          await d.db[obj.table].delete(obj.pk)
         }
         if (cfg().debug) console.log(suppr ? 'del ' : 'put ' + obj.table + ' - ' + obj.sid)
       }

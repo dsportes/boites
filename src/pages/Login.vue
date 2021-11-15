@@ -15,7 +15,7 @@
     </q-card-section>
     </q-card>
 
-    <q-card flat v-if="mode != 0" class="q-ma-xs petitelargeur">
+    <q-card flat v-if="mode > 0 && mode < 4" class="q-ma-xs petitelargeur">
       <q-card-section>
         <div class="titre-2">Phrase secrète de connexion</div>
       </q-card-section>

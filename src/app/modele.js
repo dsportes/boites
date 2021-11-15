@@ -4,7 +4,8 @@ const base64url = require('base64url')
 const rowTypes = require('./rowTypes')
 import { openIDB, closeIDB } from './db'
 import { openWS, closeWS } from './ws'
-import { cfg, store, affichermessage } from './util'
+// eslint-disable-next-line no-unused-vars
+import { cfg, store, affichermessage, sleep } from './util'
 const api = require('./api')
 const AppExc = require('./api').AppExc
 
@@ -56,9 +57,15 @@ export function onBoot () {
 
     // l'organisation était définie et elle est inchangée
     if (!compte) {
-      // on ne peut aller que sur Login
-      $store.commit('ui/majpage', 'Login')
-      if (to.name === 'Login') return true
+      // on peut aller sur Login ou Synvhro
+      if (to.name === 'Login') {
+        $store.commit('ui/majpage', 'Login')
+        return true
+      }
+      if (to.name === 'Synchro') {
+        $store.commit('ui/majpage', 'Synchro')
+        return true
+      }
       return '/' + org
     }
 
@@ -140,6 +147,7 @@ export function rowItemsToMapObjets (rowItems) {
   const res = {}
   rowItems.forEach(item => {
     if (item.table === 'compte') {
+      // le dernier quand on en a reçu plusieurs et non la liste
       res.compte = objetDeItem(item)
     } else {
       if (!res[item.table]) res[item.table] = []
@@ -149,12 +157,17 @@ export function rowItemsToMapObjets (rowItems) {
   return res
 }
 
-export function commitMapObjets (mapObj) { // SAUF compte
+export function commitMapObjets (mapObj) { // SAUF mapObj.compte
   const objets = []
+
+  function push (n) {
+    mapObj[n].forEach((x) => { objets.push(x) })
+  }
+
   let vcv = 0
   if (mapObj.avatar) {
     store().commit('db/setAvatars', mapObj.avatar)
-    objets.push(mapObj.avatar)
+    push('avatar')
   }
 
   if (mapObj.contact) {
@@ -167,7 +180,7 @@ export function commitMapObjets (mapObj) { // SAUF compte
       }
     })
     store().commit('db/setContacts', mapObj.contact)
-    objets.push(mapObj.contact)
+    push('contact')
   }
 
   if (mapObj.invitct) {
@@ -180,27 +193,27 @@ export function commitMapObjets (mapObj) { // SAUF compte
       }
     })
     store().commit('db/setInvitCts', mapObj.invitct)
-    objets.push(mapObj.contact)
+    push('invitct')
   }
 
   if (mapObj.invitgr) {
     store().commit('db/setInvitGrs', mapObj.invitgr)
-    objets.push(mapObj.invitgr)
+    push('invitgr')
   }
 
   if (mapObj.parrain) {
     store().commit('db/setParrains', mapObj.parrain)
-    objets.push(mapObj.parrain)
+    push('parrain')
   }
 
   if (mapObj.rencontre) {
     store().commit('db/setRencontres', mapObj.rencontre)
-    objets.push(mapObj.rencontre)
+    push('rencontre')
   }
 
   if (mapObj.groupe) {
     store().commit('db/setGroupes', mapObj.groupe)
-    objets.push(mapObj.groupe)
+    push('groupe')
   }
 
   if (mapObj.membre) {
@@ -213,12 +226,12 @@ export function commitMapObjets (mapObj) { // SAUF compte
       }
     })
     store().commit('db/setMembres', mapObj.membre)
-    objets.push(mapObj.membre)
+    push('membre')
   }
 
   if (mapObj.secret) {
     store().commit('db/setSecrets', mapObj.secret)
-    objets.push(mapObj.secret)
+    push('secret')
   }
 
   if (mapObj.cv) {
@@ -229,9 +242,9 @@ export function commitMapObjets (mapObj) { // SAUF compte
       }
     })
     store().commit('db/setCvs', mapObj.cv)
-    objets.push(mapObj.secret)
+    push('cv')
   }
-  this.commitRepertoire()
+  data.commitRepertoire()
   return [objets, vcv]
 }
 
@@ -280,6 +293,7 @@ class Session {
   async connexion (sansidb) { // Depuis l'opération de connexion
     this.raz()
     store().commit('db/raz')
+    remplacePage('Synchro')
     if (this.nbreconnexion === 0) {
       this.modeInitial = this.mode
     }
@@ -287,7 +301,6 @@ class Session {
     if (!sansidb && (this.mode === 1 || this.mode === 3)) await openIDB()
     if (this.mode === 1 || this.mode === 2) await openWS()
     console.log('Ouverture de session : ' + this.sessionId)
-    remplacePage('Synchro')
   }
 
   deconnexion (avantreconnexion) { // Depuis un bouton
@@ -509,25 +522,28 @@ class Session {
 
   get setCvsUtiles () {
     const s = new Set()
-    this.repertoire.forEach((cv, sid) => {
+    for (const sid in this.repertoire) {
+      const cv = this.repertoire[sid]
       if (cv.lctc.length || cv.lmbr.length) s.add(sid)
-    })
+    }
     return s
   }
 
   get setCvsManquantes () {
     const s = new Set()
-    this.repertoire.forEach((cv, sid) => {
+    for (const sid in this.repertoire) {
+      const cv = this.repertoire[sid]
       if (cv.fake && (cv.lctc.length || cv.lmbr.length)) s.add(sid)
-    })
+    }
     return s
   }
 
   get setCvsInutiles () {
     const s = new Set()
-    this.repertoire.forEach((cv, sid) => {
+    for (const sid in this.repertoire) {
+      const cv = this.repertoire[sid]
       if (!cv.lctc.length && !cv.lmbr.length) s.add(sid)
-    })
+    }
     return s
   }
 
@@ -536,23 +552,23 @@ class Session {
   }
 
   contact (id, ic) {
-    return store().getters['db/contact']({ id, ic })
+    return store().getters['db/contact'](id, ic)
   }
 
   invitct (id, ni) {
-    return store().getters['db/invitct']({ id, ni })
+    return store().getters['db/invitct'](id, ni)
   }
 
   invitgr (id, ni) {
-    return store().getters['db/invitgr']({ id, ni })
+    return store().getters['db/invitgr'](id, ni)
   }
 
   rencontre (prh, id) {
-    return store().getters['db/rencontre']({ prh, id })
+    return store().getters['db/rencontre'](prh, id)
   }
 
   parrain (pph, id) {
-    return store().getters['db/parrain']({ pph, id })
+    return store().getters['db/parrain'](pph, id)
   }
 
   groupe (id) {
@@ -560,11 +576,11 @@ class Session {
   }
 
   membre (id, im) {
-    return store().getters['db/membre']({ id, im })
+    return store().getters['db/membre'](id, im)
   }
 
   secret (id, ns) {
-    return store().getters['db/secret']({ id, ns })
+    return store().getters['db/secret'](id, ns)
   }
 
   cv (id) {

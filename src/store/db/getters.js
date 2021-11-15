@@ -1,28 +1,28 @@
 const crypt = require('../../app/crypto')
 
-export function avatar (state, id) {
+export const avatar = (state) => (id) => {
   return state.avatars[crypt.id2s(id)]
 }
 
-export function contact (state, { id, ic }) {
+export const contact = (state) => (id, ic) => {
   const lc = state.contacts[crypt.id2s(id)]
   if (!ic) return lc || { }
   return lc ? lc[ic] : null
 }
 
-export function invitct (state, { id, ni }) {
+export const invitct = (state) => (id, ni) => {
   const lc = state.invitcts[crypt.id2s(id)]
   if (!ni) return lc || { }
   return lc ? lc[crypt.id2s(ni)] : null
 }
 
-export function invitgr (state, { id, ni }) {
+export const invitgr = (state) => (id, ni) => {
   const lc = state.invitgrs[crypt.id2s(id)]
   if (!ni) return lc || { }
   return lc ? lc[crypt.id2s(ni)] : null
 }
 
-export function rencontre (state, { id, prh }) {
+export const rencontre = (state) => (id, prh) => {
   if (prh) return state.rencontres[crypt.id2s(prh)] || null
   for (const sid in state.rencontres) {
     const obj = state.rencontres[sid]
@@ -31,7 +31,7 @@ export function rencontre (state, { id, prh }) {
   return null
 }
 
-export function parrain (state, { id, pph }) {
+export const parrain = (state) => (id, pph) => {
   if (pph) return state.parrains[crypt.id2s(pph)] || null
   for (const sid in state.parrains) {
     const obj = state.parrains[sid]
@@ -40,22 +40,22 @@ export function parrain (state, { id, pph }) {
   return null
 }
 
-export function groupe (state, id) {
+export const groupe = (state) => (id) => {
   return state.groupes[crypt.id2s(id)]
 }
 
-export function membre (state, { id, im }) {
+export const membre = (state) => (id, im) => {
   const lc = state.membres[crypt.id2s(id)]
   if (!im) return lc || { }
   return lc ? lc[im] : null
 }
 
-export function secret (state, { id, ns }) {
+export const secret = (state) => (id, ns) => {
   const lc = state.membres[crypt.id2s(id)]
   if (!ns) return lc || { }
   return lc ? lc[crypt.id2s(ns)] : null
 }
 
-export function cv (state, id) {
+export const cv = (state) => (id) => {
   return state.cvs[crypt.id2s(id)]
 }

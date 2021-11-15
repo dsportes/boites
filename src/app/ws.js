@@ -3,19 +3,26 @@
 import { cfg, store, dhtToString } from './util'
 import { data } from './modele'
 import { ProcessQueue } from './operations'
+import { setEtat } from './db'
 const api = require('./api')
 const AppExc = require('./api').AppExc
 
-function EX1 (e) {
-  return new AppExc(api.E_WS, 'Ouverture de la connexion avec le serveur impossible', e.message)
+let url = ''
+
+function EX0 (e) {
+  return new AppExc(api.E_WS, 'Erreur à l\'ouverture de la connexion avec le serveur (' + url + ')', e.message)
+}
+
+function EX1 () {
+  return new AppExc(api.E_WS, 'Ouverture de la connexion avec le serveur impossible (' + url + ')')
 }
 
 function EX2 (e) {
-  return new AppExc(api.E_WS, 'Envoi d\'un message au serveur impossible', e.message)
+  return new AppExc(api.E_WS, 'Envoi d\'un message au serveur impossible (' + url + ')', e.message)
 }
 
-function EX3 (e) {
-  return new AppExc(api.E_WS, 'Rupture de la liaison avec le serveur par le serveur', e.message)
+function EX3 () {
+  return new AppExc(api.E_WS, 'Rupture de la liaison avec le serveur par le serveur ou URL mal configurée (' + url + ')')
 }
 
 let ondeconnexion = false
@@ -27,19 +34,18 @@ export function closeWS () {
 }
 
 export async function openWS () {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     try {
       const u = cfg().urlserveur
-      const url = 'wss' + u.substring(u.indexOf('://'))
+      url = 'wss' + u.substring(u.indexOf('://'))
       const ws = new WebSocket(url)
       if (data.to) clearTimeout(data.to)
       ws.onerror = (e) => {
-        try { data.setErWS(EX3(e)) } catch (e) {}
-        if (ws) ws.close()
+        reject(data.setErWS(EX1()))
       }
       ws.onclose = () => {
         if (!ondeconnexion) {
-          try { data.setErWS(EX2('Fermeture')) } catch (e) {}
+          try { data.setErWS(EX3()) } catch (e) {}
         }
         ondeconnexion = false
         data.ws = null
@@ -60,9 +66,9 @@ export async function openWS () {
         }
       }
     } catch (e) {
+      // Sur erreur d'URL (mauvais schéma)
       console.log(e)
-      try { data.setErWS(EX1(e)) } catch (e) {}
-      resolve(null)
+      reject(data.setErWS(EX0(e)))
     }
   })
 }
@@ -85,7 +91,7 @@ async function onmessage (m) {
     pongrecu = true
     if (data.dhsync < data.dh) data.dhsync = data.dh
     if (data.db) {
-      await data.db.setEtat()
+      await setEtat()
     }
     return
   }
@@ -100,7 +106,7 @@ async function onmessage (m) {
         await op.run(q) // ne sort jamais en exception
         if (data.dhsync < data.dh) data.dhsync = data.dh
         if (data.db) {
-          await data.db.setEtat()
+          await setEtat()
         }
       }
     }, 1)

@@ -11,7 +11,7 @@
             <q-tooltip>Changer d'organisation</q-tooltip>
           </span>
           <span v-if="org != null && sessionId == null && page === 'Login'" class="q-px-sm"  @click="login">Connexion ...</span>
-          <span v-if="org != null && compte != null" class="labeltitre q-px-sm">{{ compte.titre }}</span>
+          <span v-if="org != null && statut != 0 && compte != null" class="labeltitre q-px-sm">{{ compte.titre }}</span>
         </q-toolbar-title>
 
         <q-btn v-if="org != null && sessionId != null" dense size="md" color="warning" icon="logout" @click="confirmerdrc = true">
@@ -107,7 +107,7 @@
         <div class="text-weight-bold">Interrompre l'opération</div>
         <div class="text-weight-bold">{{opencours.nom}}</div>
         <q-spinner color="primary" size="2rem" :thickness="3" />
-        <q-btn flat round icon="stop" class="text-red" @click="confirmstopop = true;auneop = false" v-close-popup/>
+        <q-btn flat round icon="stop" class="text-red" @click="confirmstopop = true"/>
       </q-card>
     </q-dialog>
 
@@ -122,7 +122,7 @@
           qu'elle ne se terminera pas normalement d'elle-même.
         </q-card-section>
         <q-card-actions align="right">
-          <q-btn flat label="Confirmer l'interruption" color="warning" v-close-popup @click="stop"/>
+          <q-btn flat label="Confirmer l'interruption" color="warning" v-close-popup @click="stop;auneop=false"/>
           <q-btn flat label="Laisser l'opération se poursuivre" color="primary" v-close-popup/>
         </q-card-actions>
       </q-card>
@@ -265,6 +265,7 @@ export default {
     const diagnosticvisible = computed(() => $store.getters['ui/diagnosticvisible'])
     const opencours = computed(() => $store.state.ui.opencours)
     const statutnet = computed(() => $store.state.ui.statutnet)
+    const statut = computed(() => $store.state.ui.statutsession)
     const statutidb = computed(() => $store.state.ui.statutidb)
     const sessionId = computed(() => $store.state.ui.sessionid)
 
@@ -299,7 +300,8 @@ export default {
       statutnet,
       statutidb,
       sessionId,
-      msgdegrade
+      msgdegrade,
+      statut
     }
   }
 }

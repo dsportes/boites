@@ -143,7 +143,7 @@ export function razdialoguesynchro (state) {
 }
 
 export function majsynclec (state, { st, sid, nom, nbl }) {
-  const x = state.majsynclec
+  const x = state.synclec
   x[sid] = { st, sid, nom, nbl }
   state.synclec = { ...x }
 }

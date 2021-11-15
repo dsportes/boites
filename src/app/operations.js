@@ -2,7 +2,7 @@ import { store, post, affichermessage, cfg, sleep } from './util'
 import {
   deleteIDB, idbSidCompte, commitRows, getCompte, getAvatars, getContacts, getCvs,
   getGroupes, getInvitcts, getInvitgrs, getMembres, getParrains, getRencontres, getSecrets,
-  purgeAvatars, purgeCvs, purgeGroupes, openIDB, enregLScompte
+  purgeAvatars, purgeCvs, purgeGroupes, openIDB, enregLScompte, setEtat, getEtat
 } from './db.js'
 import { NomAvatar, Compte, Avatar, data, remplacePage, Invitgr, rowItemsToMapObjets, commitMapObjets, SIZEAV, SIZEGR } from './modele'
 const AppExc = require('./api').AppExc
@@ -67,7 +67,9 @@ export class Operation {
     const estws = this instanceof OperationWS
     // synchroniser les avatars
     if (lav && lav.size) {
-      lav.forEach(async (id) => {
+      const ar = Array.from(lav)
+      for (let i = 0; i < ar.length; i++) {
+        const id = ar[i]
         const sid = crypt.id2s(id)
         const lv = !estws && data.verAv.get(sid) ? data.verAv.get(sid) : new Array(SIZEAV).fill(0)
         const ret = await post(this, 'm1', 'syncAv', { sessionId: data.sessionId, avgr: id, lv })
@@ -80,15 +82,17 @@ export class Operation {
           })
         }
         if (data.db) {
-          await data.db.commitRows(objets)
+          await commitRows(objets)
           this.BRK()
         }
-      })
+      }
     }
 
     // synchroniser les groupes
     if (lgr && lgr.size) {
-      lgr.forEach(async (id) => {
+      const ar = Array.from(lgr)
+      for (let i = 0; i < ar.length; i++) {
+        const id = ar[i]
         const sid = crypt.id2s(id)
         const lv = !manquants && data.verGr.get(sid) ? data.verGr.get(sid) : new Array(SIZEGR).fill(0)
         const ret = await post(this, 'm1', 'syncGr', { sessionId: data.sessionId, avgr: id, lv })
@@ -101,10 +105,10 @@ export class Operation {
           })
         }
         if (data.db) {
-          await data.db.commitRows(objets)
+          await commitRows(objets)
           this.BRK()
         }
-      })
+      }
     }
   }
 
@@ -127,7 +131,7 @@ export class Operation {
       })
     }
     if (data.db) {
-      await data.db.commitRows(objets)
+      await commitRows(objets)
       this.BRK()
     }
     return nvvcv
@@ -157,7 +161,7 @@ export class Operation {
       const row = mapObj.compte
       if (row.pcbh !== data.ps.pcbh) throw EXPS // phrase secrète changée => déconnexion
       compte = new Compte().fromRow(row)
-      data.setcompte(compte)
+      data.setCompte(compte)
     }
 
     const [objets] = data.commitMapObjets(mapObj)
@@ -427,7 +431,7 @@ export class ProcessQueue extends OperationWS {
       if (data.dh < dhc) data.dh = dhc
       if (data.vcv < nvvcv) data.vcv = nvvcv
       if (data.db) {
-        await data.db.setEtat()
+        await setEtat()
       }
       this.fin()
     } catch (e) {
@@ -483,9 +487,11 @@ export class CreationCompte extends OperationUI {
       Le compte vient d'être créé et est déjà dans le modèle (clek enregistrée)
       On peut désérialiser la liste d'items (compte et avatar)
       */
-      const rows = commitMapObjets(rowItemsToMapObjets(ret.rowItems))
-      const compte2 = rows.compte[0]
-      const avatar2 = rows.avatar[0]
+      const mapObj = rowItemsToMapObjets(ret.rowItems)
+      const compte2 = new Compte().fromRow(mapObj.compte) // le dernier ROW (pas objet) quand on en a reçu plusieurs
+      data.setCompte(compte2)
+      const [rows] = commitMapObjets(mapObj)
+      rows.push(compte2)
 
       // création de la base IDB et chargement des rows compte et avatar
       if (data.mode === 1) { // synchronisé : IL FAUT OUVRIR IDB (et écrire dedans)
@@ -498,13 +504,13 @@ export class CreationCompte extends OperationUI {
           await deleteIDB(true)
           throw e
         }
-        await commitRows([compte2, avatar2])
+        await commitRows(rows)
       }
 
       data.statut = 2
       data.dhsync = data.dh
       if (data.db) {
-        await data.db.setEtat()
+        await setEtat()
       }
       this.fin()
       remplacePage('Compte')
@@ -531,7 +537,7 @@ export class ConnexionCompteAvion extends OperationUI {
       await data.connexion()
       this.BRK()
 
-      const etat = await data.db.getEtat()
+      const etat = await getEtat()
       data.dhsync = etat.dhsync
       data.statut = etat.statut
 
@@ -539,7 +545,7 @@ export class ConnexionCompteAvion extends OperationUI {
       if (!compte || compte.pcbh !== data.ps.pcbh) {
         throw new AppExc(api.F_BRO, 'Compte non enregistré localement : aucune session synchronisée ne s\'est préalablement exécutée sur ce poste avec cette phrase secrète. Erreur dans la saisie de la ligne 2 de la phrase ?')
       }
-      data.setcompte(compte)
+      data.setCompte(compte)
 
       await this.chargementIdb()
 
@@ -582,13 +588,13 @@ export class ConnexionCompte extends OperationUI {
 
       // obtention du compte depuis le serveur
       let compte = await this.lectureCompte()
-      data.setcompte(compte)
+      data.setCompte(compte)
 
       if (data.db) {
         enregLScompte(compte.sid) // La phrase secrète a pu changer : celle du serveur est installée
-        await data.db.commitRows([compte])
+        await commitRows([compte])
         this.BRK()
-        await data.db.chargementIdb()
+        await this.chargementIdb()
       }
 
       data.idbSetAvatars = data.setAvatars
@@ -604,7 +610,7 @@ export class ConnexionCompte extends OperationUI {
         const compte2 = await this.lectureCompte() // PEUT sortir en EXPS si changement de phrase secrète
         if (compte2.v > compte.v) {
           compte = compte2
-          data.setcompte(compte2)
+          data.setCompte(compte2)
           const avInutiles = new Set()
           const avUtiles = data.setAvatars
           for (const id of data.idbSetAvatars) if (!avUtiles.has(id)) avInutiles.add(id)
@@ -635,9 +641,9 @@ export class ConnexionCompte extends OperationUI {
       data.statut = 1
       data.dhsync = data.dh
       if (data.db) {
-        const etat = data.db.getEtat()
+        const etat = getEtat()
         data.vsv = etat.vsv
-        data.db.setEtat()
+        setEtat()
       }
 
       {
@@ -684,25 +690,27 @@ export class ConnexionCompte extends OperationUI {
         }
       }
 
-      compte.mac.forEach((mac, sid) => {
+      for (const sid in compte.mac) {
+        const mac = compte.mac[sid]
         store().commit('ui/majsynclec', {
           st: 0, sid: sid, nom: 'Avatar ' + mac.na.nomc, nbl: 0
         })
-      })
-      const mgr = store().state.getInvitgrs
-      mgr.forEach((av) => {
+      }
+      const mgr = store().state.db.invitgrs
+      for (const x in mgr) {
+        const av = mgr[x]
         const sidg = crypt.id2s(av.data.idg)
         store().commit('ui/majsynclec', {
           st: 0, sid: sidg, nom: 'Groupe ' + sidg, nbl: 0
         })
-      })
+      }
       store().commit('ui/majsynclec', {
         st: 0, sid: '$CV', nom: 'Cartes de visite', nbl: 0
       })
 
       const [lav, lgr] = await this.abonnements(compte)
 
-      // Synchroiser avatars et groupes
+      // Synchroniser avatars et groupes
       await this.chargerAvGr(lav, lgr)
 
       // Synchroniser les CVs (et s'abonner)
@@ -720,7 +728,7 @@ export class ConnexionCompte extends OperationUI {
       data.statut = 2
       if (data.dhsync < data.dh) data.dhsync = data.dh
       if (data.db) {
-        data.db.setEtat()
+        setEtat()
       }
 
       this.fin()
@@ -728,6 +736,7 @@ export class ConnexionCompte extends OperationUI {
     } catch (e) {
       this.fin(e)
       if (data.statut === 0) data.deconnexion()
+      // if (data.statut > 0) remplacePage('Compte')
     }
   }
 }

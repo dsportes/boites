@@ -173,7 +173,7 @@ export async function ping () {
   try {
     const u = $cfg.urlserveur + '/ping'
     affichermessage('ping - ' + u)
-    const r = await axios({ method: 'get', url: u, responseType: 'text', timeout: $cfg.debug ? 500000 : 5000 })
+    const r = await axios({ method: 'get', url: u, responseType: 'text', timeout: $cfg.debug ? 50000000 : 5000 })
     affichermessage(r.data)
     return r.data
   } catch (e) {
@@ -199,7 +199,7 @@ export async function get (module, fonction, args) {
       params: args,
       headers: headers,
       responseType: 'arraybuffer',
-      timeout: $cfg.debug ? 500000 : 5000
+      timeout: $cfg.debug ? 50000000 : 5000
     })
     return r.status === 200 ? r.data : null
   } catch (e) {

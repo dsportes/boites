@@ -36,6 +36,7 @@ import { ping, post } from '../app/util'
 import { computed } from 'vue'
 import { useStore } from 'vuex'
 import { data } from '../app/modele'
+import { getEtat } from '../app/db'
 
 export default ({
   name: 'DialogueTestPing',
@@ -70,7 +71,7 @@ export default ({
       } else {
         this.resultat3 = '-'
         try {
-          await data.db.getEtat()
+          await getEtat()
           this.resultat3 = 'OK'
         } catch (e) {
           this.resultat3 = 'KO'
