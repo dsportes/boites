@@ -1,8 +1,7 @@
 import { IDBLEC_RAZ } from '../constantes'
 export default function () {
   return {
-    erreur: null,
-    derniereerreur: null,
+    erreur: { code: -4, message: 'néant', conseil: 'néant', stack: null },
     statutidb: 0, // 0:inconnu 1:idb accessible 2:idb inaccessible (a rencontré une erreur)
     statutnet: 0,
 
@@ -11,6 +10,7 @@ export default function () {
     confirmstopop: false,
     dialoguetestping: false,
     dialoguesynchro: false,
+    dialogueerreur: false,
     diagnostic: null,
     menuouvert: false,
     confirmerdrc: false,

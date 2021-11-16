@@ -1,19 +1,23 @@
 <template>
-    <q-dialog v-model="enerreur">
+    <q-dialog v-model="dialogueerreur" persistent>
       <q-card class="q-ma-xs moyennelargeur">
         <q-card-section>
-          <div class="titre-3">{{labels['x'+erreur.code]}}</div>
+          <div class="titre-5">{{labels['x'+erreur.code]}}</div>
         </q-card-section>
         <q-card-section>
           <div class="msg">{{erreur.message}}</div>
         </q-card-section>
+        <q-card-section v-if="erreur.conseil != null">
+          <div class="msg">{{erreur.conseil}}</div>
+        </q-card-section>
         <q-card-actions align="right">
-          <q-btn flat label="J'ai lu" color="primary" @click="fermererreur" />
+          <q-btn v-for="(item, index) in erreur.options" :key="index" flat :label="item.label" :color="item.color"
+          @click="fermererreur(item.code)" />
         </q-card-actions>
         <q-card-section class="q-pt-none">
           <div v-if="erreur.stack">
             Stack <q-toggle v-model="errstack"/>
-            <q-input v-if="errstack" type="textarea" autogrow v-model="erreur.stack" class="stackclass"/>
+            <q-input v-if="errstack" type="textarea" autogrow v-model="erreur.stack" class="q-pa-xs stackclass font-mono"/>
           </div>
         </q-card-section>
       </q-card>
@@ -34,8 +38,9 @@ export default ({
   },
 
   methods: {
-    fermererreur () {
-      this.$store.commit('ui/majerreur', null)
+    fermererreur (code) {
+      this.$store.commit('ui/majdialogueerreur', false)
+      this.erreur.resolve(code)
     }
   },
 
@@ -62,15 +67,15 @@ export default ({
     }
     const $store = useStore()
     const erreur = computed(() => $store.state.ui.erreur)
-    const enerreur = computed({
-      get: () => $store.state.ui.erreur != null,
-      set: (val) => $store.commit('ui/majerreur', null)
+    const dialogueerreur = computed({
+      get: () => $store.state.ui.dialogueerreur,
+      set: (val) => $store.commit('ui/majdialogueerreur', false)
     })
 
     return {
       erreur,
       labels,
-      enerreur
+      dialogueerreur
     }
   }
 })
@@ -81,7 +86,8 @@ export default ({
 .stackclass
   height: 15rem
   border: 1px solid black
+  font-size: 0.8rem
 
 .msg
-  font-size: 1rem
+  font-size: 0.9rem
 </style>

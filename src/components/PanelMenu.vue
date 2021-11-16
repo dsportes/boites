@@ -15,11 +15,6 @@
         <q-btn flat label="Rapport de Synchronisation" color="primary" v-close-popup @click="dialoguesynchro = true;menuouvert = false"/>
       </q-item>
       <q-item>
-        <q-btn v-if="$store.getters['ui/aeuuneerreur']" flat label="Voir la dernière erreur" color="primary" v-close-popup
-           @click="$store.commit('ui/majerreur', this.derniereerreur);menuouvert = false"/>
-        <span v-else class="text-primary text-italic q-pl-md q-ma-none" style="text-align:center;">Pas de dernière erreur</span>
-      </q-item>
-      <q-item>
         <q-btn flat label="Panneau cryptographie" color="primary" @click="dialoguecrypto = true;menuouvert = false" />
       </q-item>
     </q-item-section>

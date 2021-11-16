@@ -79,6 +79,22 @@ console.log(edvol(67578920000))
 console.log(edvol(675789200000))
 */
 
+export function appexc (e) {
+  return !e ? null : (e instanceof AppExc ? e : new AppExc(api.E_BRO, 'Exception inattendue', e.message + (e.stack ? '\n' + e.stack : '')))
+}
+
+export const NOEXC = new AppExc(api.E_BRO, 'Déjà signalée')
+
+export function affichererreur (appexc, options, conseil) {
+  return new Promise((resolve) => {
+    appexc.options = options || ['J\'ai lu']
+    if (conseil) appexc.conseil = conseil
+    appexc.resolve = resolve
+    $store.commit('ui/majerreur', appexc)
+    $store.commit('ui/majdialogueerreur', true)
+  })
+}
+
 export function affichermessage (texte, important) {
   $store.dispatch('ui/affichermessage', { texte, important })
 }
@@ -132,7 +148,7 @@ export async function post (op, module, fonction, args) {
     buf = Buffer.from(r.data)
   } catch (e) {
     // Exceptions jetées par le this.BRK au-dessus)
-    if ((e === data.exIDB) || (e === data.exNET) || (e === data.EXBRK)) throw e
+    if (e === data.EXBRK) throw e
     if (axios.isCancel(e)) throw EXBRK
 
     const status = (e.response && e.response.status) || 0
@@ -170,15 +186,11 @@ export async function post (op, module, fonction, args) {
 }
 
 export async function ping () {
-  try {
-    const u = $cfg.urlserveur + '/ping'
-    affichermessage('ping - ' + u)
-    const r = await axios({ method: 'get', url: u, responseType: 'text', timeout: $cfg.debug ? 50000000 : 5000 })
-    affichermessage(r.data)
-    return r.data
-  } catch (e) {
-    store().commit('ui/majerreur', new AppExc(api.E_SRV, e.message, e.stack))
-  }
+  const u = $cfg.urlserveur + '/ping'
+  affichermessage('ping - ' + u)
+  const r = await axios({ method: 'get', url: u, responseType: 'text', timeout: $cfg.debug ? 50000000 : 5000 })
+  affichermessage(r.data)
+  return r.data
 }
 
 /*

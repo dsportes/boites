@@ -1,4 +1,4 @@
-Exception en connexion : l'affichage de l'erreur n'apparaiot pas si on change de page vers Compte
+Test de synchro à faire avec exception réseau. Détection de déconnexion au pong à retester
 
 Bizarre sur chargement des données sur page Sync
 

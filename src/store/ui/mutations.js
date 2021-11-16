@@ -15,6 +15,7 @@ export function razdialogues (state) {
   majinfoidb(state, false)
   majconfirmstopop(state, false)
   state.dialoguecreationcompte = false
+  state.erreur = { code: -4, message: 'néant', conseil: 'néant', stack: null }
 }
 
 export function deconnexion (state) {
@@ -49,11 +50,10 @@ export function majmessageto (state, to) {
 
 export function majerreur (state, err) {
   state.erreur = err
-  state.derniereerreur = err
 }
 
-export function razerreur (state) {
-  state.erreur = null
+export function majdialogueerreur (state, val) {
+  state.dialogueerreur = val
 }
 
 export function majconfirmstopop (state, val) {

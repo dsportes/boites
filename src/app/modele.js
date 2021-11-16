@@ -5,9 +5,9 @@ const rowTypes = require('./rowTypes')
 import { openIDB, closeIDB } from './db'
 import { openWS, closeWS } from './ws'
 // eslint-disable-next-line no-unused-vars
-import { cfg, store, affichermessage, sleep } from './util'
-const api = require('./api')
-const AppExc = require('./api').AppExc
+import { cfg, store, affichermessage, sleep, appexc, NOEXC } from './util'
+// const api = require('./api')
+// const AppExc = require('./api').AppExc
 
 import { useRouter, useRoute } from 'vue-router'
 import { ConnexionCompteAvion, ConnexionCompte } from './operations'
@@ -335,78 +335,48 @@ class Session {
     let nm = this.mode
     switch (this.modeInitial) {
       case 1 : { // synchronisé
-        if (this.erDB && !this.erWS) {
-          // IDB KO, peut passer en mode incognito si toutes les données sont chargées, sinon visio
-          nm = this.statut === 2 ? 2 : 4
-          break
-        }
-        if (!this.erDB && this.erWS) {
-          // NET KO, peut passer en mode avion si toutes les données sont chargées, sinon visio
-          nm = this.statut === 2 ? 3 : 4
-          break
-        }
-        if (this.erDB && this.erWS) {
-          // NET et IDB KO : mode visio
-          nm = 4
-          break
-        }
+        // IDB KO, peut passer en mode incognito si toutes les données sont chargées, sinon visio
+        if (this.statutidb === 2 && this.statutnet !== 2) { nm = this.statut === 2 ? 2 : 4; break }
+
+        // NET KO, peut passer en mode avion si toutes les données sont chargées, sinon visio
+        if (this.statutidb !== 2 && this.statutnet === 2) { nm = this.statut === 2 ? 3 : 4; break }
+
+        // NET et IDB KO : mode visio
+        if (this.statutidb !== 2 && this.statutnet !== 2) { nm = 4; break }
         break
       }
       case 2 : { // incognito
-        if (this.erWS) { nm = 4; break }
+        if (this.statutnet === 2) { nm = 4; break }
         break
       }
       case 3 : { // avion
-        if (this.erDB) { nm = 4; break }
+        if (this.statutidb === 2) { nm = 4; break }
         break
       }
     }
-    if (nm === this.mode) return // pas de dégradation
+    if (nm === this.mode) return null // pas de dégradation
     this.mode = nm
-    affichermessage('Un incident a conduit à dégrader le mode de "' +
-      MODES[this.modeInitial] + '" à "' + MODES[this.mode] + '". Plus d\'info en appuyant sur l\'icône "Mode" en haut à droite', true)
+    return 'Le mode a été dégradé de "' + MODES[this.modeInitial] + '" à "' + MODES[this.mode] + '".'
   }
 
-  setErDB (e, nostop) { // prévention des signalements multiples
-    if (this.erDB === 0) {
-      if (!(e instanceof AppExc)) {
-        e = new AppExc(api.E_BRO, e.message, e.stack)
-      }
-      this.exIDB = e
-      this.statutidb = 2
-      store().commit('ui/majerreur', e) // provoque son affichage
-      this.erDB = 1
-      if (this.db) {
-        this.db.close()
-      }
+  setErDB (e) { // prévention des signalements multiples avant affichage
+    const ex = appexc(e)
+    ex.idb = true
+    this.statutidb = 2
+    if (this.db) {
+      this.db.close()
     }
-    if (this.erDB === 1) {
-      this.erDB = 2
-      this.degraderMode()
-    }
-    if (!nostop) this.stopOp()
-    return this.exIDB
+    return ex
   }
 
-  setErWS (e, nostop) { // prévention des signalements multiples
-    if (this.erWS === 0) {
-      if (!(e instanceof AppExc)) {
-        e = new AppExc(api.E_SRV, e.message, e.stack)
-      }
-      this.exNET = e
-      this.statutnet = 2
-      store().commit('ui/majerreur', e) // provoque son affichage
-      this.erWS = 1
-      if (this.ws) {
-        this.ws.close()
-      }
+  setErWS (e) { // prévention des signalements multiples avant affichage
+    const ex = appexc(e)
+    ex.net = true
+    this.statutnet = 2
+    if (this.ws) {
+      this.ws.close()
     }
-    if (this.erWS === 1) {
-      this.erWS = 2
-      this.degraderMode()
-    }
-    if (!nostop) this.stopOp()
-    return this.exNET
+    return ex
   }
 
   stopOp () {
@@ -426,8 +396,8 @@ class Session {
     this.repertoire = {}
 
     if (!init) {
-      this.statutnet = 0
-      this.statutidb = 0
+      this.statutnet = 0 // 0: net pas ouvert, 1:net OK, 2: net KO
+      this.statutidb = 0 // 0: idb pas ouvert, 1:idb OK, 2: idb KO
       /* statut de la session
       0: fantôme : la session n'a pas encore été ouverte par une opération de login / création compte
       1: session en partie chargée, utilisable en mode visio

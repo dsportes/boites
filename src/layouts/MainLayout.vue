@@ -105,7 +105,7 @@
     <q-dialog v-model="auneop" seamless position="top" persistent transition-show="scale" transition-hide="scale">
       <q-card class="opencours row items-center justify-between no-wrap bg-amber-2 q-pa-sm">
         <div class="text-weight-bold">Interrompre l'opération</div>
-        <div class="text-weight-bold">{{opencours.nom}}</div>
+        <div v-if="opencours != null" class="text-weight-bold">{{opencours.nom}}</div>
         <q-spinner color="primary" size="2rem" :thickness="3" />
         <q-btn flat round icon="stop" class="text-red" @click="confirmstopop = true"/>
       </q-card>
@@ -270,8 +270,8 @@ export default {
     const sessionId = computed(() => $store.state.ui.sessionid)
 
     function msgdegrade () {
-      return 'Un incident (réseau, accès à la base locale, interruption d\'une opération de connexion) a conduit à dégrader le mode de "' +
-      MODES[data.modeInitial] + '" à "' + MODES[data.mode] + '". Possibilité d\'actions : conserver le mode actuel, se reconnecter, se déconnecter.'
+      return 'Suite à un incident réseau ou d\'accès à la base locale, le mode a été dégradé de "' +
+      MODES[data.modeInitial] + '" à "' + MODES[data.mode] + '".'
     }
 
     return {

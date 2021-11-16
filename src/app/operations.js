@@ -1,4 +1,4 @@
-import { store, post, affichermessage, cfg, sleep } from './util'
+import { store, post, affichermessage, cfg, sleep, affichererreur, appexc } from './util'
 import {
   deleteIDB, idbSidCompte, commitRows, getCompte, getAvatars, getContacts, getCvs,
   getGroupes, getInvitcts, getInvitgrs, getMembres, getParrains, getRencontres, getSecrets,
@@ -28,14 +28,73 @@ export class Operation {
     this.sessionId = data.sessionId
   }
 
-  EX1 (e) {
-    return new AppExc(api.E_BRO, 'Exception inattendue', e.message + '\n' + e.stack)
+  choixCDR (choix) {
+    if (choix === 'c') {
+      remplacePage('Compte')
+    } else if (choix === 'd') {
+      data.deconnexion()
+    } else {
+      data.reconnexion()
+    }
+  }
+
+  get options0 () {
+    return [
+      { code: 'c', label: 'J\'ai lu', color: 'primary' }
+    ]
+  }
+
+  get options1 () {
+    return [
+      { code: 'c', label: 'Continuer malgré la dégradation du mode', color: 'warning' },
+      { code: 'd', label: 'Se déconnecter, retourner au login', color: 'primary' },
+      { code: 'r', label: 'Essayer de se reconnecter', color: 'primary' }
+    ]
+  }
+
+  get options2 () {
+    return [
+      { code: 'c', label: 'Continuer malgré l\'erreur', color: 'warning' },
+      { code: 'd', label: 'Se déconnecter, retourner au login', color: 'primary' },
+      { code: 'r', label: 'Essayer de se reconnecter', color: 'primary' }
+    ]
+  }
+
+  get options3 () {
+    return [
+      { code: 'c', label: 'Corriger les données saisies', color: 'primary' },
+      { code: 'd', label: 'Se déconnecter, retourner au login', color: 'primary' }
+    ]
+  }
+
+  get options4 () {
+    return [
+      { code: 'd', label: 'Retourner au login', color: 'primary' },
+      { code: 'r', label: 'Essayer de  reconnecter le compte', color: 'primary' }
+    ]
+  }
+
+  get options5 () {
+    return [
+      { code: 'd', label: 'Retourner au login', color: 'primary' }
+    ]
+  }
+
+  async affichage1 () {
+    let conseil, options
+    if (this.appexc.idb || this.appexc.net || this.appexc === EXBRK) {
+      conseil = data.degraderMode()
+      options = conseil ? this.options1 : this.options2
+    } else if (this.appexc.code === api.F_BRO || this.appexc.code === api.F_SRV) {
+      options = this.options3
+    } else {
+      options = this.options4
+    }
+    return await affichererreur(this.appexc, options, conseil)
   }
 
   BRK () {
-    if (data.exIDB && this.idb) throw data.exIDB
-    if (data.exNET && this.net) throw data.exNET
-    if (this.break || (!this.opsync && data.sessionId !== this.sessionId)) throw EXBRK
+    if (this.break) throw EXBRK
   }
 
   stop () {
@@ -208,6 +267,7 @@ export class Operation {
   }
 }
 
+/* ********************************************************* */
 export class OperationUI extends Operation {
   constructor (nomop, net, idb) {
     super(nomop, net, idb)
@@ -215,32 +275,25 @@ export class OperationUI extends Operation {
     store().commit('ui/majopencours', this)
   }
 
-  fin (e) {
+  // 0: succès, 1: succès partiel (peut continuer), 2: échec
+  niveauechec () { return this.appexc ? 2 : 0 }
+
+  message () {
+    const n = this.niveauechec()
+    if (n === 2) {
+      affichermessage('Échec de l\'opération "' + this.nom + '"', true)
+    } else if (n === 1) {
+      affichermessage('Succès partiel de l\'opération "' + this.nom + '"', true)
+    } else {
+      affichermessage('Succès de l\'opération "' + this.nom + '"')
+    }
+  }
+
+  async fin (e) {
     data.opUI = null
     store().commit('ui/majopencours', null)
-    if (!e) {
-      affichermessage('Opération "' + this.nom + '" terminée avec succès')
-      return
-    }
-    affichermessage('Opération "' + this.nom + '" interrompue sur erreur', true)
-    if (e instanceof AppExc) {
-      if (e.code === api.E_DB) {
-        data.setErDB(e, true) // affiché (éventuellement) ici
-        return
-      }
-      if (e.code === api.E_WS) {
-        data.setErWS(e, true) // affiché (éventuellement) ici
-        return
-      }
-    } else { // toute exception inattendue (pas en AppExc)
-      e = new AppExc(api.E_BRO, e.message, e.stack)
-    }
-    store().commit('ui/majerreur', e) // affichage de l'erreur
-    if (e === EXPS) {
-      data.deconnexion()
-      return
-    }
-    data.degraderMode()
+    this.appexc = appexc(e)
+    this.message()
   }
 
   /* Chargement de la totalité de la base en mémoire :
@@ -388,41 +441,26 @@ export class OperationUI extends Operation {
   }
 }
 
+/* ********************************************************* */
 export class OperationWS extends Operation {
   constructor (nomop) {
     super(nomop, OUI, SELONMODE)
     data.opWS = this
   }
 
-  fin (e) {
+  async fin (e) {
     data.opWS = null
-    if (!e) return
-    let aff = false
-    if (e instanceof AppExc) {
-      if (e.code === api.E_DB) {
-        data.setErDB(e, true) // affiché (éventuelement) ici
-        aff = true
-      }
-      if (e.code === api.E_WS) {
-        data.setErWS(e, true) // affiché (éventuelement) ici
-        aff = true
-      }
-      if (e === EXBRK) aff = true
-    } else { // toute exception inattendue (pas en AppExc)
-      e = new AppExc(api.E_BRO, e.message, e.stack)
+    this.appexc = appexc(e)
+    this.message()
+    if (this.appexc) {
+      return await this.affichage1()
     }
-    if (!aff) store().commit('ui/majerreur', e) // affichage de l'erreur
-    if (e === EXPS) {
-      data.deconnexion()
-      return
-    }
-    data.degraderMode()
   }
 }
 
 export class ProcessQueue extends OperationWS {
   constructor () {
-    super('Traitement des notifications de synchronisation')
+    super('Traitement des synchronisation')
   }
 
   async run (q) {
@@ -436,10 +474,13 @@ export class ProcessQueue extends OperationWS {
       this.fin()
     } catch (e) {
       this.fin(e)
+      const choix = await this.affichage1()
+      this.choixCDR(choix)
     }
   }
 }
 
+/* ********************************************************* */
 /* On poste :
 - le row Compte, v et dds à 0
 - la clé publique de l'avatar pour la table avrsa
@@ -460,6 +501,43 @@ export class CreationCompte extends OperationUI {
   constructor () {
     super('Création de compte', OUI, SELONMODE)
     this.opsync = true
+  }
+
+  get options3 () {
+    return [
+      { code: 'c', label: 'Corriger les données saisies', color: 'primary' },
+      { code: 'd', label: 'Retourner au login', color: 'primary' }
+    ]
+  }
+
+  get options4 () {
+    return [
+      { code: 'd', label: 'Retourner au login', color: 'primary' },
+      { code: 'r', label: 'Ré-essayer de créer le compte', color: 'primary' }
+    ]
+  }
+
+  get options5 () {
+    return [
+      { code: 'd', label: 'Retourner au login', color: 'primary' }
+    ]
+  }
+
+  async affichage () {
+    let conseil, options
+    if (this.appexc.idb || this.appexc.net || this.appexc === EXBRK) {
+      conseil = data.degraderMode()
+      if (conseil) {
+        options = data.mode === 1 || data.mode === 2 ? this.options4 : this.options5
+      } else {
+        options = this.options4
+      }
+    } else if (this.appexc.code === api.F_BRO || this.appexc.code === api.F_SRV) {
+      options = this.options3
+    } else {
+      options = this.options4
+    }
+    return await affichererreur(this.appexc, options, conseil)
   }
 
   async run (mdp, ps, nom, quotas) {
@@ -516,16 +594,49 @@ export class CreationCompte extends OperationUI {
       remplacePage('Compte')
     } catch (e) {
       this.fin(e)
-      if (data.statut === 0) data.deconnexion()
+      await this.affichage()
+      data.deconnexion()
     }
   }
 }
 
-/* connexionCompteAvion ****************************************************/
+/* *************************************************** */
 export class ConnexionCompteAvion extends OperationUI {
   constructor () {
     super('Connexion à un compte en mode avion', NON, OUI)
     this.opsync = true
+  }
+
+  get options3 () {
+    return [
+      { code: 'c', label: 'Corriger les données saisies', color: 'primary' },
+      { code: 'd', label: 'Retourner au login', color: 'primary' }
+    ]
+  }
+
+  get options4 () {
+    return [
+      { code: 'd', label: 'Retourner au login', color: 'primary' },
+      { code: 'r', label: 'Ré-essayer de se connecter', color: 'primary' }
+    ]
+  }
+
+  get options5 () {
+    return [
+      { code: 'd', label: 'Retourner au login', color: 'primary' }
+    ]
+  }
+
+  async affichage () {
+    let conseil, options
+    if (this.appexc.idb || this.appexc === EXBRK) {
+      options = this.options4
+    } else if (this.appexc.code === api.F_BRO || this.appexc.code === api.F_SRV) {
+      options = this.options3
+    } else {
+      options = this.options4
+    }
+    return await affichererreur(this.appexc, options, conseil)
   }
 
   async run (ps) {
@@ -553,7 +664,8 @@ export class ConnexionCompteAvion extends OperationUI {
       remplacePage('Compte')
     } catch (e) {
       this.fin(e)
-      if (data.statut === 0) data.deconnexion()
+      await this.affichage()
+      data.deconnexion()
     }
   }
 }
@@ -563,6 +675,49 @@ export class ConnexionCompte extends OperationUI {
   constructor () {
     super('Connexion à un compte', OUI, SELONMODE)
     this.opsync = true
+  }
+
+  get options1 () {
+    return [
+      { code: 'c', label: 'Continuer malgré la dégradation du mode', color: 'warning' },
+      { code: 'd', label: 'Se déconnecter, retourner au login', color: 'primary' },
+      { code: 'r', label: 'Essayer de se reconnecter', color: 'primary' }
+    ]
+  }
+
+  get options2 () {
+    return [
+      { code: 'c', label: 'Continuer malgré l\'erreur', color: 'warning' },
+      { code: 'd', label: 'Se déconnecter, retourner au login', color: 'primary' },
+      { code: 'r', label: 'Essayer de se reconnecter', color: 'primary' }
+    ]
+  }
+
+  get options3 () {
+    return [
+      { code: 'c', label: 'Corriger les données saisies', color: 'primary' },
+      { code: 'd', label: 'Se déconnecter, retourner au login', color: 'primary' }
+    ]
+  }
+
+  get options4 () {
+    return [
+      { code: 'd', label: 'Retourner au login', color: 'primary' },
+      { code: 'r', label: 'Essayer de  reconnecter le compte', color: 'primary' }
+    ]
+  }
+
+  async affichage () {
+    let conseil, options
+    if (this.appexc.idb || this.appexc.net || this.appexc === EXBRK) {
+      conseil = data.degraderMode()
+      options = conseil ? this.options1 : this.options2
+    } else if (this.appexc.code === api.F_BRO || this.appexc.code === api.F_SRV) {
+      options = this.options3
+    } else {
+      options = this.options4
+    }
+    return await affichererreur(this.appexc, options, conseil)
   }
 
   async lectureCompte () {
@@ -575,6 +730,11 @@ export class ConnexionCompte extends OperationUI {
     const rowCompte = rowTypes.fromBuffer('compte', ret.rowItems[0].serial)
     if (data.ps.pcbh !== rowCompte.pcbh) throw EXPS // changt de phrase secrète
     return new Compte().fromRow(rowCompte)
+  }
+
+  // 0: succès, 1: succès partiel (peut continuer), 2: échec
+  niveauechec () {
+    return !this.appexc ? 0 : (data.statut === 1 ? 1 : 2)
   }
 
   async run (ps) {
@@ -735,8 +895,8 @@ export class ConnexionCompte extends OperationUI {
       remplacePage('Compte')
     } catch (e) {
       this.fin(e)
-      if (data.statut === 0) data.deconnexion()
-      // if (data.statut > 0) remplacePage('Compte')
+      const choix = await this.affichage()
+      this.choixCDR(choix)
     }
   }
 }

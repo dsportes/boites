@@ -25,8 +25,8 @@
             <img src="~assets/database_rouge.svg" class="bord">
           </q-avatar>
           <span :class="(mode == 1 || mode == 3) && statutidb != 0 && sessionId != null ? 'text-bold text-primary' : ''">
-              Erreur d'accès à la base locale (corrompue ? détruite ?) : un compte est connecté en mode synchronisé ou avion.
-              Les opérations de mise à jour sont interdites jusqu'à ce que la session ait été resynchronisée.
+              Erreur d'accès à la base locale (corrompue ? détruite ?). Un compte est connecté en mode synchronisé ou avion.
+              Les opérations de mise à jour sont interdites jusqu'à une reconnexion réussie.
           </span>
         </q-card-section>
         <q-card-actions align="left">
