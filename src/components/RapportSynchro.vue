@@ -1,7 +1,7 @@
 <template>
   <q-card class="q-pa-xs"> <!-- na pas mettre de marges haute / basse dans un q-page -->
     <q-card-actions v-if="jailu" align="right">
-      <q-btn flat label="J'ai lu" color="primary" @click="$store.commit('ui/majdialogsyncro', false)"/>
+      <q-btn flat label="J'ai lu" color="primary" @click="$store.commit('ui/majdialoguesynchro', false)"/>
     </q-card-actions>
     <q-card-section>
       <div class="titre-2">Chargement et synchronisation</div>

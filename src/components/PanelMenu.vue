@@ -9,10 +9,10 @@
         <q-btn flat label="Mode foncé / clair" color="primary" @click="tgdark" />
       </q-item>
       <q-item>
-        <q-btn flat label="Tests d'accès" color="primary" v-close-popup @click="dialoguetestping = true;menuouvert = false"/>
+        <q-btn flat label="Tests d'accès" color="primary" @click="dialoguetestping = true;menuouvert = false"/>
       </q-item>
       <q-item>
-        <q-btn flat label="Rapport de Synchronisation" color="primary" v-close-popup @click="dialoguesynchro = true;menuouvert = false"/>
+        <q-btn flat label="Rapport de Synchronisation" color="primary" @click="dialoguesynchro = true;menuouvert = false"/>
       </q-item>
       <q-item>
         <q-btn flat label="Panneau cryptographie" color="primary" @click="dialoguecrypto = true;menuouvert = false" />
@@ -58,7 +58,7 @@ export default ({
       set: (val) => $store.commit('ui/majdialoguecrypto', val)
     })
     const dialoguesynchro = computed({
-      get: () => $store.state.ui.dialoguetesynchro,
+      get: () => $store.state.ui.dialoguesynchro,
       set: (val) => $store.commit('ui/majdialoguesynchro', val)
     })
     return {

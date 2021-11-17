@@ -245,7 +245,7 @@ export default {
       set: (val) => $store.commit('ui/majdialoguetestping', val)
     })
     const dialoguesynchro = computed({
-      get: () => $store.state.ui.dialoguetesynchro,
+      get: () => $store.state.ui.dialoguesynchro,
       set: (val) => $store.commit('ui/majdialoguesynchro', val)
     })
     const org = computed({
