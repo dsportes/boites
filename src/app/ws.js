@@ -1,6 +1,6 @@
 /* gestion WebSocket */
 
-import { cfg, store, dhtToString } from './util'
+import { cfg, store, dhtToString, affichererreur } from './util'
 import { data } from './modele'
 import { ProcessQueue } from './operations'
 import { setEtat } from './db'
@@ -60,7 +60,7 @@ export async function openWS () {
           store().commit('ui/majstatutnet', 1)
           resolve(ws)
         } catch (e) {
-          try { data.setErWS(EX2(e)) } catch (e) {}
+          data.setErWS(EX2(e))
           data.ws = null
           resolve(null)
         }
@@ -114,10 +114,15 @@ async function onmessage (m) {
 }
 
 function heartBeat (sid) {
-  data.to = setTimeout(() => {
+  data.to = setTimeout(async () => {
     if (data.ws && data.sessionId === sid) {
       if (!pongrecu) {
-        try { data.setErWS(EX3({ message: 'ping / pong : pong non reçu' })) } catch (e) {}
+        const choix = await excAffichage()
+        if (choix === 'r') {
+          data.reconnexion()
+        } else if (choix === 'd') {
+          data.deconnexion()
+        }
         return
       }
       pongrecu = false
@@ -125,4 +130,22 @@ function heartBeat (sid) {
       heartBeat(sid)
     }
   }, api.PINGTO * 1000)
+}
+
+async function excAffichage () {
+  const ex = EX3({ message: 'ping / pong : pong non reçu' })
+  ex.net = true
+  data.statutnet = 2
+  const options1 = [
+    { code: 'c', label: 'Continuer malgré la dégradation du mode', color: 'warning' },
+    { code: 'd', label: 'Se déconnecter, retourner au login', color: 'primary' },
+    { code: 'r', label: 'Essayer de se reconnecter', color: 'primary' }
+  ]
+  const options2 = [
+    { code: 'd', label: 'Se déconnecter, retourner au login', color: 'primary' },
+    { code: 'r', label: 'Essayer de se reconnecter', color: 'primary' }
+  ]
+  const conseil = data.degraderMode()
+  const options = conseil ? options1 : options2
+  return await affichererreur(ex, options, conseil)
 }

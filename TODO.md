@@ -1,4 +1,4 @@
-Test de synchro à faire avec exception réseau. Détection de déconnexion au pong à retester
+Test de synchro à faire avec exception réseau. Détection de déconnexion au pong à re-tester
 
 Bizarre sur chargement des données sur page Sync
 
