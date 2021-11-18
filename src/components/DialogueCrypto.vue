@@ -6,8 +6,11 @@
           <q-btn flat label="Lancer le test de crypto" color="primary" @click="testcrypto" />
           <q-btn flat label="Lancer le test courant" color="primary" @click="testEcho"/>
         </q-card-section>
-        <phrase-secrete class="q-ma-xs" v-on:ok-ps="okps" icon-valider="check" verif label-valider="OK"></phrase-secrete>
-        <mdp-admin class="q-ma-xs" v-on:ok-mdp="okmdp"></mdp-admin>
+        <q-card-section>
+          <editeur-md v-model="memo" titre="Mon titre" @update:model-value="memochange"></editeur-md>
+        </q-card-section>
+          <phrase-secrete class="q-ma-xs" v-on:ok-ps="okps" icon-valider="check" verif label-valider="OK"></phrase-secrete>
+          <mdp-admin class="q-ma-xs" v-on:ok-mdp="okmdp"></mdp-admin>
         <q-card-section>
           <div class='t1'>Hash de la ligne 1</div>
           <div class='t2'>{{ ps ? ps.dpbh : '?'}}</div>
@@ -33,23 +36,34 @@ import { computed } from 'vue'
 const crypt = require('../app/crypto')
 import PhraseSecrete from '../components/PhraseSecrete.vue'
 import MdpAdmin from '../components/MdpAdmin.vue'
+import EditeurMd from '../components/EditeurMd.vue'
 import { post, affichermessage, afficherdiagnostic, testEcho } from '../app/util'
 
 export default ({
   name: 'DialogueCrypto',
 
   components: {
-    PhraseSecrete, MdpAdmin
+    PhraseSecrete, MdpAdmin, EditeurMd
+  },
+
+  watch: {
+    memo (newv, oldv) {
+      console.log(newv)
+    }
   },
 
   data () {
     return {
       ps: null,
-      mdp: null
+      mdp: null,
+      memo: ''
     }
   },
 
   methods: {
+    memochange (m) {
+      console.log(m)
+    },
     okps (ps) {
       this.ps = ps
     },
