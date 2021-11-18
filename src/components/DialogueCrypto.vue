@@ -5,13 +5,14 @@
           <div class="titre-2">Crytographie</div>
           <q-btn flat label="Lancer le test de crypto" color="primary" @click="testcrypto" />
           <q-btn flat label="Lancer le test courant" color="primary" @click="testEcho"/>
+          <editeur-md v-model="memo" titre="Mon titre" btnok editable
+            @update:model-value="memochange" v-on:ok="memook"></editeur-md>
         </q-card-section>
-        <q-card-section>
-          <editeur-md v-model="memo" titre="Mon titre" @update:model-value="memochange"></editeur-md>
-        </q-card-section>
-          <phrase-secrete class="q-ma-xs" v-on:ok-ps="okps" icon-valider="check" verif label-valider="OK"></phrase-secrete>
+        <q-card-section class="q-ma-xs">
+          <phrase-secrete v-on:ok-ps="okps" icon-valider="check" verif label-valider="OK"></phrase-secrete>
           <mdp-admin class="q-ma-xs" v-on:ok-mdp="okmdp"></mdp-admin>
-        <q-card-section>
+        </q-card-section>
+        <q-card-section class="q-ma-xs">
           <div class='t1'>Hash de la ligne 1</div>
           <div class='t2'>{{ ps ? ps.dpbh : '?'}}</div>
           <div class='t1'>Clé X (PBKFD de la phrase complète)</div>
@@ -63,6 +64,9 @@ export default ({
   methods: {
     memochange (m) {
       console.log(m)
+    },
+    memook (m) {
+      console.log('OK>>>' + m)
     },
     okps (ps) {
       this.ps = ps
