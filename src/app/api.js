@@ -4,7 +4,7 @@ const avro = require('avsc')
 const version = '1'
 exports.version = version
 
-const PINGTO = 10 // en secondes
+const PINGTO = 10000 // en secondes
 exports.PINGTO = PINGTO
 
 exports.E_BRK = -1 // Interruption volontaire de l'opération
@@ -176,3 +176,13 @@ exports.argTypes = argTypes
 
 const types = { synclist }
 exports.types = types
+
+function deserialize (type, u8) {
+  return type.fromBuffer(Buffer.from(u8))
+}
+exports.deserialize = deserialize
+
+function serialize (type, obj) {
+  return new Uint8Array(type.toBuffer(obj))
+}
+exports.serialize = serialize

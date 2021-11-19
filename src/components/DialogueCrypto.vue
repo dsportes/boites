@@ -76,7 +76,8 @@ export default ({
     },
 
     testcrypto () {
-      crypt.test()
+      // crypt.test()
+      crypt.test2()
     },
     async test2 () {
       try {
@@ -91,7 +92,7 @@ export default ({
     },
     async testEcho () {
       try {
-        await testEcho(10)
+        await testEcho(0)
       } catch (e) {
         console.log('>>>>' + e)
       }

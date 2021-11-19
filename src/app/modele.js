@@ -758,7 +758,7 @@ export class Compte {
       x.na = new NomAvatar(x.nomc)
       delete x.nomc
     }
-    this.memo = Buffer.from(crypt.decrypter(this.k, row.memok)).toString()
+    this.memo = crypt.decrypterStr(this.k, row.memok)
     return this
   }
 
@@ -1145,7 +1145,7 @@ export class Contact {
     // Mettre à niveau this.data en fonction de vsd et mettre this.vsd à la dernière version
     this.vsd = lcontactData.length - 1
     this.majCc()
-    this.ard = Buffer.from(crypt.decrypter(this.data.cc, row.ardc)).toString()
+    this.ard = crypt.decrypterStr(this.data.cc, row.ardc)
     this.icb = crypt.u8ToInt(crypt.decrypter(this.data.cc, row.icbc))
     return this
   }
@@ -1591,7 +1591,7 @@ export class Membre {
     this.data = rowData ? lmembreData[vsd].fromBuffer(rowData) : null
     // Mettre à jour this.data en fonction de vsd et mettre à jour this.vsd
     this.vsd = lmembreData.length - 1
-    this.ard = row.ardg ? Buffer.from(crypt.decrypter(cg, row.ardg)).toString() : null
+    this.ard = row.ardg ? crypt.decrypterStr(cg, row.ardg) : null
     const lmc = row.lmck ? crypt.decrypter(data.clek, row.lmck) : null
     this.lmc = lmc ? arrayIntType.fromBuffer(lmc) : null
     return this
@@ -1732,7 +1732,7 @@ export class Parrain {
     this.phcx = rowDatak ? parrainPhCx.fromBuffer(rowDatak) : null
     const rowDatax = row.datax && this.phcx ? crypt.decrypter(this.phcx.cx, row.datax) : null
     this.data = rowDatax ? parrainData.fromBuffer(rowDatax) : null
-    this.ard = row.ardc && this.data ? Buffer.from(crypt.decrypter(this.data.cc, row.ardc)).toString() : null
+    this.ard = row.ardc && this.data ? crypt.decrypter(this.data.cc, row.ardc) : null
     return this
   }
 
@@ -1823,7 +1823,7 @@ export class Rencontre {
     this.v = row.v
     const rowDatak = row.datak ? crypt.decrypter(data.clek, row.datak) : null
     this.phcx = rowDatak ? parrainPhCx.fromBuffer(rowDatak) : null
-    this.nomc = row.nomcx && this.phcx ? Buffer.from(crypt.decrypter(this.phcx.cx, row.nomcx)).toString() : null
+    this.nomc = row.nomcx && this.phcx ? crypt.decrypter(this.phcx.cx, row.nomcx) : null
     return this
   }
 
@@ -1949,7 +1949,7 @@ export class Secret {
     this.st = row.st
     this.v = row.v
     const cles = this.cles
-    this.txt = cles && row.txts ? Buffer.from(crypt.decrypter(cles, row.txts)).toString() : null
+    this.txt = cles && row.txts ? crypt.decrypter(cles, row.txts) : null
     this.mc = cles && row.mcs ? arrayIntType.fromBuffer(crypt.decrypter(cles, row.mcs)) : null
     this.ap = cles && row.aps ? lsecretAp[row.vsd].fromBuffer(crypt.decrypter(cles, row.aps)) : null
     // Mettre à jour this.ap en fonction de row.vsd puis mettre à jour this.vsd

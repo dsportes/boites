@@ -3,35 +3,35 @@ import { data } from './modele'
 const api = require('./api')
 import { EXBRK } from './operations'
 const AppExc = require('./api').AppExc
+const base64js = require('base64-js')
 
 const headers = { 'x-api-version': api.version }
+
+export const decoder = new TextDecoder('utf-8')
 
 let $cfg
 let globalProperties
 let cancelSourceGET
 let cancelSourcePOST
 let $store
+let $router
 let dtf
 
-export function setup (gp, appconfig) {
+export function setup (gp, appconfig, router, store) {
   $cfg = appconfig
   globalProperties = gp
+  $store = store
+  $router = router
   dtf = new Intl.DateTimeFormat($cfg.locale, $cfg.datetimeformat)
 }
 
-export function setstore (store) {
-  $store = store
-}
-
-export function store () {
-  return $store
-}
+export function store () { return $store }
 
 export function cfg () { return $cfg }
 
 export function gp () { return globalProperties }
 
-export function router () { return globalProperties.$router }
+export function router () { return $router }
 
 export function dhstring (date) {
   return dtf.format(date)
@@ -137,7 +137,7 @@ export async function post (op, module, fonction, args) {
     const at = api.argTypes[fonction]
     const type = at && at.length > 0 ? at[0] : null
     typeResp = at && at.length > 1 ? at[1] : null
-    const data = type ? type.toBuffer(args).buffer : Buffer.from(JSON.stringify(args))
+    const data = type ? api.serialize(type, args) : decoder.encode(JSON.stringify(args))
     const u = $cfg.urlserveur + '/' + $store.state.ui.org + '/' + module + '/' + fonction
     if (op) op.cancelToken = axios.CancelToken.source()
     const par = { method: 'post', url: u, data: data, headers: headers, responseType: 'arraybuffer' }
@@ -145,7 +145,7 @@ export async function post (op, module, fonction, args) {
     const r = await axios(par)
     if (op) op.cancelToken = null
     if (op) op.BRK()
-    buf = Buffer.from(r.data)
+    buf = new Uint8Array(r.data)
   } catch (e) {
     // Exceptions jetées par le this.BRK au-dessus)
     if (e === data.EXBRK) throw e
@@ -155,7 +155,7 @@ export async function post (op, module, fonction, args) {
     let appexc
     if (status >= 400 && status <= 402) {
       try {
-        const x = JSON.parse(Buffer.from(e.response.data).toString())
+        const x = JSON.parse(decoder.decode(e.response.data))
         appexc = new AppExc(x.code, x.message)
         if (status === 402 && x.stack) appexc.stack = x.stack
       } catch (e2) {
@@ -172,14 +172,14 @@ export async function post (op, module, fonction, args) {
   // les status HTTP non 2xx sont tombés en exception
   if (typeResp) { // résultat normal sérialisé
     try {
-      return typeResp.fromBuffer(buf)
+      return api.deserialize(typeResp, buf)
     } catch (e) { // Résultat mal formé
       throw new AppExc(api.E_BRO, 'Retour de la requête mal formé : désérialisation de la réponse. ' + (op ? 'Opération: ' + op.nom : ''), e.message)
     }
   }
   // sérialisé en JSON
   try {
-    return JSON.parse(buf.toString())
+    return JSON.parse(decoder.decode(buf))
   } catch (e) { // Résultat mal formé
     throw new AppExc(api.E_BRO, 'Retour de la requête mal formé : JSON parse. ' + (op ? 'Opération: ' + op.nom : ''), e.message)
   }
@@ -247,7 +247,8 @@ export async function getJsonPub (path) {
 export async function getImagePub (path, type) {
   try {
     const x = (await axios.get('./' + path, { responseType: 'arraybuffer' })).data
-    return 'data:image/' + (type || 'png') + ';base64,' + Buffer.from(x).toString('base64')
+    const s = base64js.fromByteArray(new Uint8Array(x))
+    return 'data:image/' + (type || 'png') + ';base64,' + s
   } catch (e) {
     return null
   }

@@ -78,7 +78,7 @@ let pongrecu = false
 async function onmessage (m) {
   if (!data.ws) return
   const ab = await m.data.arrayBuffer()
-  const syncList = api.types.synclist.fromBuffer(Buffer.from(ab))
+  const syncList = api.deserialize(api.types.synclist, ab)
   if (syncList.sessionId !== data.sessionId) return
   if (data.dh < syncList.dh) data.dh = syncList.dh
   const pong = !syncList.rowItems

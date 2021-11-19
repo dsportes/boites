@@ -22,8 +22,9 @@
 <script>
 import { computed } from 'vue'
 import { useStore } from 'vuex'
-import { get } from '../app/util'
+import { get, decoder } from '../app/util'
 import { onBoot, remplacePage } from '../app/modele'
+const api = require('../app/api')
 const rowTypes = require('../app/rowTypes')
 
 export default ({
@@ -41,14 +42,14 @@ export default ({
     async getcv (sid) {
       const r = await get('m1', 'getcv', { sid: sid })
       if (r) {
-        const objcv = rowTypes.rowSchemas.cv.fromBuffer(Buffer.from(r))
+        const objcv = api.deserialize(rowTypes.rowSchemas.cv, new Uint8Array(r))
         console.log(JSON.stringify(objcv))
       }
     },
     async getclepub (sid) {
       const r = await get('m1', 'getclepub', { sid: sid })
       if (r) {
-        const c = Buffer.from(r).toString()
+        const c = decoder.decode(new Uint8Array(r))
         console.log(c)
       }
     },

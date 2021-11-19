@@ -2,7 +2,7 @@ import { boot } from 'quasar/wrappers'
 import { setup, getJsonPub, getImagePub, getBinPub } from '../app/util'
 const crypt = require('../app/crypto')
 
-export default boot(async ({ app /*, router, store, Vue */ }) => {
+export default boot(async ({ app, router, store /* Vue */ }) => {
   const gp = app.config.globalProperties
   const cfg = await getJsonPub('app-config.json')
   cfg.logo = await getImagePub(cfg.pathlogo)
@@ -16,5 +16,5 @@ export default boot(async ({ app /*, router, store, Vue */ }) => {
   console.log('Build : ' + cfg.build)
   const salts = await getBinPub('salts')
   crypt.setSalts(salts)
-  setup(gp, cfg)
+  setup(gp, cfg, router, store)
 })

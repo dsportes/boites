@@ -1,9 +1,12 @@
 const crypto = require('crypto')
 const base64url = require('base64url') // https://www.npmjs.com/package/base64url
+const base64js = require('base64-js')
+const decoder = new TextDecoder('utf-8')
+const encoder = new TextEncoder('utf-8')
 
 const SALTS = new Array(256)
 function setSalts (a) {
-  const b = Buffer.from(a)
+  const b = new Uint8Array(a)
   for (let i = 0; i < 256; i++) {
     SALTS[i] = Uint8Array.prototype.slice.call(b, i * 16, (i + 1) * 16)
   }
@@ -73,20 +76,38 @@ function int2base64 (n) {
 }
 exports.int2base64 = int2base64
 
+function writeUInt32LE (u8, value, offset) {
+  value = +value
+  offset = offset >>> 0
+  u8[offset + 3] = (value >>> 24)
+  u8[offset + 2] = (value >>> 16)
+  u8[offset + 1] = (value >>> 8)
+  u8[offset] = (value & 0xff)
+  return offset + 4
+}
+
 const max32 = BigInt(2 ** 32)
 function big2u8 (n) {
   if (typeof n === 'number') n = BigInt(n)
   if (n < 0) n = -n
-  const buf = Buffer.alloc(8)
-  buf.writeUInt32LE(Number(n / max32), 4)
-  buf.writeUInt32LE(Number(n % max32), 0)
+  const buf = new Uint8Array(8)
+  writeUInt32LE(buf, Number(n / max32), 4)
+  writeUInt32LE(buf, Number(n % max32), 0)
   return buf
 }
 exports.big2u8 = big2u8
 
+function readUInt32LE (u8, offset) {
+  offset = offset >>> 0
+  return ((u8[offset]) |
+      (u8[offset + 1] << 8) |
+      (u8[offset + 2] << 16)) +
+      (u8[offset + 3] * 0x1000000)
+}
+
 function u82big (u8, number = false) {
-  const fort = BigInt(u8.readUInt32LE(4))
-  const faible = BigInt(u8.readUInt32LE(0))
+  const fort = BigInt(readUInt32LE(u8, 4))
+  const faible = BigInt(readUInt32LE(u8, 0))
   const r = (fort * max32) + faible
   return !number ? r : Number(r)
 }
@@ -112,7 +133,7 @@ function intToU8 (n) {
   const p2x = bi ? p2b : p2
   let l = 8
   for (let i = 6; i >= 0; i--, l--) if (n > p2x[i]) break
-  const u8 = Buffer.alloc(l)
+  const u8 = new Uint8Array(l)
   for (let i = 0; i < 8; i++) {
     u8[i] = bi ? Number(n % 256n) : n % 256
     n = bi ? (n / 256n) : Math.floor(n / 256)
@@ -122,21 +143,31 @@ function intToU8 (n) {
 exports.intToU8 = intToU8
 
 function crypter (cle, buffer, idxIV) {
-  const k = typeof cle === 'string' ? Buffer.from(cle, 'base64') : cle
+  const k = typeof cle === 'string' ? base64url.toBuffer(cle) : cle
   const n = !idxIV ? 0 : (idxIV < 0 ? Number(crypto.randomBytes(1)) : idxIV)
   const cipher = crypto.createCipheriv('aes-256-cbc', k, SALTS[n])
+  const x0 = new Uint8Array(1)
+  x0[0] = n
   const x1 = cipher.update(buffer)
   const x2 = cipher.final()
-  return Buffer.concat([Buffer.from([n]), x1, x2])
+  return concat([x0, x1, x2])
 }
 exports.crypter = crypter
 
 function decrypter (cle, buffer) {
-  const k = typeof cle === 'string' ? Buffer.from(cle, 'base64') : cle
+  const k = typeof cle === 'string' ? base64url.toBuffer(cle) : cle
   const decipher = crypto.createDecipheriv('aes-256-cbc', k, SALTS[Number(buffer[0])])
-  return Buffer.concat([decipher.update(Buffer.from(buffer.slice(1))), decipher.final()])
+  const x1 = decipher.update(buffer.slice(1))
+  const x2 = decipher.final()
+  return concat([x1, x2])
 }
 exports.decrypter = decrypter
+
+function decrypterStr (cle, buffer) {
+  const buf = decrypter(cle, buffer)
+  return decoder.decode(buf)
+}
+exports.decrypterStr = decrypterStr
 
 /* The `generateKeyPairSync` (node) method accepts two arguments:
   1. The type ok keys we want, which in this case is "rsa"
@@ -145,7 +176,7 @@ exports.decrypter = decrypter
   return : { publicKey, privateKey }
 */
 function abToPem (ab, pubpriv) { // ArrayBuffer
-  const s = Buffer.from(ab).toString('base64')
+  const s = base64js.fromByteArray(new Uint8Array(ab))
   let i = 0
   const a = ['-----BEGIN ' + pubpriv + ' KEY-----']
   while (i < s.length) {
@@ -227,7 +258,7 @@ exports.id2s = id2s
 
 async function test () {
   console.log(process.version)
-  const cle = Buffer.from('toto est beau')
+  const cle = encoder.encode('toto est beau')
   const clebin = sha256(cle)
   const cle64 = base64url(clebin)
   console.log(cle64)
@@ -239,20 +270,20 @@ async function test () {
   x = random(6)
   console.log(u8ToInt(x))
   const xx = 'https://stackoverflow.com/questions/7616461/generate-a-hash-from-string-in-javascript'
-  x = Buffer.from(xx)
+  x = encoder.encode(xx)
   const e1 = crypter(clebin, x)
   console.log(e1.toString('hex'))
   const d1 = decrypter(clebin, e1)
-  console.log(d1.toString('utf8'))
+  console.log(decoder.decode(d1))
   const n = Number(crypto.randomBytes(1)[0])
   const e2 = crypter(cle64, x, n)
   console.log(e2.toString('hex'))
   const d2 = decrypter(clebin, e2)
-  console.log(d2.toString('utf8'))
+  console.log(decoder.decode(d2))
   const e3 = crypter(cle64, x, n)
   console.log(e3.toString('hex'))
-  const d3 = decrypter(clebin, e2)
-  console.log(d3.toString('utf8'))
+  const d3 = decrypter(clebin, e3)
+  console.log(decoder.decode(d3))
   const kp = await genKeyPair()
   const encRSA = encrypterRSA(kp.publicKey, x)
   console.log('encypted data RSA : ' + encRSA.toString('base64'))
@@ -270,9 +301,11 @@ async function test () {
   console.log(base64url(b1))
   console.log(u82big(b1))
   z = hash(xx, true)
+  console.log(z)
   const b2 = big2u8(z)
   console.log(base64url(b2))
   console.log(u82big(b2, true))
+  console.log(u82big(b2))
   console.log(b1.length + ' - ' + b2.length)
 }
 exports.test = test
@@ -319,3 +352,19 @@ function test2 () {
   console.log(m1 + ' ' + u1.toString('hex') + ' ' + v1.toString('hex') + ' ' + i1 + ' ' + j1)
 }
 exports.test2 = test2
+
+function concat (arrays) {
+  // sum of individual array lengths
+  const totalLength = arrays.reduce((acc, value) => acc + value.length, 0)
+  if (!arrays.length) return null
+  const result = new Uint8Array(totalLength)
+  // for each array - copy it over result
+  // next array is copied right after the previous one
+  let length = 0
+  for (const array of arrays) {
+    result.set(array, length)
+    length += array.length
+  }
+  return result
+}
+exports.concat = concat
