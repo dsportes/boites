@@ -1,5 +1,6 @@
 const crypto = require('crypto')
-const base64url = require('base64url') // https://www.npmjs.com/package/base64url
+
+const wcrypt = require('./webcrypto')
 const base64js = require('base64-js')
 const decoder = new TextDecoder('utf-8')
 const encoder = new TextEncoder('utf-8')
@@ -13,6 +14,26 @@ function setSalts (a) {
   return SALTS
 }
 exports.setSalts = setSalts
+
+exports.SALTS = function (n) { return SALTS[n] }
+
+function u8ToB64 (u8, url) {
+  const s = base64js.fromByteArray(u8)
+  if (!url) return s
+  return s.replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_')
+}
+exports.u8ToB64 = u8ToB64
+
+function b64ToU8 (s) {
+  const diff = s.length % 4
+  let x = s
+  if (diff) {
+    const pad = '===='.substring(0, 4 - diff)
+    x = s + pad
+  }
+  return base64js.toByteArray(x.replace(/-/g, '+').replace(/_/g, '/'))
+}
+exports.b64ToU8 = b64ToU8
 
 function sha256 (buffer) {
   return crypto.createHash('sha256').update(buffer).digest()
@@ -143,7 +164,7 @@ function intToU8 (n) {
 exports.intToU8 = intToU8
 
 function crypter (cle, buffer, idxIV) {
-  const k = typeof cle === 'string' ? base64url.toBuffer(cle) : cle
+  const k = typeof cle === 'string' ? b64ToU8(cle) : cle
   const n = !idxIV ? 0 : (idxIV < 0 ? Number(crypto.randomBytes(1)) : idxIV)
   const cipher = crypto.createCipheriv('aes-256-cbc', k, SALTS[n])
   const x0 = new Uint8Array(1)
@@ -155,7 +176,7 @@ function crypter (cle, buffer, idxIV) {
 exports.crypter = crypter
 
 function decrypter (cle, buffer) {
-  const k = typeof cle === 'string' ? base64url.toBuffer(cle) : cle
+  const k = typeof cle === 'string' ? b64ToU8(cle) : cle
   const decipher = crypto.createDecipheriv('aes-256-cbc', k, SALTS[Number(buffer[0])])
   const x1 = decipher.update(buffer.slice(1))
   const x2 = decipher.final()
@@ -236,14 +257,14 @@ function decrypterRSA (privateKey, encryptedData) {
 exports.decrypterRSA = decrypterRSA
 
 function id2b (id) { // to buffer (u8)
-  if (typeof id === 'string') return base64url.toBuffer(id) // b64 -> buffer
+  if (typeof id === 'string') return b64ToU8(id, true) // b64 -> buffer
   if (typeof id === 'number') return intToU8(id) // int / bigint -> buffer
   return id // déjà en buffer
 }
 exports.id2b = id2b
 
 function id2n (id) { // to number (int / bigint)
-  if (typeof id === 'string') return u8ToInt(base64url.toBuffer(id)) // b64 -> buffer
+  if (typeof id === 'string') return u8ToInt(b64ToU8(id, true)) // b64 -> buffer
   if (typeof id === 'number') return id // déjà en number
   return u8ToInt(id) // u8 -> number
 }
@@ -251,22 +272,22 @@ exports.id2n = id2n
 
 function id2s (id) { // to string (b64)
   if (typeof id === 'string') return id // déjà en B64
-  if (typeof id === 'number') return base64url(intToU8(id)) // int -> u8 -> b64
-  return base64url(id) // u8 -> b64
+  if (typeof id === 'number') return u8ToB64(intToU8(id), true) // int -> u8 -> b64
+  return u8ToB64(id, true) // u8 -> b64
 }
 exports.id2s = id2s
 
 async function test () {
   console.log(process.version)
   const cle = encoder.encode('toto est beau')
-  const clebin = sha256(cle)
-  const cle64 = base64url(clebin)
+  const clebin = await wcrypt.sha256(cle)
+  const cle64 = u8ToB64(clebin, true)
   console.log(cle64)
-  let x = pbkfd('toto est beau')
-  const y = base64url(x)
+  let x = await wcrypt.pbkfd('toto est beau')
+  const y = u8ToB64(x, true)
   console.log(y)
   x = random(16)
-  console.log(base64url(x))
+  console.log(u8ToB64(x, true))
   x = random(6)
   console.log(u8ToInt(x))
   const xx = 'https://stackoverflow.com/questions/7616461/generate-a-hash-from-string-in-javascript'
@@ -298,12 +319,12 @@ async function test () {
   let z = hash(xx, false)
   console.log(z)
   const b1 = big2u8(z)
-  console.log(base64url(b1))
+  console.log(u8ToB64(b1, true))
   console.log(u82big(b1))
   z = hash(xx, true)
   console.log(z)
   const b2 = big2u8(z)
-  console.log(base64url(b2))
+  console.log(u8ToB64(b2, true))
   console.log(u82big(b2, true))
   console.log(u82big(b2))
   console.log(b1.length + ' - ' + b2.length)

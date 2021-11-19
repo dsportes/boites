@@ -1,6 +1,8 @@
 const avro = require('avsc')
+const wcrypt = require('./webcrypto')
 const crypt = require('./crypto')
-const base64url = require('base64url')
+const u8ToB64 = require('./crypto').u8ToB64
+const b64ToU8 = require('./crypto').b64ToU8
 const rowTypes = require('./rowTypes')
 import { openIDB, closeIDB } from './db'
 import { openWS, closeWS } from './ws'
@@ -626,11 +628,11 @@ export const data = new Session()
 
 /** classes Phrase, MdpAdmin, Quotas ****************/
 export class Phrase {
-  constructor (debut, fin) {
-    this.pcb = crypt.pbkfd(debut + '\n' + fin)
-    this.pcb64 = base64url(this.pcb)
+  async init (debut, fin) {
+    this.pcb = await wcrypt.pbkfd(debut + '\n' + fin)
+    this.pcb64 = u8ToB64(this.pcb)
     this.pcbh = crypt.hashBin(this.pcb)
-    this.dpbh = crypt.hashBin(crypt.pbkfd(debut))
+    this.dpbh = crypt.hashBin(await wcrypt.pbkfd(debut))
   }
 }
 
@@ -638,7 +640,7 @@ export class MdpAdmin {
   constructor (mdp) {
     this.mdp = mdp
     this.mdpb = crypt.pbkfd(mdp)
-    this.mdp64 = base64url(this.mdpb)
+    this.mdp64 = u8ToB64(this.mdpb, true)
     this.mdph = crypt.hashBin(this.mdpb)
   }
 }
@@ -829,13 +831,13 @@ export class NomAvatar {
     } else {
       const i = n.lastIndexOf('@')
       this.nom = n.substring(0, i)
-      this.rndb = base64url.toBuffer(n.substring(i + 1))
+      this.rndb = b64ToU8(n.substring(i + 1))
     }
   }
 
   get id () { return crypt.hashBin(this.rndb) }
 
-  get nomc () { return this.nom + '@' + base64url(this.rndb) }
+  get nomc () { return this.nom + '@' + u8ToB64(this.rndb, true) }
 
   get sid () { return crypt.id2s(this.id) }
 

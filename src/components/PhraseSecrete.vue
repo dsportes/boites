@@ -86,8 +86,8 @@ export default ({
     },
     okem () {
       this.encours = true
-      setTimeout(() => {
-        const ps = new Phrase(this.ligne1, this.ligne2)
+      setTimeout(async () => {
+        const ps = await new Phrase().init(this.ligne1, this.ligne2)
         this.$emit('ok-ps', ps)
         this.raz()
       }, 300)
