@@ -114,7 +114,7 @@ export async function getCompte () {
   go()
   try {
     const idb = await data.db.compte.get(1)
-    return idb ? new Compte().fromIdb(crypt.decrypter(data.ps.pcb, idb.data), idb.vs) : null
+    return idb ? new Compte().fromIdb(await crypt.decrypter(data.ps.pcb, idb.data), idb.vs) : null
   } catch (e) {
     throw data.setErDB(EX2(e))
   }
@@ -125,12 +125,13 @@ export async function getAvatars () {
   try {
     let vol = 0
     const r = []
-    await data.db.avatar.each(idb => {
+    await data.db.avatar.each(async (idb) => {
       vol += idb.data.length
-      const x = new Avatar().fromIdb(crypt.decrypter(data.clek, idb.data), idb.vs)
+      const y = await crypt.decrypter(data.clek, idb.data)
+      const x = new Avatar().fromIdb(y, idb.vs)
       r.push(x)
       data.setVerAv(x.sidav, api.AVATAR, x.v)
-      this.refsAv.add(x.id)
+      data.refsAv.add(x.id)
     })
     return { objs: r, vol: vol }
   } catch (e) {
@@ -143,13 +144,14 @@ export async function getInvitgrs () {
   try {
     let vol = 0
     const r = []
-    await data.db.invitgr.each(idb => {
+    await data.db.invitgr.each(async (idb) => {
       vol += idb.data.length
-      const x = new Invitgr().fromIdb(crypt.decrypter(data.clek, idb.data), idb.vs)
+      const y = await crypt.decrypter(data.clek, idb.data)
+      const x = new Invitgr().fromIdb(y, idb.vs)
       r.push(x)
       data.setVerAv(x.sidav, api.INVITGR, x.v)
-      this.refsAv.add(x.id)
-      if (x.idg) this.refsGr.add(x.idg)
+      data.refsAv.add(x.id)
+      if (x.idg) data.refsGr.add(x.idg)
     })
     return { objs: r, vol: vol }
   } catch (e) {
@@ -162,9 +164,9 @@ export async function getInvitcts () {
   try {
     let vol = 0
     const r = []
-    await data.db.invitct.each(idb => {
+    await data.db.invitct.each(async (idb) => {
       vol += idb.data.length
-      const x = new Invitct().fromIdb(crypt.decrypter(data.clek, idb.data), idb.vs)
+      const x = new Invitct().fromIdb(await crypt.decrypter(data.clek, idb.data), idb.vs)
       r.push(x)
       data.setVerAv(x.sidav, api.INVITCT, x.v)
       data.refsAv.add(x.id)
@@ -180,9 +182,9 @@ export async function getContacts () {
   try {
     let vol = 0
     const r = []
-    await data.db.contact.each(idb => {
+    await data.db.contact.each(async (idb) => {
       vol += idb.data.length
-      const x = new Contact().fromIdb(crypt.decrypter(data.clek, idb.data), idb.vs)
+      const x = new Contact().fromIdb(await crypt.decrypter(data.clek, idb.data), idb.vs)
       r.push(x)
       data.setVerAv(x.sidav, api.CONTACT, x.v)
       data.refsAv.add(x.id)
@@ -198,9 +200,9 @@ export async function getParrains () {
   try {
     let vol = 0
     const r = []
-    await data.db.parrain.each(idb => {
+    await data.db.parrain.each(async (idb) => {
       vol += idb.data.length
-      const x = new Parrain().fromIdb(crypt.decrypter(data.clek, idb.data), idb.vs)
+      const x = new Parrain().fromIdb(await crypt.decrypter(data.clek, idb.data), idb.vs)
       r.push(x)
       data.setVerAv(x.sidav, api.PARRAIN, x.v)
       data.refsAv.add(x.id)
@@ -216,9 +218,9 @@ export async function getRencontres () {
   try {
     let vol = 0
     const r = []
-    await data.db.rencontre.each(idb => {
+    await data.db.rencontre.each(async (idb) => {
       vol += idb.data.length
-      const x = new Rencontre().fromIdb(crypt.decrypter(data.clek, idb.data), idb.vs)
+      const x = new Rencontre().fromIdb(await crypt.decrypter(data.clek, idb.data), idb.vs)
       r.push(x)
       data.setVerAv(x.sidav, api.RENCONTRE, x.v)
       data.refsAv.add(x.id)
@@ -234,9 +236,9 @@ export async function getGroupes () {
   try {
     let vol = 0
     const r = []
-    await data.db.groupe.each(idb => {
+    await data.db.groupe.each(async (idb) => {
       vol += idb.data.length
-      const x = new Groupe().fromIdb(crypt.decrypter(data.clek, idb.data), idb.vs)
+      const x = new Groupe().fromIdb(await crypt.decrypter(data.clek, idb.data), idb.vs)
       data.setVerGr(x.sidgr, api.GROUPE, x.v)
       r.push(x)
       data.refsGr.add(x.id)
@@ -252,9 +254,9 @@ export async function getMembres () {
   try {
     let vol = 0
     const r = []
-    await data.db.membre.each(idb => {
+    await data.db.membre.each(async (idb) => {
       vol += idb.data.length
-      const x = new Membre().fromIdb(crypt.decrypter(data.clek, idb.data), idb.vs)
+      const x = new Membre().fromIdb(await crypt.decrypter(data.clek, idb.data), idb.vs)
       r.push(x)
       data.setVerGr(x.sidgr, api.MEMBRE, x.v)
       data.refsGr.add(x.id)
@@ -271,9 +273,9 @@ export async function getSecrets () {
   try {
     let vol = 0
     const r = []
-    await data.db.secret.each(idb => {
+    await data.db.secret.each(async (idb) => {
       vol += idb.data.length
-      const x = new Secret().fromIdb(crypt.decrypter(data.clek, idb.data), idb.vs)
+      const x = new Secret().fromIdb(await crypt.decrypter(data.clek, idb.data), idb.vs)
       r.push(x)
       if (x.estAv) {
         data.setVerAv(x.sidavgr, api.SECRET, x.v)
@@ -294,9 +296,9 @@ export async function getCvs () {
   try {
     let vol = 0
     const r = []
-    await data.db.cv.each(idb => {
+    await data.db.cv.each(async (idb) => {
       vol += idb.data.length
-      const x = new Cv().fromIdb(crypt.decrypter(data.clek, idb.data), idb.vs)
+      const x = new Cv().fromIdb(await crypt.decrypter(data.clek, idb.data), idb.vs)
       r.push(x)
     })
     return { objs: r, vol: vol }
@@ -374,18 +376,27 @@ export async function commitRows (lobj) {
   try {
     if (!lobj || !lobj.length) return
     const d = data
+    const lidb = []
+    for (let i = 0; i < lobj.length; i++) {
+      const obj = lobj[i]
+      const suppr = obj.st !== undefined && obj.st < 0
+      const idb = obj.toIdb
+      if (!suppr) {
+        idb.data = await crypt.crypter(obj.table === 'compte' ? d.ps.pcb : d.clek, idb.data)
+        lidb.push({ table: obj.table, suppr: suppr, idb: idb, sid: obj.sid })
+      } else {
+        lidb.push({ table: obj.table, suppr: suppr, pk: obj.pk })
+      }
+    }
     await d.db.transaction('rw', TABLES, async () => {
-      for (let i = 0; i < lobj.length; i++) {
-        const obj = lobj[i]
-        const suppr = obj.st !== undefined && obj.st < 0
-        const idb = obj.toIdb
-        if (!suppr) {
-          idb.data = crypt.crypter(obj.table === 'compte' ? d.ps.pcb : d.clek, idb.data)
-          await d.db[obj.table].put(idb)
+      for (let i = 0; i < lidb.length; i++) {
+        const x = lidb[i]
+        if (!x.suppr) {
+          await d.db[x.table].put(x.idb)
         } else {
-          await d.db[obj.table].delete(obj.pk)
+          await d.db[x.table].delete(x.pk)
         }
-        if (cfg().debug) console.log(suppr ? 'del ' : 'put ' + obj.table + ' - ' + obj.sid)
+        if (cfg().debug) console.log(x.suppr ? 'del ' : 'put ' + x.table + ' - ' + (x.id || x.pk))
       }
     })
   } catch (e) {

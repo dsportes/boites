@@ -580,10 +580,10 @@ export class CreationCompte extends OperationUI {
       const kp = await crypt.genKeyPair()
       const nomAvatar = new NomAvatar(nom, true) // nouveau
       const compte = new Compte().nouveau(nomAvatar, kp.privateKey)
-      const rowCompte = compte.toRow
+      const rowCompte = compte.toRow()
       data.setCompte(compte)
       const avatar = new Avatar().nouveau(nomAvatar)
-      const rowAvatar = avatar.toRow
+      const rowAvatar = avatar.toRow()
 
       const args = { sessionId: data.sessionId, mdp64: mdp.mdp64, q1: quotas.q1, q2: quotas.q2, qm1: quotas.qm1, qm2: quotas.qm2, clePub: kp.publicKey, rowCompte, rowAvatar }
       const ret = await post(this, 'm1', 'creationCompte', args)
@@ -758,7 +758,7 @@ export class ConnexionCompte extends OperationUI {
       data.statut = 1
       data.dhsync = data.dh
       if (data.db) {
-        const etat = getEtat()
+        const etat = await getEtat()
         data.vsv = etat.vsv
         setEtat()
       }
@@ -845,7 +845,7 @@ export class ConnexionCompte extends OperationUI {
       data.statut = 2
       if (data.dhsync < data.dh) data.dhsync = data.dh
       if (data.db) {
-        setEtat()
+        await setEtat()
       }
 
       this.finOK()

@@ -745,38 +745,38 @@ export class Compte {
     return i === -1 ? this.memo : this.memo.substring(0, i)
   }
 
-  fromRow (row) {
+  async fromRow (row) {
     this.id = row.id
     this.v = row.v
     this.dds = row.dds
     this.dpbh = row.dpbh
-    this.k = crypt.decrypter(data.ps.pcb, row.kx)
+    this.k = await crypt.decrypter(data.ps.pcb, row.kx)
     this.pcbh = row.pcbh
     data.clek = this.k
-    this.mmc = compteMmcType.fromBuffer(crypt.decrypter(this.k, row.mmck))
-    this.mac = compteMacType.fromBuffer(crypt.decrypter(this.k, row.mack))
+    this.mmc = compteMmcType.fromBuffer(await crypt.decrypter(this.k, row.mmck))
+    this.mac = compteMacType.fromBuffer(await crypt.decrypter(this.k, row.mack))
     for (const sid in this.mac) {
       const x = this.mac[sid]
       x.na = new NomAvatar(x.nomc)
       delete x.nomc
     }
-    this.memo = crypt.decrypterStr(this.k, row.memok)
+    this.memo = await crypt.decrypterStr(this.k, row.memok)
     return this
   }
 
-  get toRow () { // après maj éventuelle de mac et / ou mmc
-    this.memok = crypt.crypter(data.clek, this.memo)
-    this.mmck = crypt.crypter(data.clek, compteMmcType.toBuffer(this.mmc))
+  async toRow () { // après maj éventuelle de mac et / ou mmc
+    this.memok = await crypt.crypter(data.clek, this.memo)
+    this.mmck = await crypt.crypter(data.clek, compteMmcType.toBuffer(this.mmc))
     for (const sid in this.mac) {
       const x = this.mac[sid]
       x.nomc = x.na.nomc
     }
-    this.mack = crypt.crypter(data.clek, compteMacType.toBuffer(this.mac))
+    this.mack = await crypt.crypter(data.clek, compteMacType.toBuffer(this.mac))
     for (const sid in this.mac) {
       const x = this.mac[sid]
       delete x.nomc
     }
-    this.kx = crypt.crypter(data.ps.pcb, this.k)
+    this.kx = await crypt.crypter(data.ps.pcb, this.k)
     const buf = rowTypes.rowSchemas.compte.toBuffer(this)
     delete this.mack
     delete this.mmck
@@ -888,17 +888,17 @@ export class Avatar {
     return this
   }
 
-  fromRow (row) {
+  async fromRow (row) {
     this.id = row.id
     this.na = data.avc(this.id).na
     this.v = row.v
     this.st = row.st
     this.vcv = row.vcv
     this.dds = row.dds
-    const x = arrayStringType.fromBuffer(crypt.decrypter(this.na.cle, row.cva))
+    const x = arrayStringType.fromBuffer(await crypt.decrypter(this.na.cle, row.cva))
     this.photo = x[0]
     this.info = x[1]
-    this.lct = arrayLongType.fromBuffer(crypt.decrypter(data.clek, row.lctk))
+    this.lct = arrayLongType.fromBuffer(await crypt.decrypter(data.clek, row.lctk))
     return this
   }
 
@@ -916,9 +916,9 @@ export class Avatar {
     return this.photo || ''
   }
 
-  get toRow () { // après maj éventuelle de cv et / ou lct
-    this.cva = crypt.crypter(this.na.cle, arrayStringType.toBuffer([this.photo, this.info]))
-    this.lctk = crypt.crypter(data.clek, arrayLongType.toBuffer(this.lct))
+  async toRow () { // après maj éventuelle de cv et / ou lct
+    this.cva = await crypt.crypter(this.na.cle, arrayStringType.toBuffer([this.photo, this.info]))
+    this.lctk = await crypt.crypter(data.clek, arrayLongType.toBuffer(this.lct))
     const buf = rowTypes.rowSchemas.avatar.toBuffer(this)
     delete this.cva
     delete this.lctk
@@ -1023,13 +1023,13 @@ export class Cv {
     { name: 'phinf', type: ['null', 'bytes'], default: null }
   ]
   */
-  fromRow (row, nomc) { // row : rowCv - item retour de sync
+  async fromRow (row, nomc) { // row : rowCv - item retour de sync
     this.id = row.id
     this.vcv = row.vcv
     this.st = row.cv
     this.nomc = nomc
     this.na = new NomAvatar(nomc)
-    const x = row.phinf ? arrayStringType.fromBuffer(crypt.decrypter(this.na.cle, row.phinf)) : null
+    const x = row.phinf ? arrayStringType.fromBuffer(await crypt.decrypter(this.na.cle, row.phinf)) : null
     this.photo = x ? x[0] : null
     this.info = x ? x[1] : null
     return this
@@ -1133,7 +1133,7 @@ export class Contact {
     if (this.data) data.clec[this.sid] = this.data.cc
   }
 
-  fromRow (row) {
+  async fromRow (row) {
     this.id = row.id
     this.ic = row.ic
     this.v = row.v
@@ -1143,19 +1143,19 @@ export class Contact {
     this.qm1 = row.qm1
     this.qm2 = row.qm2
     const vsd = row.vsd || 0
-    this.data = row.datak ? lcontactData[vsd].fromBuffer(crypt.decrypter(data.clek, row.datak)) : null
+    this.data = row.datak ? lcontactData[vsd].fromBuffer(await crypt.decrypter(data.clek, row.datak)) : null
     // Mettre à niveau this.data en fonction de vsd et mettre this.vsd à la dernière version
     this.vsd = lcontactData.length - 1
     this.majCc()
-    this.ard = crypt.decrypterStr(this.data.cc, row.ardc)
-    this.icb = crypt.u8ToInt(crypt.decrypter(this.data.cc, row.icbc))
+    this.ard = await crypt.decrypterStr(this.data.cc, row.ardc)
+    this.icb = crypt.u8ToInt(await crypt.decrypter(this.data.cc, row.icbc))
     return this
   }
 
-  get toRow () {
-    this.datak = crypt.crypter(data.clek, lcontactData[this.vsd].toBuffer(this.data))
-    this.ardc = crypt.crypter(this.data.cc, this.ard)
-    this.icbc = crypt.crypter(this.data.cc, crypt.int2u8(this.icb))
+  async toRow () {
+    this.datak = await crypt.crypter(data.clek, lcontactData[this.vsd].toBuffer(this.data))
+    this.ardc = await crypt.crypter(this.data.cc, this.ard)
+    this.icbc = await crypt.crypter(this.data.cc, crypt.int2u8(this.icb))
     const buf = rowTypes.rowSchemas.contact.toBuffer(this)
     delete this.datak
     delete this.icbc
@@ -1243,25 +1243,25 @@ export class Groupe {
     return this.photo || ''
   }
 
-  fromRow (row) {
+  async fromRow (row) {
     this.id = row.id
     this.v = row.v
     this.dds = row.dds
     this.st = row.st
     const cleg = data.clegDe(this.sid)
-    const cv = row.cvg ? arrayStringType.fromBuffer(crypt.decrypter(cleg, row.cvg)) : null
+    const cv = row.cvg ? arrayStringType.fromBuffer(await crypt.decrypter(cleg, row.cvg)) : null
     this.photo = cv ? (cv[0] || '') : ''
     this.info = cv ? (cv[1] || '') : ''
-    this.mc = row.mcg ? arrayIntType.fromBuffer(crypt.decrypter(cleg, row.mcg)) : null
-    this.lstm = row.lstmg ? arrayLongType.fromBuffer(crypt.decrypter(cleg, row.lstmg)) : null
+    this.mc = row.mcg ? arrayIntType.fromBuffer(await crypt.decrypter(cleg, row.mcg)) : null
+    this.lstm = row.lstmg ? arrayLongType.fromBuffer(await crypt.decrypter(cleg, row.lstmg)) : null
     return this
   }
 
-  get toRow () {
+  async toRow () {
     const cleg = data.clegDe(this.sid)
-    this.cvg = crypt.crypter(cleg, arrayStringType.toBuffer([this.photo, this.info]))
-    this.mcg = this.mcg ? crypt.crypter(cleg, arrayIntType.toBuffer(this.mc)) : null
-    this.lstmg = this.lstm ? crypt.crypter(cleg, arrayLongType.toBuffer(this.lstm)) : null
+    this.cvg = await crypt.crypter(cleg, arrayStringType.toBuffer([this.photo, this.info]))
+    this.mcg = this.mcg ? await crypt.crypter(cleg, arrayIntType.toBuffer(this.mc)) : null
+    this.lstmg = this.lstm ? await crypt.crypter(cleg, arrayLongType.toBuffer(this.lstm)) : null
     const buf = rowTypes.rowSchemas.groupe.toBuffer(this)
     delete this.cvg
     delete this.mcg
@@ -1349,7 +1349,7 @@ export class Invitct {
     if (this.data) data.clec[this.sid] = this.data.cc
   }
 
-  fromRow (row) {
+  async fromRow (row) {
     this.id = row.id
     this.ni = row.ni
     this.v = row.v
@@ -1357,20 +1357,20 @@ export class Invitct {
     this.st = row.st
     let rowData = null
     if (row.datak) {
-      rowData = crypt.decrypter(data.clek, row.datak)
+      rowData = await crypt.decrypter(data.clek, row.datak)
     } else if (row.datap) {
       const cpriv = data.avc(this.id).cpriv
-      rowData = crypt.decrypterRSA(cpriv, row.datap)
+      rowData = await crypt.decrypterRSA(cpriv, row.datap)
     }
     this.data = rowData ? invitctData.fromBuffer(rowData) : null
     this.majCc()
-    this.ard = row.ardc ? crypt.decrypter(this.data.cc, row.ardc) : null
+    this.ard = row.ardc ? await crypt.decrypter(this.data.cc, row.ardc) : null
     return this
   }
 
-  get toRow () {
-    this.datak = this.data ? crypt.crypter(data.clek, invitctData.toBuffer(this.data)) : null
-    this.ardc = this.ard ? crypt.crypter(this.data.cc, this.ard) : null
+  async toRow () {
+    this.datak = this.data ? await crypt.crypter(data.clek, invitctData.toBuffer(this.data)) : null
+    this.ardc = this.ard ? await crypt.crypter(this.data.cc, this.ard) : null
     const buf = rowTypes.rowSchemas.invitct.toBuffer(this)
     delete this.datak
     delete this.ardc
@@ -1462,7 +1462,7 @@ export class Invitgr {
     if (this.data) data.cleg[crypt.id2s(this.id)] = this.data.cleg
   }
 
-  fromRow (row) {
+  async fromRow (row) {
     this.id = row.id
     this.ni = row.ni
     this.v = row.v
@@ -1470,18 +1470,18 @@ export class Invitgr {
     this.st = row.st
     let rowData = null
     if (row.datak) {
-      rowData = crypt.decrypter(data.clek, row.datak)
+      rowData = await crypt.decrypter(data.clek, row.datak)
     } else if (row.datap) {
       const cpriv = data.avc(this.id).cpriv
-      rowData = crypt.decrypterRSA(cpriv, row.datap)
+      rowData = await crypt.decrypterRSA(cpriv, row.datap)
     }
     this.data = rowData ? invitgrData.fromBuffer(rowData) : null
     this.majCg()
     return this
   }
 
-  get toRow () {
-    this.datak = this.data ? crypt.crypter(data.clek, invitgrData.toBuffer(this.data)) : null
+  async toRow () {
+    this.datak = this.data ? await crypt.crypter(data.clek, invitgrData.toBuffer(this.data)) : null
     const buf = rowTypes.rowSchemas.invitgr.toBuffer(this)
     delete this.datak
     return buf
@@ -1581,29 +1581,29 @@ export class Membre {
 
   get na () { return this.data ? new NomAvatar(this.data.nomc) : null }
 
-  fromRow (row) {
+  async fromRow (row) {
     this.id = row.id
     this.im = row.im
     this.v = row.v
     this.st = row.st
     this.dlv = row.dlv
     const cg = row.datag || row.ardg || row.lmck ? data.cleg(this.id) : null
-    const rowData = row.datag ? crypt.decrypter(cg, row.datag) : null
+    const rowData = row.datag ? await crypt.decrypter(cg, row.datag) : null
     const vsd = row.vsd
     this.data = rowData ? lmembreData[vsd].fromBuffer(rowData) : null
     // Mettre à jour this.data en fonction de vsd et mettre à jour this.vsd
     this.vsd = lmembreData.length - 1
-    this.ard = row.ardg ? crypt.decrypterStr(cg, row.ardg) : null
-    const lmc = row.lmck ? crypt.decrypter(data.clek, row.lmck) : null
+    this.ard = row.ardg ? await crypt.decrypterStr(cg, row.ardg) : null
+    const lmc = row.lmck ? await crypt.decrypter(data.clek, row.lmck) : null
     this.lmc = lmc ? arrayIntType.fromBuffer(lmc) : null
     return this
   }
 
-  get toRow () {
+  async toRow () {
     const cg = this.data || this.ard || this.lmc ? data.clegDe(this.sid) : null
-    this.datag = this.data ? crypt.crypter(cg, lmembreData[this.vsd].toBuffer(this.data)) : null
-    this.ardg = this.ard ? crypt.crypter(cg, this.ard) : null
-    this.lmck = this.lmc ? crypt.crypter(data.clek, arrayIntType.toBuffer(this.lmc)) : null
+    this.datag = this.data ? await crypt.crypter(cg, lmembreData[this.vsd].toBuffer(this.data)) : null
+    this.ardg = this.ard ? await crypt.crypter(cg, this.ard) : null
+    this.lmck = this.lmc ? await crypt.crypter(data.clek, arrayIntType.toBuffer(this.lmc)) : null
     const buf = rowTypes.rowSchemas.membre.toBuffer(this)
     delete this.datag
     delete this.ardg
@@ -1719,7 +1719,7 @@ export class Parrain {
 
   get pk () { return this.pph }
 
-  fromRow (row) {
+  async fromRow (row) {
     this.pph = row.pph
     this.id = row.id
     this.nc = row.nc
@@ -1730,18 +1730,18 @@ export class Parrain {
     this.q2 = row.q2
     this.qm1 = row.qm1
     this.qm2 = row.qm2
-    const rowDatak = row.datak ? crypt.decrypter(data.clek, row.datak) : null
+    const rowDatak = row.datak ? await crypt.decrypter(data.clek, row.datak) : null
     this.phcx = rowDatak ? parrainPhCx.fromBuffer(rowDatak) : null
-    const rowDatax = row.datax && this.phcx ? crypt.decrypter(this.phcx.cx, row.datax) : null
+    const rowDatax = row.datax && this.phcx ? await crypt.decrypter(this.phcx.cx, row.datax) : null
     this.data = rowDatax ? parrainData.fromBuffer(rowDatax) : null
-    this.ard = row.ardc && this.data ? crypt.decrypter(this.data.cc, row.ardc) : null
+    this.ard = row.ardc && this.data ? await crypt.decrypter(this.data.cc, row.ardc) : null
     return this
   }
 
-  get toRow () {
-    this.datak = this.phcx ? crypt.crypter(data.clek, parrainPhCx.toBuffer(this.phcx)) : null
-    this.datax = this.phcx && this.data ? crypt.crypter(this.phcx.cx, parrainData.toBuffer(this.data)) : null
-    this.ardc = this.data && this.ard ? crypt.crypter(this.data.cc, this.ard) : null
+  async toRow () {
+    this.datak = this.phcx ? await crypt.crypter(data.clek, parrainPhCx.toBuffer(this.phcx)) : null
+    this.datax = this.phcx && this.data ? await crypt.crypter(this.phcx.cx, parrainData.toBuffer(this.data)) : null
+    this.ardc = this.data && this.ard ? await crypt.crypter(this.data.cc, this.ard) : null
     const buf = rowTypes.rowSchemas.parrain.toBuffer(this)
     delete this.datak
     delete this.ardg
@@ -1817,21 +1817,21 @@ export class Rencontre {
 
   get pk () { return this.prh }
 
-  fromRow (row) {
+  async fromRow (row) {
     this.prh = row.prh
     this.id = row.id
     this.dlv = row.dlv
     this.st = row.st
     this.v = row.v
-    const rowDatak = row.datak ? crypt.decrypter(data.clek, row.datak) : null
+    const rowDatak = row.datak ? await crypt.decrypter(data.clek, row.datak) : null
     this.phcx = rowDatak ? parrainPhCx.fromBuffer(rowDatak) : null
-    this.nomc = row.nomcx && this.phcx ? crypt.decrypter(this.phcx.cx, row.nomcx) : null
+    this.nomc = row.nomcx && this.phcx ? await crypt.decrypter(this.phcx.cx, row.nomcx) : null
     return this
   }
 
-  get toRow () {
-    this.datak = this.phcx ? crypt.crypter(data.clek, parrainPhCx.toBuffer(this.phcx)) : null
-    this.nomcx = this.phcx && this.nomc ? crypt.crypter(this.phcx.cx, this.nomc) : null
+  async toRow () {
+    this.datak = this.phcx ? await crypt.crypter(data.clek, parrainPhCx.toBuffer(this.phcx)) : null
+    this.nomcx = this.phcx && this.nomc ? await crypt.crypter(this.phcx.cx, this.nomc) : null
     const buf = rowTypes.rowSchemas.rencontre.toBuffer(this)
     delete this.datak
     delete this.nomcx
@@ -1944,30 +1944,30 @@ export class Secret {
     return this.ts ? (this.ts === 1 ? data.clecDe(this.sidc) : data.clegDe(crypt.id2s(this.id))) : data.clek
   }
 
-  fromRow (row) {
+  async fromRow (row) {
     this.id = row.id
     this.ns = row.ns
     this.ic = row.ic
     this.st = row.st
     this.v = row.v
     const cles = this.cles
-    this.txt = cles && row.txts ? crypt.decrypter(cles, row.txts) : null
-    this.mc = cles && row.mcs ? arrayIntType.fromBuffer(crypt.decrypter(cles, row.mcs)) : null
-    this.ap = cles && row.aps ? lsecretAp[row.vsd].fromBuffer(crypt.decrypter(cles, row.aps)) : null
+    this.txt = cles && row.txts ? await crypt.decrypter(cles, row.txts) : null
+    this.mc = cles && row.mcs ? arrayIntType.fromBuffer(await crypt.decrypter(cles, row.mcs)) : null
+    this.ap = cles && row.aps ? lsecretAp[row.vsd].fromBuffer(await crypt.decrypter(cles, row.aps)) : null
     // Mettre à jour this.ap en fonction de row.vsd puis mettre à jour this.vsd
     this.vsd = lsecretAp.length - 1
-    const dup = cles && row.dups ? arrayLongType.fromBuffer(crypt.decrypter(cles, row.dups)) : [0, 0]
+    const dup = cles && row.dups ? arrayLongType.fromBuffer(await crypt.decrypter(cles, row.dups)) : [0, 0]
     this.dupid = dup[0]
     this.dupns = dup[1]
     return this
   }
 
-  get toRow () {
+  async toRow () {
     const cles = this.cles
-    this.txts = cles && this.txt ? crypt.crypter(cles, this.txt) : null
-    this.mcs = cles && this.mc ? crypt.crypter(cles, arrayIntType.toBuffer(this.mc)) : null
-    this.aps = cles && this.ap ? crypt.crypter(cles, lsecretAp[this.vsd].toBuffer(this.ap)) : null
-    this.dups = cles && this.dupid && this.dupns ? crypt.crypter(cles, arrayLongType.toBuffer([this.dupid, this.dupns])) : null
+    this.txts = cles && this.txt ? await crypt.crypter(cles, this.txt) : null
+    this.mcs = cles && this.mc ? await crypt.crypter(cles, arrayIntType.toBuffer(this.mc)) : null
+    this.aps = cles && this.ap ? await crypt.crypter(cles, lsecretAp[this.vsd].toBuffer(this.ap)) : null
+    this.dups = cles && this.dupid && this.dupns ? await crypt.crypter(cles, arrayLongType.toBuffer([this.dupid, this.dupns])) : null
     const buf = rowTypes.rowSchemas.secret.toBuffer(this)
     delete this.txts
     delete this.mcs

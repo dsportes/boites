@@ -1,6 +1,6 @@
 import { boot } from 'quasar/wrappers'
 import { setup, getJsonPub, getImagePub, getBinPub } from '../app/util'
-const crypt = require('../app/crypto')
+const wcrypt = require('../app/webcrypto')
 
 export default boot(async ({ app, router, store /* Vue */ }) => {
   const gp = app.config.globalProperties
@@ -15,6 +15,6 @@ export default boot(async ({ app, router, store /* Vue */ }) => {
   gp.$cfg = cfg
   console.log('Build : ' + cfg.build)
   const salts = await getBinPub('salts')
-  crypt.setSalts(salts)
+  wcrypt.setSalts(salts)
   setup(gp, cfg, router, store)
 })
