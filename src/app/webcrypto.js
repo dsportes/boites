@@ -1,4 +1,9 @@
+/***********************************************
+IMPLEMENTATION de webcrypto.js EN UTILISANT Web Cryptography API (sans Node)
+***********************************************/
+
 const base64js = require('base64-js')
+const jssha256 = require('js-sha256').sha256
 const ab2b = require('./schemas').ab2b
 
 const enc = new TextEncoder()
@@ -33,12 +38,14 @@ async function pbkfd (secret) {
     true,
     ['encrypt', 'decrypt']
   )
-  return ab2b(await window.crypto.subtle.exportKey('raw', key))
+  const res = await window.crypto.subtle.exportKey('raw', key)
+  return ab2b(res)
 }
 exports.pbkfd = pbkfd
 
-async function sha256 (buffer) {
-  return ab2b(await window.crypto.subtle.digest('SHA-256', buffer))
+function sha256 (buffer) {
+  // return ab2b(await window.crypto.subtle.digest('SHA-256', buffer))
+  return ab2b(jssha256.arrayBuffer(buffer))
 }
 exports.sha256 = sha256
 
@@ -49,9 +56,14 @@ function random (nbytes) {
 }
 exports.random = random
 
+function arrayBuffer (u8) {
+  // https://stackoverflow.com/questions/37228285/uint8array-to-arraybuffer
+  return u8.buffer.slice(u8.byteOffset, u8.byteLength + u8.byteOffset)
+}
+
 async function crypter (cle, u8, idxIV) {
   const k = typeof cle === 'string' ? b64ToU8(cle) : cle
-  const key = await window.crypto.subtle.importKey('raw', k, 'aes-cbc', false, ['encrypt'])
+  const key = await window.crypto.subtle.importKey('raw', arrayBuffer(k), 'aes-cbc', false, ['encrypt'])
   const n = !idxIV ? 0 : (idxIV < 0 ? Number(crypto.randomBytes(1)) : idxIV)
   const iv = SALTS[n]
   const x0 = new Uint8Array(1).fill(n)
@@ -62,7 +74,7 @@ exports.crypter = crypter
 
 async function decrypter (cle, u8) {
   const k = typeof cle === 'string' ? b64ToU8(cle) : cle
-  const key = await window.crypto.subtle.importKey('raw', k, 'aes-cbc', false, ['decrypt'])
+  const key = await window.crypto.subtle.importKey('raw', arrayBuffer(k), 'aes-cbc', false, ['decrypt'])
   const iv = SALTS[Number(u8[0])]
   const r = await crypto.subtle.decrypt({ name: 'aes-cbc', iv: iv }, key, u8.slice(1))
   return ab2b(r)
@@ -106,7 +118,7 @@ exports.genKeyPair = genKeyPair
 async function crypterRSA (clepub, u8) {
   const k = keyToU8(clepub, 'PUBLIC')
   // !!! SHA-1 pour que Node puisse decrypter !!!
-  const key = await window.crypto.subtle.importKey('spki', k, { name: 'RSA-OAEP', hash: 'SHA-1' }, false, ['encrypt'])
+  const key = await window.crypto.subtle.importKey('spki', arrayBuffer(k), { name: 'RSA-OAEP', hash: 'SHA-1' }, false, ['encrypt'])
   const buf = await crypto.subtle.encrypt({ name: 'RSA-OAEP' }, key, u8)
   return ab2b(buf)
 }
@@ -115,7 +127,7 @@ exports.crypterRSA = crypterRSA
 async function decrypterRSA (clepriv, u8) {
   const k = keyToU8(clepriv, 'PRIVATE')
   // !!! SHA-1 pour que Node puisse decrypter !!!
-  const key = await window.crypto.subtle.importKey('pkcs8', k, { name: 'RSA-OAEP', hash: 'SHA-1' }, false, ['decrypt'])
+  const key = await window.crypto.subtle.importKey('pkcs8', arrayBuffer(k), { name: 'RSA-OAEP', hash: 'SHA-1' }, false, ['decrypt'])
   const r = await crypto.subtle.decrypt({ name: 'RSA-OAEP' }, key, u8)
   return ab2b(r)
 }

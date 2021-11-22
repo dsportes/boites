@@ -11,7 +11,7 @@ export const IDBLEC_RAZ = {
   rencontre: { st: false, vol: 0, nbl: 0 },
   groupe: { st: false, vol: 0, nbl: 0 },
   membre: { st: false, vol: 0, nbl: 0 },
-  secrets: { st: false, vol: 0, nbl: 0 },
+  secret: { st: false, vol: 0, nbl: 0 },
   purgeav: { st: false, vol: 0, nbl: 0 },
   purgegr: { st: false, vol: 0, nbl: 0 },
   cv: { st: false, vol: 0, nbl: 0 },

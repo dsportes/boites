@@ -1,15 +1,10 @@
-const avro = require('avsc')
-const wcrypt = require('./webcrypto')
+const schemas = require('./schemas')
 const crypt = require('./crypto')
 const u8ToB64 = require('./crypto').u8ToB64
 const b64ToU8 = require('./crypto').b64ToU8
-const rowTypes = require('./rowTypes')
 import { openIDB, closeIDB } from './db'
 import { openWS, closeWS } from './ws'
-// eslint-disable-next-line no-unused-vars
-import { cfg, store, affichermessage, sleep, appexc, NOEXC } from './util'
-// const api = require('./api')
-// const AppExc = require('./api').AppExc
+import { cfg, store, appexc } from './util'
 
 import { useRouter, useRoute } from 'vue-router'
 import { ConnexionCompteAvion, ConnexionCompte } from './operations'
@@ -123,20 +118,21 @@ export async function remplacePage (page) {
   await $router.replace(x)
 }
 
-export function objetDeItem (item) {
-  const row = rowTypes.fromBuffer(item.table, item.serial)
+export async function objetDeItem (item) {
+  const row = schemas.deserialize('row' + item.table, item.serial)
+  let x
   switch (item.table) {
     case 'compte' : return row
-    case 'avatar' : return new Avatar().fromRow(row)
-    case 'contact' : return new Contact().fromRow(row)
-    case 'invitct' : return new Invitct().fromRow(row)
-    case 'invitgr' : return new Invitgr().fromRow(row)
-    case 'parrain' : return new Parrain().fromRow(row)
-    case 'rencontre' : return new Rencontre().fromRow(row)
-    case 'groupe' : return new Groupe().fromRow(row)
-    case 'membre' : return new Membre().fromRow(row)
-    case 'secret' : return new Secret().fromRow(row)
-    case 'cv' : return new Cv().fromRow(row)
+    case 'avatar' : { x = new Avatar(); return await x.fromRow(row) }
+    case 'contact' : { x = new Contact(); return await x.fromRow(row) }
+    case 'invitct' : { x = new Invitct(); return await x.fromRow(row) }
+    case 'invitgr' : { x = new Invitgr(); return await x.fromRow(row) }
+    case 'parrain' : { x = new Parrain(); return await x.fromRow(row) }
+    case 'rencontre' : { x = new Rencontre(); return await x.fromRow(row) }
+    case 'groupe' : { x = new Groupe(); return await x.fromRow(row) }
+    case 'membre' : { x = new Membre(); return await x.fromRow(row) }
+    case 'secret' : { x = new Secret(); return await x.fromRow(row) }
+    case 'cv' : { x = new Cv(); return await x.fromRow(row) }
   }
 }
 
@@ -145,17 +141,19 @@ Retourne une map avec une entrée pour chaque table et en valeur,
 - pour compte : LE dernier ROW (pas objet) reçu en notification
 - pour les autres, l'array des objets
 */
-export function rowItemsToMapObjets (rowItems) {
+export async function rowItemsToMapObjets (rowItems) {
   const res = {}
-  rowItems.forEach(item => {
+  for (let i = 0; i < rowItems.length; i++) {
+    const item = rowItems[i]
     if (item.table === 'compte') {
       // le dernier quand on en a reçu plusieurs et non la liste
       res.compte = objetDeItem(item)
     } else {
       if (!res[item.table]) res[item.table] = []
-      res[item.table].push(objetDeItem(item))
+      const obj = await objetDeItem(item)
+      res[item.table].push(obj)
     }
-  })
+  }
   return res
 }
 
@@ -299,7 +297,7 @@ class Session {
     if (this.nbreconnexion === 0) {
       this.modeInitial = this.mode
     }
-    this.sessionId = crypt.id2s(crypt.random(6))
+    this.sessionId = crypt.idToSid(crypt.random(6))
     if (!sansidb && (this.mode === 1 || this.mode === 3)) await openIDB()
     if (this.mode === 1 || this.mode === 2) await openWS()
     console.log('Ouverture de session : ' + this.sessionId)
@@ -629,17 +627,17 @@ export const data = new Session()
 /** classes Phrase, MdpAdmin, Quotas ****************/
 export class Phrase {
   async init (debut, fin) {
-    this.pcb = await wcrypt.pbkfd(debut + '\n' + fin)
+    this.pcb = await crypt.pbkfd(debut + '\n' + fin)
     this.pcb64 = u8ToB64(this.pcb)
     this.pcbh = crypt.hashBin(this.pcb)
-    this.dpbh = crypt.hashBin(await wcrypt.pbkfd(debut))
+    this.dpbh = crypt.hashBin(await crypt.pbkfd(debut))
   }
 }
 
 export class MdpAdmin {
-  constructor (mdp) {
+  async init (mdp) {
     this.mdp = mdp
-    this.mdpb = crypt.pbkfd(mdp)
+    this.mdpb = await crypt.pbkfd(mdp)
     this.mdp64 = u8ToB64(this.mdpb, true)
     this.mdph = crypt.hashBin(this.mdpb)
   }
@@ -663,16 +661,14 @@ export class Quotas {
 }
 
 /** Schémas globaux *************************/
-const arrayStringType = avro.Type.forSchema({ type: 'array', items: 'string' })
-const arrayLongType = avro.Type.forSchema({ type: 'array', items: 'long' })
-const arrayIntType = avro.Type.forSchema({ type: 'array', items: 'int' })
-// const mapIntType = avro.Type.forSchema({ type: 'map', values: 'int' })
-// const mapArrayIntType = avro.Type.forSchema({ type: 'map', values: arrayIntType })
+const arrayStringType = schemas.forSchema({ type: 'array', items: 'string' })
+const arrayLongType = schemas.forSchema({ type: 'array', items: 'long' })
+const arrayIntType = schemas.forSchema({ type: 'array', items: 'int' })
 
 /** Compte **********************************/
-const compteMacType = avro.Type.forSchema({ // map des avatars du compte
+const compteMacType = schemas.forSchema({ // map des avatars du compte
   type: 'map',
-  values: avro.Type.forSchema({
+  values: schemas.forSchema({
     name: 'mac',
     type: 'record',
     fields: [
@@ -682,12 +678,12 @@ const compteMacType = avro.Type.forSchema({ // map des avatars du compte
   })
 })
 
-const compteMmcType = avro.Type.forSchema({ // map des avatars du compte
+const compteMmcType = schemas.forSchema({ // map des avatars du compte
   type: 'map',
   values: 'string'
 })
 
-const idbCompte = avro.Type.forSchema({
+const idbCompte = schemas.forSchema({
   name: 'idbCompte',
   type: 'record',
   fields: [
@@ -735,7 +731,7 @@ export class Compte {
     return this
   }
 
-  get sid () { return crypt.id2s(this.id) }
+  get sid () { return crypt.idToSid(this.id) }
 
   get pk () { return this.id }
 
@@ -777,7 +773,7 @@ export class Compte {
       delete x.nomc
     }
     this.kx = await crypt.crypter(data.ps.pcb, this.k)
-    const buf = rowTypes.rowSchemas.compte.toBuffer(this)
+    const buf = schemas.serialize('rowcompte', this)
     delete this.mack
     delete this.mmck
     delete this.kx
@@ -818,7 +814,7 @@ export class Compte {
   get clone () { return new Compte().fromIdb(this.toIdb.data) }
 
   av (id) {
-    return this.mac[crypt.id2s(id)]
+    return this.mac[crypt.idToSid(id)]
   }
 }
 
@@ -839,7 +835,7 @@ export class NomAvatar {
 
   get nomc () { return this.nom + '@' + u8ToB64(this.rndb, true) }
 
-  get sid () { return crypt.id2s(this.id) }
+  get sid () { return crypt.idToSid(this.id) }
 
   get cle () { return crypt.sha256(this.rndb) }
 }
@@ -857,7 +853,7 @@ export class NomAvatar {
   ]
 */
 
-const idbAvatar = avro.Type.forSchema({
+const idbAvatar = schemas.forSchema({
   name: 'idbAvatar',
   type: 'record',
   fields: [
@@ -902,9 +898,9 @@ export class Avatar {
     return this
   }
 
-  get sid () { return crypt.id2s(this.id) }
+  get sid () { return crypt.idToSid(this.id) }
 
-  get sidav () { return crypt.id2s(this.id) }
+  get sidav () { return crypt.idToSid(this.id) }
 
   get pk () { return this.id }
 
@@ -919,7 +915,7 @@ export class Avatar {
   async toRow () { // après maj éventuelle de cv et / ou lct
     this.cva = await crypt.crypter(this.na.cle, arrayStringType.toBuffer([this.photo, this.info]))
     this.lctk = await crypt.crypter(data.clek, arrayLongType.toBuffer(this.lct))
-    const buf = rowTypes.rowSchemas.avatar.toBuffer(this)
+    const buf = schemas.serialize('rowavatar', this)
     delete this.cva
     delete this.lctk
     return buf
@@ -945,7 +941,7 @@ export class Avatar {
 }
 
 /** cvIdb ************************************/
-const cvIdb = avro.Type.forSchema({
+const cvIdb = schemas.forSchema({
   name: 'cvIdb',
   type: 'record',
   fields: [
@@ -999,7 +995,7 @@ export class Cv {
     this.info = na.nomc
   }
 
-  get sid () { return crypt.id2s(this.id) }
+  get sid () { return crypt.idToSid(this.id) }
 
   get pk () { return this.id }
 
@@ -1055,9 +1051,9 @@ export class Cv {
 }
 
 /** contact **********************************/
-const contactData = avro.Type.forSchema({ // map des avatars du compte
+const contactData = schemas.forSchema({ // map des avatars du compte
   type: 'map',
-  values: avro.Type.forSchema({
+  values: schemas.forSchema({
     name: 'contactData',
     type: 'record',
     fields: [
@@ -1072,7 +1068,7 @@ const contactData = avro.Type.forSchema({ // map des avatars du compte
 
 const lcontactData = [contactData]
 
-const idbContact = avro.Type.forSchema({
+const idbContact = schemas.forSchema({
   name: 'idbContact',
   type: 'record',
   fields: [
@@ -1121,9 +1117,9 @@ const lidbContact = [idbContact]
 export class Contact {
   get table () { return 'contact' }
 
-  get sidav () { return crypt.id2s(this.id) }
+  get sidav () { return crypt.idToSid(this.id) }
 
-  get sid () { return crypt.id2s(this.id) + '/' + this.ic }
+  get sid () { return crypt.idToSid(this.id) + '/' + this.ic }
 
   get pk () { return [this.id, this.ic] }
 
@@ -1156,7 +1152,7 @@ export class Contact {
     this.datak = await crypt.crypter(data.clek, lcontactData[this.vsd].toBuffer(this.data))
     this.ardc = await crypt.crypter(this.data.cc, this.ard)
     this.icbc = await crypt.crypter(this.data.cc, crypt.int2u8(this.icb))
-    const buf = rowTypes.rowSchemas.contact.toBuffer(this)
+    const buf = schemas.serialize('rowcontact', this)
     delete this.datak
     delete this.icbc
     delete this.ardc
@@ -1212,7 +1208,7 @@ export class Contact {
 - `lstmg` : liste des ids des membres du groupe.
 */
 
-const idbGroupe = avro.Type.forSchema({
+const idbGroupe = schemas.forSchema({
   name: 'idbGroupe',
   type: 'record',
   fields: [
@@ -1229,9 +1225,9 @@ const idbGroupe = avro.Type.forSchema({
 export class Groupe {
   get table () { return 'groupe' }
 
-  get sidgr () { return crypt.id2s(this.id) }
+  get sidgr () { return crypt.idToSid(this.id) }
 
-  get sid () { return crypt.id2s(this.id) }
+  get sid () { return crypt.idToSid(this.id) }
 
   get pk () { return this.id }
 
@@ -1262,7 +1258,7 @@ export class Groupe {
     this.cvg = await crypt.crypter(cleg, arrayStringType.toBuffer([this.photo, this.info]))
     this.mcg = this.mcg ? await crypt.crypter(cleg, arrayIntType.toBuffer(this.mc)) : null
     this.lstmg = this.lstm ? await crypt.crypter(cleg, arrayLongType.toBuffer(this.lstm)) : null
-    const buf = rowTypes.rowSchemas.groupe.toBuffer(this)
+    const buf = schemas.serialize('rowgroupe', this)
     delete this.cvg
     delete this.mcg
     delete this.lstmg
@@ -1289,7 +1285,7 @@ export class Groupe {
 
 /** Invitct **********************************/
 /*
-const rowInvitct = avro.Type.forSchema({
+const rowInvitct = schemas.forSchema({
   name: 'rowInvitct',
   type: 'record',
   fields: [
@@ -1310,7 +1306,7 @@ const rowInvitct = avro.Type.forSchema({
 - `ic` : numéro du contact de A pour B (pour que B puisse écrire le statut et l'ardoise dans `contact` de A).
 - `cc` : clé `cc` du contact *fort* A / B, définie par A.
 */
-const invitctData = avro.Type.forSchema({
+const invitctData = schemas.forSchema({
   name: 'invitctData',
   type: 'record',
   fields: [
@@ -1320,7 +1316,7 @@ const invitctData = avro.Type.forSchema({
   ]
 })
 
-const idbInvitct = avro.Type.forSchema({
+const idbInvitct = schemas.forSchema({
   name: 'idbInvitct',
   type: 'record',
   fields: [
@@ -1337,9 +1333,9 @@ const idbInvitct = avro.Type.forSchema({
 export class Invitct {
   get table () { return 'invitct' }
 
-  get sidav () { return crypt.id2s(this.id) }
+  get sidav () { return crypt.idToSid(this.id) }
 
-  get sid () { return crypt.id2s(this.id) + '/' + crypt.id2s(this.ni) }
+  get sid () { return crypt.idToSid(this.id) + '/' + crypt.idToSid(this.ni) }
 
   get pk () { return [this.id, this.ni] }
 
@@ -1371,7 +1367,7 @@ export class Invitct {
   async toRow () {
     this.datak = this.data ? await crypt.crypter(data.clek, invitctData.toBuffer(this.data)) : null
     this.ardc = this.ard ? await crypt.crypter(this.data.cc, this.ard) : null
-    const buf = rowTypes.rowSchemas.invitct.toBuffer(this)
+    const buf = schemas.serialize('rowinvitct', this)
     delete this.datak
     delete this.ardc
     return buf
@@ -1419,9 +1415,9 @@ export class Invitct {
  - `im` : indice de membre de l'invité dans le groupe.
 - `datak` : même données que `datap` mais cryptées par la clé K du compte de l'invité, après son acceptation.
 */
-const invitgrData = avro.Type.forSchema({ // map des avatars du compte
+const invitgrData = schemas.forSchema({ // map des avatars du compte
   type: 'map',
-  values: avro.Type.forSchema({
+  values: schemas.forSchema({
     name: 'invitgrData',
     type: 'record',
     fields: [
@@ -1432,7 +1428,7 @@ const invitgrData = avro.Type.forSchema({ // map des avatars du compte
   })
 })
 
-const idbInvitgr = avro.Type.forSchema({
+const idbInvitgr = schemas.forSchema({
   name: 'idbInvitgr',
   type: 'record',
   fields: [
@@ -1448,18 +1444,18 @@ const idbInvitgr = avro.Type.forSchema({
 export class Invitgr {
   get table () { return 'invitgr' }
 
-  get sidav () { return crypt.id2s(this.id) }
+  get sidav () { return crypt.idToSid(this.id) }
 
-  get sid () { return crypt.id2s(this.id) + '/' + crypt.id2s(this.ni) }
+  get sid () { return crypt.idToSid(this.id) + '/' + crypt.idToSid(this.ni) }
 
   get pk () { return [this.id, this.ni] }
 
   get idg () { return this.data ? this.data.idg : null }
 
-  get sidg () { return this.data ? crypt.id2s(this.data.idg) : null }
+  get sidg () { return this.data ? crypt.idToSid(this.data.idg) : null }
 
   majCg () {
-    if (this.data) data.cleg[crypt.id2s(this.id)] = this.data.cleg
+    if (this.data) data.cleg[crypt.idToSid(this.id)] = this.data.cleg
   }
 
   async fromRow (row) {
@@ -1482,7 +1478,7 @@ export class Invitgr {
 
   async toRow () {
     this.datak = this.data ? await crypt.crypter(data.clek, invitgrData.toBuffer(this.data)) : null
-    const buf = rowTypes.rowSchemas.invitgr.toBuffer(this)
+    const buf = schemas.serialize('rowinvitgr', this)
     delete this.datak
     return buf
   }
@@ -1538,9 +1534,9 @@ export class Invitgr {
 - `lmck` : liste, cryptée par la clé k du membre, des mots clés de rangement / recherche attribués par le membre quand il est actif.
 */
 
-const membreData = avro.Type.forSchema({ // map des avatars du compte
+const membreData = schemas.forSchema({ // map des avatars du compte
   type: 'map',
-  values: avro.Type.forSchema({
+  values: schemas.forSchema({
     name: 'membreData',
     type: 'record',
     fields: [
@@ -1554,7 +1550,7 @@ const membreData = avro.Type.forSchema({ // map des avatars du compte
 })
 const lmembreData = [membreData]
 
-const idbMembre = avro.Type.forSchema({
+const idbMembre = schemas.forSchema({
   name: 'idbMembre',
   type: 'record',
   fields: [
@@ -1573,9 +1569,9 @@ const lidbMembre = [idbMembre]
 export class Membre {
   get table () { return 'membre' }
 
-  get sidgr () { return crypt.id2s(this.id) }
+  get sidgr () { return crypt.idToSid(this.id) }
 
-  get sid () { return crypt.id2s(this.id) + '/' + this.im }
+  get sid () { return crypt.idToSid(this.id) + '/' + this.im }
 
   get pk () { return [this.id, this.im] }
 
@@ -1604,7 +1600,7 @@ export class Membre {
     this.datag = this.data ? await crypt.crypter(cg, lmembreData[this.vsd].toBuffer(this.data)) : null
     this.ardg = this.ard ? await crypt.crypter(cg, this.ard) : null
     this.lmck = this.lmc ? await crypt.crypter(data.clek, arrayIntType.toBuffer(this.lmc)) : null
-    const buf = rowTypes.rowSchemas.membre.toBuffer(this)
+    const buf = schemas.serialize('rowmembre', this)
     delete this.datag
     delete this.ardg
     delete this.lmck
@@ -1665,9 +1661,9 @@ export class Membre {
 - `ardc` : cryptée par la clé `cc`, *ardoise*, texte de sollicitation écrit par A pour B et/ou réponse de B.
 */
 
-const parrainPhCx = avro.Type.forSchema({
+const parrainPhCx = schemas.forSchema({
   type: 'map',
-  values: avro.Type.forSchema({
+  values: schemas.forSchema({
     name: 'parrainPhCx',
     type: 'record',
     fields: [
@@ -1677,9 +1673,9 @@ const parrainPhCx = avro.Type.forSchema({
   })
 })
 
-const parrainData = avro.Type.forSchema({
+const parrainData = schemas.forSchema({
   type: 'map',
-  values: avro.Type.forSchema({
+  values: schemas.forSchema({
     name: 'parrainData',
     type: 'record',
     fields: [
@@ -1690,7 +1686,7 @@ const parrainData = avro.Type.forSchema({
   })
 })
 
-const idbParrain = avro.Type.forSchema({
+const idbParrain = schemas.forSchema({
   name: 'idbParrain',
   type: 'record',
   fields: [
@@ -1713,9 +1709,9 @@ const idbParrain = avro.Type.forSchema({
 export class Parrain {
   get table () { return 'parrain' }
 
-  get sidav () { return crypt.id2s(this.id) }
+  get sidav () { return crypt.idToSid(this.id) }
 
-  get sid () { return crypt.id2s(this.pph) }
+  get sid () { return crypt.idToSid(this.pph) }
 
   get pk () { return this.pph }
 
@@ -1742,7 +1738,7 @@ export class Parrain {
     this.datak = this.phcx ? await crypt.crypter(data.clek, parrainPhCx.toBuffer(this.phcx)) : null
     this.datax = this.phcx && this.data ? await crypt.crypter(this.phcx.cx, parrainData.toBuffer(this.data)) : null
     this.ardc = this.data && this.ard ? await crypt.crypter(this.data.cc, this.ard) : null
-    const buf = rowTypes.rowSchemas.parrain.toBuffer(this)
+    const buf = schemas.serialize('rowparrain', this)
     delete this.datak
     delete this.ardg
     delete this.datax
@@ -1794,7 +1790,7 @@ export class Parrain {
 - `nomcx` : nom complet de A (pas de B, son nom complet n'est justement pas connu de A) crypté par la clé X.
 */
 
-const idbRencontre = avro.Type.forSchema({
+const idbRencontre = schemas.forSchema({
   name: 'idbRencontre',
   type: 'record',
   fields: [
@@ -1811,9 +1807,9 @@ const idbRencontre = avro.Type.forSchema({
 export class Rencontre {
   get table () { return 'rencontre' }
 
-  get sidav () { return crypt.id2s(this.id) }
+  get sidav () { return crypt.idToSid(this.id) }
 
-  get sid () { return crypt.id2s(this.prh) }
+  get sid () { return crypt.idToSid(this.prh) }
 
   get pk () { return this.prh }
 
@@ -1832,7 +1828,7 @@ export class Rencontre {
   async toRow () {
     this.datak = this.phcx ? await crypt.crypter(data.clek, parrainPhCx.toBuffer(this.phcx)) : null
     this.nomcx = this.phcx && this.nomc ? await crypt.crypter(this.phcx.cx, this.nomc) : null
-    const buf = rowTypes.rowSchemas.rencontre.toBuffer(this)
+    const buf = schemas.serialize('rowrencontre', this)
     delete this.datak
     delete this.nomcx
     return buf
@@ -1891,7 +1887,7 @@ export class Rencontre {
 - `dups` : couple `[id ns]` crypté par la clé du secret de l'autre exemplaire pour un secret de couple A/B.
 */
 
-const idbSecret = avro.Type.forSchema({
+const idbSecret = schemas.forSchema({
   name: 'idbSecret',
   type: 'record',
   fields: [
@@ -1908,9 +1904,9 @@ const idbSecret = avro.Type.forSchema({
 })
 const lidbSecret = [idbSecret]
 
-const secretAp = avro.Type.forSchema({
+const secretAp = schemas.forSchema({
   type: 'map',
-  values: avro.Type.forSchema({
+  values: schemas.forSchema({
     name: 'secretAp',
     type: 'record',
     fields: [
@@ -1928,20 +1924,20 @@ const lsecretAp = [secretAp]
 export class Secret {
   get table () { return 'secret' }
 
-  get sidavgr () { return crypt.id2s(this.id) }
+  get sidavgr () { return crypt.idToSid(this.id) }
 
   get estAv () { return (this.ns % 2) === 0 }
 
-  get sid () { return crypt.id2s(this.id) + '/' + crypt.id2s(this.ns) }
+  get sid () { return crypt.idToSid(this.id) + '/' + crypt.idToSid(this.ns) }
 
-  get sidc () { return crypt.id2s(this.id) + '/' + this.ic }
+  get sidc () { return crypt.idToSid(this.id) + '/' + this.ic }
 
   get pk () { return [this.id, this.ns] }
 
   get ts () { return this.ic ? 1 : (this.ns % 2 ? 0 : 2) } // 0:avatar 1:couple 2:groupe
 
   get cles () {
-    return this.ts ? (this.ts === 1 ? data.clecDe(this.sidc) : data.clegDe(crypt.id2s(this.id))) : data.clek
+    return this.ts ? (this.ts === 1 ? data.clecDe(this.sidc) : data.clegDe(crypt.idToSid(this.id))) : data.clek
   }
 
   async fromRow (row) {
@@ -1968,7 +1964,7 @@ export class Secret {
     this.mcs = cles && this.mc ? await crypt.crypter(cles, arrayIntType.toBuffer(this.mc)) : null
     this.aps = cles && this.ap ? await crypt.crypter(cles, lsecretAp[this.vsd].toBuffer(this.ap)) : null
     this.dups = cles && this.dupid && this.dupns ? await crypt.crypter(cles, arrayLongType.toBuffer([this.dupid, this.dupns])) : null
-    const buf = rowTypes.rowSchemas.secret.toBuffer(this)
+    const buf = schemas.serialize('rowsecret', this)
     delete this.txts
     delete this.mcs
     delete this.aps

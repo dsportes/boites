@@ -51,7 +51,7 @@ const labels = [
   'Purge des cartes de visite obsolètes'
 ]
 
-const tables = ['avatar', 'invitgr', 'contact', 'invitct', 'parrain', 'rencontre', 'groupe', 'membre', 'secrets', 'purgeav', 'purgegr', 'cv', 'purgecv']
+const tables = ['avatar', 'invitgr', 'contact', 'invitct', 'parrain', 'rencontre', 'groupe', 'membre', 'secret', 'purgeav', 'purgegr', 'cv', 'purgecv']
 
 export default ({
   name: 'RapportSynchro',

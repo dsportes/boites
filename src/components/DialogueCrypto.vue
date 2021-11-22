@@ -77,8 +77,8 @@ export default ({
 
     async testcrypto () {
       // crypt.test()
-      // crypt.testWAC()
-      crypt.testAvro()
+      crypt.testWAC()
+      // crypt.testAvro()
     },
     async test2 () {
       try {

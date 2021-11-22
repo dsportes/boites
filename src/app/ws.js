@@ -4,6 +4,7 @@ import { cfg, store, dhtToString, affichererreur } from './util'
 import { data } from './modele'
 import { ProcessQueue } from './operations'
 import { setEtat } from './db'
+const schemas = require('./schemas')
 const api = require('./api')
 const AppExc = require('./api').AppExc
 
@@ -78,7 +79,7 @@ let pongrecu = false
 async function onmessage (m) {
   if (!data.ws) return
   const ab = await m.data.arrayBuffer()
-  const syncList = api.deserialize(api.types.synclist, ab)
+  const syncList = schemas.deserialize('synclist', ab)
   if (syncList.sessionId !== data.sessionId) return
   if (data.dh < syncList.dh) data.dh = syncList.dh
   const pong = !syncList.rowItems

@@ -30,8 +30,9 @@ export default ({
   methods: {
     ok () {
       this.encours = true
-      setTimeout(() => {
-        const m = new MdpAdmin(this.mdp)
+      setTimeout(async () => {
+        const m = new MdpAdmin()
+        await m.init(this.mdp)
         this.$emit('ok-mdp', m)
         this.encours = false
       }, 1)

@@ -33,7 +33,7 @@ export function purgeAvatars (state, val) { // val : Set des ids des avatars uti
   const x = state.avatars
   const s = new Set()
   for (const sid in x) {
-    const id = crypt.id2n(sid)
+    const id = crypt.sidToId(sid)
     if (!val.has(id)) s.add(sid)
   }
   if (s.size) {
@@ -47,7 +47,7 @@ export function purgeGroupes (state, val) { // val : Set des ids des groupes uti
   const x = state.groupes
   const s = new Set()
   for (const sid in x) {
-    const id = crypt.id2n(sid)
+    const id = crypt.sidToId(sid)
     if (!val.has(id)) s.add(sid)
   }
   if (s.size) {
@@ -61,7 +61,7 @@ export function purgeCvs (state, val) { // val : Set des ids des avatars utiles
   const x = state.cvs
   const s = new Set()
   for (const sid in x) {
-    const id = crypt.id2n(sid)
+    const id = crypt.sidToId(sid)
     if (!val.has(id)) s.add(sid)
   }
   if (s.size) {
@@ -101,7 +101,7 @@ export function setContacts (state, val) { // val : array d'objets Contact
   const x = state.contacts
   val.forEach(a => {
     a.dernier = false
-    const ids = crypt.id2s(a.id)
+    const ids = crypt.idToSid(a.id)
     let y = x[ids]
     if (!y) { y = {}; x[ids] = y }
     const a2 = y[a.ic]
@@ -114,8 +114,8 @@ export function setInvitcts (state, val) { // val : array d'objets Invitct
   const x = state.invitcts
   val.forEach(a => {
     a.dernier = false
-    const ids = crypt.id2s(a.id)
-    const nis = crypt.id2s(a.ni)
+    const ids = crypt.idToSid(a.id)
+    const nis = crypt.idToSid(a.ni)
     let y = x[ids]
     if (!y) { y = {}; x[ids] = y }
     const a2 = y[nis]
@@ -127,8 +127,8 @@ export function setInvitcts (state, val) { // val : array d'objets Invitct
 export function setInvitgrs (state, val) { // val : array d'objets Invitgr
   const x = state.invitgrs
   val.forEach(a => {
-    const ids = crypt.id2s(a.id)
-    const nis = crypt.id2s(a.ni)
+    const ids = crypt.idToSid(a.id)
+    const nis = crypt.idToSid(a.ni)
     if (a.st < 0) {
       const d = x[ids]
       if (d) delete d[nis]
@@ -177,7 +177,7 @@ export function setMembres (state, val) { // val : array d'objets Membre
   const x = state.membres
   val.forEach(a => {
     a.dernier = false
-    const ids = crypt.id2s(a.id)
+    const ids = crypt.idToSid(a.id)
     let y = x[ids]
     if (!y) { y = {}; x[ids] = y }
     const a2 = y[a.ic]
@@ -190,8 +190,8 @@ export function setSecrets (state, val) { // val : array d'objets Secret
   const x = state.membres
   val.forEach(a => {
     a.dernier = false
-    const ids = crypt.id2s(a.id)
-    const nss = crypt.id2s(a.ns)
+    const ids = crypt.idToSid(a.id)
+    const nss = crypt.idToSid(a.ns)
     let y = x[ids]
     if (!y) { y = {}; x[ids] = y }
     const a2 = y[nss]

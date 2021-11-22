@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { data } from './modele'
+const schemas = require('./schemas')
 const api = require('./api')
 import { EXBRK } from './operations'
 const AppExc = require('./api').AppExc
@@ -137,7 +138,7 @@ export async function post (op, module, fonction, args) {
     const at = api.argTypes[fonction]
     const type = at && at.length > 0 ? at[0] : null
     typeResp = at && at.length > 1 ? at[1] : null
-    const data = type ? api.serialize(type, args) : decoder.encode(JSON.stringify(args))
+    const data = type ? schemas.serialize(type, args) : decoder.encode(JSON.stringify(args))
     const u = $cfg.urlserveur + '/' + $store.state.ui.org + '/' + module + '/' + fonction
     if (op) op.cancelToken = axios.CancelToken.source()
     const par = { method: 'post', url: u, data: data, headers: headers, responseType: 'arraybuffer' }
@@ -172,7 +173,7 @@ export async function post (op, module, fonction, args) {
   // les status HTTP non 2xx sont tombés en exception
   if (typeResp) { // résultat normal sérialisé
     try {
-      return api.deserialize(typeResp, buf)
+      return schemas.deserialize(typeResp, buf)
     } catch (e) { // Résultat mal formé
       throw new AppExc(api.E_BRO, 'Retour de la requête mal formé : désérialisation de la réponse. ' + (op ? 'Opération: ' + op.nom : ''), e.message)
     }

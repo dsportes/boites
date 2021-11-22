@@ -24,8 +24,7 @@ import { computed } from 'vue'
 import { useStore } from 'vuex'
 import { get, decoder } from '../app/util'
 import { onBoot, remplacePage } from '../app/modele'
-const api = require('../app/api')
-const rowTypes = require('../app/rowTypes')
+const schemas = require('../app/schemas')
 
 export default ({
   name: 'Compte',
@@ -42,7 +41,7 @@ export default ({
     async getcv (sid) {
       const r = await get('m1', 'getcv', { sid: sid })
       if (r) {
-        const objcv = api.deserialize(rowTypes.rowSchemas.cv, new Uint8Array(r))
+        const objcv = schemas.deserialize('rowcv', new Uint8Array(r))
         console.log(JSON.stringify(objcv))
       }
     },

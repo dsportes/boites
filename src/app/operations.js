@@ -9,7 +9,7 @@ const AppExc = require('./api').AppExc
 const api = require('./api')
 
 const crypt = require('./crypto')
-const rowTypes = require('./rowTypes')
+const schemas = require('./schemas')
 
 export const EXBRK = new AppExc(api.E_BRK, 'Interruption volontaire')
 export const EXPS = new AppExc(api.F_BRO, 'La phrase secrète a changé depuis l\'authentification du comptE Déconnexion et reconnexion requise')
@@ -160,11 +160,11 @@ export class Operation {
       const ar = Array.from(lav)
       for (let i = 0; i < ar.length; i++) {
         const id = ar[i]
-        const sid = crypt.id2s(id)
+        const sid = crypt.idToSid(id)
         const lv = !estws && data.verAv.get(sid) ? data.verAv.get(sid) : new Array(SIZEAV).fill(0)
         const ret = await post(this, 'm1', 'syncAv', { sessionId: data.sessionId, avgr: id, lv })
         if (data.dh < ret.dh) data.dh = ret.dh
-        const [objets] = commitMapObjets(rowItemsToMapObjets(ret.rowItems)) // stockés en modele
+        const [objets] = commitMapObjets(await rowItemsToMapObjets(ret.rowItems)) // stockés en modele
         if (!estws) {
           const av = data.avatar(id)
           store().commit('ui/majsynclec', {
@@ -183,11 +183,11 @@ export class Operation {
       const ar = Array.from(lgr)
       for (let i = 0; i < ar.length; i++) {
         const id = ar[i]
-        const sid = crypt.id2s(id)
+        const sid = crypt.idToSid(id)
         const lv = !manquants && data.verGr.get(sid) ? data.verGr.get(sid) : new Array(SIZEGR).fill(0)
         const ret = await post(this, 'm1', 'syncGr', { sessionId: data.sessionId, avgr: id, lv })
         if (data.dh < ret.dh) data.dh = ret.dh
-        const [objets] = commitMapObjets(rowItemsToMapObjets(ret.rowItems)) // stockés en modele
+        const [objets] = commitMapObjets(await rowItemsToMapObjets(ret.rowItems)) // stockés en modele
         if (!estws) {
           const gr = data.groupe(id)
           store().commit('ui/majsynclec', {
@@ -213,7 +213,7 @@ export class Operation {
     const args = { sessionId: data.sessionId, vcv: data.vcv, lcvmaj, lcvchargt }
     const ret = await post(this, 'm1', 'chargtCVs', args)
     if (data.dh < ret.dh) data.dh = ret.dh
-    const [objets, vcv] = commitMapObjets(rowItemsToMapObjets(ret.rowItems)) // stockés en modele
+    const [objets, vcv] = commitMapObjets(await rowItemsToMapObjets(ret.rowItems)) // stockés en modele
     if (vcv > nvvcv) nvvcv = vcv
     if (!estws) {
       store().commit('ui/majsynclec', {
@@ -237,13 +237,12 @@ export class Operation {
       if (syncList.dhc > dhc) dhc = syncList.dhc
       if (syncList.rowItems) {
         syncList.rowItems.forEach((rowItem) => {
-          const item = rowTypes.deserialItem(rowItem)
-          items.push(item)
+          items.push(rowItem)
         })
       }
     })
 
-    const mapObj = data.rowItemsToMapObjets(items)
+    const mapObj = await rowItemsToMapObjets(items)
 
     let compte = null
     if (mapObj.compte) {
@@ -254,7 +253,7 @@ export class Operation {
       data.setCompte(compte)
     }
 
-    const [objets] = data.commitMapObjets(mapObj)
+    const [objets] = commitMapObjets(mapObj)
     if (compte) objets.push(compte)
 
     if (data.db) {
@@ -393,7 +392,7 @@ export class OperationUI extends Operation {
         })
       }
       store().commit('db/setContacts', objs)
-      store().commit('ui/majidblec', { table: 'invcontactitgr', st: true, vol: vol, nbl: objs.length })
+      store().commit('ui/majidblec', { table: 'contact', st: true, vol: vol, nbl: objs.length })
     }
 
     this.BRK()
@@ -593,7 +592,7 @@ export class CreationCompte extends OperationUI {
       Le compte vient d'être créé et est déjà dans le modèle (clek enregistrée)
       On peut désérialiser la liste d'items (compte et avatar)
       */
-      const mapObj = rowItemsToMapObjets(ret.rowItems)
+      const mapObj = await rowItemsToMapObjets(ret.rowItems)
       const compte2 = new Compte().fromRow(mapObj.compte) // le dernier ROW (pas objet) quand on en a reçu plusieurs
       data.setCompte(compte2)
       const [rows] = commitMapObjets(mapObj)
@@ -689,7 +688,7 @@ export class ConnexionCompte extends OperationUI {
     // maj du modèle en mémoire
     if (data.dh < ret.dh) data.dh = ret.dh
     // construction de l'objet compte
-    const rowCompte = rowTypes.fromBuffer('compte', ret.rowItems[0].serial)
+    const rowCompte = schemas.deserialize('rowcompte', ret.rowItems[0].serial)
     if (data.ps.pcbh !== rowCompte.pcbh) throw EXPS // changt de phrase secrète
     return new Compte().fromRow(rowCompte)
   }
@@ -734,7 +733,7 @@ export class ConnexionCompte extends OperationUI {
           if (avInutiles.size) {
             store().commit('db/purgeAvatars', avUtiles)
             for (const id of avInutiles) {
-              const sid = crypt.id2s(id)
+              const sid = crypt.idToSid(id)
               delete data.verAv[sid]
             }
             await data.db.purgeAvatars(avInutiles)
@@ -750,7 +749,7 @@ export class ConnexionCompte extends OperationUI {
         // créer la liste des versions chargées pour les tables des avatars, cad 0 pour toutes
         // cette liste a été créée par chargementIDB dans le mode synchro, mais pas en mode incognito
         data.idbSetAvatars.forEach((id) => {
-          data.setVerAv(crypt.id2s(id), api.AVATAR, 0)
+          data.setVerAv(crypt.idToSid(id), api.AVATAR, 0)
         })
       }
 
@@ -775,7 +774,7 @@ export class ConnexionCompte extends OperationUI {
         const maj = []
         ret.rowItems.forEach(item => {
           if (item.table === 'invitgr') {
-            const rowInvitgr = rowTypes.fromBuffer('invitgr', item.serial)
+            const rowInvitgr = schemas.deserialize('rowinvitgr', item.serial)
             const invitgr = new Invitgr().fromRow(rowInvitgr)
             maj.push(invitgr)
             if (invitgr.st < 0) {
@@ -816,7 +815,7 @@ export class ConnexionCompte extends OperationUI {
       const mgr = store().state.db.invitgrs
       for (const x in mgr) {
         const av = mgr[x]
-        const sidg = crypt.id2s(av.data.idg)
+        const sidg = crypt.idToSid(av.data.idg)
         store().commit('ui/majsynclec', {
           st: 0, sid: sidg, nom: 'Groupe ' + sidg, nbl: 0
         })

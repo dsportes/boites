@@ -1,4 +1,3 @@
-/* eslint-disable no-unused-vars */
 const wcrypt = require('./webcrypto')
 const base64js = require('base64-js')
 
@@ -91,7 +90,7 @@ function writeUInt32LE (u8, value, offset) {
 }
 
 const max32 = BigInt(2 ** 32)
-function big2u8 (n) {
+function bigToU8 (n) {
   if (typeof n === 'number') n = BigInt(n)
   if (n < 0) n = -n
   const buf = new Uint8Array(8)
@@ -99,7 +98,7 @@ function big2u8 (n) {
   writeUInt32LE(buf, Number(n % max32), 0)
   return buf
 }
-exports.big2u8 = big2u8
+exports.bigToU8 = bigToU8
 
 function readUInt32LE (u8, offset) {
   offset = offset >>> 0
@@ -109,15 +108,15 @@ function readUInt32LE (u8, offset) {
       (u8[offset + 3] * 0x1000000)
 }
 
-function u82big (u8, number = false) {
+const BI_MAX_SAFE_INTEGER = BigInt(Number.MAX_SAFE_INTEGER)
+function u8ToBig (u8, number = false) {
   const fort = BigInt(readUInt32LE(u8, 4))
   const faible = BigInt(readUInt32LE(u8, 0))
   const r = (fort * max32) + faible
-  return !number ? r : Number(r)
+  return number && r < BI_MAX_SAFE_INTEGER ? Number(r) : r
 }
-exports.u82big = u82big
+exports.u8ToBig = u8ToBig
 
-const BI_MAX_SAFE_INTEGER = BigInt(Number.MAX_SAFE_INTEGER)
 function u8ToInt (u8) {
   if (!u8 || !u8.length || u8.length > 8) return 0
   let r = 0n
@@ -146,27 +145,19 @@ function intToU8 (n) {
 }
 exports.intToU8 = intToU8
 
-function id2b (id) { // to buffer (u8)
-  if (typeof id === 'string') return b64ToU8(id, true) // b64 -> buffer
-  if (typeof id === 'number') return intToU8(id) // int / bigint -> buffer
-  return id // déjà en buffer
+function sidToId (id) {
+  return u8ToInt(b64ToU8(id, true)) // b64 -> buffer
 }
-exports.id2b = id2b
+exports.sidToId = sidToId
 
-function id2n (id) { // to number (int / bigint)
-  if (typeof id === 'string') return u8ToInt(b64ToU8(id, true)) // b64 -> buffer
-  if (typeof id === 'number') return id // déjà en number
-  return u8ToInt(id) // u8 -> number
-}
-exports.id2n = id2n
-
-function id2s (id) { // to string (b64)
+function idToSid (id) { // to string (b64)
   if (typeof id === 'string') return id // déjà en B64
   if (typeof id === 'number') return u8ToB64(intToU8(id), true) // int -> u8 -> b64
   return u8ToB64(id, true) // u8 -> b64
 }
-exports.id2s = id2s
+exports.idToSid = idToSid
 
+/*
 async function test () {
   const xx = 'https://stackoverflow.com/questions/7616461/generate-a-hash-from-string-in-javascript'
   console.log(int2base64(12345678))
@@ -177,15 +168,15 @@ async function test () {
   console.log(hash(xx, true, true))
   let z = hash(xx, false)
   console.log(z)
-  const b1 = big2u8(z)
+  const b1 = bigToU8(z)
   console.log(u8ToB64(b1, true))
-  console.log(u82big(b1))
+  console.log(u8ToBig(b1))
   z = hash(xx, true)
   console.log(z)
-  const b2 = big2u8(z)
+  const b2 = bigToU8(z)
   console.log(u8ToB64(b2, true))
-  console.log(u82big(b2, true))
-  console.log(u82big(b2))
+  console.log(u8ToBig(b2, true))
+  console.log(u8ToBig(b2))
   console.log(b1.length + ' - ' + b2.length)
 
   const m7 = (2n ** 64n) - 1n
@@ -201,8 +192,8 @@ async function test () {
   const t2 = new Date().getTime()
   console.log((t2 - t1) + 'ms')
   for (let i = 0; i < 1000; i++) {
-    v7 = big2u8(m7)
-    j7 = u82big(v7)
+    v7 = bigToU8(m7)
+    j7 = u8ToBig(v7)
   }
   const t3 = new Date().getTime()
   console.log((t3 - t2) + 'ms')
@@ -210,16 +201,16 @@ async function test () {
   console.log('v7 ' + hashBin(v7))
 
   const u5 = intToU8(m5)
-  const v5 = big2u8(m5b)
+  const v5 = bigToU8(m5b)
   const i5 = u8ToInt(u5)
-  const j5 = u82big(v5)
+  const j5 = u8ToBig(v5)
   console.log('u5 ' + hashBin(u5))
   console.log('v5 ' + hashBin(v5))
 
   const u1 = intToU8(m1)
-  const v1 = big2u8(10n)
+  const v1 = bigToU8(10n)
   const i1 = u8ToInt(u1)
-  const j1 = u82big(v1)
+  const j1 = u8ToBig(v1)
   console.log('u1 ' + hashBin(u1))
   console.log('v1 ' + hashBin(v1))
 
@@ -245,10 +236,10 @@ async function testWAC () {
   console.log(s3)
 
   cle = enc.encode('toto est beau')
-  const clebin = await wcrypt.sha256(cle)
+  const clebin = wcrypt.sha256(cle)
   const cle64 = u8ToB64(clebin, true)
 
-  const sha2 = await wcrypt.sha256(cle)
+  const sha2 = wcrypt.sha256(cle)
   console.log(u8ToB64(sha2, true))
 
   let x = wcrypt.random(16)
@@ -282,7 +273,7 @@ async function testAvro () {
   const enc = new TextEncoder()
   const dec = new TextDecoder()
   const avro = require('avsc')
-  const cle = await wcrypt.sha256(enc.encode('toto est beau'))
+  const cle = wcrypt.sha256(enc.encode('toto est beau'))
   const txt = 'https://stackoverflow.com/questions/7616461/generate-a-hash-from-string-in-javascript'
   const bin = await wcrypt.crypter(cle, enc.encode(txt))
   const bin2 = Buffer.from(bin)
@@ -301,3 +292,4 @@ async function testAvro () {
   console.log(dec.decode(b))
 }
 exports.testAvro = testAvro
+*/
