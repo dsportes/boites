@@ -72,9 +72,15 @@ module.exports = configure(function (ctx) {
           .use(ESLintPlugin, [{ extensions: ['js', 'vue'] }])
       }
       */
+      /* Quand le polyfill de Node est requis pour compatibilité webpack 4
       chainWebpack (chain) {
         const nodePolyfillWebpackPlugin = require('node-polyfill-webpack-plugin')
         chain.plugin('node-polyfill').use(nodePolyfillWebpackPlugin)
+      }
+      */
+      chainWebpack (chain) {
+        chain.plugin('eslint-webpack-plugin')
+          .use(ESLintPlugin, [{ extensions: ['js', 'vue'] }])
       }
     },
 
