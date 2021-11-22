@@ -1,4 +1,4 @@
-const crypt = require('../../app/crypto')
+import { crypt } from '../../app/crypto.js'
 
 export const avatar = (state) => (id) => {
   return state.avatars[crypt.idToSid(id)]

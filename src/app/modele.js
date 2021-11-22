@@ -1,7 +1,7 @@
-const schemas = require('./schemas')
-const crypt = require('./crypto')
-const u8ToB64 = require('./crypto').u8ToB64
-const b64ToU8 = require('./crypto').b64ToU8
+import { schemas } from './schemas.js'
+import { crypt } from './crypto.js'
+const u8ToB64 = crypt.u8ToB64
+const b64ToU8 = crypt.b64ToU8
 import { openIDB, closeIDB } from './db'
 import { openWS, closeWS } from './ws'
 import { cfg, store, appexc } from './util'

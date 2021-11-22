@@ -1,12 +1,11 @@
 import axios from 'axios'
 import { data } from './modele'
-const schemas = require('./schemas')
-const api = require('./api')
+import { schemas } from './schemas'
+import { AppExc, version, E_BRO, E_SRV, argTypes } from './api'
 import { EXBRK } from './operations'
-const AppExc = require('./api').AppExc
 const base64js = require('base64-js')
 
-const headers = { 'x-api-version': api.version }
+const headers = { 'x-api-version': version }
 
 export const decoder = new TextDecoder('utf-8')
 
@@ -81,10 +80,10 @@ console.log(edvol(675789200000))
 */
 
 export function appexc (e) {
-  return !e ? null : (e instanceof AppExc ? e : new AppExc(api.E_BRO, 'Exception inattendue', e.message + (e.stack ? '\n' + e.stack : '')))
+  return !e ? null : (e instanceof AppExc ? e : new AppExc(E_BRO, 'Exception inattendue', e.message + (e.stack ? '\n' + e.stack : '')))
 }
 
-export const NOEXC = new AppExc(api.E_BRO, 'Déjà signalée')
+export const NOEXC = new AppExc(E_BRO, 'Déjà signalée')
 
 export function affichererreur (appexc, options, conseil) {
   return new Promise((resolve) => {
@@ -135,7 +134,7 @@ export async function post (op, module, fonction, args) {
   let buf, typeResp
   try {
     if (op) op.BRK()
-    const at = api.argTypes[fonction]
+    const at = argTypes[fonction]
     const type = at && at.length > 0 ? at[0] : null
     typeResp = at && at.length > 1 ? at[1] : null
     const data = type ? schemas.serialize(type, args) : decoder.encode(JSON.stringify(args))
@@ -160,14 +159,14 @@ export async function post (op, module, fonction, args) {
         appexc = new AppExc(x.code, x.message)
         if (status === 402 && x.stack) appexc.stack = x.stack
       } catch (e2) {
-        throw new AppExc(api.E_BRO, 'Retour de la requête mal formé : JSON parse. ' + (op ? 'Opération: ' + op.nom : '') + ' Message: ' + e.message)
+        throw new AppExc(E_BRO, 'Retour de la requête mal formé : JSON parse. ' + (op ? 'Opération: ' + op.nom : '') + ' Message: ' + e.message)
       }
       // 400 : anomalie fonctionnelle à traiter par l'application (pas en exception)
       if (status === 400) return appexc
       // 401 : anomalie fonctionnelle à afficher et traiter comme exception
       // 402 : inattendue, récuprée sur le serveur
       throw appexc
-    } else throw new AppExc(api.E_SRV, e.message, e.stack) // inattendue, pas mise en forme
+    } else throw new AppExc(E_SRV, e.message, e.stack) // inattendue, pas mise en forme
   }
 
   // les status HTTP non 2xx sont tombés en exception
@@ -175,14 +174,14 @@ export async function post (op, module, fonction, args) {
     try {
       return schemas.deserialize(typeResp, buf)
     } catch (e) { // Résultat mal formé
-      throw new AppExc(api.E_BRO, 'Retour de la requête mal formé : désérialisation de la réponse. ' + (op ? 'Opération: ' + op.nom : ''), e.message)
+      throw new AppExc(E_BRO, 'Retour de la requête mal formé : désérialisation de la réponse. ' + (op ? 'Opération: ' + op.nom : ''), e.message)
     }
   }
   // sérialisé en JSON
   try {
     return JSON.parse(decoder.decode(buf))
   } catch (e) { // Résultat mal formé
-    throw new AppExc(api.E_BRO, 'Retour de la requête mal formé : JSON parse. ' + (op ? 'Opération: ' + op.nom : ''), e.message)
+    throw new AppExc(E_BRO, 'Retour de la requête mal formé : JSON parse. ' + (op ? 'Opération: ' + op.nom : ''), e.message)
   }
 }
 

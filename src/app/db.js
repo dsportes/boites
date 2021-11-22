@@ -2,9 +2,8 @@
 import Dexie from 'dexie'
 import { Avatar, Compte, Invitgr, Invitct, Contact, Parrain, Rencontre, Groupe, Membre, Secret, Cv, data } from './modele'
 import { store, cfg } from './util'
-const crypt = require('./crypto')
-const api = require('./api')
-const AppExc = require('./api').AppExc
+import { crypt } from './crypto'
+import { AppExc, E_DB, INDEXT } from './api'
 
 const STORES = {
   etat: 'id',
@@ -25,11 +24,11 @@ const TABLES = []
 for (const x in STORES) TABLES.push(x)
 
 function EX1 (e) {
-  return new AppExc(api.E_DB, 'Ouverture de la base locale impossible', e.message + (e.stack ? '\n' + e.stack : ''))
+  return new AppExc(E_DB, 'Ouverture de la base locale impossible', e.message + (e.stack ? '\n' + e.stack : ''))
 }
 
 function EX2 (e) {
-  return new AppExc(api.E_DB, 'Erreur en lecture / écriture sur la base locale', e.message + '\n' + e.stack)
+  return new AppExc(E_DB, 'Erreur en lecture / écriture sur la base locale', e.message + '\n' + e.stack)
 }
 
 function go () {
@@ -130,7 +129,7 @@ export async function getAvatars () {
       const y = await crypt.decrypter(data.clek, idb.data)
       const x = new Avatar().fromIdb(y, idb.vs)
       r.push(x)
-      data.setVerAv(x.sidav, api.AVATAR, x.v)
+      data.setVerAv(x.sidav, INDEXT.AVATAR, x.v)
       data.refsAv.add(x.id)
     })
     return { objs: r, vol: vol }
@@ -149,7 +148,7 @@ export async function getInvitgrs () {
       const y = await crypt.decrypter(data.clek, idb.data)
       const x = new Invitgr().fromIdb(y, idb.vs)
       r.push(x)
-      data.setVerAv(x.sidav, api.INVITGR, x.v)
+      data.setVerAv(x.sidav, INDEXT.INVITGR, x.v)
       data.refsAv.add(x.id)
       if (x.idg) data.refsGr.add(x.idg)
     })
@@ -168,7 +167,7 @@ export async function getInvitcts () {
       vol += idb.data.length
       const x = new Invitct().fromIdb(await crypt.decrypter(data.clek, idb.data), idb.vs)
       r.push(x)
-      data.setVerAv(x.sidav, api.INVITCT, x.v)
+      data.setVerAv(x.sidav, INDEXT.INVITCT, x.v)
       data.refsAv.add(x.id)
     })
     return { objs: r, vol: vol }
@@ -186,7 +185,7 @@ export async function getContacts () {
       vol += idb.data.length
       const x = new Contact().fromIdb(await crypt.decrypter(data.clek, idb.data), idb.vs)
       r.push(x)
-      data.setVerAv(x.sidav, api.CONTACT, x.v)
+      data.setVerAv(x.sidav, INDEXT.CONTACT, x.v)
       data.refsAv.add(x.id)
     })
     return { objs: r, vol: vol }
@@ -204,7 +203,7 @@ export async function getParrains () {
       vol += idb.data.length
       const x = new Parrain().fromIdb(await crypt.decrypter(data.clek, idb.data), idb.vs)
       r.push(x)
-      data.setVerAv(x.sidav, api.PARRAIN, x.v)
+      data.setVerAv(x.sidav, INDEXT.PARRAIN, x.v)
       data.refsAv.add(x.id)
     })
     return { objs: r, vol: vol }
@@ -222,7 +221,7 @@ export async function getRencontres () {
       vol += idb.data.length
       const x = new Rencontre().fromIdb(await crypt.decrypter(data.clek, idb.data), idb.vs)
       r.push(x)
-      data.setVerAv(x.sidav, api.RENCONTRE, x.v)
+      data.setVerAv(x.sidav, INDEXT.RENCONTRE, x.v)
       data.refsAv.add(x.id)
     })
     return { objs: r, vol: vol }
@@ -239,7 +238,7 @@ export async function getGroupes () {
     await data.db.groupe.each(async (idb) => {
       vol += idb.data.length
       const x = new Groupe().fromIdb(await crypt.decrypter(data.clek, idb.data), idb.vs)
-      data.setVerGr(x.sidgr, api.GROUPE, x.v)
+      data.setVerGr(x.sidgr, INDEXT.GROUPE, x.v)
       r.push(x)
       data.refsGr.add(x.id)
     })
@@ -258,7 +257,7 @@ export async function getMembres () {
       vol += idb.data.length
       const x = new Membre().fromIdb(await crypt.decrypter(data.clek, idb.data), idb.vs)
       r.push(x)
-      data.setVerGr(x.sidgr, api.MEMBRE, x.v)
+      data.setVerGr(x.sidgr, INDEXT.MEMBRE, x.v)
       data.refsGr.add(x.id)
       if (x.na) data.refsAv.add(x.na)
     })
@@ -278,9 +277,9 @@ export async function getSecrets () {
       const x = new Secret().fromIdb(await crypt.decrypter(data.clek, idb.data), idb.vs)
       r.push(x)
       if (x.estAv) {
-        data.setVerAv(x.sidavgr, api.SECRET, x.v)
+        data.setVerAv(x.sidavgr, INDEXT.SECRET, x.v)
       } else {
-        data.setVerGr(x.sidavgr, api.SECRET, x.v)
+        data.setVerGr(x.sidavgr, INDEXT.SECRET, x.v)
       }
       if (x.ts === 2) data.refsGr.add(x.id)
       else { data.refsAv.add(x.id) }

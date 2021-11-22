@@ -1,5 +1,6 @@
 import { boot } from 'quasar/wrappers'
 import { setup, getJsonPub, getImagePub, getBinPub } from '../app/util'
+
 const wcrypt = require('../app/webcrypto')
 
 export default boot(async ({ app, router, store /* Vue */ }) => {

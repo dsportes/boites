@@ -5,14 +5,13 @@ import {
   purgeAvatars, purgeCvs, purgeGroupes, openIDB, enregLScompte, setEtat, getEtat
 } from './db.js'
 import { NomAvatar, Compte, Avatar, data, remplacePage, Invitgr, rowItemsToMapObjets, commitMapObjets, SIZEAV, SIZEGR } from './modele'
-const AppExc = require('./api').AppExc
-const api = require('./api')
+import { AppExc, E_BRK, F_BRO, X_SRV, INDEXT } from './api'
 
-const crypt = require('./crypto')
-const schemas = require('./schemas')
+import { crypt } from './crypto'
+import { schemas } from './schemas'
 
-export const EXBRK = new AppExc(api.E_BRK, 'Interruption volontaire')
-export const EXPS = new AppExc(api.F_BRO, 'La phrase secrète a changé depuis l\'authentification du comptE Déconnexion et reconnexion requise')
+export const EXBRK = new AppExc(E_BRK, 'Interruption volontaire')
+export const EXPS = new AppExc(F_BRO, 'La phrase secrète a changé depuis l\'authentification du comptE Déconnexion et reconnexion requise')
 
 const OUI = 1
 const NON = 0
@@ -59,7 +58,7 @@ export class Operation {
       { code: 'c', label: 'Corriger les données saisies', color: 'primary' },
       { code: 'd', label: 'Se déconnecter, retourner au login', color: 'primary' }
     ]
-    if (this.appexc.code === api.X_SRV) {
+    if (this.appexc.code === X_SRV) {
       return [options, null]
     }
   }
@@ -333,7 +332,7 @@ export class OperationUI extends Operation {
       { code: 'x', label: 'Corriger la phrase secrète saisie', color: 'primary' },
       { code: 'd', label: 'Retourner au login', color: 'primary' }
     ]
-    if (this.appexc.code === api.X_SRV) {
+    if (this.appexc.code === X_SRV) {
       return [options, null]
     }
   }
@@ -551,7 +550,7 @@ export class CreationCompte extends OperationUI {
       { code: 'c', label: 'Corriger les données saisies', color: 'primary' },
       { code: 'd', label: 'Abandonner la création, retourner au login', color: 'primary' }
     ]
-    if (this.appexc.code === api.X_SRV) {
+    if (this.appexc.code === X_SRV) {
       return [options, null]
     }
   }
@@ -643,7 +642,7 @@ export class ConnexionCompteAvion extends OperationUI {
     try {
       data.ps = ps
       if (!idbSidCompte()) {
-        throw new AppExc(api.F_BRO, 'Compte non enregistré localement : aucune session synchronisée ne s\'est préalablement exécutée sur ce poste avec cette phrase secrète. Erreur dans la saisie de la ligne 1 de la phrase ?')
+        throw new AppExc(F_BRO, 'Compte non enregistré localement : aucune session synchronisée ne s\'est préalablement exécutée sur ce poste avec cette phrase secrète. Erreur dans la saisie de la ligne 1 de la phrase ?')
       }
       await data.connexion()
       this.BRK()
@@ -654,7 +653,7 @@ export class ConnexionCompteAvion extends OperationUI {
 
       const compte = await getCompte()
       if (!compte || compte.pcbh !== data.ps.pcbh) {
-        throw new AppExc(api.F_BRO, 'Compte non enregistré localement : aucune session synchronisée ne s\'est préalablement exécutée sur ce poste avec cette phrase secrète. Erreur dans la saisie de la ligne 2 de la phrase ?')
+        throw new AppExc(F_BRO, 'Compte non enregistré localement : aucune session synchronisée ne s\'est préalablement exécutée sur ce poste avec cette phrase secrète. Erreur dans la saisie de la ligne 2 de la phrase ?')
       }
       data.setCompte(compte)
 
@@ -749,7 +748,7 @@ export class ConnexionCompte extends OperationUI {
         // créer la liste des versions chargées pour les tables des avatars, cad 0 pour toutes
         // cette liste a été créée par chargementIDB dans le mode synchro, mais pas en mode incognito
         data.idbSetAvatars.forEach((id) => {
-          data.setVerAv(crypt.idToSid(id), api.AVATAR, 0)
+          data.setVerAv(crypt.idToSid(id), INDEXT.AVATAR, 0)
         })
       }
 
@@ -767,7 +766,7 @@ export class ConnexionCompte extends OperationUI {
         // chargement des invitgrs ayant changé depuis l'état local (tous le cas échéant)
         // pour obtenir la liste des groupes accédés
         const lvav = {}
-        data.verAv.forEach((lv, sid) => { lvav[sid] = lv[api.AVATAR] })
+        data.verAv.forEach((lv, sid) => { lvav[sid] = lv[INDEXT.AVATAR] })
         const ret = await post(this, 'm1', 'syncInvitgr', { sessionId: data.sessionId, lvav })
         if (data.dh < ret.dh) data.dh = ret.dh
         // traitement des invitgr reçus
@@ -786,7 +785,7 @@ export class ConnexionCompte extends OperationUI {
             } else {
               // Inscrire le groupe dans la liste de ceux à synchroniser s'il n'y était pas
               if (!data.verGr.has(invitgr.sidg)) {
-                data.setVerGr(invitgr.sidg, api.GROUPE, 0)
+                data.setVerGr(invitgr.sidg, INDEXT.GROUPE, 0)
               }
             }
           }

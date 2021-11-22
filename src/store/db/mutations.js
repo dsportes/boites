@@ -1,5 +1,5 @@
-import { NomAvatar, Cv } from '../../app/modele'
-const crypt = require('../../app/crypto')
+import { NomAvatar, Cv } from '../../app/modele.js'
+import { crypt } from '../../app/crypto.js'
 
 export function raz (state) {
   state.compte = null

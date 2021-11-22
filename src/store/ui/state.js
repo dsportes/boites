@@ -1,4 +1,4 @@
-import { IDBLEC_RAZ } from '../constantes'
+import { IDBLEC_RAZ } from '../constantes.js'
 export default function () {
   return {
     erreur: { code: -4, message: 'néant', conseil: 'néant', stack: null },

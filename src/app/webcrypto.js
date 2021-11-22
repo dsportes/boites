@@ -4,20 +4,18 @@ IMPLEMENTATION de webcrypto.js EN UTILISANT Web Cryptography API (sans Node)
 
 const base64js = require('base64-js')
 const jssha256 = require('js-sha256').sha256
-const ab2b = require('./schemas').ab2b
+import { ab2b } from './schemas'
 
 const enc = new TextEncoder()
 const dec = new TextDecoder()
 
-const SALTS = new Array(256)
-exports.SALTS = SALTS
-function setSalts (a) {
+export const SALTS = new Array(256)
+export function setSalts (a) {
   const b = new Uint8Array(a)
   for (let i = 0; i < 256; i++) {
     SALTS[i] = Uint8Array.prototype.slice.call(b, i * 16, (i + 1) * 16)
   }
 }
-exports.setSalts = setSalts
 
 function b64ToU8 (s) {
   const diff = s.length % 4
@@ -29,7 +27,7 @@ function b64ToU8 (s) {
   return base64js.toByteArray(x.replace(/-/g, '+').replace(/_/g, '/'))
 }
 
-async function pbkfd (secret) {
+export async function pbkfd (secret) {
   const passwordKey = await window.crypto.subtle.importKey('raw', enc.encode(secret), 'PBKDF2', false, ['deriveKey'])
   const key = await window.crypto.subtle.deriveKey(
     { name: 'PBKDF2', salt: SALTS[0], iterations: 5000, hash: 'SHA-256' },
@@ -41,27 +39,24 @@ async function pbkfd (secret) {
   const res = await window.crypto.subtle.exportKey('raw', key)
   return ab2b(res)
 }
-exports.pbkfd = pbkfd
 
-function sha256 (buffer) {
+export function sha256 (buffer) {
   // return ab2b(await window.crypto.subtle.digest('SHA-256', buffer))
   return ab2b(jssha256.arrayBuffer(buffer))
 }
-exports.sha256 = sha256
 
-function random (nbytes) {
+export function random (nbytes) {
   const u8 = new Uint32Array(nbytes)
   window.crypto.getRandomValues(u8)
   return u8
 }
-exports.random = random
 
 function arrayBuffer (u8) {
   // https://stackoverflow.com/questions/37228285/uint8array-to-arraybuffer
   return u8.buffer.slice(u8.byteOffset, u8.byteLength + u8.byteOffset)
 }
 
-async function crypter (cle, u8, idxIV) {
+export async function crypter (cle, u8, idxIV) {
   const k = typeof cle === 'string' ? b64ToU8(cle) : cle
   const key = await window.crypto.subtle.importKey('raw', arrayBuffer(k), 'aes-cbc', false, ['encrypt'])
   const n = !idxIV ? 0 : (idxIV < 0 ? Number(crypto.randomBytes(1)) : idxIV)
@@ -70,22 +65,19 @@ async function crypter (cle, u8, idxIV) {
   const buf = await crypto.subtle.encrypt({ name: 'aes-cbc', iv: iv }, key, u8)
   return ab2b(concat([x0, new Uint8Array(buf)]))
 }
-exports.crypter = crypter
 
-async function decrypter (cle, u8) {
+export async function decrypter (cle, u8) {
   const k = typeof cle === 'string' ? b64ToU8(cle) : cle
   const key = await window.crypto.subtle.importKey('raw', arrayBuffer(k), 'aes-cbc', false, ['decrypt'])
   const iv = SALTS[Number(u8[0])]
   const r = await crypto.subtle.decrypt({ name: 'aes-cbc', iv: iv }, key, u8.slice(1))
   return ab2b(r)
 }
-exports.decrypter = decrypter
 
-async function decrypterStr (cle, buffer) {
+export async function decrypterStr (cle, buffer) {
   const buf = await decrypter(cle, buffer)
   return dec.decode(buf)
 }
-exports.decrypterStr = decrypterStr
 
 function abToPem (ab, pubpriv) { // ArrayBuffer
   const s = base64js.fromByteArray(new Uint8Array(ab))
@@ -106,34 +98,31 @@ function keyToU8 (pem, pubpriv) {
   return base64js.toByteArray(s.replace(/\n/g, ''))
 }
 
-async function genKeyPair () {
+export async function genKeyPair () {
   const rsaOpt = { name: 'RSA-OAEP', modulusLength: 2048, publicExponent: new Uint8Array([0x01, 0x00, 0x01]), hash: { name: 'SHA-256' } }
   const key = await window.crypto.subtle.generateKey(rsaOpt, true, ['encrypt', 'decrypt'])
   const jpriv = await window.crypto.subtle.exportKey('pkcs8', key.privateKey)
   const jpub = await window.crypto.subtle.exportKey('spki', key.publicKey)
   return { publicKey: abToPem(jpub, 'PUBLIC'), privateKey: abToPem(jpriv, 'PRIVATE') }
 }
-exports.genKeyPair = genKeyPair
 
-async function crypterRSA (clepub, u8) {
+export async function crypterRSA (clepub, u8) {
   const k = keyToU8(clepub, 'PUBLIC')
   // !!! SHA-1 pour que Node puisse decrypter !!!
   const key = await window.crypto.subtle.importKey('spki', arrayBuffer(k), { name: 'RSA-OAEP', hash: 'SHA-1' }, false, ['encrypt'])
   const buf = await crypto.subtle.encrypt({ name: 'RSA-OAEP' }, key, u8)
   return ab2b(buf)
 }
-exports.crypterRSA = crypterRSA
 
-async function decrypterRSA (clepriv, u8) {
+export async function decrypterRSA (clepriv, u8) {
   const k = keyToU8(clepriv, 'PRIVATE')
   // !!! SHA-1 pour que Node puisse decrypter !!!
   const key = await window.crypto.subtle.importKey('pkcs8', arrayBuffer(k), { name: 'RSA-OAEP', hash: 'SHA-1' }, false, ['decrypt'])
   const r = await crypto.subtle.decrypt({ name: 'RSA-OAEP' }, key, u8)
   return ab2b(r)
 }
-exports.decrypterRSA = decrypterRSA
 
-function concat (arrays) {
+export function concat (arrays) {
   // sum of individual array lengths
   const totalLength = arrays.reduce((acc, value) => acc + value.length, 0)
   if (!arrays.length) return null
@@ -145,4 +134,3 @@ function concat (arrays) {
   }
   return result
 }
-exports.concat = concat

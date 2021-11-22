@@ -1,4 +1,4 @@
-import { IDBLEC_RAZ } from '../constantes'
+import { IDBLEC_RAZ } from '../constantes.js'
 
 let nummessage = 1
 

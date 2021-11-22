@@ -4,5 +4,6 @@
 /src-cordova
 /.quasar
 /node_modules
+/src/app/avrobrowser.js
 .eslintrc.js
 jsconfig.json

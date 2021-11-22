@@ -4,26 +4,25 @@ import { cfg, store, dhtToString, affichererreur } from './util'
 import { data } from './modele'
 import { ProcessQueue } from './operations'
 import { setEtat } from './db'
-const schemas = require('./schemas')
-const api = require('./api')
-const AppExc = require('./api').AppExc
+import { schemas } from './schemas'
+import { AppExc, E_WS, PINGTO } from './api'
 
 let url = ''
 
 function EX0 (e) {
-  return new AppExc(api.E_WS, 'Erreur à l\'ouverture de la connexion avec le serveur (' + url + ')', e.message)
+  return new AppExc(E_WS, 'Erreur à l\'ouverture de la connexion avec le serveur (' + url + ')', e.message)
 }
 
 function EX1 () {
-  return new AppExc(api.E_WS, 'Ouverture de la connexion avec le serveur impossible (' + url + ')')
+  return new AppExc(E_WS, 'Ouverture de la connexion avec le serveur impossible (' + url + ')')
 }
 
 function EX2 (e) {
-  return new AppExc(api.E_WS, 'Envoi d\'un message au serveur impossible (' + url + ')', e.message)
+  return new AppExc(E_WS, 'Envoi d\'un message au serveur impossible (' + url + ')', e.message)
 }
 
 function EX3 () {
-  return new AppExc(api.E_WS, 'Rupture de la liaison avec le serveur par le serveur ou URL mal configurée (' + url + ')')
+  return new AppExc(E_WS, 'Rupture de la liaison avec le serveur par le serveur ou URL mal configurée (' + url + ')')
 }
 
 let ondeconnexion = false
@@ -130,7 +129,7 @@ function heartBeat (sid) {
       data.ws.send(sid) // ping
       heartBeat(sid)
     }
-  }, api.PINGTO * 1000)
+  }, PINGTO * 1000)
 }
 
 async function excAffichage () {
