@@ -24,7 +24,7 @@ import { computed } from 'vue'
 import { useStore } from 'vuex'
 import { get, decoder } from '../app/util'
 import { onBoot, remplacePage } from '../app/modele'
-const schemas = require('../app/schemas')
+import { schemas } from '../app/schemas.mjs'
 
 export default ({
   name: 'Compte',

@@ -62,7 +62,6 @@
 <script>
 import { useStore } from 'vuex'
 import { computed } from 'vue'
-// const crypt = require('../app/crypto')
 import PhraseSecrete from './PhraseSecrete.vue'
 import MdpAdmin from './MdpAdmin.vue'
 import QuotasVolume from './QuotasVolume.vue'

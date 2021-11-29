@@ -34,7 +34,7 @@
 <script>
 import { useStore } from 'vuex'
 import { computed } from 'vue'
-const crypt = require('../app/crypto')
+import { crypt } from '../app/crypto.mjs'
 import PhraseSecrete from '../components/PhraseSecrete.vue'
 import MdpAdmin from '../components/MdpAdmin.vue'
 import EditeurMd from '../components/EditeurMd.vue'
@@ -76,9 +76,8 @@ export default ({
     },
 
     async testcrypto () {
-      // crypt.test()
-      crypt.testWAC()
-      // crypt.testAvro()
+      await crypt.test1()
+      await crypt.test2()
     },
     async test2 () {
       try {

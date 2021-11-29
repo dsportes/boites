@@ -2,9 +2,9 @@
 IMPLEMENTATION de webcrypto.js EN UTILISANT Web Cryptography API (sans Node)
 ***********************************************/
 
-const base64js = require('base64-js')
-const jssha256 = require('js-sha256').sha256
+import { sha256 as jssha256 } from 'js-sha256'
 import { ab2b } from './schemas.mjs'
+import { toByteArray, fromByteArray } from './base64.mjs'
 
 const enc = new TextEncoder()
 const dec = new TextDecoder()
@@ -15,16 +15,6 @@ export function setSalts (a) {
   for (let i = 0; i < 256; i++) {
     SALTS[i] = Uint8Array.prototype.slice.call(b, i * 16, (i + 1) * 16)
   }
-}
-
-function b64ToU8 (s) {
-  const diff = s.length % 4
-  let x = s
-  if (diff) {
-    const pad = '===='.substring(0, 4 - diff)
-    x = s + pad
-  }
-  return base64js.toByteArray(x.replace(/-/g, '+').replace(/_/g, '/'))
 }
 
 export async function pbkfd (secret) {
@@ -46,7 +36,7 @@ export function sha256 (buffer) {
 }
 
 export function random (nbytes) {
-  const u8 = new Uint32Array(nbytes)
+  const u8 = new Uint8Array(nbytes)
   window.crypto.getRandomValues(u8)
   return u8
 }
@@ -57,8 +47,7 @@ function arrayBuffer (u8) {
 }
 
 export async function crypter (cle, u8, idxIV) {
-  const k = typeof cle === 'string' ? b64ToU8(cle) : cle
-  const key = await window.crypto.subtle.importKey('raw', arrayBuffer(k), 'aes-cbc', false, ['encrypt'])
+  const key = await window.crypto.subtle.importKey('raw', arrayBuffer(cle), 'aes-cbc', false, ['encrypt'])
   const n = !idxIV ? 0 : (idxIV < 0 ? Number(crypto.randomBytes(1)) : idxIV)
   const iv = SALTS[n]
   const x0 = new Uint8Array(1).fill(n)
@@ -67,8 +56,7 @@ export async function crypter (cle, u8, idxIV) {
 }
 
 export async function decrypter (cle, u8) {
-  const k = typeof cle === 'string' ? b64ToU8(cle) : cle
-  const key = await window.crypto.subtle.importKey('raw', arrayBuffer(k), 'aes-cbc', false, ['decrypt'])
+  const key = await window.crypto.subtle.importKey('raw', arrayBuffer(cle), 'aes-cbc', false, ['decrypt'])
   const iv = SALTS[Number(u8[0])]
   const r = await crypto.subtle.decrypt({ name: 'aes-cbc', iv: iv }, key, u8.slice(1))
   return ab2b(r)
@@ -80,7 +68,7 @@ export async function decrypterStr (cle, buffer) {
 }
 
 function abToPem (ab, pubpriv) { // ArrayBuffer
-  const s = base64js.fromByteArray(new Uint8Array(ab))
+  const s = fromByteArray(new Uint8Array(ab))
   let i = 0
   const a = ['-----BEGIN ' + pubpriv + ' KEY-----']
   while (i < s.length) {
@@ -95,7 +83,7 @@ function keyToU8 (pem, pubpriv) {
   const d = '-----BEGIN ' + pubpriv + ' KEY-----'
   const f = '-----END ' + pubpriv + ' KEY-----'
   const s = pem.substring(d.length, pem.length - f.length)
-  return base64js.toByteArray(s.replace(/\n/g, ''))
+  return toByteArray(s.replace(/\n/g, ''))
 }
 
 export async function genKeyPair () {

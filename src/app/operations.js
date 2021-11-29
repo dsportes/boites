@@ -7,7 +7,7 @@ import {
 import { NomAvatar, Compte, Avatar, data, remplacePage, Invitgr, rowItemsToMapObjets, commitMapObjets, SIZEAV, SIZEGR } from './modele'
 import { AppExc, E_BRK, F_BRO, X_SRV, INDEXT } from './api.mjs'
 
-import { crypt } from './crypto.js'
+import { crypt } from './crypto.mjs'
 import { schemas } from './schemas.mjs'
 
 export const EXBRK = new AppExc(E_BRK, 'Interruption volontaire')

@@ -82,7 +82,7 @@ function test () {
       { name: 'age', type: 'int' }
     ]
   }
-  const obj1 = { nom: 'Daniel', age: 62 }
+  const obj1 = { nom: 'Le beau Toto', age: 32 }
 
   const test1 = avro.Type.forSchema(sch)
   const buf = test1.toBuffer(obj1)
@@ -95,4 +95,5 @@ function test () {
   console.log(JSON.stringify(obj2b))
 }
 
-module.exports = { getType, ab2b, forSchema, serialize, deserialize, test }
+window.avrobrowser =  { getType, ab2b, forSchema, serialize, deserialize, test }
+console.log('schemas.js chargé')

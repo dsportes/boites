@@ -40,7 +40,7 @@ import { computed } from 'vue'
 import { useStore } from 'vuex'
 import { data } from '../app/modele'
 import { getEtat } from '../app/db'
-const api = require('../app/api')
+import { E_SRV, AppExc } from '../app/api.mjs'
 
 export default ({
   name: 'DialogueTestPing',
@@ -65,7 +65,7 @@ export default ({
         this.resultat1a = 'OK'
         this.resultat1b = ret
       } catch (e) {
-        const ex = new api.AppExc(api.E_SRV, e.message, e.stack)
+        const ex = new AppExc(E_SRV, e.message, e.stack)
         data.setErWS(ex)
         const m = data.degraderMode()
         this.resultat1a = 'KO' + (m ? ' - ' + m : '')

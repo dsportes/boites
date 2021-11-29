@@ -3,7 +3,7 @@ import { data } from './modele'
 import { schemas } from './schemas.mjs'
 import { AppExc, version, E_BRO, E_SRV, argTypes } from './api.mjs'
 import { EXBRK } from './operations'
-const base64js = require('base64-js')
+import { u8ToB64 } from './crypto.mjs'
 
 const headers = { 'x-api-version': version }
 
@@ -247,7 +247,7 @@ export async function getJsonPub (path) {
 export async function getImagePub (path, type) {
   try {
     const x = (await axios.get('./' + path, { responseType: 'arraybuffer' })).data
-    const s = base64js.fromByteArray(new Uint8Array(x))
+    const s = u8ToB64(new Uint8Array(x))
     return 'data:image/' + (type || 'png') + ';base64,' + s
   } catch (e) {
     return null

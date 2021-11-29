@@ -1,5 +1,5 @@
 import { NomAvatar, Cv } from '../../app/modele.js'
-import { crypt } from '../../app/crypto.js'
+import { crypt } from '../../app/crypto.mjs'
 
 export function raz (state) {
   state.compte = null

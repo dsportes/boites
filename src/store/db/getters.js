@@ -1,4 +1,4 @@
-import { crypt } from '../../app/crypto.js'
+import { crypt } from '../../app/crypto.mjs'
 
 export const avatar = (state) => (id) => {
   return state.avatars[crypt.idToSid(id)]
