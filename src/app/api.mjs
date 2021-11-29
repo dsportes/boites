@@ -1,5 +1,5 @@
-import { schemas } from './schemas.js'
-import './rowTypes.js'
+import { schemas } from './schemas.mjs'
+import './rowTypes.mjs'
 
 export const version = '1'
 

@@ -1,4 +1,4 @@
-import { schemas } from './schemas.js'
+import { schemas } from './schemas.mjs'
 import { crypt } from './crypto.js'
 const u8ToB64 = crypt.u8ToB64
 const b64ToU8 = crypt.b64ToU8

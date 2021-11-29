@@ -4,8 +4,8 @@ import { cfg, store, dhtToString, affichererreur } from './util'
 import { data } from './modele'
 import { ProcessQueue } from './operations'
 import { setEtat } from './db'
-import { schemas } from './schemas'
-import { AppExc, E_WS, PINGTO } from './api'
+import { schemas } from './schemas.mjs'
+import { AppExc, E_WS, PINGTO } from './api.mjs'
 
 let url = ''
 

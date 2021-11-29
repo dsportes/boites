@@ -1,5 +1,6 @@
-import { pbkfd, sha256, random, crypter, decrypter, decrypterStr, genKeyPair, crypterRSA, decrypterRSA, concat } from './webcrypto'
 const base64js = require('base64-js')
+
+import { pbkfd, sha256, random, crypter, decrypter, decrypterStr, genKeyPair, crypterRSA, decrypterRSA, concat } from './webcrypto.js'
 
 export const crypt = { pbkfd, sha256, random, crypter, decrypter, decrypterStr, genKeyPair, crypterRSA, decrypterRSA, concat, u8ToB64, b64ToU8, rnd6, hash, hashBin, int2base64, bigToU8, u8ToBig, u8ToInt, intToU8, sidToId, idToSid, test }
 

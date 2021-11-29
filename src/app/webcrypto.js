@@ -4,7 +4,7 @@ IMPLEMENTATION de webcrypto.js EN UTILISANT Web Cryptography API (sans Node)
 
 const base64js = require('base64-js')
 const jssha256 = require('js-sha256').sha256
-import { ab2b } from './schemas'
+import { ab2b } from './schemas.mjs'
 
 const enc = new TextEncoder()
 const dec = new TextDecoder()

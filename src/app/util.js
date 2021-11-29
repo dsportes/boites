@@ -1,7 +1,7 @@
 import axios from 'axios'
 import { data } from './modele'
-import { schemas } from './schemas'
-import { AppExc, version, E_BRO, E_SRV, argTypes } from './api'
+import { schemas } from './schemas.mjs'
+import { AppExc, version, E_BRO, E_SRV, argTypes } from './api.mjs'
 import { EXBRK } from './operations'
 const base64js = require('base64-js')
 

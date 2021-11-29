@@ -2,8 +2,8 @@
 import Dexie from 'dexie'
 import { Avatar, Compte, Invitgr, Invitct, Contact, Parrain, Rencontre, Groupe, Membre, Secret, Cv, data } from './modele'
 import { store, cfg } from './util'
-import { crypt } from './crypto'
-import { AppExc, E_DB, INDEXT } from './api'
+import { crypt } from './crypto.js'
+import { AppExc, E_DB, INDEXT } from './api.mjs'
 
 const STORES = {
   etat: 'id',

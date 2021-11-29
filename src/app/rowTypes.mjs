@@ -1,4 +1,4 @@
-import { schemas } from './schemas.js'
+import { schemas } from './schemas.mjs'
 
 /*
 - `versions` (id) : table des prochains numéros de versions (actuel et dernière sauvegarde) et autres singletons clé / valeur
