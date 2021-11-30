@@ -1,5 +1,5 @@
 import * as CONST from '../constantes.js'
-import { cfg } from '../../app/util.js'
+import { cfg } from '../../app/util.mjs'
 
 export function orgicon (state) {
   return state.org ? cfg().orgs[state.org].icon : cfg().logo

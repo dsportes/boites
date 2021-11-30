@@ -1,5 +1,5 @@
 import { boot } from 'quasar/wrappers'
-import { setup, getJsonPub, getImagePub, getBinPub } from '../app/util'
+import { setup, getJsonPub, getImagePub, getBinPub } from '../app/util.mjs'
 import { setSalts } from '../app/webcrypto.mjs'
 
 export default boot(async ({ app, router, store /* Vue */ }) => {

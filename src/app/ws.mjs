@@ -1,10 +1,9 @@
 /* gestion WebSocket */
 
-import { cfg, store, dhtToString, affichererreur } from './util'
-import { data } from './modele'
-import { ProcessQueue } from './operations'
-import { setEtat } from './db'
-import { schemas } from './schemas.mjs'
+import { cfg, store, dhtToString, affichererreur, deserial } from './util.mjs'
+import { data } from './modele.mjs'
+import { ProcessQueue } from './operations.mjs'
+import { setEtat } from './db.mjs'
 import { AppExc, E_WS, PINGTO } from './api.mjs'
 
 let url = ''
@@ -78,7 +77,7 @@ let pongrecu = false
 async function onmessage (m) {
   if (!data.ws) return
   const ab = await m.data.arrayBuffer()
-  const syncList = schemas.deserialize('synclist', ab)
+  const syncList = deserial(new Uint8Array(ab))
   if (syncList.sessionId !== data.sessionId) return
   if (data.dh < syncList.dh) data.dh = syncList.dh
   const pong = !syncList.rowItems

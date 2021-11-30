@@ -1,13 +1,17 @@
 import axios from 'axios'
-import { data } from './modele'
-import { schemas } from './schemas.mjs'
-import { AppExc, version, E_BRO, E_SRV, argTypes } from './api.mjs'
-import { EXBRK } from './operations'
+import { data } from './modele.mjs'
+import { AppExc, version, E_BRO, E_SRV } from './api.mjs'
+import { EXBRK } from './operations.mjs'
 import { u8ToB64 } from './crypto.mjs'
+import { encode, decode } from '@msgpack/msgpack'
 
 const headers = { 'x-api-version': version }
 
-export const decoder = new TextDecoder('utf-8')
+const decoder = new TextDecoder('utf-8')
+const encoder = new TextEncoder('utf-8')
+
+export function u8ToString (u8) { return decoder.decode(u8) }
+export function stringToU8 (str) { return encoder.encode(str) }
 
 let $cfg
 let globalProperties
@@ -79,11 +83,17 @@ console.log(edvol(67578920000))
 console.log(edvol(675789200000))
 */
 
+export function serial (obj) {
+  return new Uint8Array(encode(obj))
+}
+
+export function deserial (u8) {
+  return decode(u8)
+}
+
 export function appexc (e) {
   return !e ? null : (e instanceof AppExc ? e : new AppExc(E_BRO, 'Exception inattendue', e.message + (e.stack ? '\n' + e.stack : '')))
 }
-
-export const NOEXC = new AppExc(E_BRO, 'Déjà signalée')
 
 export function affichererreur (appexc, options, conseil) {
   return new Promise((resolve) => {
@@ -131,13 +141,10 @@ Retour :
 Exception : un AppExc avec les propriétés code, message, stack
 */
 export async function post (op, module, fonction, args) {
-  let buf, typeResp
+  let buf
   try {
     if (op) op.BRK()
-    const at = argTypes[fonction]
-    const type = at && at.length > 0 ? at[0] : null
-    typeResp = at && at.length > 1 ? at[1] : null
-    const data = type ? schemas.serialize(type, args) : decoder.encode(JSON.stringify(args))
+    const data = serial(args)
     const u = $cfg.urlserveur + '/' + $store.state.ui.org + '/' + module + '/' + fonction
     if (op) op.cancelToken = axios.CancelToken.source()
     const par = { method: 'post', url: u, data: data, headers: headers, responseType: 'arraybuffer' }
@@ -145,7 +152,8 @@ export async function post (op, module, fonction, args) {
     const r = await axios(par)
     if (op) op.cancelToken = null
     if (op) op.BRK()
-    buf = new Uint8Array(r.data)
+    // buf = new Uint8Array(r.data)
+    buf = r.data
   } catch (e) {
     // Exceptions jetées par le this.BRK au-dessus)
     if (e === data.EXBRK) throw e
@@ -170,18 +178,10 @@ export async function post (op, module, fonction, args) {
   }
 
   // les status HTTP non 2xx sont tombés en exception
-  if (typeResp) { // résultat normal sérialisé
-    try {
-      return schemas.deserialize(typeResp, buf)
-    } catch (e) { // Résultat mal formé
-      throw new AppExc(E_BRO, 'Retour de la requête mal formé : désérialisation de la réponse. ' + (op ? 'Opération: ' + op.nom : ''), e.message)
-    }
-  }
-  // sérialisé en JSON
   try {
-    return JSON.parse(decoder.decode(buf))
+    return deserial(buf)
   } catch (e) { // Résultat mal formé
-    throw new AppExc(E_BRO, 'Retour de la requête mal formé : JSON parse. ' + (op ? 'Opération: ' + op.nom : ''), e.message)
+    throw new AppExc(E_BRO, 'Retour de la requête mal formé : désérialisation de la réponse. ' + (op ? 'Opération: ' + op.nom : ''), e.message)
   }
 }
 
@@ -260,36 +260,4 @@ export function log10 (v) { return Math.round(Math.log10(v > 100000 ? 100000 : v
 
 // Volume entier retourné depuis un byte en Ko
 export function pow10 (v) { return Math.round(Math.pow(10, v / 50)) }
-*/
-
-/*
-export async function orgicon (org) {
-  try {
-    const u = $cfg.urlserveur + '/icon/' + org
-    $store.commit('ui/debutreq')
-    affichermessage('Recherche de l\'icône de ' + org, false)
-    cancelSource = axios.CancelToken.source()
-    const r = await axios({ method: 'get', url: u, responseType: 'text', cancelToken: cancelSource.token })
-    $store.commit('ui/finreq')
-    razmessage()
-    $store.commit('ui/majstatushttp', r.status)
-    return r.data
-  } catch (e) {
-    $store.commit('ui/finreq')
-    err(e)
-  }
-}
-*/
-
-/*
-// generation de key pair sur le serveur
-export async function genkeypair () {
-  try {
-    const u = $cfg.urlserveur + '/genkeypair'
-    const r = await axios({ method: 'get', url: u, responseType: 'json' })
-    return { publicKey: r.data[0], privateKey: r.data[1] }
-  } catch (e) {
-    err(e)
-  }
-}
 */

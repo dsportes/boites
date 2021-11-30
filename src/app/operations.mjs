@@ -1,10 +1,10 @@
-import { store, post, affichermessage, cfg, sleep, affichererreur, appexc } from './util'
+import { store, post, affichermessage, cfg, sleep, affichererreur, appexc } from './util.mjs'
 import {
   deleteIDB, idbSidCompte, commitRows, getCompte, getAvatars, getContacts, getCvs,
   getGroupes, getInvitcts, getInvitgrs, getMembres, getParrains, getRencontres, getSecrets,
   purgeAvatars, purgeCvs, purgeGroupes, openIDB, enregLScompte, setEtat, getEtat
-} from './db.js'
-import { NomAvatar, Compte, Avatar, data, remplacePage, Invitgr, rowItemsToMapObjets, commitMapObjets, SIZEAV, SIZEGR } from './modele'
+} from './db.mjs'
+import { NomAvatar, Compte, Avatar, data, remplacePage, Invitgr, rowItemsToMapObjets, commitMapObjets, SIZEAV, SIZEGR } from './modele.mjs'
 import { AppExc, E_BRK, F_BRO, X_SRV, INDEXT } from './api.mjs'
 
 import { crypt } from './crypto.mjs'
@@ -248,7 +248,8 @@ export class Operation {
       // Une mise à jour de compte notifiée
       const row = mapObj.compte
       if (row.pcbh !== data.ps.pcbh) throw EXPS // phrase secrète changée => déconnexion
-      compte = new Compte().fromRow(row)
+      compte = new Compte()
+      await compte.fromRow(row)
       data.setCompte(compte)
     }
 
@@ -578,10 +579,10 @@ export class CreationCompte extends OperationUI {
       const kp = await crypt.genKeyPair()
       const nomAvatar = new NomAvatar(nom, true) // nouveau
       const compte = new Compte().nouveau(nomAvatar, kp.privateKey)
-      const rowCompte = compte.toRow()
+      const rowCompte = await compte.toRow()
       data.setCompte(compte)
       const avatar = new Avatar().nouveau(nomAvatar)
-      const rowAvatar = avatar.toRow()
+      const rowAvatar = await avatar.toRow()
 
       const args = { sessionId: data.sessionId, mdp64: mdp.mdp64, q1: quotas.q1, q2: quotas.q2, qm1: quotas.qm1, qm2: quotas.qm2, clePub: kp.publicKey, rowCompte, rowAvatar }
       const ret = await post(this, 'm1', 'creationCompte', args)
@@ -592,7 +593,8 @@ export class CreationCompte extends OperationUI {
       On peut désérialiser la liste d'items (compte et avatar)
       */
       const mapObj = await rowItemsToMapObjets(ret.rowItems)
-      const compte2 = new Compte().fromRow(mapObj.compte) // le dernier ROW (pas objet) quand on en a reçu plusieurs
+      const compte2 = new Compte()
+      await compte2.fromRow(mapObj.compte) // le dernier ROW (pas objet) quand on en a reçu plusieurs
       data.setCompte(compte2)
       const [rows] = commitMapObjets(mapObj)
       rows.push(compte2)
@@ -689,7 +691,8 @@ export class ConnexionCompte extends OperationUI {
     // construction de l'objet compte
     const rowCompte = schemas.deserialize('rowcompte', ret.rowItems[0].serial)
     if (data.ps.pcbh !== rowCompte.pcbh) throw EXPS // changt de phrase secrète
-    return new Compte().fromRow(rowCompte)
+    const c = new Compte()
+    return await c.fromRow(rowCompte)
   }
 
   async run (ps) {
@@ -771,10 +774,12 @@ export class ConnexionCompte extends OperationUI {
         if (data.dh < ret.dh) data.dh = ret.dh
         // traitement des invitgr reçus
         const maj = []
-        ret.rowItems.forEach(item => {
+        for (let i = 0; i < ret.rowItems; i++) {
+          const item = ret.rowItems[i]
           if (item.table === 'invitgr') {
             const rowInvitgr = schemas.deserialize('rowinvitgr', item.serial)
-            const invitgr = new Invitgr().fromRow(rowInvitgr)
+            const invitgr = new Invitgr()
+            await invitgr.fromRow(rowInvitgr)
             maj.push(invitgr)
             if (invitgr.st < 0) {
               // Inscrire le groupe en inutile et le supprimer de la liste des groupes à synchroniser
@@ -789,7 +794,8 @@ export class ConnexionCompte extends OperationUI {
               }
             }
           }
-        })
+        }
+
         if (grAPurger.size) {
           store().commit('db/purgeGroupes', grAPurger)
           if (data.db) {

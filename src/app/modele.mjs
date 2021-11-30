@@ -2,12 +2,12 @@ import { schemas } from './schemas.mjs'
 import { crypt } from './crypto.mjs'
 const u8ToB64 = crypt.u8ToB64
 const b64ToU8 = crypt.b64ToU8
-import { openIDB, closeIDB } from './db'
-import { openWS, closeWS } from './ws'
-import { cfg, store, appexc } from './util'
+import { openIDB, closeIDB } from './db.mjs'
+import { openWS, closeWS } from './ws.mjs'
+import { cfg, store, appexc, serial, deserial } from './util.mjs'
+import { ConnexionCompteAvion, ConnexionCompte } from './operations.mjs'
 
 import { useRouter, useRoute } from 'vue-router'
-import { ConnexionCompteAvion, ConnexionCompte } from './operations'
 
 let bootfait = false
 let $router
@@ -147,7 +147,7 @@ export async function rowItemsToMapObjets (rowItems) {
     const item = rowItems[i]
     if (item.table === 'compte') {
       // le dernier quand on en a reçu plusieurs et non la liste
-      res.compte = objetDeItem(item)
+      res.compte = await objetDeItem(item)
     } else {
       if (!res[item.table]) res[item.table] = []
       const obj = await objetDeItem(item)
@@ -359,7 +359,7 @@ class Session {
     return 'Le mode a été dégradé de "' + MODES[this.modeInitial] + '" à "' + MODES[this.mode] + '".'
   }
 
-  setErDB (e) { // prévention des signalements multiples avant affichage
+  setErDB (e) {
     const ex = appexc(e)
     ex.idb = true
     this.statutidb = 2
@@ -369,7 +369,7 @@ class Session {
     return ex
   }
 
-  setErWS (e) { // prévention des signalements multiples avant affichage
+  setErWS (e) {
     const ex = appexc(e)
     ex.net = true
     this.statutnet = 2
@@ -660,12 +660,8 @@ export class Quotas {
   }
 }
 
-/** Schémas globaux *************************/
-const arrayStringType = schemas.forSchema({ type: 'array', items: 'string' })
-const arrayLongType = schemas.forSchema({ type: 'array', items: 'long' })
-const arrayIntType = schemas.forSchema({ type: 'array', items: 'int' })
-
 /** Compte **********************************/
+/*
 const compteMacType = schemas.forSchema({ // map des avatars du compte
   type: 'map',
   values: schemas.forSchema({
@@ -682,10 +678,13 @@ const compteMmcType = schemas.forSchema({ // map des avatars du compte
   type: 'map',
   values: 'string'
 })
+*/
 
-const idbCompte = schemas.forSchema({
+schemas.forSchema({
   name: 'idbCompte',
-  type: 'record',
+  cols: ['id', 'v', 'dds', 'dpbh', 'pcbh', 'k', 'mac', 'mmc', 'memo']
+})
+/*
   fields: [
     { name: 'id', type: 'long' },
     { name: 'v', type: 'int' },
@@ -696,20 +695,6 @@ const idbCompte = schemas.forSchema({
     { name: 'mac', type: compteMacType },
     { name: 'mmc', type: compteMmcType },
     { name: 'memo', type: ['null', 'string'] }
-  ]
-})
-
-/*
-  fields: [
-    { name: 'id', type: 'long' }, // pk
-    { name: 'v', type: 'int' },
-    { name: 'dds', type: 'int' },
-    { name: 'dpbh', type: 'long' },
-    { name: 'pcbh', type: 'long' },
-    { name: 'kx', type: 'bytes' },
-    { name: 'mack', type: 'bytes' },
-    { name: 'mmck', type: 'bytes' },
-    { name: 'memok', type: ['null', 'bytes'] }
   ]
 */
 
@@ -749,8 +734,8 @@ export class Compte {
     this.k = await crypt.decrypter(data.ps.pcb, row.kx)
     this.pcbh = row.pcbh
     data.clek = this.k
-    this.mmc = compteMmcType.fromBuffer(await crypt.decrypter(this.k, row.mmck))
-    this.mac = compteMacType.fromBuffer(await crypt.decrypter(this.k, row.mack))
+    this.mmc = deserial(await crypt.decrypter(this.k, row.mmck))
+    this.mac = deserial(await crypt.decrypter(this.k, row.mack))
     for (const sid in this.mac) {
       const x = this.mac[sid]
       x.na = new NomAvatar(x.nomc)
@@ -762,12 +747,12 @@ export class Compte {
 
   async toRow () { // après maj éventuelle de mac et / ou mmc
     this.memok = await crypt.crypter(data.clek, this.memo)
-    this.mmck = await crypt.crypter(data.clek, compteMmcType.toBuffer(this.mmc))
+    this.mmck = await crypt.crypter(data.clek, serial(this.mmc))
     for (const sid in this.mac) {
       const x = this.mac[sid]
       x.nomc = x.na.nomc
     }
-    this.mack = await crypt.crypter(data.clek, compteMacType.toBuffer(this.mac))
+    this.mack = await crypt.crypter(data.clek, serial(this.mac))
     for (const sid in this.mac) {
       const x = this.mac[sid]
       delete x.nomc
@@ -785,24 +770,15 @@ export class Compte {
       const x = this.mac[sid]
       x.nomc = x.na.nomc
     }
-    const idb = { id: 1, vs: 0, data: idbCompte.toBuffer(this) }
+    const idb = { id: 1, vs: 0, data: schemas.serialize('idbCompte', this) }
     for (const sid in this.mac) delete this.mac[sid].nomc
     return idb
   }
 
   fromIdb (idb, vs) {
-    const sch = [idbCompte][vs || 0]
-    const row = sch.fromBuffer(idb)
-    this.id = row.id
-    this.v = row.v
-    this.dds = row.dds
-    this.dpbh = row.dpbh
-    this.pcbh = row.pcbh
-    this.k = row.k
+    schemas.deserialize('idbCompte', idb, this)
+    // mettre à jour selon vs (version du schema)
     data.clek = this.k
-    this.mmc = row.mmc
-    this.mac = row.mac
-    this.memo = vs ? (row.memo || '') : ''
     for (const sid in this.mac) {
       const x = this.mac[sid]
       x.na = new NomAvatar(x.nomc)
@@ -853,9 +829,11 @@ export class NomAvatar {
   ]
 */
 
-const idbAvatar = schemas.forSchema({
+schemas.forSchema({
   name: 'idbAvatar',
-  type: 'record',
+  cols: ['id', 'v', 'st', 'vcv', 'dds', 'photo', 'info', 'lct']
+})
+/*
   fields: [
     { name: 'id', type: 'long' },
     { name: 'v', type: 'int' },
@@ -866,7 +844,7 @@ const idbAvatar = schemas.forSchema({
     { name: 'info', type: 'string' },
     { name: 'lct', type: arrayLongType }
   ]
-})
+*/
 
 export class Avatar {
   get table () { return 'avatar' }
@@ -891,10 +869,10 @@ export class Avatar {
     this.st = row.st
     this.vcv = row.vcv
     this.dds = row.dds
-    const x = arrayStringType.fromBuffer(await crypt.decrypter(this.na.cle, row.cva))
+    const x = deserial(await crypt.decrypter(this.na.cle, row.cva))
     this.photo = x[0]
     this.info = x[1]
-    this.lct = arrayLongType.fromBuffer(await crypt.decrypter(data.clek, row.lctk))
+    this.lct = deserial(await crypt.decrypter(data.clek, row.lctk))
     return this
   }
 
@@ -913,8 +891,8 @@ export class Avatar {
   }
 
   async toRow () { // après maj éventuelle de cv et / ou lct
-    this.cva = await crypt.crypter(this.na.cle, arrayStringType.toBuffer([this.photo, this.info]))
-    this.lctk = await crypt.crypter(data.clek, arrayLongType.toBuffer(this.lct))
+    this.cva = await crypt.crypter(this.na.cle, serial([this.photo, this.info]))
+    this.lctk = await crypt.crypter(data.clek, serial(this.lct))
     const buf = schemas.serialize('rowavatar', this)
     delete this.cva
     delete this.lctk
@@ -922,28 +900,22 @@ export class Avatar {
   }
 
   get toIdb () {
-    return { id: this.id, data: idbAvatar.toBuffer(this) }
+    return { id: this.id, data: schemas.serialize('idbAvatar', this) }
   }
 
   fromIdb (idb) {
-    const row = idbAvatar.fromBuffer(idb)
-    this.id = row.id
+    schemas.deserialize('idbAvatar', idb, this)
     this.na = data.avc(this.id).na
-    this.v = row.v
-    this.st = row.st
-    this.vcv = row.vcv
-    this.dds = row.dds
-    this.photo = row.photo
-    this.info = row.info
-    this.lct = row.lct
     return this
   }
 }
 
 /** cvIdb ************************************/
-const cvIdb = schemas.forSchema({
+schemas.forSchema({
   name: 'cvIdb',
-  type: 'record',
+  cols: ['id', 'vcv', 'st', 'nomc', 'photo', 'info']
+})
+/*
   fields: [
     { name: 'id', type: 'long' },
     { name: 'vcv', type: 'int' },
@@ -952,7 +924,7 @@ const cvIdb = schemas.forSchema({
     { name: 'photo', type: 'string' },
     { name: 'info', type: 'string' }
   ]
-})
+*/
 
 export class Cv {
   constructor () {
@@ -1025,7 +997,7 @@ export class Cv {
     this.st = row.cv
     this.nomc = nomc
     this.na = new NomAvatar(nomc)
-    const x = row.phinf ? arrayStringType.fromBuffer(await crypt.decrypter(this.na.cle, row.phinf)) : null
+    const x = row.phinf ? deserial(await crypt.decrypter(this.na.cle, row.phinf)) : null
     this.photo = x ? x[0] : null
     this.info = x ? x[1] : null
     return this
@@ -1033,24 +1005,20 @@ export class Cv {
 
   get toIdb () {
     this.nomc = this.na.nomc
-    const idb = { id: this.id, data: cvIdb.toBuffer(this) }
+    const idb = { id: this.id, data: schemas.serialize('cvIdb', this) }
     delete this.nomc
     return idb
   }
 
   fromIdb (idb) {
-    const row = cvIdb.fromBuffer(idb)
-    this.id = row.id
-    this.vcv = row.vcv
-    this.st = row.st
-    this.na = new NomAvatar(row.nomc)
-    this.photo = row.photo
-    this.texte = row.texte
+    schemas.deserialize('cvIdb', idb, this)
+    this.na = new NomAvatar(this.nomc)
     return this
   }
 }
 
 /** contact **********************************/
+/*
 const contactData = schemas.forSchema({ // map des avatars du compte
   type: 'map',
   values: schemas.forSchema({
@@ -1065,12 +1033,13 @@ const contactData = schemas.forSchema({ // map des avatars du compte
     ]
   })
 })
+*/
 
-const lcontactData = [contactData]
-
-const idbContact = schemas.forSchema({
+schemas.forSchema({
   name: 'idbContact',
-  type: 'record',
+  cols: ['id', 'ic', 'v', 'st', 'q1', 'q2', 'qm1', 'qm2', 'ard', 'icb', 'vsd', 'data']
+})
+/*
   fields: [
     { name: 'id', type: 'long' },
     { name: 'ic', type: 'int' },
@@ -1085,8 +1054,7 @@ const idbContact = schemas.forSchema({
     { name: 'vsd', type: 'int' },
     { name: 'data', type: contactData }
   ]
-})
-const lidbContact = [idbContact]
+*/
 /*
   name: 'rowContact',
   type: 'record',
@@ -1138,10 +1106,9 @@ export class Contact {
     this.q2 = row.q2
     this.qm1 = row.qm1
     this.qm2 = row.qm2
-    const vsd = row.vsd || 0
-    this.data = row.datak ? lcontactData[vsd].fromBuffer(await crypt.decrypter(data.clek, row.datak)) : null
-    // Mettre à niveau this.data en fonction de vsd et mettre this.vsd à la dernière version
-    this.vsd = lcontactData.length - 1
+    this.data = row.datak ? deserial(await crypt.decrypter(data.clek, row.datak)) : null
+    // Mettre à niveau this.data en fonction de this.vsd et mettre this.vsd à la dernière version
+    this.vsd = 0
     this.majCc()
     this.ard = await crypt.decrypterStr(this.data.cc, row.ardc)
     this.icb = crypt.u8ToInt(await crypt.decrypter(this.data.cc, row.icbc))
@@ -1149,9 +1116,9 @@ export class Contact {
   }
 
   async toRow () {
-    this.datak = await crypt.crypter(data.clek, lcontactData[this.vsd].toBuffer(this.data))
+    this.datak = await crypt.crypter(data.clek, serial(this.data))
     this.ardc = await crypt.crypter(this.data.cc, this.ard)
-    this.icbc = await crypt.crypter(this.data.cc, crypt.int2u8(this.icb))
+    this.icbc = await crypt.crypter(this.data.cc, crypt.intTou8(this.icb))
     const buf = schemas.serialize('rowcontact', this)
     delete this.datak
     delete this.icbc
@@ -1161,26 +1128,14 @@ export class Contact {
 
   get toIdb () {
     const vs = 0
-    return { id: this.id, ic: this.ic, vs: vs, data: lidbContact[vs].toBuffer(this) }
+    return { id: this.id, ic: this.ic, vs: vs, data: schemas.serialize('lidbContact', this) }
   }
 
   fromIdb (idb, vs) {
-    const row = lidbContact[vs || 0].fromBuffer(idb)
-    this.id = row.id
-    this.ic = row.ic
-    this.v = row.v
-    this.st = row.st
-    this.q1 = row.q1
-    this.q2 = row.q2
-    this.qm1 = row.qm1
-    this.qm2 = row.qm2
-    this.vsd = row.vsd
-    this.data = row.data
-    // Mettre à jour this.data en fonction de row.vsd et mettre à jour this.vsd
-    this.vsd = lcontactData.length - 1
+    schemas.desrialise('lidbContact', idb, this)
+    // Mettre à jour this.data en fonction de this.vsd et mettre à jour this.vsd
+    this.vsd = 0
     this.majCc()
-    this.ard = row.ard
-    this.icb = row.icb
     return this
   }
 }
@@ -1208,9 +1163,11 @@ export class Contact {
 - `lstmg` : liste des ids des membres du groupe.
 */
 
-const idbGroupe = schemas.forSchema({
+schemas.forSchema({
   name: 'idbGroupe',
-  type: 'record',
+  cols: ['id', 'v', 'dds', 'st', 'cv', 'mc', 'lstm']
+})
+/*
   fields: [
     { name: 'id', type: 'long' },
     { name: 'v', type: 'int' },
@@ -1220,7 +1177,7 @@ const idbGroupe = schemas.forSchema({
     { name: 'mc', type: ['null', arrayIntType] },
     { name: 'lstm', type: ['null', arrayLongType] }
   ]
-})
+*/
 
 export class Groupe {
   get table () { return 'groupe' }
@@ -1245,19 +1202,19 @@ export class Groupe {
     this.dds = row.dds
     this.st = row.st
     const cleg = data.clegDe(this.sid)
-    const cv = row.cvg ? arrayStringType.fromBuffer(await crypt.decrypter(cleg, row.cvg)) : null
+    const cv = row.cvg ? deserial(await crypt.decrypter(cleg, row.cvg)) : null
     this.photo = cv ? (cv[0] || '') : ''
     this.info = cv ? (cv[1] || '') : ''
-    this.mc = row.mcg ? arrayIntType.fromBuffer(await crypt.decrypter(cleg, row.mcg)) : null
-    this.lstm = row.lstmg ? arrayLongType.fromBuffer(await crypt.decrypter(cleg, row.lstmg)) : null
+    this.mc = row.mcg ? deserial(await crypt.decrypter(cleg, row.mcg)) : null
+    this.lstm = row.lstmg ? deserial(await crypt.decrypter(cleg, row.lstmg)) : null
     return this
   }
 
   async toRow () {
     const cleg = data.clegDe(this.sid)
-    this.cvg = await crypt.crypter(cleg, arrayStringType.toBuffer([this.photo, this.info]))
-    this.mcg = this.mcg ? await crypt.crypter(cleg, arrayIntType.toBuffer(this.mc)) : null
-    this.lstmg = this.lstm ? await crypt.crypter(cleg, arrayLongType.toBuffer(this.lstm)) : null
+    this.cvg = await crypt.crypter(cleg, serial([this.photo, this.info]))
+    this.mcg = this.mcg ? await crypt.crypter(cleg, serial(this.mc)) : null
+    this.lstmg = this.lstm ? await crypt.crypter(cleg, serial(this.lstm)) : null
     const buf = schemas.serialize('rowgroupe', this)
     delete this.cvg
     delete this.mcg
@@ -1266,19 +1223,11 @@ export class Groupe {
   }
 
   get toIdb () {
-    return { id: this.id, data: idbGroupe.toBuffer(this) }
+    return { id: this.id, data: schemas.serialize('idbGroupe', this) }
   }
 
   fromIdb (idb) {
-    const row = idbGroupe.fromBuffer(idb)
-    this.id = row.id
-    this.v = row.v
-    this.dds = row.dds
-    this.st = row.st
-    this.photo = row.photo
-    this.info = row.info
-    this.mc = row.mc
-    this.lstm = row.lstm
+    schemas.deserialize('idbGroupe', idb, this)
     return this
   }
 }
@@ -1306,6 +1255,7 @@ const rowInvitct = schemas.forSchema({
 - `ic` : numéro du contact de A pour B (pour que B puisse écrire le statut et l'ardoise dans `contact` de A).
 - `cc` : clé `cc` du contact *fort* A / B, définie par A.
 */
+/*
 const invitctData = schemas.forSchema({
   name: 'invitctData',
   type: 'record',
@@ -1315,10 +1265,13 @@ const invitctData = schemas.forSchema({
     { name: 'cc', type: 'bytes' }
   ]
 })
+*/
 
-const idbInvitct = schemas.forSchema({
+schemas.forSchema({
   name: 'idbInvitct',
-  type: 'record',
+  cols: ['id', 'ni', 'v', 'dlv', 'st', 'data', 'ard']
+})
+/*
   fields: [
     { name: 'id', type: 'long' },
     { name: 'ni', type: 'int' },
@@ -1328,7 +1281,7 @@ const idbInvitct = schemas.forSchema({
     { name: 'data', type: ['null', 'bytes'] },
     { name: 'ard', type: ['null', 'bytes'] }
   ]
-})
+*/
 
 export class Invitct {
   get table () { return 'invitct' }
@@ -1358,14 +1311,14 @@ export class Invitct {
       const cpriv = data.avc(this.id).cpriv
       rowData = await crypt.decrypterRSA(cpriv, row.datap)
     }
-    this.data = rowData ? invitctData.fromBuffer(rowData) : null
+    this.data = rowData ? deserial(rowData) : null
     this.majCc()
     this.ard = row.ardc ? await crypt.decrypter(this.data.cc, row.ardc) : null
     return this
   }
 
   async toRow () {
-    this.datak = this.data ? await crypt.crypter(data.clek, invitctData.toBuffer(this.data)) : null
+    this.datak = this.data ? await crypt.crypter(data.clek, serial(this.data)) : null
     this.ardc = this.ard ? await crypt.crypter(this.data.cc, this.ard) : null
     const buf = schemas.serialize('rowinvitct', this)
     delete this.datak
@@ -1374,19 +1327,11 @@ export class Invitct {
   }
 
   get toIdb () {
-    return { id: this.id, ni: this.ni, data: idbInvitct.toBuffer(this) }
+    return { id: this.id, ni: this.ni, data: schemas.serialize('idbInvitct', this) }
   }
 
   fromIdb (idb) {
-    const row = idbInvitct.fromBuffer(idb)
-    this.id = row.id
-    this.ni = row.ni
-    this.v = row.v
-    this.dlv = row.dlv
-    this.st = row.st
-    this.data = row.data
-    this.majCc()
-    this.ard = row.ard
+    schemas.desrialise('idbInvitct', idb, this)
     return this
   }
 }
@@ -1415,6 +1360,7 @@ export class Invitct {
  - `im` : indice de membre de l'invité dans le groupe.
 - `datak` : même données que `datap` mais cryptées par la clé K du compte de l'invité, après son acceptation.
 */
+/*
 const invitgrData = schemas.forSchema({ // map des avatars du compte
   type: 'map',
   values: schemas.forSchema({
@@ -1427,11 +1373,13 @@ const invitgrData = schemas.forSchema({ // map des avatars du compte
     ]
   })
 })
+*/
 
-const idbInvitgr = schemas.forSchema({
+schemas.forSchema({
   name: 'idbInvitgr',
-  type: 'record',
-  fields: [
+  cols: ['id', 'ni', 'v', 'dlv', 'st', 'data']
+})
+/*  fields: [
     { name: 'id', type: 'long' },
     { name: 'ni', type: 'int' },
     { name: 'v', type: 'int' },
@@ -1439,7 +1387,7 @@ const idbInvitgr = schemas.forSchema({
     { name: 'st', type: 'int' },
     { name: 'data', type: ['null', 'bytes'] }
   ]
-})
+*/
 
 export class Invitgr {
   get table () { return 'invitgr' }
@@ -1471,30 +1419,24 @@ export class Invitgr {
       const cpriv = data.avc(this.id).cpriv
       rowData = await crypt.decrypterRSA(cpriv, row.datap)
     }
-    this.data = rowData ? invitgrData.fromBuffer(rowData) : null
+    this.data = rowData ? deserial(rowData) : null
     this.majCg()
     return this
   }
 
   async toRow () {
-    this.datak = this.data ? await crypt.crypter(data.clek, invitgrData.toBuffer(this.data)) : null
+    this.datak = this.data ? await crypt.crypter(data.clek, serial(this.data)) : null
     const buf = schemas.serialize('rowinvitgr', this)
     delete this.datak
     return buf
   }
 
   get toIdb () {
-    return { id: this.id, ni: this.ni, data: idbInvitgr.toBuffer(this) }
+    return { id: this.id, ni: this.ni, data: schemas.serialize('idbInvitgr', this) }
   }
 
   fromIdb (idb) {
-    const row = idbInvitgr.fromBuffer(idb)
-    this.id = row.id
-    this.ni = row.ni
-    this.v = row.v
-    this.dlv = row.dlv
-    this.st = row.st
-    this.data = row.data
+    schemas.deserialize('idbInvitgr', idb, this)
     this.majCg()
     return this
   }
@@ -1533,7 +1475,7 @@ export class Invitgr {
 - `ardg` : ardoise du membre vis à vis du groupe, texte d'invitation / réponse de l'invité cryptée par la clé du groupe.
 - `lmck` : liste, cryptée par la clé k du membre, des mots clés de rangement / recherche attribués par le membre quand il est actif.
 */
-
+/*
 const membreData = schemas.forSchema({ // map des avatars du compte
   type: 'map',
   values: schemas.forSchema({
@@ -1548,11 +1490,13 @@ const membreData = schemas.forSchema({ // map des avatars du compte
     ]
   })
 })
-const lmembreData = [membreData]
+*/
 
-const idbMembre = schemas.forSchema({
+schemas.forSchema({
   name: 'idbMembre',
-  type: 'record',
+  cols: ['id', 'im', 'v', 'st', 'dlv', 'vsd', 'datag', 'ardg', 'lmck']
+})
+/*
   fields: [
     { name: 'id', type: 'long' },
     { name: 'im', type: 'int' },
@@ -1563,8 +1507,7 @@ const idbMembre = schemas.forSchema({
     { name: 'ard', type: 'string' },
     { name: 'lmc', type: ['null', 'bytes'] }
   ]
-})
-const lidbMembre = [idbMembre]
+*/
 
 export class Membre {
   get table () { return 'membre' }
@@ -1585,21 +1528,20 @@ export class Membre {
     this.dlv = row.dlv
     const cg = row.datag || row.ardg || row.lmck ? data.cleg(this.id) : null
     const rowData = row.datag ? await crypt.decrypter(cg, row.datag) : null
-    const vsd = row.vsd
-    this.data = rowData ? lmembreData[vsd].fromBuffer(rowData) : null
+    this.data = rowData ? deserial(rowData) : null
     // Mettre à jour this.data en fonction de vsd et mettre à jour this.vsd
-    this.vsd = lmembreData.length - 1
+    this.vsd = 0
     this.ard = row.ardg ? await crypt.decrypterStr(cg, row.ardg) : null
     const lmc = row.lmck ? await crypt.decrypter(data.clek, row.lmck) : null
-    this.lmc = lmc ? arrayIntType.fromBuffer(lmc) : null
+    this.lmc = lmc ? deserial(lmc) : null
     return this
   }
 
   async toRow () {
     const cg = this.data || this.ard || this.lmc ? data.clegDe(this.sid) : null
-    this.datag = this.data ? await crypt.crypter(cg, lmembreData[this.vsd].toBuffer(this.data)) : null
+    this.datag = this.data ? await crypt.crypter(cg, serial(this.data)) : null
     this.ardg = this.ard ? await crypt.crypter(cg, this.ard) : null
-    this.lmck = this.lmc ? await crypt.crypter(data.clek, arrayIntType.toBuffer(this.lmc)) : null
+    this.lmck = this.lmc ? await crypt.crypter(data.clek, serial(this.lmc)) : null
     const buf = schemas.serialize('rowmembre', this)
     delete this.datag
     delete this.ardg
@@ -1609,21 +1551,13 @@ export class Membre {
 
   get toIdb () {
     const vs = 0
-    return { id: this.id, im: this.im, vs: vs, data: lidbMembre[vs].toBuffer(this) }
+    return { id: this.id, im: this.im, vs: vs, data: schemas.serialize('lidbMembre', this) }
   }
 
   fromIdb (idb, vs) {
-    const row = lidbMembre[vs].fromBuffer(idb)
-    this.id = row.id
-    this.im = row.im
-    this.v = row.v
-    this.dlv = row.dlv
-    this.st = row.st
-    this.data = row.data
+    schemas.desrialise('lidbMembre', idb, this)
     // Mettre à jour this.data en fonction de row.vsd et mettre à jour this.vsd
-    this.vsd = lmembreData.length - 1
-    this.ard = row.ard
-    this.lmc = row.lmc
+    this.vsd = 0
     return this
   }
 }
@@ -1660,7 +1594,7 @@ export class Membre {
   - `cc` : clé `cc` générée par P pour le couple P / F.
 - `ardc` : cryptée par la clé `cc`, *ardoise*, texte de sollicitation écrit par A pour B et/ou réponse de B.
 */
-
+/*
 const parrainPhCx = schemas.forSchema({
   type: 'map',
   values: schemas.forSchema({
@@ -1685,10 +1619,13 @@ const parrainData = schemas.forSchema({
     ]
   })
 })
+*/
 
-const idbParrain = schemas.forSchema({
+schemas.forSchema({
   name: 'idbParrain',
-  type: 'record',
+  cols: ['pph', 'id', 'nc', 'dlv', 'st', 'v', 'q1', 'q2', 'qm1', 'qm2', 'phcx', 'data', 'ard']
+})
+/*
   fields: [
     { name: 'pph', type: 'long' }, // pk
     { name: 'id', type: 'long' },
@@ -1704,7 +1641,7 @@ const idbParrain = schemas.forSchema({
     { name: 'data', type: ['null', parrainData] },
     { name: 'ard', type: ['null', 'string'] }
   ]
-})
+*/
 
 export class Parrain {
   get table () { return 'parrain' }
@@ -1727,16 +1664,16 @@ export class Parrain {
     this.qm1 = row.qm1
     this.qm2 = row.qm2
     const rowDatak = row.datak ? await crypt.decrypter(data.clek, row.datak) : null
-    this.phcx = rowDatak ? parrainPhCx.fromBuffer(rowDatak) : null
+    this.phcx = rowDatak ? deserial(rowDatak) : null
     const rowDatax = row.datax && this.phcx ? await crypt.decrypter(this.phcx.cx, row.datax) : null
-    this.data = rowDatax ? parrainData.fromBuffer(rowDatax) : null
+    this.data = rowDatax ? deserial(rowDatax) : null
     this.ard = row.ardc && this.data ? await crypt.decrypter(this.data.cc, row.ardc) : null
     return this
   }
 
   async toRow () {
-    this.datak = this.phcx ? await crypt.crypter(data.clek, parrainPhCx.toBuffer(this.phcx)) : null
-    this.datax = this.phcx && this.data ? await crypt.crypter(this.phcx.cx, parrainData.toBuffer(this.data)) : null
+    this.datak = this.phcx ? await crypt.crypter(data.clek, serial(this.phcx)) : null
+    this.datax = this.phcx && this.data ? await crypt.crypter(this.phcx.cx, serial(this.data)) : null
     this.ardc = this.data && this.ard ? await crypt.crypter(this.data.cc, this.ard) : null
     const buf = schemas.serialize('rowparrain', this)
     delete this.datak
@@ -1746,29 +1683,16 @@ export class Parrain {
   }
 
   get toIdb () {
-    return { pph: this.pph, id: this.id, data: idbParrain.toBuffer(this) }
+    return { pph: this.pph, id: this.id, data: schemas.serialize('idbParrain', this) }
   }
 
   fromIdb (idb) {
-    const row = idbParrain.fromBuffer(idb)
-    this.pph = row.pph
-    this.id = row.id
-    this.nc = row.nc
-    this.dlv = row.dlv
-    this.st = row.st
-    this.v = row.v
-    this.q1 = row.q1
-    this.q2 = row.q2
-    this.qm1 = row.qm1
-    this.qm2 = row.qm2
-    this.phcx = row.phcx
-    this.data = row.data
-    this.ard = row.ard
+    schemas.deserialize('idbParrain', idb, this)
     return this
   }
 }
 
-/** Parrain **********************************/
+/** Rencontre **********************************/
 /*
   name: 'rowRencontre',
   type: 'record',
@@ -1790,10 +1714,11 @@ export class Parrain {
 - `nomcx` : nom complet de A (pas de B, son nom complet n'est justement pas connu de A) crypté par la clé X.
 */
 
-const idbRencontre = schemas.forSchema({
+schemas.forSchema({
   name: 'idbRencontre',
-  type: 'record',
-  fields: [
+  cols: ['prh', 'id', 'v', 'dlv', 'st', 'phcx', 'nomc']
+})
+/*  fields: [
     { name: 'prh', type: 'long' }, // pk
     { name: 'id', type: 'long' },
     { name: 'dlv', type: 'int' },
@@ -1802,7 +1727,7 @@ const idbRencontre = schemas.forSchema({
     { name: 'phcx', type: ['null', parrainPhCx] },
     { name: 'nomc', type: ['null', 'string'] }
   ]
-})
+*/
 
 export class Rencontre {
   get table () { return 'rencontre' }
@@ -1820,13 +1745,13 @@ export class Rencontre {
     this.st = row.st
     this.v = row.v
     const rowDatak = row.datak ? await crypt.decrypter(data.clek, row.datak) : null
-    this.phcx = rowDatak ? parrainPhCx.fromBuffer(rowDatak) : null
+    this.phcx = rowDatak ? deserial(rowDatak) : null
     this.nomc = row.nomcx && this.phcx ? await crypt.decrypter(this.phcx.cx, row.nomcx) : null
     return this
   }
 
   async toRow () {
-    this.datak = this.phcx ? await crypt.crypter(data.clek, parrainPhCx.toBuffer(this.phcx)) : null
+    this.datak = this.phcx ? await crypt.crypter(data.clek, serial(this.phcx)) : null
     this.nomcx = this.phcx && this.nomc ? await crypt.crypter(this.phcx.cx, this.nomc) : null
     const buf = schemas.serialize('rowrencontre', this)
     delete this.datak
@@ -1835,18 +1760,11 @@ export class Rencontre {
   }
 
   get toIdb () {
-    return { prh: this.prh, id: this.id, data: idbRencontre.toBuffer(this) }
+    return { prh: this.prh, id: this.id, data: schemas.serialize('idbRencontre', this) }
   }
 
   fromIdb (idb) {
-    const row = idbRencontre.fromBuffer(idb)
-    this.prh = row.prh
-    this.id = row.id
-    this.dlv = row.dlv
-    this.st = row.st
-    this.v = row.v
-    this.phcx = row.phcx
-    this.nomc = row.nomc
+    schemas.deserialize('idbRencontre', idb, this)
     return this
   }
 }
@@ -1887,23 +1805,25 @@ export class Rencontre {
 - `dups` : couple `[id ns]` crypté par la clé du secret de l'autre exemplaire pour un secret de couple A/B.
 */
 
-const idbSecret = schemas.forSchema({
+schemas.forSchema({
   name: 'idbSecret',
-  type: 'record',
-  fields: [
+  cols: ['id', 'ns', 'ic', 'v', 'st', 'txt', 'mc', 'vsd', 'ap', 'dupid', 'dupns']
+})
+/*  fields: [
     { name: 'id', type: 'long' }, // pk1
     { name: 'ns', type: 'int' }, // pk2
     { name: 'ic', type: 'int' },
+    { name: 'v', type: 'int' },
     { name: 'st', type: 'int' },
     { name: 'txt', type: ['null', 'string'] },
     { name: 'mc', type: ['null', arrayIntType] },
+    { name: 'vsd', type: 'int' },
     { name: 'ap', type: ['null', 'bytes'] },
     { name: 'dupid', type: ['null', 'long'] },
     { name: 'dupns', type: ['null', 'int'] }
   ]
-})
-const lidbSecret = [idbSecret]
-
+*/
+/*
 const secretAp = schemas.forSchema({
   type: 'map',
   values: schemas.forSchema({
@@ -1919,7 +1839,7 @@ const secretAp = schemas.forSchema({
     ]
   })
 })
-const lsecretAp = [secretAp]
+*/
 
 export class Secret {
   get table () { return 'secret' }
@@ -1948,11 +1868,11 @@ export class Secret {
     this.v = row.v
     const cles = this.cles
     this.txt = cles && row.txts ? await crypt.decrypter(cles, row.txts) : null
-    this.mc = cles && row.mcs ? arrayIntType.fromBuffer(await crypt.decrypter(cles, row.mcs)) : null
-    this.ap = cles && row.aps ? lsecretAp[row.vsd].fromBuffer(await crypt.decrypter(cles, row.aps)) : null
-    // Mettre à jour this.ap en fonction de row.vsd puis mettre à jour this.vsd
-    this.vsd = lsecretAp.length - 1
-    const dup = cles && row.dups ? arrayLongType.fromBuffer(await crypt.decrypter(cles, row.dups)) : [0, 0]
+    this.mc = cles && row.mcs ? deserial(await crypt.decrypter(cles, row.mcs)) : null
+    this.ap = cles && row.aps ? deserial(await crypt.decrypter(cles, row.aps)) : null
+    // Mettre à jour this.ap en fonction de vsd puis mettre à jour this.vsd
+    this.vsd = 0
+    const dup = cles && row.dups ? deserial(await crypt.decrypter(cles, row.dups)) : [0, 0]
     this.dupid = dup[0]
     this.dupns = dup[1]
     return this
@@ -1961,9 +1881,9 @@ export class Secret {
   async toRow () {
     const cles = this.cles
     this.txts = cles && this.txt ? await crypt.crypter(cles, this.txt) : null
-    this.mcs = cles && this.mc ? await crypt.crypter(cles, arrayIntType.toBuffer(this.mc)) : null
-    this.aps = cles && this.ap ? await crypt.crypter(cles, lsecretAp[this.vsd].toBuffer(this.ap)) : null
-    this.dups = cles && this.dupid && this.dupns ? await crypt.crypter(cles, arrayLongType.toBuffer([this.dupid, this.dupns])) : null
+    this.mcs = cles && this.mc ? await crypt.crypter(cles, serial(this.mc)) : null
+    this.aps = cles && this.ap ? await crypt.crypter(cles, serial(this.ap)) : null
+    this.dups = cles && this.dupid && this.dupns ? await crypt.crypter(cles, serial([this.dupid, this.dupns])) : null
     const buf = schemas.serialize('rowsecret', this)
     delete this.txts
     delete this.mcs
@@ -1974,23 +1894,13 @@ export class Secret {
 
   get toIdb () {
     const vs = 0
-    return { id: this.id, ns: this.ns, vs: vs, data: lidbSecret[vs].toBuffer(this) }
+    return { id: this.id, ns: this.ns, vs: vs, data: schemas.seialise('lidbSecret', this) }
   }
 
   fromIdb (idb, vs) {
-    const row = lidbSecret[vs].fromBuffer(idb)
-    this.id = row.id
-    this.ns = row.ns
-    this.ic = row.ic
-    this.st = row.st
-    this.v = row.v
-    this.txt = row.txt
-    this.mc = row.mc
-    this.ap = row.ap
+    schemas.deserialize('lidbSecret', idb, this)
     // Mettre à jour this.ap en fonction row.vsd puis mettre à jour this.vsd
-    this.vsd = lsecretAp.length - 1
-    this.dupid = row.dupid
-    this.dupns = row.dupns
+    this.vsd = 0
     return this
   }
 }

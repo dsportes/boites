@@ -22,7 +22,7 @@
 <script>
 import { computed } from 'vue'
 import { useStore } from 'vuex'
-import { get, decoder } from '../app/util'
+import { get, u8ToString } from '../app/util'
 import { onBoot, remplacePage } from '../app/modele'
 import { schemas } from '../app/schemas.mjs'
 
@@ -48,7 +48,7 @@ export default ({
     async getclepub (sid) {
       const r = await get('m1', 'getclepub', { sid: sid })
       if (r) {
-        const c = decoder.decode(new Uint8Array(r))
+        const c = u8ToString(new Uint8Array(r))
         console.log(c)
       }
     },

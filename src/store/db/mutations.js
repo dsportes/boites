@@ -1,4 +1,4 @@
-import { NomAvatar, Cv } from '../../app/modele.js'
+import { NomAvatar, Cv } from '../../app/modele.mjs'
 import { crypt } from '../../app/crypto.mjs'
 
 export function raz (state) {
