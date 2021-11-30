@@ -1,4 +1,4 @@
-Passage à msgpack
+éditeur MD
 
 Base template.db3 et super.db3 : à recréer.
 
