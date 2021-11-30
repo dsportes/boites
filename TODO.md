@@ -1,6 +1,4 @@
-Reprendre les serial / deserial
-
-Bizarre sur chargement des données sur page Sync
+Passage à msgpack
 
 Base template.db3 et super.db3 : à recréer.
 
