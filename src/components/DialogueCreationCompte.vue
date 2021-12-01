@@ -10,7 +10,7 @@
       <q-stepper v-model="step" vertical color="primary" animated>
         <q-step :name="1" title="Saisie du mot de passe" icon="settings" :done="step > 1">
           Donner le mot de passe du "grand argentier" qui permet de s'octroyer
-          des quotas sans limite et de se passer d'être parrainé par le titulaire d'un compte existant.
+          des quotas sans limite sans avoir besoin d'être parrainé par un compte existant.
           <mdp-admin :init-val="mdp" class="q-ma-xs" v-on:ok-mdp="okmdp"></mdp-admin>
         </q-step>
 
@@ -23,10 +23,7 @@
         </q-step>
 
         <q-step :name="3" title="Nom du premier avatar du compte" icon="settings" :done="step > 3" >
-          Ce nom de 6 à 24 caractères NE POURRA PLUS être changé
-          <q-input dense counter v-model="nom" @keydown.enter.prevent="oknom" label="Nom"
-            hint="Presser 'Entrée' à la fin de la saisie'"
-            :rules="[val => (val.length >= 6 && val.length <= 24) || 'Entre 6 et 24 caractères' ]"/>
+          <nom-avatar class="q-ma-xs" v-on:ok-nom="oknom" icon-valider="check" label-valider="Suivant"></nom-avatar>
           <q-stepper-navigation>
             <q-btn flat @click="step = 2" color="primary" label="Précédent" class="q-ml-sm" />
           </q-stepper-navigation>
@@ -64,6 +61,7 @@ import { useStore } from 'vuex'
 import { computed } from 'vue'
 import PhraseSecrete from './PhraseSecrete.vue'
 import MdpAdmin from './MdpAdmin.vue'
+import NomAvatar from './NomAvatar.vue'
 import QuotasVolume from './QuotasVolume.vue'
 import { CreationCompte } from '../app/operations'
 import { Quotas } from '../app/modele'
@@ -72,7 +70,7 @@ export default ({
   name: 'DialogueCreationCompte',
 
   components: {
-    PhraseSecrete, MdpAdmin, QuotasVolume
+    PhraseSecrete, MdpAdmin, QuotasVolume, NomAvatar
   },
 
   data () {
@@ -100,7 +98,8 @@ export default ({
         this.step = 3
       }
     },
-    oknom () {
+    oknom (nom) {
+      this.nom = nom
       this.step = 4
     },
     okq (q) {

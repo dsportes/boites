@@ -1,25 +1,21 @@
 <template>
-<div :class="taille === 2 ? 'page' + dlclass() : 'flow' + dlclass()">
+<div :class="('flow' + taille) + dlclass() + ' column justify start'">
   <div class="titre">{{titre}}</div>
-  <div class="vide"></div>
+  <!--div class="vide"></div-->
   <div class="icons" >
-    <q-icon v-if="taille===0" class="icon" name="zoom_in" @click="taille = 1"></q-icon>
-    <q-icon v-if="taille>0" class="icon" name="zoom_out" @click="taille = 0"></q-icon>
-    <q-icon v-if="taille===2" class="icon" name="fullscreen_exit" @click="taille = 1"></q-icon>
-    <q-icon v-if="taille<2" class="icon" name="fullscreen" @click="taille = 2"></q-icon>
-    <q-icon v-if="editable && md" class="icon" name="mode_edit" @click="md=false"></q-icon>
-    <q-icon v-if="editable && !md" class="icon" name="visibility" @click="md=true"></q-icon>
-    <q-btn v-if="btnok" class="icon" icon="check" label="OK" size="xs" dense push color="warning"
-      @click="$emit('ok', modelValue)"></q-btn>
+    <q-btn v-if="editable && !enedition" class="icon" label="Modifier" size="xs" dense push color="warning" @click="startEdit"></q-btn>
+    <q-btn v-if="enedition" class="icon" icon="undo" size="sm" dense @click="undo"></q-btn>
+    <q-btn v-if="enedition" class="icon" icon="check" :disable="!modifie" label="OK" size="sm" dense push color="warning"  @click="ok"></q-btn>
+    <q-btn v-if="taille===0" class="icon" icon="zoom_in" size="sm" dense @click="taille = 1"></q-btn>
+    <q-btn v-if="taille>0" class="icon" icon="zoom_out" size="sm" dense @click="taille = 0"></q-btn>
+    <q-btn v-if="taille===2" class="icon" icon="fullscreen_exit" size="sm" dense @click="taille = 1"></q-btn>
+    <q-btn v-if="taille<2" class="icon" icon="fullscreen" size="sm" dense @click="taille = 2"></q-btn>
+    <q-btn :disable="!md" class="icon" icon="mode_edit" size="sm" dense @click="md=false"></q-btn>
+    <q-btn :disable="md" class="icon" icon="visibility" size="sm" dense @click="md=true"></q-btn>
   </div>
-  <textarea v-if="!md"
-    :class="taclass()"
-    :value="modelValue"
-    @input="$emit('update:modelValue', $event.target.value)"/>
-  <textarea v-if="md"
-    :class="taclassmd()"
-    :value="modelValue"
-    @input="$emit('update:modelValue', $event.target.value)"/>
+  <textarea v-if="!md" :class="taclass() + ' col font-mono'" v-model="texte" :readonly="!enedition"/>
+    <!-- @input="$emit('update:modelValue', $event.target.value)"/> -->
+  <textarea v-if="md" :class="taclass() + ' col'" v-model="texte" readonly />
 </div>
 </template>
 <script>
@@ -32,28 +28,51 @@ export default ({
   props: {
     modelValue: String,
     titre: String,
-    editable: Boolean,
-    btnok: Boolean
+    editable: Boolean
   },
 
   emits: ['update:modelValue', 'ok'],
 
   data () {
     return {
+      texte: '',
+      src: '',
+      enedition: false,
       taille: 0,
       md: true
     }
   },
 
   computed: {
+    modifie () { return this.texte !== this.src }
+  },
+
+  watch: {
+    modelValue (nv, av) {
+      this.src = nv
+      if (!this.enedition) this.texte = nv
+    }
   },
 
   methods: {
+    ok () {
+      this.$emit('ok', this.texte)
+      this.enedition = false
+    },
+    undo () {
+      this.texte = this.src
+      this.enedition = false
+      this.md = true
+    },
+    startEdit () {
+      this.enedition = true
+      this.texte = this.src
+      this.md = false
+    },
     dlclass () { return this.$q.dark.isActive ? ' sombre' : ' clair' },
     taclass () {
-      return (this.taille === 0 ? 'ta tas' : (this.taille === 1 ? 'ta tam' : 'ta tal')) + this.dlclass()
-    },
-    taclassmd () { return this.taclass() + ' tamd' }
+      return 'ta' + this.taille + this.dlclass() + (this.enedition ? ' borderw' : ' borderp')
+    }
   },
 
   setup () {
@@ -66,46 +85,44 @@ export default ({
 @import '../css/input.sass'
 $ht: 1.2rem
 $htic: 1.5rem
-$htz: 2.4rem
-$htm: 7rem
+$ht0: 50px
+$ht1: 200px
 .icons
   position: absolute
-  top: 0
+  top: -2px
   right: 0
   cursor: pointer
 .icon
   font-size: $htic
   position: relative
   top: -2px
-.flow
+  margin-left: 2px
+.flow0
   position: relative
-.page
+  height: $ht0 !important
+  padding:2px
+.flow1
+  position: relative
+  height: $ht1 !important
+  padding:2px
+.flow2
   position: fixed
   top: 0
   left: 0
   z-index: 2
   width: 100vw
-.vide
-  height: $htz
-.tas
-  height: $htz
-  overflow: hidden
-.tam
-  height: $htm
-  overflow-y: scroll
-.tal
   height: 100vh
-  overflow-y: scroll
-.ta
-  position: absolute
-  top: $ht
-  z-index: 2
+  padding: 2px
+.borderw
+  border: 1px solid $warning
+.borderp
+  border: 1px solid $primary
+.ta0, .ta1, .ta2
   width: 100%
-  border: 2px solid $warning
   margin: 0
-  padding: 0
-.tamd
-  border: none !important
+  padding: 2px
+.ta1, .ta2
+  overflow-y: scroll
 .titre
   height: $ht
   overflow: hidden

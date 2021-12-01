@@ -5,8 +5,8 @@
           <div class="titre-2">Crytographie</div>
           <q-btn flat label="Lancer le test de crypto" color="primary" @click="testcrypto" />
           <q-btn flat label="Lancer le test courant" color="primary" @click="testEcho"/>
-          <editeur-md v-model="memo" titre="Mon titre" btnok editable
-            @update:model-value="memochange" v-on:ok="memook"></editeur-md>
+          <editeur-md v-model="memo" titre="Mon titre" editable v-on:ok="memook"></editeur-md>
+          <q-input v-model="memo" label="Valeur de memo"/>
         </q-card-section>
         <q-card-section class="q-ma-xs">
           <phrase-secrete v-on:ok-ps="okps" icon-valider="check" verif label-valider="OK"></phrase-secrete>
@@ -48,9 +48,6 @@ export default ({
   },
 
   watch: {
-    memo (newv, oldv) {
-      console.log(newv)
-    }
   },
 
   data () {
@@ -62,11 +59,8 @@ export default ({
   },
 
   methods: {
-    memochange (m) {
-      console.log(m)
-    },
     memook (m) {
-      console.log('OK>>>' + m)
+      this.memo = m
     },
     okps (ps) {
       this.ps = ps

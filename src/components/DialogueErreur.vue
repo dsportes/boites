@@ -61,9 +61,9 @@ export default ({
       'x-3': 'Erreur d\'accès à la base locale',
       'x-4': 'Erreur inattendue survenue dans l\'exécution sur le poste',
       'x-5': 'Erreur inattendue survenue dans le traitement sur le serveur',
-      'x-6': 'Erreur fonctionnelle : données transmises au serveur non acceptables',
-      x1: 'Erreur fonctionnelle : données détectées localement non admissibles',
-      x2: 'Erreur fonctionnelle : données transmises au serveur non acceptables'
+      'x-6': 'Données transmises au serveur non conformes',
+      x1: 'Données saisies non conformes',
+      x2: 'Données transmises au serveur non conformes'
     }
     const $store = useStore()
     const erreur = computed(() => $store.state.ui.erreur)
