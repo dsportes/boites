@@ -6,7 +6,7 @@
           <q-btn flat label="Lancer le test de crypto" color="primary" @click="testcrypto" />
           <q-btn flat label="Lancer le test courant" color="primary" @click="testEcho"/>
           <editeur-md v-model="memo" titre="Mon titre" editable v-on:ok="memook"></editeur-md>
-          <q-input v-model="memo" label="Valeur de memo"/>
+          <!--q-input v-model="memo" label="Valeur de memo"/-->
         </q-card-section>
         <q-card-section class="q-ma-xs">
           <phrase-secrete v-on:ok-ps="okps" icon-valider="check" verif label-valider="OK"></phrase-secrete>
