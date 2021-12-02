@@ -38,3 +38,10 @@ Dans quasar.conf.js build: {}
         const nodePolyfillWebpackPlugin = require('node-polyfill-webpack-plugin')
         chain.plugin('node-polyfill').use(nodePolyfillWebpackPlugin)
       }
+
+indexedDB ne fonctionne pas sur Firefox en mode privé : fake-indexeddb n'a pas fonctionné
+correctement avec emoji-picker. Donc pas de Firefox en mode privé (à la limite pas d'emoji picker)
+
+https://cdn.jsdelivr.net/npm/emoji-picker-element-data@%5E1/en/emojibase/data.json
+
+Lien vers la base des emojis (recopiée en public/emoji.json)

@@ -7,3 +7,4 @@
 /src/app/avrobrowser.js
 .eslintrc.js
 jsconfig.json
+src/boot/appconfig.js

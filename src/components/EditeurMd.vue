@@ -1,18 +1,19 @@
 <template>
-<div :class="('flow' + taille) + dlclass() + ' column justify start'">
+<div ref="root" id="toto" :class="('flow' + taille) + dlclass() + ' column justify start'">
   <div class="titre">{{titre}}</div>
   <!--div class="vide"></div-->
   <div class="icons" >
     <q-btn v-if="editable && !enedition" class="icon" label="Modifier" size="xs" dense push color="warning" @click="startEdit"></q-btn>
     <q-btn v-if="enedition" class="icon" icon="undo" size="sm" dense @click="undo"></q-btn>
     <q-btn v-if="enedition" class="icon" icon="check" :disable="!modifie" label="OK" size="sm" dense push color="warning"  @click="ok"></q-btn>
+    <q-btn v-if="enedition" :disable="md" class="icon" icon="face" size="sm" dense @click="emoji=true"></q-btn>
     <q-btn v-if="taille!==0" class="icon" icon="zoom_out" size="sm" dense @click="taille = 0"></q-btn>
     <q-btn v-if="taille!==1" class="icon" icon="zoom_in" size="sm" dense @click="taille = 1"></q-btn>
     <q-btn v-if="taille!==2" class="icon" icon="fullscreen" size="sm" dense @click="taille = 2"></q-btn>
     <q-btn :disable="!md" class="icon" icon="mode_edit" size="sm" dense @click="md=false"></q-btn>
     <q-btn :disable="md" class="icon" icon="visibility" size="sm" dense @click="md=true"></q-btn>
   </div>
-  <textarea v-if="!md" :class="taclass() + ' col font-mono'" v-model="texte" :readonly="!enedition"/>
+  <textarea id="ta" v-if="!md" :class="taclass() + ' col font-mono'" v-model="texte" :readonly="!enedition"/>
     <!-- @input="$emit('update:modelValue', $event.target.value)"/> -->
   <div v-if="md && !$q.dark.isActive" :class="taclass() + ' col'">
     <sd-light class="markdown-body" :texte="texte"/>
@@ -20,15 +21,21 @@
   <div v-if="md && $q.dark.isActive" :class="taclass() + ' col'">
     <sd-dark class="markdown-body" :texte="texte"/>
   </div>
+  <q-dialog v-model="emoji">
+    <VuemojiPicker @emojiClick="emojiclick" data-source="emoji.json"/>
+  </q-dialog>
 </div>
 </template>
 <script>
 import SdLight from './SdLight.vue'
 import SdDark from './SdDark.vue'
+import { VuemojiPicker } from 'vuemoji-picker'
+import { ref, onMounted } from 'vue'
+
 export default ({
   name: 'EditeurMd',
 
-  components: { SdLight, SdDark },
+  components: { SdLight, SdDark, VuemojiPicker },
 
   props: {
     modelValue: String,
@@ -44,7 +51,8 @@ export default ({
       src: '',
       enedition: false,
       taille: 0,
-      md: true
+      md: true,
+      emoji: false
     }
   },
 
@@ -77,11 +85,33 @@ export default ({
     dlclass () { return this.$q.dark.isActive ? ' sombre' : ' clair' },
     taclass () {
       return 'ta' + this.taille + this.dlclass() + (this.enedition ? ' borderw' : ' borderp')
+    },
+    emojiclick (emoji) {
+      console.log(JSON.stringify(emoji.emoji.shortcodes))
+      // const code = ':' + emoji.emoji.shortcodes[0] + ':'
+      const code = emoji.emoji.unicode
+      const ta = this.root.querySelector('#ta')
+      let val
+      if (ta.selectionStart || ta.selectionStart === '0') {
+        const startPos = ta.selectionStart
+        const endPos = ta.selectionEnd
+        val = ta.value.substring(0, startPos) + code + ta.value.substring(endPos, ta.value.length)
+      } else {
+        val = ta.value + code
+      }
+      this.texte = val
+      this.emoji = false
     }
   },
 
   setup () {
+    const root = ref(null)
+    onMounted(() => {
+      // the DOM element will be assigned to the ref after initial render
+      // console.log(root.value.id) // <div>This is a root element</div>
+    })
     return {
+      root
     }
   }
 })
