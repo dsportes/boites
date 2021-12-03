@@ -20,13 +20,22 @@ let cancelSourcePOST
 let $store
 let $router
 let dtf
+let idbalerte
 
 export function setup (gp, appconfig, router, store) {
   $cfg = appconfig
+  idbalerte = $cfg.idb
   globalProperties = gp
   $store = store
   $router = router
   dtf = new Intl.DateTimeFormat($cfg.locale, $cfg.datetimeformat)
+}
+
+export function affidbmsg (msg) {
+  if (!idbalerte) {
+    affichermessage(msg, true)
+    idbalerte = true
+  }
 }
 
 export function store () { return $store }

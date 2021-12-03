@@ -30,7 +30,8 @@
 import SdLight from './SdLight.vue'
 import SdDark from './SdDark.vue'
 import { VuemojiPicker } from 'vuemoji-picker'
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
+import { affidbmsg } from '../app/util.mjs'
 
 export default ({
   name: 'EditeurMd',
@@ -106,16 +107,22 @@ export default ({
 
   setup () {
     const root = ref(null)
-    onMounted(() => {
-      // the DOM element will be assigned to the ref after initial render
-      // console.log(root.value.id) // <div>This is a root element</div>
-    })
+    affidbmsg('Quand Firefox est en mode privé, le premier affichage des emojis peut être long (plus d\'une minute)')
     return {
       root
     }
   }
 })
 </script>
+
+<style lang="css">
+@media screen and (max-width: 320px) {
+  emoji-picker {
+    --num-columns: 5;
+    --category-emoji-size: 1rem;
+  }
+}
+</style>
 
 <style lang="sass" scoped>
 @import '../css/input.sass'
