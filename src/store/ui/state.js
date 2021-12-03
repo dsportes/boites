@@ -6,6 +6,7 @@ export default function () {
     statutnet: 0,
 
     dialoguecrypto: false,
+    dialoguehelp: false,
     dialoguecreationcompte: false,
     confirmstopop: false,
     dialoguetestping: false,
@@ -18,6 +19,8 @@ export default function () {
     infomode: false,
     inforeseau: false,
     infoidb: false,
+
+    helpstack: [],
 
     opencours: null,
 

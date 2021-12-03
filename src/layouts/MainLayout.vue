@@ -141,6 +141,7 @@
       <rapport-synchro jailu></rapport-synchro>
     </q-dialog>
 
+    <dialogue-help></dialogue-help>
     <dialogue-crypto></dialogue-crypto>
     <dialogue-erreur></dialogue-erreur>
     <dialogue-test-ping></dialogue-test-ping>
@@ -166,12 +167,13 @@ import PanelMenu from 'components/PanelMenu.vue'
 import DialogueErreur from 'components/DialogueErreur.vue'
 import DialogueCrypto from 'components/DialogueCrypto.vue'
 import RapportSynchro from 'components/RapportSynchro.vue'
+import DialogueHelp from 'components/DialogueHelp.vue'
 
 export default {
   name: 'MainLayout',
 
   components: {
-    RapportSynchro, PanelMenu, DialogueErreur, DialogueCrypto, DialogueCreationCompte, DialogueTestPing, DialogueInfoMode, DialogueInfoReseau, DialogueInfoIdb
+    RapportSynchro, PanelMenu, DialogueErreur, DialogueCrypto, DialogueCreationCompte, DialogueTestPing, DialogueInfoMode, DialogueInfoReseau, DialogueInfoIdb, DialogueHelp
   },
 
   data () {

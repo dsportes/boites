@@ -8,6 +8,7 @@ export function razdialogues (state) {
   majconfirmerdrc(state, false)
   majopencours(state, null)
   majdialoguecrypto(state, false)
+  majdialoguehelp(state, false)
   majdialoguetestping(state, false)
   majmenuouvert(state, false)
   majinfomode(state, false)
@@ -50,6 +51,24 @@ export function majmessageto (state, to) {
 
 export function majerreur (state, err) {
   state.erreur = err
+}
+
+export function pushhelp (state, page) {
+  if (state.helpstack.length === 0) state.dialoguehelp = true
+  state.helpstack.push(page)
+}
+
+export function pophelp (state) {
+  if (state.helpstack.length === 0) {
+    state.dialoguehelp = false
+  } else {
+    state.helpstack.splice(state.helpstack.length - 1, 1)
+  }
+}
+
+export function majdialoguehelp (state, val) {
+  state.dialoguehelp = val
+  if (val === false) state.helpstack.length = 0
 }
 
 export function majdialogueerreur (state, val) {
