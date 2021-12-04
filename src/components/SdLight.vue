@@ -1,5 +1,5 @@
 <template>
-  <vue-showdown class="markdown-body'" :markdown="texte" flavor="github" :options="{ emoji: true }" />
+  <vue-showdown v-if="ok" class="markdown-body" :markdown="texte" flavor="github" :options="{ emoji: true }" />
 </template>
 <script>
 import { VueShowdown } from 'vue-showdown'
@@ -8,9 +8,7 @@ export default ({
 
   components: { VueShowdown },
 
-  props: {
-    texte: String
-  }
+  props: { texte: String }
 })
 </script>
 

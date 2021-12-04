@@ -13,7 +13,7 @@
     <q-btn :disable="!md" class="icon" icon="mode_edit" size="sm" dense @click="md=false"></q-btn>
     <q-btn :disable="md" class="icon" icon="visibility" size="sm" dense @click="md=true"></q-btn>
   </div>
-  <textarea id="ta" v-if="!md" :class="taclass() + ' col font-mono'" v-model="texte" :readonly="!enedition"/>
+  <textarea v-if="!md" id="ta" :class="taclass() + ' col font-mono'" v-model="texte" :readonly="!enedition"/>
     <!-- @input="$emit('update:modelValue', $event.target.value)"/> -->
   <div v-if="md && !$q.dark.isActive" :class="taclass() + ' col'">
     <sd-light class="markdown-body" :texte="texte"/>
@@ -44,7 +44,7 @@ export default ({
     editable: Boolean
   },
 
-  emits: ['update:modelValue', 'ok'],
+  emits: ['ok'],
 
   data () {
     return {
@@ -65,6 +65,9 @@ export default ({
     modelValue (nv, av) {
       this.src = nv
       if (!this.enedition) this.texte = nv
+    },
+    texte (nv) {
+      console.log(nv)
     }
   },
 

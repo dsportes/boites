@@ -78,6 +78,12 @@ module.exports = configure(function (ctx) {
         chain.plugin('node-polyfill').use(nodePolyfillWebpackPlugin)
       }
       */
+      extendWebpack (cfg) {
+        cfg.module.rules.push({
+          test: /\.md$/i,
+          use: 'raw-loader'
+        })
+      },
       chainWebpack (chain) {
         chain.plugin('eslint-webpack-plugin')
           .use(ESLintPlugin, [{ extensions: ['js', 'vue'] }])

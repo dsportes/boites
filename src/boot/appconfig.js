@@ -40,6 +40,13 @@ export default boot(async ({ app, router, store /* Vue */ }) => {
     }
   }
 
+  function pagesHelp (cfg) {
+    cfg.help = require('../assets/help/help.json')
+    for (const page in cfg.help) {
+      cfg.help[page].md = require('../assets/help/' + page + '.md').default
+    }
+  }
+
   const gp = app.config.globalProperties
   const cfg = await getJsonPub('app-config.json')
   cfg.logo = await getImagePub(cfg.pathlogo)
@@ -50,6 +57,7 @@ export default boot(async ({ app, router, store /* Vue */ }) => {
     const img = await getImagePub(o.pathicon)
     cfg.orgs[org].icon = img || cfg.logo
   }
+  pagesHelp(cfg)
   gp.$cfg = cfg
   console.log('Build : ' + cfg.build)
   const salts = await getBinPub('salts')

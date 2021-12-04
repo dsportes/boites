@@ -3,8 +3,9 @@
       <q-card class="q-ma-xs moyennelargeur">
         <q-card-section>
           <div class="titre-2">Crytographie</div>
-          <q-btn flat label="Lancer le test de crypto" color="primary" @click="testcrypto" />
-          <q-btn flat label="Lancer le test courant" color="primary" @click="testEcho"/>
+          <q-btn flat label="Test de crypto" color="primary" @click="testcrypto" />
+          <q-btn flat label="Test écho" color="primary" @click="testEcho"/>
+          <q-btn flat label="Test help" color="primary" @click="testHelp"/>
           <editeur-md v-model="memo" titre="Mon titre" editable v-on:ok="memook"></editeur-md>
           <!--q-input v-model="memo" label="Valeur de memo"/-->
         </q-card-section>
@@ -60,6 +61,7 @@ export default ({
 
   methods: {
     memook (m) {
+      console.log(m.substring(0, 10))
       this.memo = m
     },
     okps (ps) {
@@ -100,6 +102,9 @@ export default ({
     async testidb () {
       const l = await indexedDB.databases()
       l.forEach(db => { console.log(db) })
+    },
+    testHelp () {
+      this.$store.commit('ui/pushhelp', 'page1')
     }
   },
 

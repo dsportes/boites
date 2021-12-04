@@ -59,8 +59,9 @@ export function pushhelp (state, page) {
 }
 
 export function pophelp (state) {
-  if (state.helpstack.length === 0) {
+  if (state.helpstack.length === 1) {
     state.dialoguehelp = false
+    state.helpstack.length = 0
   } else {
     state.helpstack.splice(state.helpstack.length - 1, 1)
   }
