@@ -787,7 +787,9 @@ export class Compte {
     return this
   }
 
-  get clone () { return new Compte().fromIdb(this.toIdb.data) }
+  get clone () {
+    return schemas.clone('idbCompte', this, new Compte())
+  }
 
   av (id) {
     return this.mac[crypt.idToSid(id)]
@@ -907,6 +909,10 @@ export class Avatar {
     schemas.deserialize('idbAvatar', idb, this)
     this.na = data.avc(this.id).na
     return this
+  }
+
+  get clone () {
+    return schemas.clone('idbAvatar', this, new Avatar())
   }
 }
 

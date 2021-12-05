@@ -5,7 +5,7 @@
           <div class="titre-2">Crytographie</div>
           <q-btn flat label="Test de crypto" color="primary" @click="testcrypto" />
           <q-btn flat label="Test écho" color="primary" @click="testEcho"/>
-          <q-btn flat label="Test help" color="primary" @click="testHelp"/>
+          <bouton-help page="page1"/>
           <editeur-md v-model="memo" titre="Mon titre" editable v-on:ok="memook"></editeur-md>
           <!--q-input v-model="memo" label="Valeur de memo"/-->
         </q-card-section>
@@ -39,13 +39,14 @@ import { crypt } from '../app/crypto.mjs'
 import PhraseSecrete from '../components/PhraseSecrete.vue'
 import MdpAdmin from '../components/MdpAdmin.vue'
 import EditeurMd from '../components/EditeurMd.vue'
+import BoutonHelp from '../components/BoutonHelp.vue'
 import { post, affichermessage, afficherdiagnostic, testEcho } from '../app/util'
 
 export default ({
   name: 'DialogueCrypto',
 
   components: {
-    PhraseSecrete, MdpAdmin, EditeurMd
+    PhraseSecrete, MdpAdmin, EditeurMd, BoutonHelp
   },
 
   watch: {

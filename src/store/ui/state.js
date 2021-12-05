@@ -41,6 +41,8 @@ export default function () {
     idblec: IDBLEC_RAZ,
     synclec: {},
 
-    page: 'Org'
+    page: 'Org',
+
+    tabcompte: 'apropos'
   }
 }

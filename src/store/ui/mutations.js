@@ -80,6 +80,10 @@ export function majconfirmstopop (state, val) {
   state.confirmstopop = val
 }
 
+export function majtabcompte (state, val) {
+  state.tabcompte = val
+}
+
 export function majinfomode (state, val) {
   state.infomode = val
 }

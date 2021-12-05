@@ -47,24 +47,35 @@
         </div>
 
       </q-toolbar>
-        <q-toolbar inset>
-          <q-toolbar-title>
-          <span v-if="page === 'Synchro'" class="q-px-xs">Chargement / Synchronisation</span>
-          <span v-if="page !== 'Synchro' && compte != null" class="cursor-pointer q-px-xs" @click="tocompte">Synthèse</span>
-          <q-icon v-if="page !== 'Synchro' && (avatar != null || groupe != null)" class="q-px-xs" size="md" name="label_important"/>
-          <q-avatar v-if="page !== 'Synchro' && avatar != null" size="md">
-            <img v-if="avatar.icone.length !== 0" :src="avatar.icone">
-            <q-icon v-else size="md" name="face"/>
-          </q-avatar>
-          <q-avatar v-if="page !== 'Synchro' && groupe != null" size="md">
-            <img v-if="groupe.icone.length !== 0" :src="groupe.icone">
-            <q-icon v-else size="md" name="group"/>
-          </q-avatar>
-          <span v-if="page !== 'Synchro' && avatar != null">{{avatar.label}}</span>
-          </q-toolbar-title>
-          <q-btn flat dense round icon="people" aria-label="Contacts"/>
-          <q-btn flat dense round icon="menu" aria-label="Menu" @click="$store.commit('ui/majmenuouvert', true)"/>
-        </q-toolbar>
+
+      <q-toolbar inset>
+        <q-toolbar-title>
+        <span v-if="page !== 'Synchro' && compte != null" class="titre-4 cursor-pointer q-px-xs" @click="tocompte">Compte</span>
+        <q-icon v-if="page !== 'Synchro' && (avatar != null || groupe != null)" class="q-px-xs" size="xs" name="label_important"/>
+        <q-avatar v-if="page !== 'Synchro' && avatar != null" size="sm">
+          <img v-if="avatar.icone.length !== 0" :src="avatar.icone">
+          <q-icon v-else size="sm" name="face"/>
+        </q-avatar>
+        <span v-if="page !== 'Synchro' && avatar != null" class="titre-4 cursor-pointer q-px-xs" @click="toavatar">{{avatar.label}}</span>
+        <q-avatar v-if="page !== 'Synchro' && groupe != null" size="md">
+          <img v-if="groupe.icone.length !== 0" :src="groupe.icone">
+          <q-icon v-else size="md" name="group"/>
+        </q-avatar>
+        </q-toolbar-title>
+        <q-btn flat dense round icon="people" aria-label="Contacts"/>
+        <q-btn flat dense round icon="menu" aria-label="Menu" @click="$store.commit('ui/majmenuouvert', true)"/>
+      </q-toolbar>
+
+      <q-toolbar v-if="page === 'Compte'">
+        <div style="max-width:100vw;padding-right:10px">
+        <q-tabs v-model="tabcompte" inline-label no-caps dense outside-arrows mobile-arrows>
+          <q-tab name="apropos" label="A propos" />
+          <q-tab name="motscles" label="Mots clés" />
+          <q-tab name="avatars" label="Avatars" />
+          <q-tab name="groupes" label="Groupes" />
+        </q-tabs>
+        </div>
+      </q-toolbar>
     </q-header>
 
     <q-drawer v-model="menuouvert" side="right" overlay elevated class="bg-grey-1" >
@@ -195,6 +206,10 @@ export default {
       remplacePage('Compte')
     },
 
+    toavatar () {
+      remplacePage('Avatar')
+    },
+
     deconnexion () {
       data.deconnexion()
     },
@@ -254,6 +269,11 @@ export default {
       get: () => $store.state.ui.org,
       set: (val) => $store.commit('ui/majorg', val)
     })
+    const tabcompte = computed({
+      get: () => $store.state.ui.tabcompte,
+      set: (val) => $store.commit('ui/majtabcompte', val)
+    })
+
     const page = computed(() => $store.state.ui.page)
     const orgicon = computed(() => $store.getters['ui/orgicon'])
     const orglabel = computed(() => $store.getters['ui/orglabel'])
@@ -303,7 +323,8 @@ export default {
       statutidb,
       sessionId,
       msgdegrade,
-      statut
+      statut,
+      tabcompte
     }
   }
 }
@@ -316,6 +337,9 @@ export default {
 .fade-enter, .fade-leave-active
   opacity: 0
   transform: translateX(50%) /* CA BUG : Login ne se réaffichae pas */
+
+.q-toolbar
+  height: $toolbarheight !important
 
 .labeltitre
   padding: 0 2px

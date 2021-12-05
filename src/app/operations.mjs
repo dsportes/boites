@@ -485,7 +485,7 @@ export class OperationUI extends Operation {
     data.refsAv = null
     data.refsGr = null
 
-    if (cfg().debug) await sleep(1000)
+    if (cfg().debug) await sleep(1)
 
     this.BRK()
   }

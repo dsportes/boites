@@ -3,13 +3,13 @@
   <div class="titre">{{titre}}</div>
   <!--div class="vide"></div-->
   <div class="icons" >
-    <q-btn v-if="editable && !enedition" class="icon" label="Modifier" size="xs" dense push color="warning" @click="startEdit"></q-btn>
+    <q-btn v-if="editable && !enedition" class="icon" label="Modifier" size="sm" dense push color="warning" @click="startEdit"></q-btn>
     <q-btn v-if="enedition" class="icon" icon="undo" size="sm" dense @click="undo"></q-btn>
     <q-btn v-if="enedition" class="icon" icon="check" :disable="!modifie" label="OK" size="sm" dense push color="warning"  @click="ok"></q-btn>
     <q-btn v-if="enedition" :disable="md" class="icon" icon="face" size="sm" dense @click="emoji=true"></q-btn>
-    <q-btn v-if="taille!==0" class="icon" icon="zoom_out" size="sm" dense @click="taille = 0"></q-btn>
-    <q-btn v-if="taille!==1" class="icon" icon="zoom_in" size="sm" dense @click="taille = 1"></q-btn>
-    <q-btn v-if="taille!==2" class="icon" icon="fullscreen" size="sm" dense @click="taille = 2"></q-btn>
+    <q-btn v-if="taille!==0" class="icon" icon="zoom_out" size="sm" dense @click="taillefx = 0"></q-btn>
+    <q-btn v-if="taille!==1" class="icon" icon="zoom_in" size="sm" dense @click="taillefx = 1"></q-btn>
+    <q-btn v-if="taille!==2" class="icon" icon="fullscreen" size="sm" dense @click="taillefx = 2"></q-btn>
     <q-btn :disable="!md" class="icon" icon="mode_edit" size="sm" dense @click="md=false"></q-btn>
     <q-btn :disable="md" class="icon" icon="visibility" size="sm" dense @click="md=true"></q-btn>
   </div>
@@ -41,27 +41,31 @@ export default ({
   props: {
     modelValue: String,
     titre: String,
-    editable: Boolean
+    editable: Boolean,
+    tailleInit: String
   },
 
   emits: ['ok'],
 
+  computed: {
+    modifie () { return this.texte !== this.modelValue },
+    taille () {
+      return this.taillefx === -1 ? (this.tailleInit ? parseInt(this.tailleInit) : 0) : this.taillefx
+    }
+  },
+
   data () {
     return {
-      texte: '',
-      src: '',
+      texte: this.modelValue,
       enedition: false,
-      taille: 0,
+      taillefx: -1,
       md: true,
       emoji: false
     }
   },
 
-  computed: {
-    modifie () { return this.texte !== this.src }
-  },
-
   watch: {
+    /*
     modelValue (nv, av) {
       this.src = nv
       if (!this.enedition) this.texte = nv
@@ -69,6 +73,7 @@ export default ({
     texte (nv) {
       console.log(nv)
     }
+    */
   },
 
   methods: {
@@ -77,13 +82,13 @@ export default ({
       this.enedition = false
     },
     undo () {
-      this.texte = this.src
+      this.texte = this.modelValue
       this.enedition = false
       this.md = true
     },
     startEdit () {
       this.enedition = true
-      this.texte = this.src
+      this.texte = this.modelValue
       this.md = false
     },
     dlclass () { return this.$q.dark.isActive ? ' sombre' : ' clair' },

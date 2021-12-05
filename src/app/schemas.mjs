@@ -1,5 +1,5 @@
 import { serial, deserial } from './util.mjs'
-export const schemas = { forSchema, serialize, deserialize, test }
+export const schemas = { forSchema, serialize, deserialize, clone, test }
 
 /* Gestion des schémas **************************************************/
 const allTypes = {}
@@ -7,6 +7,11 @@ const allTypes = {}
 function forSchema (s) {
   if (s && s.name) allTypes[s.name] = s
   return s
+}
+
+function clone (s, src, dest) {
+  deserialize(s, serialize(s, src), dest)
+  return dest
 }
 
 function serialize (s, src) {
