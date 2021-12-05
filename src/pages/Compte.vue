@@ -8,7 +8,7 @@
   </q-card>
 
   <q-card v-if="tabcompte === 'motscles'" class="column align-start items-start">
-    <h6>Mes mots clé</h6>
+    <mots-cles></mots-cles>
   </q-card>
 
   <q-card v-if="tabcompte === 'avatars'" class="column align-start items-start">
@@ -38,10 +38,11 @@ import { onBoot, remplacePage, data } from '../app/modele.mjs'
 import { schemas } from '../app/schemas.mjs'
 import EditeurMd from '../components/EditeurMd.vue'
 import BoutonHelp from '../components/BoutonHelp.vue'
+import MotsCles from '../components/MotsCles.vue'
 
 export default ({
   name: 'Compte',
-  components: { EditeurMd, BoutonHelp },
+  components: { EditeurMd, BoutonHelp, MotsCles },
   data () {
     return {
       tab: 'apropos'
