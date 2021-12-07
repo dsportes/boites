@@ -252,6 +252,129 @@ export const SIZEAV = 7
 export const SIZEGR = 3
 export const MODES = ['inconnu', 'synchronisé', 'incognito', 'avion', 'visio']
 
+/* Motscles ************************************************************/
+const OBS = 'obsolète'
+
+export class Motscles {
+  /*
+  Mode 1 : chargement des mots clés du compte et l'organisation en vue d'éditer ceux du compte
+  Mode 2 : chargement des mots clés du groupe idg et l'organisation en vue d'éditer ceux du groupe
+  Mode 3 : chargement des mots clés du compte, de l'organisation et du groupe idg (s'il est donné)
+  en vue de sélectionner / afficher une liste de mots clés
+  */
+  constructor (mode, idg) {
+    this.mode = mode
+    this.idg = idg
+    this.categs = new Map()
+    this.tous = new Map()
+    this.categs.set(OBS, [])
+    this.lcategs = []
+    this.fusion(cfg().motscles)
+    let src
+    if (mode === 1 || mode === 3) {
+      this.mapc = data.compte().mmc
+      this.fusion(this.mapc)
+      if (mode === 1) src = this.mapc
+    }
+    if (mode === 2 || mode === 3) {
+      const gr = idg ? data.groupe(idg) : null
+      this.mapg = gr ? gr.mc : {}
+      if (mode === 2 && gr && gr.maxSty === 2) src = this.mapg
+      this.fusion(this.mapg)
+    }
+    this.tri()
+    if (src) {
+      this.localIdx = {}
+      this.localNom = {}
+      for (const idx in src) {
+        const nc = src[idx]
+        const [categ, nom] = this.split(nc)
+        this.localIdx[idx] = nc
+        this.localNom[nom] = [idx, categ]
+      }
+    }
+  }
+
+  split (nc) {
+    const j = nc.indexOf('/')
+    const categ = j === -1 ? OBS : nc.substring(0, j)
+    const nom = j === -1 ? nc : nc.substring(j + 1)
+    return [categ, nom]
+  }
+
+  setCateg (categ, idx, nom) {
+    let x = this.categs.get(categ)
+    if (!x) {
+      x = []
+      this.categs.set(categ, x)
+    }
+    let trouve = false
+    for (let i = 0; i < x.length; i++) {
+      if (x[1] === idx) {
+        x[0] = nom
+        trouve = true
+        break
+      }
+    }
+    if (!trouve) x.push([nom, idx])
+  }
+
+  delCateg (categ, idx) {
+    const x = this.categs.get(categ)
+    if (!x) return
+    let j = -1
+    for (let i = 0; i < x.length; i++) {
+      if (x[1] === idx) {
+        j = i
+        break
+      }
+    }
+    if (j !== -1) {
+      x.splice(j, 1)
+      if (!x.length) {
+        this.categs.delete(categ)
+      }
+    }
+  }
+
+  fusion (map) {
+    for (const i in map) {
+      const idx = parseInt(i)
+      const nc = map[i]
+      const [categ, nom] = this.split(nc)
+      this.setCateg(categ, idx, nom)
+    }
+  }
+
+  tri () {
+    const s = new Set()
+    this.lcategs = []
+    this.categs.forEach((v, k) => {
+      if (!s.has(k)) {
+        this.lcategs.push(k)
+        s.add(k)
+      }
+      if (v.length > 1) v.sort((a, b) => { return a[0] < b[0] ? -1 : a[0] === b[0] ? 0 : 1 })
+    })
+    this.lcategs.sort()
+  }
+
+  changerMC (idx, nc) {
+    if (this.mode === 3) return
+    const [categ, nom] = this.split(nc)
+    const x = this.localNom[nom]
+    if (x) return 'Le nom est déjà attribué à l\'index "' + x[0] + '" (catégorie "' + x[1] + '")'
+    const ancnc = this.localIdx[idx]
+    const [anccateg, ancnom] = this.split(ancnc)
+    this.localIdx[idx] = nc
+    delete this.localNom[ancnom]
+    this.localNom[nom] = [idx, categ]
+    this.delCateg(anccateg, idx)
+    this.setCateg(categ, idx, nom)
+    this.tri()
+  }
+}
+
 /* état de session ************************************************************/
 class Session {
   constructor () {
@@ -1146,18 +1269,7 @@ export class Contact {
   }
 }
 /** Groupe ***********************************/
-/*
-  name: 'rowGroupe',
-  type: 'record',
-  fields: [
-    { name: 'id', type: 'long' }, // pk
-    { name: 'v', type: 'int' },
-    { name: 'dds', type: 'int' },
-    { name: 'st', type: 'int' },
-    { name: 'cvg', type: ['null', 'bytes'] },
-    { name: 'mcg', type: ['null', 'bytes'] },
-    { name: 'lstmg', type: ['null', 'bytes'] }
-  ]
+/* rowGroupe
 - `id` : id du groupe.
 - `v` :
 - `dds` :
@@ -1173,17 +1285,6 @@ schemas.forSchema({
   name: 'idbGroupe',
   cols: ['id', 'v', 'dds', 'st', 'cv', 'mc', 'lstm']
 })
-/*
-  fields: [
-    { name: 'id', type: 'long' },
-    { name: 'v', type: 'int' },
-    { name: 'dds', type: 'int' },
-    { name: 'st', type: 'int' },
-    { name: 'cv', type: ['null', arrayStringType] },
-    { name: 'mc', type: ['null', arrayIntType] },
-    { name: 'lstm', type: ['null', arrayLongType] }
-  ]
-*/
 
 export class Groupe {
   get table () { return 'groupe' }
@@ -1200,6 +1301,41 @@ export class Groupe {
 
   get icone () {
     return this.photo || ''
+  }
+
+  /*
+  Map ayant pour clé les sid des avatars du compte
+  et pour valeur le couple [invitgr, membre] de l'avatar correspondant dans le groupe
+  */
+  mapInvitgrMembre () {
+    const mapmembres = data.membre(this.id)
+    const res = {}
+    for (const im in mapmembres) {
+      const membre = mapmembres[im]
+      const na = new NomAvatar(membre.nomc)
+      const avid = na.id
+      if (data.avec(avid)) { // c'est un avatar du compte
+        const invitgr = data.invitgr(avid, parseInt(im)) // peut retourner null si résilié
+        res[na.sid] = [invitgr, membre]
+      }
+    }
+    return res
+  }
+
+  maxSty () {
+    // plus haut statut lecteur / auteur / animateur : -1 si non accédant
+    let sty = -1
+    const m = this.mapInvitgrMembre()
+    for (const avsid in m) {
+      const [invitgr] = m[avsid]
+      if (invitgr.st > 0) {
+        if (invitgr.stx === 3) {
+          const y = invitgr.sty
+          if (y >= 0 && y > sty) sty = y
+        }
+      }
+    }
+    return sty
   }
 
   async fromRow (row) {
@@ -1239,38 +1375,18 @@ export class Groupe {
 }
 
 /** Invitct **********************************/
-/*
-const rowInvitct = schemas.forSchema({
-  name: 'rowInvitct',
-  type: 'record',
-  fields: [
-    { name: 'id', type: 'long' }, // pk1
-    { name: 'ni', type: 'int' }, // pk2
-    { name: 'v', type: 'int' },
-    { name: 'dlv', type: 'int' },
-    { name: 'st', type: 'int' },
-    { name: 'datap', type: ['null', 'bytes'] },
-    { name: 'datak', type: ['null', 'bytes'] },
-    { name: 'ardc', type: ['null', 'bytes'] }
-  ]
-})
-*/
-/*
-`datap` : données cryptées par la clé publique de B.
-- `nom@rnd` : nom complet de A.
-- `ic` : numéro du contact de A pour B (pour que B puisse écrire le statut et l'ardoise dans `contact` de A).
-- `cc` : clé `cc` du contact *fort* A / B, définie par A.
-*/
-/*
-const invitctData = schemas.forSchema({
-  name: 'invitctData',
-  type: 'record',
-  fields: [
-    { name: 'nomc', type: 'string' },
-    { name: 'ic', type: 'int' },
-    { name: 'cc', type: 'bytes' }
-  ]
-})
+/* rowInvitct
+- `id` : id de B.
+- `ni` : numéro aléatoire d'invitation en complément de `id`.
+- `v`
+- `dlv` : la date limite de validité permettant de purger les rencontres (quels qu'en soient les statuts).
+- `st` : <= 0: annulée, 0: en attente, 1: acceptée, 2: refusée
+- `datap` : données cryptées par la clé publique de B.
+  - `nom@rnd` : nom complet de A.
+  - `ic` : numéro du contact de A pour B (pour que B puisse écrire le statut et l'ardoise dans `contact` de A).
+  - `cc` : clé `cc` du contact *fort* A / B, définie par A.
+- `datak` : même données que `datap` mais cryptées par la clé K de B après acceptation ou refus.
+- `ardc` : texte de sollicitation écrit par A pour B et/ou réponse de B (après acceptation ou refus).
 */
 
 schemas.forSchema({
@@ -1343,57 +1459,28 @@ export class Invitct {
 }
 
 /** Invitgr **********************************/
-/*
-  name: 'rowInvitgr',
-  type: 'record',
-  fields: [
-    { name: 'id', type: 'long' }, // pk1
-    { name: 'ni', type: 'int' }, // pk2
-    { name: 'v', type: 'int' },
-    { name: 'dlv', type: 'int' },
-    { name: 'st', type: 'int' },
-    { name: 'datap', type: ['null', 'bytes'] },
-    { name: 'datak', type: ['null', 'bytes'] }
-  ]
+/* rowInvitgr'
 - `id` : id du membre invité.
 - `ni` : numéro d'invitation.
 - `v` :
 - `dlv` :
-- `st` : statut. Si `st` < 0, c'est une suppression annulation. 0:invité, 1:actif
+- `st` : statut. `xy` : < 0 signifie supprimé (redondance de `st` de `membre`)
+  - `x` : 2:invité, 3:actif.
+  - `y` : 0:lecteur, 1:auteur, 2:administrateur.
 - `datap` : pour une invitation _en cours_, crypté par la clé publique du membre invité, référence dans la liste des membres du groupe `[idg, cleg, im]`.
- - `idg` : id du groupe.
- - `cleg` : clé du groupe.
- - `im` : indice de membre de l'invité dans le groupe.
+  - `idg` : id du groupe.
+  - `cleg` : clé du groupe.
+  - `im` : indice de membre de l'invité dans le groupe.
 - `datak` : même données que `datap` mais cryptées par la clé K du compte de l'invité, après son acceptation.
-*/
-/*
-const invitgrData = schemas.forSchema({ // map des avatars du compte
-  type: 'map',
-  values: schemas.forSchema({
-    name: 'invitgrData',
-    type: 'record',
-    fields: [
-      { name: 'idg', type: 'long' },
-      { name: 'cleg', type: 'bytes' },
-      { name: 'im', type: 'int' }
-    ]
-  })
-})
+- `ank` : annotation cryptée par la clé K de l'invité
+  - `mc` : mots clés
+  - `txt` : commentaire personnel de l'invité
 */
 
 schemas.forSchema({
   name: 'idbInvitgr',
-  cols: ['id', 'ni', 'v', 'dlv', 'st', 'data']
+  cols: ['id', 'ni', 'v', 'dlv', 'st', 'data', 'an']
 })
-/*  fields: [
-    { name: 'id', type: 'long' },
-    { name: 'ni', type: 'int' },
-    { name: 'v', type: 'int' },
-    { name: 'dlv', type: 'int' },
-    { name: 'st', type: 'int' },
-    { name: 'data', type: ['null', 'bytes'] }
-  ]
-*/
 
 export class Invitgr {
   get table () { return 'invitgr' }
@@ -1407,6 +1494,10 @@ export class Invitgr {
   get idg () { return this.data ? this.data.idg : null }
 
   get sidg () { return this.data ? crypt.idToSid(this.data.idg) : null }
+
+  get stx () { return this.st < 0 ? -1 : Math.floor(this.st / 10) }
+
+  get sty () { return this.st < 0 ? -1 : this.st % 10 }
 
   majCg () {
     if (this.data) data.cleg[crypt.idToSid(this.id)] = this.data.cleg
@@ -1426,14 +1517,23 @@ export class Invitgr {
       rowData = await crypt.decrypterRSA(cpriv, row.datap)
     }
     this.data = rowData ? deserial(rowData) : null
+    this.annot = null
+    if (this.stx === 2 || this.stx === 3) {
+      const x = row.ank ? await crypt.decrypter(data.clek, row.ank) : null
+      if (x) {
+        this.an = deserial(x)
+      }
+    }
     this.majCg()
     return this
   }
 
   async toRow () {
     this.datak = this.data ? await crypt.crypter(data.clek, serial(this.data)) : null
+    this.ank = this.an ? await crypt.crypter(data.clek, serial(this.an)) : null
     const buf = schemas.serialize('rowinvitgr', this)
     delete this.datak
+    delete this.ank
     return buf
   }
 
@@ -1449,71 +1549,27 @@ export class Invitgr {
 }
 
 /** Membre ***********************************/
-/*
-  name: 'rowMembre',
-  type: 'record',
-  fields: [
-    { name: 'id', type: 'long' }, // pk 1
-    { name: 'im', type: 'int' }, // pk 2
-    { name: 'v', type: 'int' },
-    { name: 'st', type: 'int' },
-    { name: 'dlv', type: 'int' },
-    { name: 'vsd', type: 'int' },
-    { name: 'datag', type: ['null', 'bytes'] },
-    { name: 'ardg', type: ['null', 'bytes'] },
-    { name: 'lmck', type: ['null', 'bytes'] }
-  ]
-
+/* 'rowMembre'
 - `id` : id du groupe.
 - `im` : numéro du membre dans le groupe.
 - `v` :
 - `st` : statut. `xy` : < 0 signifie supprimé.
-  - `x` : 1:pressenti, 2:invité, 3:ayant refusé, 3:actif, 8: résilié, 9:disparu.
+  - `x` : 1:pressenti, 2:invité, 3:ayant refusé, 3:actif, 8: résilié.
   - `y` : 0:lecteur, 1:auteur, 2:administrateur.
 - `vote` : vote de réouverture.
 - `dlv` : date limite de validité de l'invitation. N'est significative qu'en statut _invité_.
+- `q1 q2` : balance des quotas donnés / reçus par le membre au groupe.
 - `datag` : données cryptées par la clé du groupe.
   - `nomc` : nom complet de l'avatar `nom@rnd` (donne la clé d'accès à sa carte de visite)
-  - `ni` : numéro d'invitation du membre dans `invitgr` relativement à son `id` (issu de `nomc`).
-  Permet de supprimer son accès au groupe (`st < 0, datap / datak null` dans `invitgr`) quand il est résilié / disparu.
-  - `idi` : id du membre qui l'a pressenti puis invité.
-  - `q1 q2` : balance des quotas donnés / reçus par le membre au groupe.
-- `ardg` : ardoise du membre vis à vis du groupe, texte d'invitation / réponse de l'invité cryptée par la clé du groupe.
-- `lmck` : liste, cryptée par la clé k du membre, des mots clés de rangement / recherche attribués par le membre quand il est actif.
-*/
-/*
-const membreData = schemas.forSchema({ // map des avatars du compte
-  type: 'map',
-  values: schemas.forSchema({
-    name: 'membreData',
-    type: 'record',
-    fields: [
-      { name: 'nomc', type: 'string' },
-      { name: 'ni', type: 'int' },
-      { name: 'idi', type: 'long' },
-      { name: 'q1', type: 'long' },
-      { name: 'q2', type: 'long' }
-    ]
-  })
-})
+  - `ni` : numéro d'invitation du membre dans `invitgr` relativement à son `id` (issu de `nomc`). Permet de supprimer son accès au groupe (`st < 0, datap / datak null` dans `invitgr`) quand il est résilié / disparu.
+  - `idi` : id du premier membre qui l'a pressenti / invité.
+- `ardg` : ardoise du membre vis à vis du groupe.
 */
 
 schemas.forSchema({
   name: 'idbMembre',
-  cols: ['id', 'im', 'v', 'st', 'dlv', 'vsd', 'datag', 'ardg', 'lmck']
+  cols: ['id', 'im', 'v', 'st', 'vote', 'dlv', 'q1', 'q2', 'datag', 'ardg']
 })
-/*
-  fields: [
-    { name: 'id', type: 'long' },
-    { name: 'im', type: 'int' },
-    { name: 'v', type: 'int' },
-    { name: 'st', type: 'int' },
-    { name: 'dlv', type: 'int' },
-    { name: 'data', type: 'bytes' },
-    { name: 'ard', type: 'string' },
-    { name: 'lmc', type: ['null', 'bytes'] }
-  ]
-*/
 
 export class Membre {
   get table () { return 'membre' }
@@ -1526,20 +1582,33 @@ export class Membre {
 
   get na () { return this.data ? new NomAvatar(this.data.nomc) : null }
 
+  get stx () { return this.st < 0 ? -1 : Math.floor(this.st / 10) }
+
+  get sty () { return this.st < 0 ? -1 : this.st % 10 }
+
+  /* retourne l'invitgr correspondant
+  - si le membre est un avatar du groupe,
+  - si cet invitgr existe (invité ou actif)
+  sinon null
+  */
+  invitgr () {
+    const na = this.na
+    if (!na) return null
+    const ida = na.id
+    const x = this.stx
+    return (x === 2 || x === 3) && data.avc(ida) ? data.invitgr(ida, this.data.ni) : null
+  }
+
   async fromRow (row) {
     this.id = row.id
     this.im = row.im
     this.v = row.v
     this.st = row.st
     this.dlv = row.dlv
-    const cg = row.datag || row.ardg || row.lmck ? data.cleg(this.id) : null
+    const cg = row.datag || row.ardg ? data.cleg(this.id) : null
     const rowData = row.datag ? await crypt.decrypter(cg, row.datag) : null
     this.data = rowData ? deserial(rowData) : null
-    // Mettre à jour this.data en fonction de vsd et mettre à jour this.vsd
-    this.vsd = 0
     this.ard = row.ardg ? await crypt.decrypterStr(cg, row.ardg) : null
-    const lmc = row.lmck ? await crypt.decrypter(data.clek, row.lmck) : null
-    this.lmc = lmc ? deserial(lmc) : null
     return this
   }
 
@@ -1547,11 +1616,9 @@ export class Membre {
     const cg = this.data || this.ard || this.lmc ? data.clegDe(this.sid) : null
     this.datag = this.data ? await crypt.crypter(cg, serial(this.data)) : null
     this.ardg = this.ard ? await crypt.crypter(cg, this.ard) : null
-    this.lmck = this.lmc ? await crypt.crypter(data.clek, serial(this.lmc)) : null
     const buf = schemas.serialize('rowmembre', this)
     delete this.datag
     delete this.ardg
-    delete this.lmck
     return buf
   }
 
@@ -1562,8 +1629,6 @@ export class Membre {
 
   fromIdb (idb, vs) {
     schemas.desrialise('lidbMembre', idb, this)
-    // Mettre à jour this.data en fonction de row.vsd et mettre à jour this.vsd
-    this.vsd = 0
     return this
   }
 }
