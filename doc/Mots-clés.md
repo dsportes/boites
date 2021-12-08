@@ -45,23 +45,10 @@ Les mots clés de 100 à 199 ne peuvent être attachés qu'à un secret de group
 - il peut être cité dans _le secret lui-même_ par un animateur du groupe.
 - il peut aussi être cité dans _l'annotation personnelle d'un compte à un secret de groupe_ : le compte peut dans cette liste citer tous les mots clés, de son compte, du groupe du secret et de l'organisation.
 
->Remarque : deux mots clé d'un compte et d'un groupe peuvent portier le même nom (voire d'ailleurs un mot clé de l'organisation). L'origine du mot clé est distinguée à l'affichage en cas de doublon de nom par un suffixe `-g` pour un groupe et `-o` pour l'organisation)
+>Remarque : deux mots clé d'un compte et d'un groupe peuvent porter le même nom (voire d'ailleurs un mot clé de l'organisation). L'origine du mot clé est distinguée à l'affichage en cas de doublon de nom par un suffixe `-g` pour un groupe et `-o` pour l'organisation)
 
 #### Mots clés _obsolètes_
 Un mot clé _obsolète_ est un mot clé sans catégorie :
 - son attribution est interdite : quand une liste de mots clés est éditée, les mots clés obsolètes sont effacés.
 - la suppression définitive d'un mot clé ne s'opère que sur un mot clé obsolète. Une recherche permettra de lister où il apparaît avant de décider.
 
-### Opération d'annotation
-L'opération d'annotation attache une liste de mots clés et un texte éventuel d'annotation à un secret, un contact ou un groupe (sur l'invitation d'un des avatars du compte au groupe).
-
-Cette opération peut _éventuellement_ et conjointement porter une mise à jour des listes de mots clés,
-- du compte,
-- du groupe si le compte a un de ses avatars animateurs du groupe.
-
-En souhaitant attacher un mot clé à un secret par exemple, l'utilisateur peut s'apercevoir qu'il n'est pas défini : il le fait sur l'instant en déclarant un nouveau mot clé ou en corrigeant la formulation d'un autre.
-
-L'opération d'annotation peut aussi ne procéder qu'à la mise à jour des mots clés (du compte et / ou d'un groupe) sans enregistrer d'annotation.
-
-### Implémentation UI
-(à suivre)

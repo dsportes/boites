@@ -262,37 +262,68 @@ export class Motscles {
   Mode 3 : chargement des mots clés du compte, de l'organisation et du groupe idg (s'il est donné)
   en vue de sélectionner / afficher une liste de mots clés
   */
-  constructor (mode, idg) {
+  constructor (mc, mode, idg) {
     this.mode = mode
     this.idg = idg
-    this.categs = new Map()
-    this.tous = new Map()
-    this.categs.set(OBS, [])
-    this.lcategs = []
+    this.mc = mc
+  }
+
+  debutEdition () {
+    if (this.mode === 3 || !this.src) return
+    this.premier = this.mode === 1 ? 1 : 100
+    this.dernier = this.mode === 1 ? 99 : 199
+    this.mc.st.enedition = true
+    this.localIdx = {}
+    this.localNom = {}
+    for (const idx in this.src) {
+      const nc = this.src[idx]
+      const [categ, nom] = this.split(nc)
+      this.localIdx[idx] = nc
+      this.localNom[nom] = [idx, categ]
+    }
+    this.avant = this.flatMap(this.src)
+    this.apres = this.avant
+  }
+
+  flatMap (map) {
+    const a = []
+    for (const idx in map) a.push(parseInt(idx))
+    a.sort()
+    const b = []
+    for (let i = 0; i < a.length; i++) {
+      const idx = a[i]
+      b.push(idx + '/' + map[idx])
+    }
+    return b.join('&')
+  }
+
+  finEdition () {
+    if (this.mode === 3) return
+    this.mc.st.enedition = false
+    this.mc.st.modifie = false
+    const r = this.localIdx
+    delete this.localIdx
+    delete this.localNom
+    delete this.apres
+    return r
+  }
+
+  recharger () {
+    if (this.mc.st.enedition) return
     this.fusion(cfg().motscles)
-    let src
-    if (mode === 1 || mode === 3) {
+    if (this.mode === 1 || this.mode === 3) {
       this.mapc = data.compte().mmc
       this.fusion(this.mapc)
-      if (mode === 1) src = this.mapc
+      if (this.mode === 1) this.src = this.mapc
     }
-    if (mode === 2 || mode === 3) {
-      const gr = idg ? data.groupe(idg) : null
+    if (this.mode === 2 || this.mode === 3) {
+      const gr = this.idg ? data.groupe(this.idg) : null
       this.mapg = gr ? gr.mc : {}
-      if (mode === 2 && gr && gr.maxSty === 2) src = this.mapg
+      if (this.mode === 2 && gr && gr.maxSty === 2) this.src = this.mapg
       this.fusion(this.mapg)
     }
     this.tri()
-    if (src) {
-      this.localIdx = {}
-      this.localNom = {}
-      for (const idx in src) {
-        const nc = src[idx]
-        const [categ, nom] = this.split(nc)
-        this.localIdx[idx] = nc
-        this.localNom[nom] = [idx, categ]
-      }
-    }
+    return this
   }
 
   split (nc) {
@@ -303,15 +334,15 @@ export class Motscles {
   }
 
   setCateg (categ, idx, nom) {
-    let x = this.categs.get(categ)
+    let x = this.mc.categs.get(categ)
     if (!x) {
       x = []
-      this.categs.set(categ, x)
+      this.mc.categs.set(categ, x)
     }
     let trouve = false
     for (let i = 0; i < x.length; i++) {
-      if (x[1] === idx) {
-        x[0] = nom
+      if (x[i][1] === idx) {
+        x[i][0] = nom
         trouve = true
         break
       }
@@ -320,11 +351,11 @@ export class Motscles {
   }
 
   delCateg (categ, idx) {
-    const x = this.categs.get(categ)
+    const x = this.mc.categs.get(categ)
     if (!x) return
     let j = -1
     for (let i = 0; i < x.length; i++) {
-      if (x[1] === idx) {
+      if (x[i][1] === idx) {
         j = i
         break
       }
@@ -332,7 +363,7 @@ export class Motscles {
     if (j !== -1) {
       x.splice(j, 1)
       if (!x.length) {
-        this.categs.delete(categ)
+        this.mc.categs.delete(categ)
       }
     }
   }
@@ -348,30 +379,52 @@ export class Motscles {
 
   tri () {
     const s = new Set()
-    this.lcategs = []
-    this.categs.forEach((v, k) => {
+    this.mc.lcategs.length = 0
+    this.mc.categs.forEach((v, k) => {
       if (!s.has(k)) {
-        this.lcategs.push(k)
+        this.mc.lcategs.push(k)
         s.add(k)
       }
       if (v.length > 1) v.sort((a, b) => { return a[0] < b[0] ? -1 : a[0] === b[0] ? 0 : 1 })
     })
-    this.lcategs.sort()
+    if (this.mc.lcategs.length > 1) this.mc.lcategs.sort()
+  }
+
+  supprMC (idx) {
+    if (!this.mc.enedition || idx < this.premier || idx > this.dernier) return 'Pas en édition ou index incoorect'
+    const ancnc = this.localIdx[idx]
+    if (!ancnc) return
+    const [anccateg, ancnom] = this.split(ancnc)
+    delete this.localNom[ancnom]
+    delete this.localIdx[idx]
+    this.delCateg(anccateg, idx)
+    this.apres = this.flatMap(this.localIdx)
+    this.mc.st.modifie = this.apres !== this.avant
   }
 
   changerMC (idx, nc) {
-    if (this.mode === 3) return
+    if (!this.mc.st.enedition || (idx !== 0 && (idx < this.premier || idx > this.dernier))) return 'Pas en édition ou index incoorect'
+    if (idx && !nc) return this.supprMC(idx)
     const [categ, nom] = this.split(nc)
     const x = this.localNom[nom]
-    if (x) return 'Le nom est déjà attribué à l\'index "' + x[0] + '" (catégorie "' + x[1] + '")'
-    const ancnc = this.localIdx[idx]
-    const [anccateg, ancnom] = this.split(ancnc)
+    if (x && x[0] !== idx) return 'Le nom est déjà attribué à l\'index "' + x[0] + '" (catégorie "' + x[1] + '")'
+    if (idx) {
+      const ancnc = this.localIdx[idx]
+      const [anccateg, ancnom] = this.split(ancnc)
+      delete this.localNom[ancnom]
+      this.delCateg(anccateg, idx)
+    } else {
+      for (let i = this.premier; i < this.dernier; i++) {
+        if (!this.localIdx[i]) { idx = i; break }
+      }
+      if (!idx) return 'Plus d\'index libres pour ajouter un mot clé'
+    }
     this.localIdx[idx] = nc
-    delete this.localNom[ancnom]
     this.localNom[nom] = [idx, categ]
-    this.delCateg(anccateg, idx)
     this.setCateg(categ, idx, nom)
     this.tri()
+    this.apres = this.flatMap(this.localIdx)
+    this.mc.st.modifie = this.apres !== this.avant
   }
 }
 

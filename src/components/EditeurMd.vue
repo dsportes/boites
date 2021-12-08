@@ -64,18 +64,6 @@ export default ({
     }
   },
 
-  watch: {
-    /*
-    modelValue (nv, av) {
-      this.src = nv
-      if (!this.enedition) this.texte = nv
-    },
-    texte (nv) {
-      console.log(nv)
-    }
-    */
-  },
-
   methods: {
     ok () {
       this.$emit('ok', this.texte)
@@ -96,19 +84,11 @@ export default ({
       return 'ta' + this.taille + this.dlclass() + (this.enedition ? ' borderw' : ' borderp')
     },
     emojiclick (emoji) {
-      console.log(JSON.stringify(emoji.emoji.shortcodes))
+      // console.log(JSON.stringify(emoji.emoji.shortcodes))
       // const code = ':' + emoji.emoji.shortcodes[0] + ':'
       const code = emoji.emoji.unicode
       const ta = this.root.querySelector('#ta')
-      let val
-      if (ta.selectionStart || ta.selectionStart === '0') {
-        const startPos = ta.selectionStart
-        const endPos = ta.selectionEnd
-        val = ta.value.substring(0, startPos) + code + ta.value.substring(endPos, ta.value.length)
-      } else {
-        val = ta.value + code
-      }
-      this.texte = val
+      this.texte = ta.value.substring(0, ta.selectionStart) + code + ta.value.substring(ta.selectionEnd, ta.value.length)
       this.emoji = false
     }
   },
