@@ -128,10 +128,13 @@ export default ({
     okEdit () {
       // simulation du retour sync de maj serveur
       const mmc = this.motscles.finEdition()
-      const c = this.compte.clone
-      c.mmc = mmc
-      c.v++
-      data.setCompte(c)
+      setTimeout(() => {
+        const c = this.compte.clone
+        c.mmc = mmc
+        c.mmc[32] = 'Statut/toto'
+        c.v++
+        data.setCompte(c)
+      }, 5000)
     }
   },
 
@@ -149,9 +152,17 @@ export default ({
     })
 
     watch(
-      () => mc,
+      [() => mc, () => compte],
       (val, prevVal) => {
-        // console.log(val.categs.size)
+        /*
+        const lmc = val[0]
+        const lcompte = val[1]._value
+        console.log('watch 0 : ' + lmc.categs.size)
+        console.log('watch 1 : ' + lcompte.v + '/' + prevVal[1]._value.v)
+        */
+        if (val[1]._value.v > motscles.version) {
+          motscles.recharger()
+        }
       },
       { deep: true }
     )

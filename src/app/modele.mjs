@@ -302,22 +302,28 @@ export class Motscles {
     this.mc.st.enedition = false
     this.mc.st.modifie = false
     const r = this.localIdx
-    delete this.localIdx
-    delete this.localNom
-    delete this.apres
+    this.recharger()
     return r
   }
 
   recharger () {
     if (this.mc.st.enedition) return
+    delete this.localIdx
+    delete this.localNom
+    delete this.apres
+    delete this.avant
+    this.mc.categs.clear()
+    this.mc.lcategs.length = 0
     this.fusion(cfg().motscles)
     if (this.mode === 1 || this.mode === 3) {
       this.mapc = data.compte().mmc
+      this.version = data.compte().v
       this.fusion(this.mapc)
       if (this.mode === 1) this.src = this.mapc
     }
     if (this.mode === 2 || this.mode === 3) {
       const gr = this.idg ? data.groupe(this.idg) : null
+      this.version = gr ? gr.v : 0
       this.mapg = gr ? gr.mc : {}
       if (this.mode === 2 && gr && gr.maxSty === 2) this.src = this.mapg
       this.fusion(this.mapg)
@@ -378,8 +384,8 @@ export class Motscles {
   }
 
   tri () {
-    const s = new Set()
     this.mc.lcategs.length = 0
+    const s = new Set()
     this.mc.categs.forEach((v, k) => {
       if (!s.has(k)) {
         this.mc.lcategs.push(k)
