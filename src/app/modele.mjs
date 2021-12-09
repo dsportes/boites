@@ -259,8 +259,8 @@ export class Motscles {
   /*
   Mode 1 : chargement des mots clés du compte et l'organisation en vue d'éditer ceux du compte
   Mode 2 : chargement des mots clés du groupe idg et l'organisation en vue d'éditer ceux du groupe
-  Mode 3 : chargement des mots clés du compte, de l'organisation et du groupe idg (s'il est donné)
-  en vue de sélectionner / afficher une liste de mots clés
+  Mode 3 : chargement des mots clés du compte OU du groupe idg et de l'organisation
+  en vue d'afficher une liste de mots clés pour SELECTION
   */
   constructor (mc, mode, idg) {
     this.mode = mode
@@ -315,17 +315,15 @@ export class Motscles {
     this.mc.categs.clear()
     this.mc.lcategs.length = 0
     this.fusion(cfg().motscles)
-    if (this.mode === 1 || this.mode === 3) {
+    if (this.mode === 1 || (this.mode === 3 && !this.idg)) {
       this.mapc = data.compte().mmc
-      this.version = data.compte().v
       this.fusion(this.mapc)
       if (this.mode === 1) this.src = this.mapc
     }
-    if (this.mode === 2 || this.mode === 3) {
-      const gr = this.idg ? data.groupe(this.idg) : null
-      this.version = gr ? gr.v : 0
-      this.mapg = gr ? gr.mc : {}
-      if (this.mode === 2 && gr && gr.maxSty === 2) this.src = this.mapg
+    if (this.mode === 2 || (this.mode === 3 && this.idg)) {
+      const gr = data.groupe(this.idg)
+      this.mapg = gr.mc
+      if (this.mode === 2 && gr.maxSty === 2) this.src = this.mapg
       this.fusion(this.mapg)
     }
     this.tri()

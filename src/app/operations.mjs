@@ -1,4 +1,4 @@
-import { store, post, affichermessage, cfg, sleep, affichererreur, appexc } from './util.mjs'
+import { store, post, affichermessage, cfg, sleep, affichererreur, appexc, serial } from './util.mjs'
 import {
   deleteIDB, idbSidCompte, commitRows, getCompte, getAvatars, getContacts, getCvs,
   getGroupes, getInvitcts, getInvitgrs, getMembres, getParrains, getRencontres, getSecrets,
@@ -233,7 +233,7 @@ export class Operation {
     const items = []
     let dhc = 0
     q.forEach((syncList) => {
-      if (syncList.dhc > dhc) dhc = syncList.dhc
+      if (syncList.dh > dhc) dhc = syncList.dh
       if (syncList.rowItems) {
         syncList.rowItems.forEach((rowItem) => {
           items.push(rowItem)
@@ -854,6 +854,62 @@ export class ConnexionCompte extends OperationUI {
 
       this.finOK()
       remplacePage('Compte')
+    } catch (e) {
+      await this.finKO(e)
+    }
+  }
+}
+
+/******************************************************
+Mise à jour du mémo du compte
+*/
+export class MemoCompte extends OperationUI {
+  constructor () {
+    super('Mise à jour du mémo du compte', OUI, SELONMODE)
+    this.opsync = true
+  }
+
+  excAffichages () { return [this.excAffichage1f] }
+
+  // excActions(), défaut de Operation
+
+  async run (memo) {
+    try {
+      const c = data.compte()
+      const memok = await crypt.crypter(data.clek, memo)
+      this.BRK()
+      const args = { sessionId: data.sessionId, id: c.id, memok: memok }
+      const ret = await post(this, 'm1', 'memocompte', args)
+      if (data.dh < ret.dh) data.dh = ret.dh
+      this.finOK()
+    } catch (e) {
+      await this.finKO(e)
+    }
+  }
+}
+
+/******************************************************
+Mise à jour des mots clés du compte
+*/
+export class MmcCompte extends OperationUI {
+  constructor () {
+    super('Mise à jour des mots clés du compte', OUI, SELONMODE)
+    this.opsync = true
+  }
+
+  excAffichages () { return [this.excAffichage1f] }
+
+  // excActions(), défaut de Operation
+
+  async run (mmc) {
+    try {
+      const c = data.compte()
+      const mmck = await crypt.crypter(data.clek, serial(mmc))
+      this.BRK()
+      const args = { sessionId: data.sessionId, id: c.id, mmck: mmck }
+      const ret = await post(this, 'm1', 'mmccompte', args)
+      if (data.dh < ret.dh) data.dh = ret.dh
+      this.finOK()
     } catch (e) {
       await this.finKO(e)
     }

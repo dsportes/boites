@@ -77,7 +77,7 @@ let pongrecu = false
 async function onmessage (m) {
   if (!data.ws) return
   const ab = await m.data.arrayBuffer()
-  const syncList = deserial(new Uint8Array(ab))
+  const syncList = deserial(new Uint8Array(ab)) // syncList : { sessionId, dh, rowItems }
   if (syncList.sessionId !== data.sessionId) return
   if (data.dh < syncList.dh) data.dh = syncList.dh
   const pong = !syncList.rowItems
@@ -95,7 +95,7 @@ async function onmessage (m) {
     return
   }
 
-  data.syncqueue.push(syncList)
+  data.syncqueue.push(syncList) // syncList : { sessionId, dh, rowItems }
   if (data.statut === 2 && data.opWS == null) {
     setTimeout(async () => {
       while (data.sessionId === sessionId && data.ws && data.syncqueue.length) {

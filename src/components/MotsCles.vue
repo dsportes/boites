@@ -49,7 +49,8 @@
 <script>
 import { useStore } from 'vuex'
 import { computed, ref, reactive, watch, onMounted } from 'vue'
-import { data, Motscles } from '../app/modele.mjs'
+import { Motscles } from '../app/modele.mjs'
+import { MmcCompte } from '../app/operation.mjs'
 import { afficherdiagnostic } from '../app/util.mjs'
 import { VuemojiPicker } from 'vuemoji-picker'
 
@@ -133,9 +134,10 @@ export default ({
       this.nom = inp.value.substring(0, inp.selectionStart) + code + inp.value.substring(inp.selectionEnd, inp.value.length)
       this.emoji = false
     },
-    okEdit () {
-      // simulation du retour sync de maj serveur
+    async okEdit () {
       const mmc = this.motscles.finEdition()
+      await new MmcCompte().run(mmc)
+      /* simulation du retour sync de maj serveur
       setTimeout(() => {
         const c = this.compte.clone
         c.mmc = mmc
@@ -143,6 +145,7 @@ export default ({
         c.v++
         data.setCompte(c)
       }, 5000)
+      */
     }
   },
 

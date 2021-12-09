@@ -34,7 +34,8 @@
 import { computed /* , watch */ } from 'vue'
 import { useStore } from 'vuex'
 import { get, u8ToString } from '../app/util'
-import { onBoot, remplacePage, data } from '../app/modele.mjs'
+import { onBoot, remplacePage } from '../app/modele.mjs'
+import { MemoCompte } from '../app/operation.mjs'
 import { schemas } from '../app/schemas.mjs'
 import EditeurMd from '../components/EditeurMd.vue'
 import BoutonHelp from '../components/BoutonHelp.vue'
@@ -50,9 +51,10 @@ export default ({
   },
 
   methods: {
-    memook (m) {
-      // simulation du retour sync de maj serveur
-      console.log(m)
+    async memook (m) {
+      // console.log(m)
+      await new MemoCompte().run(m)
+      /* simulation locale
       setTimeout(() => {
         const c = this.compte.clone
         c.memo = m
@@ -60,6 +62,7 @@ export default ({
         data.setCompte(c)
         console.log('Après setCompte : ' + this.compte.memo)
       }, 5000)
+      */
     },
     async getcv (sid) {
       const r = await get('m1', 'getcv', { sid: sid })
