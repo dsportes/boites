@@ -6,8 +6,7 @@
           <q-btn flat label="Test de crypto" color="primary" @click="testcrypto" />
           <q-btn flat label="Test écho" color="primary" @click="testEcho"/>
           <bouton-help page="page1"/>
-          <editeur-md v-model="memo" titre="Mon titre" editable v-on:ok="memook"></editeur-md>
-          <!--q-input v-model="memo" label="Valeur de memo"/-->
+          <editeur-md :texte="memo" titre="Mon titre" editable v-on:ok="memook"></editeur-md>
         </q-card-section>
         <q-card-section class="q-ma-xs">
           <phrase-secrete v-on:ok-ps="okps" icon-valider="check" verif label-valider="OK"></phrase-secrete>
@@ -63,7 +62,7 @@ export default ({
   methods: {
     memook (m) {
       console.log(m.substring(0, 10))
-      this.memo = m
+      setTimeout(() => { this.memo = m }, 3000)
     },
     okps (ps) {
       this.ps = ps

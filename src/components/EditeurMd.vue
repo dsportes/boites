@@ -13,13 +13,12 @@
     <q-btn :disable="!md" class="icon" icon="mode_edit" size="sm" dense @click="md=false"></q-btn>
     <q-btn :disable="md" class="icon" icon="visibility" size="sm" dense @click="md=true"></q-btn>
   </div>
-  <textarea v-if="!md" id="ta" :class="taclass() + ' col font-mono'" v-model="texte" :readonly="!enedition"/>
-    <!-- @input="$emit('update:modelValue', $event.target.value)"/> -->
+  <textarea v-if="!md" id="ta" :class="taclass() + ' col font-mono'" v-model="textelocal" :readonly="!enedition"/>
   <div v-if="md && !$q.dark.isActive" :class="taclass() + ' col'">
-    <sd-light class="markdown-body" :texte="texte"/>
+    <sd-light class="markdown-body" :texte="textelocal"/>
   </div>
   <div v-if="md && $q.dark.isActive" :class="taclass() + ' col'">
-    <sd-dark class="markdown-body" :texte="texte"/>
+    <sd-dark class="markdown-body" :texte="textelocal"/>
   </div>
   <q-dialog v-model="emoji">
     <VuemojiPicker @emojiClick="emojiclick" data-source="emoji.json"/>
@@ -30,7 +29,7 @@
 import SdLight from './SdLight.vue'
 import SdDark from './SdDark.vue'
 import { VuemojiPicker } from 'vuemoji-picker'
-import { ref } from 'vue'
+import { ref, toRef, watch, onMounted } from 'vue'
 import { affidbmsg } from '../app/util.mjs'
 
 export default ({
@@ -38,17 +37,12 @@ export default ({
 
   components: { SdLight, SdDark, VuemojiPicker },
 
-  props: {
-    modelValue: String,
-    titre: String,
-    editable: Boolean,
-    tailleInit: String
-  },
-
   emits: ['ok'],
 
+  props: { texte: String, titre: String, editable: Boolean, tailleInit: String },
+
   computed: {
-    modifie () { return this.texte !== this.modelValue },
+    modifie () { return this.textelocal !== this.texte },
     taille () {
       return this.taillefx === -1 ? (this.tailleInit ? parseInt(this.tailleInit) : 0) : this.taillefx
     }
@@ -56,8 +50,6 @@ export default ({
 
   data () {
     return {
-      texte: this.modelValue,
-      enedition: false,
       taillefx: -1,
       md: true,
       emoji: false
@@ -66,17 +58,17 @@ export default ({
 
   methods: {
     ok () {
-      this.$emit('ok', this.texte)
-      this.enedition = false
+      this.$emit('ok', this.textelocal)
+      this.undo()
     },
     undo () {
-      this.texte = this.modelValue
+      this.textelocal = this.texte
       this.enedition = false
       this.md = true
     },
     startEdit () {
       this.enedition = true
-      this.texte = this.modelValue
+      this.textelocal = this.texte
       this.md = false
     },
     dlclass () { return this.$q.dark.isActive ? ' sombre' : ' clair' },
@@ -88,16 +80,33 @@ export default ({
       // const code = ':' + emoji.emoji.shortcodes[0] + ':'
       const code = emoji.emoji.unicode
       const ta = this.root.querySelector('#ta')
-      this.texte = ta.value.substring(0, ta.selectionStart) + code + ta.value.substring(ta.selectionEnd, ta.value.length)
+      this.textelocal = ta.value.substring(0, ta.selectionStart) + code + ta.value.substring(ta.selectionEnd, ta.value.length)
       this.emoji = false
     }
   },
 
-  setup () {
+  setup (props) {
+    const textelocal = ref('') // en Ref parce que sa valeur dépend du changement de la prop texte ET de enedition (sinon ça serait texte)
+    const enedition = ref(false) // en Ref pour pouvoir le traiter dans le watch
+    const texte = toRef(props, 'texte') // pour pouvoir mettre un watch sur le changement de la propriété
+
+    onMounted(() => { // initialisation de textelocal par défaut à texte
+      textelocal.value = texte.value
+    })
+
+    watch(texte, (ap, av) => { // quand texte change, textelocal ne change pas si en édition
+      // console.log('Texte : ' + ap + '\n' + av)
+      if (!enedition.value) {
+        textelocal.value = ap
+      }
+    })
+
     const root = ref(null)
     affidbmsg('Quand Firefox est en mode privé, le premier affichage des emojis peut être long (plus d\'une minute)')
     return {
-      root
+      root,
+      enedition,
+      textelocal
     }
   }
 })

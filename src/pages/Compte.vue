@@ -3,7 +3,7 @@
   <q-card v-if="tabcompte === 'apropos'" class="column align-start items-start q-pa-xs">
       <div class="titre q-my-md"><span>Code du compte : {{compte.sid}}</span><bouton-help page="page1"/></div>
       <div style="width:100%">
-        <editeur-md v-model="compte.memo" taille-init="1" titre="Mon mémo" editable v-on:ok="memook"></editeur-md>
+        <editeur-md :texte="compte.memo" taille-init="1" titre="'Mon mémo'" editable v-on:ok="memook"></editeur-md>
       </div>
   </q-card>
 
@@ -31,7 +31,7 @@
 </template>
 
 <script>
-import { computed } from 'vue'
+import { computed /* , watch */ } from 'vue'
 import { useStore } from 'vuex'
 import { get, u8ToString } from '../app/util'
 import { onBoot, remplacePage, data } from '../app/modele.mjs'
@@ -49,22 +49,17 @@ export default ({
     }
   },
 
-  watch: {
-    /*
-    compte () {
-      console.log(this.compte.sid + '/' + this.compte.memo)
-    }
-    */
-  },
-
   methods: {
     memook (m) {
       // simulation du retour sync de maj serveur
       console.log(m)
-      const c = this.compte.clone
-      c.memo = m
-      c.v++
-      data.setCompte(c)
+      setTimeout(() => {
+        const c = this.compte.clone
+        c.memo = m
+        c.v++
+        data.setCompte(c)
+        console.log('Après setCompte : ' + this.compte.memo)
+      }, 5000)
     },
     async getcv (sid) {
       const r = await get('m1', 'getcv', { sid: sid })
@@ -112,6 +107,15 @@ export default ({
     const groupes = computed(() => $store.state.db.groupes)
     const mode = computed(() => $store.state.ui.mode)
     const modeleactif = computed(() => $store.state.ui.modeleactif)
+
+    /*
+    watch(
+      () => compte.value,
+      (ap, av) => {
+        console.log('Mémo : ' + ap.memo + '\n' + av.memo)
+      }
+    )
+    */
 
     return {
       org,

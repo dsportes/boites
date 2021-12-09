@@ -68,6 +68,14 @@ export default ({
     }
   },
 
+  watch: {
+    /* Ecrire le watch dans le setup
+    compte (apres, avant) {
+      console.log('watch COMPTE ' + JSON.stringify(apres.mmc))
+    }
+    */
+  },
+
   methods: {
     startEdit () {
       this.motscles.debutEdition()
@@ -151,21 +159,39 @@ export default ({
       tab.value = mc.lcategs[0]
     })
 
+    /* watch multiple (concommittant) : inutile dans ce cas. Plusieurs watch sont possibles
     watch(
-      [() => mc, () => compte],
+      [() => mc, () => compte.value],
       (val, prevVal) => {
-        /*
-        const lmc = val[0]
-        const lcompte = val[1]._value
-        console.log('watch 0 : ' + lmc.categs.size)
-        console.log('watch 1 : ' + lcompte.v + '/' + prevVal[1]._value.v)
-        */
-        if (val[1]._value.v > motscles.version) {
+        console.log('watch 0 : ' + val[0].categs.size)
+        console.log('watch 1 : ' + val[1].v + '/' + prevVal[1].v)
+        if (val[1].v > prevVal[1].v) {
           motscles.recharger()
         }
       },
       { deep: true }
     )
+    */
+
+    watch(
+      () => compte.value, // OUI .value !!!
+      (val, prevVal) => {
+        console.log('watch compte : ' + val.sid + ' ' + val.v + '/' + prevVal.v)
+        if (val.v > prevVal.v) {
+          motscles.recharger()
+        }
+      }
+    )
+
+    /* Pas d'action sur ce watch : juste pour test
+    watch(
+      () => mc,
+      (val, prevVal) => {
+        console.log('watch mc : ' + val.categs.size)
+      },
+      { deep: true }
+    )
+    */
 
     return {
       root,
