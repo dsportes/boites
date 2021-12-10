@@ -257,7 +257,7 @@ export class Operation {
     if (compte) objets.push(compte)
 
     if (data.db) {
-      await data.db.commitRows(objets)
+      await commitRows(objets)
       this.BRK()
     }
 
@@ -294,6 +294,8 @@ export class Operation {
     // Synchroniser les CVs (et s'abonner)
     const nvvcv = await this.syncCVs(data.vcv)
     if (data.vcv < nvvcv) data.vcv = nvvcv
+
+    return [dhc, nvvcv]
   }
 }
 
@@ -741,7 +743,7 @@ export class ConnexionCompte extends OperationUI {
             await data.db.purgeAvatars(avInutiles)
           }
           this.BRK()
-          await data.db.commitRows([compte])
+          await commitRows([compte])
           this.BRK()
           if (avInutiles.size) await data.db.purgeAvatars(avInutiles)
           this.BRK()
@@ -805,7 +807,7 @@ export class ConnexionCompte extends OperationUI {
         if (maj.length) {
           store.commit('db/setInvitgrs', maj) // maj du modèle
           if (data.db) {
-            await data.db.commitRows(maj) // et de IDB
+            await commitRows(maj) // et de IDB
             this.BRK()
           }
         }
@@ -879,7 +881,7 @@ export class MemoCompte extends OperationUI {
       const memok = await crypt.crypter(data.clek, memo)
       this.BRK()
       const args = { sessionId: data.sessionId, id: c.id, memok: memok }
-      const ret = await post(this, 'm1', 'memocompte', args)
+      const ret = await post(this, 'm1', 'memoCompte', args)
       if (data.dh < ret.dh) data.dh = ret.dh
       this.finOK()
     } catch (e) {
@@ -907,7 +909,7 @@ export class MmcCompte extends OperationUI {
       const mmck = await crypt.crypter(data.clek, serial(mmc))
       this.BRK()
       const args = { sessionId: data.sessionId, id: c.id, mmck: mmck }
-      const ret = await post(this, 'm1', 'mmccompte', args)
+      const ret = await post(this, 'm1', 'mmcCompte', args)
       if (data.dh < ret.dh) data.dh = ret.dh
       this.finOK()
     } catch (e) {

@@ -31,11 +31,11 @@
 </template>
 
 <script>
+import { MemoCompte } from '../app/operations'
 import { computed /* , watch */ } from 'vue'
 import { useStore } from 'vuex'
-import { get, u8ToString } from '../app/util'
+import { get, u8ToString } from '../app/util.mjs'
 import { onBoot, remplacePage } from '../app/modele.mjs'
-import { MemoCompte } from '../app/operation.mjs'
 import { schemas } from '../app/schemas.mjs'
 import EditeurMd from '../components/EditeurMd.vue'
 import BoutonHelp from '../components/BoutonHelp.vue'
@@ -53,6 +53,7 @@ export default ({
   methods: {
     async memook (m) {
       // console.log(m)
+      // eslint-disable-next-line no-undef
       await new MemoCompte().run(m)
       /* simulation locale
       setTimeout(() => {

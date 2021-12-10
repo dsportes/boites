@@ -63,8 +63,8 @@ import PhraseSecrete from './PhraseSecrete.vue'
 import MdpAdmin from './MdpAdmin.vue'
 import NomAvatar from './NomAvatar.vue'
 import QuotasVolume from './QuotasVolume.vue'
-import { CreationCompte } from '../app/operations'
-import { Quotas } from '../app/modele'
+import { CreationCompte } from '../app/operations.mjs'
+import { Quotas } from '../app/modele.mjs'
 
 export default ({
   name: 'DialogueCreationCompte',
