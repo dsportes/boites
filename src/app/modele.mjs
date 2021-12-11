@@ -1900,74 +1900,27 @@ export class Rencontre {
 /** Secret **********************************/
 /*
   name: 'rowSecret',
-  type: 'record',
-  fields: [
-    { name: 'id', type: 'long' }, // pk1
-    { name: 'ns', type: 'int' }, // pk2
-    { name: 'ic', type: 'int' },
-    { name: 'v', type: 'int' },
-    { name: 'st', type: 'int' },
-    { name: 'txts', type: ['null', 'bytes'] },
-    { name: 'mcs', type: ['null', 'bytes'] },
-    { name: 'vsd', type: 'int' },
-    { name: 'aps', type: ['null', 'bytes'] },
-    { name: 'dups', type: ['null', 'bytes'] }
-  ]
 - `id` : id du groupe ou de l'avatar.
 - `ns` : numéro du secret.
 - `ic` : indice du contact pour un secret de couple, sinon 0.
 - `v` :
 - `st` : < 0 pour un secret _supprimé_, numéro de semaine de création pour un _temporaire_, 99999 pour un *permanent*.
-- `txts` : texte complet gzippé crypté par la clé du secret.
-- `mcs` : liste des mots clés cryptée par la clé du secret.
-- `aps` : données d'aperçu du secret cryptées par la clé du secret.
-  - `la` [] : liste des id des auteurs pour un secret de groupe ou de couple.
-  - `ap` : texte d'aperçu.
-  - `st` : 3 bytes donnant :
-    - 0:ouvert, 1:restreint, 2:archivé
-    - type de la pièce jointe : 0 inconnu, 1, 2 ... selon une liste prédéfinie.
-    - version de la pièce jointe afin que l'upload de la version suivante n'écrase pas la précédente.
-  - `ttx` : la taille du texte : 0 pas de texte
-  - `tpj` : la taille de la pièce jointe : 0 pas de pièce jointe
-  - `r` : référence à un autre secret (du même groupe, couple, avatar).
-- `dups` : couple `[id ns]` crypté par la clé du secret de l'autre exemplaire pour un secret de couple A/B.
+- `ora` : 0:ouvert, 1:restreint, 2:archivé
+- `v1` : volume du texte
+- `v2` : volume de la pièce jointe
+- `txts` : crypté par la clé du secret.
+  - `la` [] : liste des auteurs (pour un secret de couple ou de groupe).
+  - `gz` : texte gzippé
+  - `ref` : référence à un autre secret.
+- `mcs` : liste des mots clés crypté par la clé du secret.
+- `mpjs` : sérialisation de la map des pièces jointes { nom: [version, volume] }.
+- `dups` : couple `[id, ns]` crypté par la clé du secret de l'autre exemplaire pour un secret de couple A/B.
 */
 
 schemas.forSchema({
   name: 'idbSecret',
-  cols: ['id', 'ns', 'ic', 'v', 'st', 'txt', 'mc', 'vsd', 'ap', 'dupid', 'dupns']
+  cols: ['id', 'ns', 'ic', 'v', 'st', 'txt', 'mc', 'mpj', 'dupid', 'dupns']
 })
-/*  fields: [
-    { name: 'id', type: 'long' }, // pk1
-    { name: 'ns', type: 'int' }, // pk2
-    { name: 'ic', type: 'int' },
-    { name: 'v', type: 'int' },
-    { name: 'st', type: 'int' },
-    { name: 'txt', type: ['null', 'string'] },
-    { name: 'mc', type: ['null', arrayIntType] },
-    { name: 'vsd', type: 'int' },
-    { name: 'ap', type: ['null', 'bytes'] },
-    { name: 'dupid', type: ['null', 'long'] },
-    { name: 'dupns', type: ['null', 'int'] }
-  ]
-*/
-/*
-const secretAp = schemas.forSchema({
-  type: 'map',
-  values: schemas.forSchema({
-    name: 'secretAp',
-    type: 'record',
-    fields: [
-      { name: 'la', type: arrayLongType },
-      { name: 'ap', type: 'string' },
-      { name: 'st', type: 'bytes' },
-      { name: 'ttx', type: 'int' },
-      { name: 'tpj', type: 'int' },
-      { name: 'r', type: 'int' }
-    ]
-  })
-})
-*/
 
 export class Secret {
   get table () { return 'secret' }
@@ -1997,9 +1950,14 @@ export class Secret {
     const cles = this.cles
     this.txt = cles && row.txts ? await crypt.decrypter(cles, row.txts) : null
     this.mc = cles && row.mcs ? deserial(await crypt.decrypter(cles, row.mcs)) : null
+    this.mpj = {}
+    if (row.mpjs) {
+      for (const ns in row.mpjs) {
+        const nom = await crypt.decrypter(cles, ns)
+        this.mpj[nom] = row.mpjs[ns]
+      }
+    }
     this.ap = cles && row.aps ? deserial(await crypt.decrypter(cles, row.aps)) : null
-    // Mettre à jour this.ap en fonction de vsd puis mettre à jour this.vsd
-    this.vsd = 0
     const dup = cles && row.dups ? deserial(await crypt.decrypter(cles, row.dups)) : [0, 0]
     this.dupid = dup[0]
     this.dupns = dup[1]
@@ -2010,12 +1968,12 @@ export class Secret {
     const cles = this.cles
     this.txts = cles && this.txt ? await crypt.crypter(cles, this.txt) : null
     this.mcs = cles && this.mc ? await crypt.crypter(cles, serial(this.mc)) : null
-    this.aps = cles && this.ap ? await crypt.crypter(cles, serial(this.ap)) : null
+    this.mpjs = cles && this.ap ? await crypt.crypter(cles, serial(this.ap)) : null
     this.dups = cles && this.dupid && this.dupns ? await crypt.crypter(cles, serial([this.dupid, this.dupns])) : null
     const buf = schemas.serialize('rowsecret', this)
     delete this.txts
     delete this.mcs
-    delete this.aps
+    delete this.mpjs
     delete this.dups
     return buf
   }

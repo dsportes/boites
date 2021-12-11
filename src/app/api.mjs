@@ -247,7 +247,7 @@ schemas.forSchema({
 
 schemas.forSchema({
   name: 'rowsecret',
-  cols: ['id', 'ns', 'ic', 'v', 'st', 'txts', 'mcs', 'vsd', 'aps', 'dups']
+  cols: ['id', 'ns', 'ic', 'v', 'st', 'txts', 'mcs', 'mpjs', 'dups']
 })
 /*
   fields: [
@@ -258,8 +258,7 @@ schemas.forSchema({
     { name: 'st', type: 'int' },
     { name: 'txts', type: ['null', 'bytes'] },
     { name: 'mcs', type: ['null', 'bytes'] },
-    { name: 'vsd', type: 'int' },
-    { name: 'aps', type: ['null', 'bytes'] },
+    { name: 'mpjs', type: 'map', values: 'arrayint' }, [version, volume]
     { name: 'dups', type: ['null', 'bytes'] }
   ]
 */
