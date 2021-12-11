@@ -1015,18 +1015,6 @@ schemas.forSchema({
   name: 'idbAvatar',
   cols: ['id', 'v', 'st', 'vcv', 'dds', 'photo', 'info', 'lct']
 })
-/*
-  fields: [
-    { name: 'id', type: 'long' },
-    { name: 'v', type: 'int' },
-    { name: 'st', type: 'int' },
-    { name: 'vcv', type: 'int' },
-    { name: 'dds', type: 'int' },
-    { name: 'photo', type: 'string' },
-    { name: 'info', type: 'string' },
-    { name: 'lct', type: arrayLongType }
-  ]
-*/
 
 export class Avatar {
   get table () { return 'avatar' }
@@ -1525,8 +1513,7 @@ export class Invitct {
   - `x` : 2:invité, 3:actif.
   - `y` : 0:lecteur, 1:auteur, 2:administrateur.
 - `datap` : pour une invitation _en cours_, crypté par la clé publique du membre invité, référence dans la liste des membres du groupe `[idg, cleg, im]`.
-  - `idg` : id du groupe.
-  - `cleg` : clé du groupe.
+  - `nomc` : nom complet du groupe.
   - `im` : indice de membre de l'invité dans le groupe.
 - `datak` : même données que `datap` mais cryptées par la clé K du compte de l'invité, après son acceptation.
 - `ank` : annotation cryptée par la clé K de l'invité
@@ -1548,9 +1535,13 @@ export class Invitgr {
 
   get pk () { return [this.id, this.ni] }
 
-  get idg () { return this.data ? this.data.idg : null }
+  get idg () { return this.data ? this.ng.id : null }
 
-  get sidg () { return this.data ? crypt.idToSid(this.data.idg) : null }
+  get ng () { return this.data ? new NomAvatar(data.nomc) : null }
+
+  get cleg () { return this.data ? this.ng.cle : null }
+
+  get sidg () { return this.data ? crypt.idToSid(this.idg) : null }
 
   get stx () { return this.st < 0 ? -1 : Math.floor(this.st / 10) }
 
@@ -1558,6 +1549,15 @@ export class Invitgr {
 
   majCg () {
     if (this.data) data.cleg[crypt.idToSid(this.id)] = this.data.cleg
+  }
+
+  // retourne le membre correspondant si cet invitgr est invité ou actif sinon null, et le groupe
+  membreGroupe () {
+    const x = this.stx
+    if (x !== 2 && x !== 3) return null
+    const m = data.membre(this.idg, this.data.im)
+    const g = data.groupe(this.idg)
+    return [m, g]
   }
 
   async fromRow (row) {
@@ -1645,7 +1645,7 @@ export class Membre {
 
   /* retourne l'invitgr correspondant
   - si le membre est un avatar du groupe,
-  - si cet invitgr existe (invité ou actif)
+  - si cet invitgr existe et est invité ou actif,
   sinon null
   */
   invitgr () {

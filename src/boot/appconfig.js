@@ -62,5 +62,6 @@ export default boot(async ({ app, router, store /* Vue */ }) => {
   console.log('Build : ' + cfg.build)
   const salts = await getBinPub('salts')
   setSalts(salts)
+  cfg.mimes = require('../assets/mime-db.json')
   setup(gp, cfg, router, store)
 })

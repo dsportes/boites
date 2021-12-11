@@ -21,6 +21,7 @@ let $store
 let $router
 let dtf
 let idbalerte
+const extensions = {}
 
 export function setup (gp, appconfig, router, store) {
   $cfg = appconfig
@@ -29,6 +30,31 @@ export function setup (gp, appconfig, router, store) {
   $store = store
   $router = router
   dtf = new Intl.DateTimeFormat($cfg.locale, $cfg.datetimeformat)
+  for (const m in cfg.mimes) {
+    const ext = m.extensions
+    if (ext) {
+      ext.forEach(x => {
+        let e = extensions[x]
+        if (!e) {
+          e = []
+          extensions[x] = e
+        }
+        e.push(m)
+      })
+    }
+  }
+}
+
+export function mimesDeExt (n) {
+  if (!n) return null
+  const i = n.lastIndexOf('.')
+  const ext = i === -1 ? n : n.substring(i)
+  return extensions[ext]
+}
+
+export function extDeMime (m) {
+  const mt = cfg.mimes[m]
+  return mt ? mt.extensions : null
 }
 
 export function affidbmsg (msg) {
