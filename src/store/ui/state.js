@@ -7,6 +7,7 @@ export default function () {
 
     dialoguecrypto: false,
     dialoguehelp: false,
+    cartevisite: false,
     dialoguecreationcompte: false,
     confirmstopop: false,
     dialoguetestping: false,

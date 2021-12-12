@@ -81,6 +81,19 @@ export function sleep (delai) {
   return new Promise((resolve) => { setTimeout(() => resolve(), delai) })
 }
 
+export async function readFile (file) {
+  return new Promise((resolve, reject) => {
+    const image = { size: file.size, name: file.name, type: file.type }
+    const reader = new FileReader()
+    reader.addEventListener('load', (event) => {
+      image.b64 = event.target.result
+      resolve(image)
+    })
+    reader.onerror = (error) => reject(error)
+    reader.readAsDataURL(file)
+  })
+}
+
 export function edvol (vol) {
   const v = vol || 0
   if (v <= 999) return v + 'o'

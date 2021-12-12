@@ -83,6 +83,10 @@ module.exports = configure(function (ctx) {
           test: /\.md$/i,
           use: 'raw-loader'
         })
+        cfg.module.rules.push({
+          test: /\.txt$/i,
+          use: 'raw-loader'
+        })
       },
       chainWebpack (chain) {
         chain.plugin('eslint-webpack-plugin')

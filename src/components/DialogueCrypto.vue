@@ -5,6 +5,7 @@
           <div class="titre-2">Crytographie</div>
           <q-btn flat label="Test de crypto" color="primary" @click="testcrypto" />
           <q-btn flat label="Test écho" color="primary" @click="testEcho"/>
+          <q-btn flat label="CV" color="primary" @click="cartevisite=true"/>
           <bouton-help page="page1"/>
           <editeur-md :texte="memo" titre="Mon titre" editable v-on:ok="memook"></editeur-md>
         </q-card-section>
@@ -28,6 +29,7 @@
           <q-btn flat label="Fermer" icon-right="close" color="primary" @click="ps=null;$store.commit('ui/majdialoguecrypto',false)" />
         </q-card-actions>
       </q-card>
+      <carte-visite info-init="Mon info initiale" photo-init="" v-on:ok="okcv"></carte-visite>
     </q-dialog>
 </template>
 
@@ -39,13 +41,14 @@ import PhraseSecrete from '../components/PhraseSecrete.vue'
 import MdpAdmin from '../components/MdpAdmin.vue'
 import EditeurMd from '../components/EditeurMd.vue'
 import BoutonHelp from '../components/BoutonHelp.vue'
+import CarteVisite from '../components/CarteVisite.vue'
 import { post, affichermessage, afficherdiagnostic, testEcho } from '../app/util'
 
 export default ({
   name: 'DialogueCrypto',
 
   components: {
-    PhraseSecrete, MdpAdmin, EditeurMd, BoutonHelp
+    PhraseSecrete, MdpAdmin, EditeurMd, BoutonHelp, CarteVisite
   },
 
   watch: {
@@ -70,7 +73,9 @@ export default ({
     okmdp (mdp) {
       this.mdp = mdp
     },
-
+    okcv (resultat) {
+      console.log('CV changée : ' + resultat.info + '\n' + resultat.ph.substring(0, 30))
+    },
     async testcrypto () {
       await crypt.test1()
       await crypt.test2()
@@ -114,6 +119,10 @@ export default ({
       dialoguecrypto: computed({
         get: () => $store.state.ui.dialoguecrypto,
         set: (val) => $store.commit('ui/majdialoguecrypto', val)
+      }),
+      cartevisite: computed({
+        get: () => $store.state.ui.cartevisite,
+        set: (val) => $store.commit('ui/majcartevisite', val)
       })
     }
   }
