@@ -88,17 +88,18 @@ function keyToU8 (pem, pubpriv) {
   return toByteArray(s.replace(/\n/g, ''))
 }
 
-export async function genKeyPair () {
+export async function genKeyPair (asPem) {
   const rsaOpt = { name: 'RSA-OAEP', modulusLength: 2048, publicExponent: new Uint8Array([0x01, 0x00, 0x01]), hash: { name: 'SHA-256' } }
   const key = await window.crypto.subtle.generateKey(rsaOpt, true, ['encrypt', 'decrypt'])
   const jpriv = await window.crypto.subtle.exportKey('pkcs8', key.privateKey)
   const jpub = await window.crypto.subtle.exportKey('spki', key.publicKey)
-  return { publicKey: abToPem(jpub, 'PUBLIC'), privateKey: abToPem(jpriv, 'PRIVATE') }
+  if (asPem) return { publicKey: abToPem(jpub, 'PUBLIC'), privateKey: abToPem(jpriv, 'PRIVATE') }
+  return { publicKey: new Uint8Array(jpub), privateKey: new Uint8Array(jpriv) }
 }
 
 export async function crypterRSA (clepub, u8) {
   if (typeof u8 === 'string') u8 = enc.encode(u8)
-  const k = keyToU8(clepub, 'PUBLIC')
+  const k = typeof clepub === 'string' ? keyToU8(clepub, 'PUBLIC') : clepub
   // !!! SHA-1 pour que Node puisse decrypter !!!
   const key = await window.crypto.subtle.importKey('spki', arrayBuffer(k), { name: 'RSA-OAEP', hash: 'SHA-1' }, false, ['encrypt'])
   const buf = await crypto.subtle.encrypt({ name: 'RSA-OAEP' }, key, arrayBuffer(u8))
@@ -106,7 +107,7 @@ export async function crypterRSA (clepub, u8) {
 }
 
 export async function decrypterRSA (clepriv, u8) {
-  const k = keyToU8(clepriv, 'PRIVATE')
+  const k = typeof clepriv === 'string' ? keyToU8(clepriv, 'PRIVATE') : clepriv
   // !!! SHA-1 pour que Node puisse decrypter !!!
   const key = await window.crypto.subtle.importKey('pkcs8', arrayBuffer(k), { name: 'RSA-OAEP', hash: 'SHA-1' }, false, ['decrypt'])
   const r = await crypto.subtle.decrypt({ name: 'RSA-OAEP' }, key, arrayBuffer(u8))

@@ -1,6 +1,6 @@
-éditeur MD
+Liste des avatars : carte de visite / photo
 
-Base template.db3 et super.db3 : à recréer.
+Bloquer les maj en mode avion
 
 Garder la trace du dernier SQL émis (ex console.log) pour l'afficher en cas d'exception
 
