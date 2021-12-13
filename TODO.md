@@ -1,4 +1,4 @@
-Liste des avatars : carte de visite / photo
+Liste des avatars : carte de visite / photo. A poursuivre
 
 Bloquer les maj en mode avion
 
