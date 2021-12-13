@@ -44,6 +44,9 @@ export default function () {
 
     page: 'Org',
 
-    tabcompte: 'apropos'
+    tabcompte: 'etc',
+    tabavatar: 'etc',
+    tabgroupe: 'etc'
+
   }
 }

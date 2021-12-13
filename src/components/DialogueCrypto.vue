@@ -7,10 +7,10 @@
           <q-btn flat label="Test écho" color="primary" @click="testEcho"/>
           <q-btn flat label="CV" color="primary" @click="cartevisite=true"/>
           <bouton-help page="page1"/>
-          <editeur-md :texte="memo" titre="Mon titre" editable v-on:ok="memook"></editeur-md>
+          <editeur-md ref="edmd" :texte="memo" v-model="texteedite" editable label-ok="Valider" v-on:ok="memook"></editeur-md>
         </q-card-section>
         <q-card-section class="q-ma-xs">
-          <phrase-secrete v-on:ok-ps="okps" icon-valider="check" verif label-valider="OK"></phrase-secrete>
+          <phrase-secrete v-on:ok-ps="okps" icon-valider="check" verif label-ok="OK"></phrase-secrete>
           <mdp-admin class="q-ma-xs" v-on:ok-mdp="okmdp"></mdp-admin>
         </q-card-section>
         <q-card-section class="q-ma-xs">
@@ -35,7 +35,7 @@
 
 <script>
 import { useStore } from 'vuex'
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { crypt } from '../app/crypto.mjs'
 import PhraseSecrete from '../components/PhraseSecrete.vue'
 import MdpAdmin from '../components/MdpAdmin.vue'
@@ -52,19 +52,24 @@ export default ({
   },
 
   watch: {
+    texteedite (ap) {
+      console.log(ap)
+    }
   },
 
   data () {
     return {
       ps: null,
       mdp: null,
-      memo: ''
+      memo: 'Mon beau memo',
+      texteedite: ''
     }
   },
 
   methods: {
     memook (m) {
       console.log(m.substring(0, 10))
+      this.edmd.undo()
       setTimeout(() => { this.memo = m }, 3000)
     },
     okps (ps) {
@@ -114,8 +119,10 @@ export default ({
   },
 
   setup () {
+    const edmd = ref(null)
     const $store = useStore()
     return {
+      edmd,
       dialoguecrypto: computed({
         get: () => $store.state.ui.dialoguecrypto,
         set: (val) => $store.commit('ui/majdialoguecrypto', val)

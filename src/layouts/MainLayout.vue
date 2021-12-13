@@ -49,30 +49,45 @@
       </q-toolbar>
 
       <q-toolbar inset>
-        <q-toolbar-title>
-        <span v-if="page !== 'Synchro' && compte != null" class="titre-4 cursor-pointer q-px-xs" @click="tocompte">Compte</span>
-        <q-icon v-if="page !== 'Synchro' && (avatar != null || groupe != null)" class="q-px-xs" size="xs" name="label_important"/>
-        <q-avatar v-if="page !== 'Synchro' && avatar != null" size="sm">
-          <img v-if="avatar.icone.length !== 0" :src="avatar.icone">
-          <q-icon v-else size="sm" name="face"/>
-        </q-avatar>
-        <span v-if="page !== 'Synchro' && avatar != null" class="titre-4 cursor-pointer q-px-xs" @click="toavatar">{{avatar.label}}</span>
-        <q-avatar v-if="page !== 'Synchro' && groupe != null" size="md">
-          <img v-if="groupe.icone.length !== 0" :src="groupe.icone">
-          <q-icon v-else size="md" name="group"/>
-        </q-avatar>
+        <q-toolbar-title class="row no-wrap justify-around">
+          <div :class="'col-4 cag ' + (page === 'Synchro' || compte == null ? 'disabled' : '')" @click="tocompte">Compte</div>
+          <div :class="'col-4 cag ' + (page === 'Synchro' || compte == null ? 'disabled' : '')" @click="toavatar">
+            {{ avatar != null ? avatar.label : 'Avatar' }}
+          </div>
+          <div :class="'col-4 cag ' + (page === 'Synchro' || compte == null ? 'disabled' : '')" @click="togroupe">
+            {{ groupe != null ? groupe.label : 'Groupe' }}
+          </div>
         </q-toolbar-title>
         <q-btn flat dense round icon="people" aria-label="Contacts"/>
         <q-btn flat dense round icon="menu" aria-label="Menu" @click="$store.commit('ui/majmenuouvert', true)"/>
       </q-toolbar>
 
       <q-toolbar v-if="page === 'Compte'">
-        <div style="max-width:100vw;padding-right:10px">
-        <q-tabs v-model="tabcompte" inline-label no-caps dense outside-arrows mobile-arrows>
-          <q-tab name="apropos" label="A propos" />
-          <q-tab name="motscles" label="Mots clés" />
+        <div style="width:100vw;">
+        <q-tabs v-model="tabcompte" inline-label no-caps dense>
+          <q-tab name="etc" label="Etc." />
           <q-tab name="avatars" label="Avatars" />
           <q-tab name="groupes" label="Groupes" />
+        </q-tabs>
+        </div>
+      </q-toolbar>
+
+      <q-toolbar v-if="page === 'Avatar'">
+        <div style="width:100vw;">
+        <q-tabs v-model="tabavatar" inline-label no-caps dense>
+          <q-tab name="etc" label="Etc." />
+          <q-tab name="contacts" label="Contacts" />
+          <q-tab name="secrets" label="Secrets" />
+        </q-tabs>
+        </div>
+      </q-toolbar>
+
+      <q-toolbar v-if="page === 'Groupe'">
+        <div style="width:100vw;">
+        <q-tabs v-model="tabgroupe" inline-label no-caps dense>
+          <q-tab name="etc" label="Etc." />
+          <q-tab name="membres" label="Membres" />
+          <q-tab name="secrets" label="Secrets" />
         </q-tabs>
         </div>
       </q-toolbar>
@@ -203,11 +218,36 @@ export default {
     },
 
     tocompte () {
+      if (this.page === 'Synchro' || !this.compte) return
       remplacePage('Compte')
     },
 
     toavatar () {
-      remplacePage('Avatar')
+      if (this.page === 'Synchro' || !this.compte) return
+      if (this.avatar) {
+        remplacePage('Avatar')
+        return
+      }
+      const la = this.compte.avatars // leurs na
+      if (la.length === 1) {
+        const na = la[0]
+        const av = data.avatar(na.id)
+        this.$store.commit('db/majavatar', av)
+        remplacePage('Avatar')
+      } else {
+        this.tabcompte = 'avatars'
+        remplacePage('Compte')
+      }
+    },
+
+    togroupe () {
+      if (this.page === 'Synchro' || !this.compte) return
+      if (this.groupe) {
+        remplacePage('Groupe')
+        return
+      }
+      this.tabcompte = 'groupes'
+      remplacePage('Compte')
     },
 
     deconnexion () {
@@ -273,6 +313,14 @@ export default {
       get: () => $store.state.ui.tabcompte,
       set: (val) => $store.commit('ui/majtabcompte', val)
     })
+    const tabavatar = computed({
+      get: () => $store.state.ui.tabavatar,
+      set: (val) => $store.commit('ui/majtabavatar', val)
+    })
+    const tabgroupe = computed({
+      get: () => $store.state.ui.tabgroupe,
+      set: (val) => $store.commit('ui/majtabgroupe', val)
+    })
 
     const page = computed(() => $store.state.ui.page)
     const orgicon = computed(() => $store.getters['ui/orgicon'])
@@ -324,7 +372,9 @@ export default {
       sessionId,
       msgdegrade,
       statut,
-      tabcompte
+      tabcompte,
+      tabavatar,
+      tabgroupe
     }
   }
 }
@@ -338,8 +388,15 @@ export default {
   opacity: 0
   transform: translateX(50%) /* CA BUG : Login ne se réaffichae pas */
 
-.q-toolbar
-  height: $toolbarheight !important
+.cag
+  text-align: center
+  padding: 2px 0
+  max-height: 1.5rem
+  font-family: Calibri-Light
+  font-size: 1.2rem
+  overflow: hidden
+  text-overflow: ellipsis
+  cursor: pointer
 
 .labeltitre
   padding: 0 2px

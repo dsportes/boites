@@ -846,24 +846,6 @@ export class Quotas {
 }
 
 /** Compte **********************************/
-/*
-const compteMacType = schemas.forSchema({ // map des avatars du compte
-  type: 'map',
-  values: schemas.forSchema({
-    name: 'mac',
-    type: 'record',
-    fields: [
-      { name: 'nomc', type: 'string' },
-      { name: 'cpriv', type: 'string' }
-    ]
-  })
-})
-
-const compteMmcType = schemas.forSchema({ // map des avatars du compte
-  type: 'map',
-  values: 'string'
-})
-*/
 
 schemas.forSchema({
   name: 'idbCompte',
@@ -913,6 +895,13 @@ export class Compte {
     if (!this.memo) return this.sid
     const i = this.memo.indexOf('/n')
     return i === -1 ? this.memo : this.memo.substring(0, i)
+  }
+
+  get avatars () {
+    const l = []
+    for (const avsid in this.mac) l.push(this.mac[avsid].na)
+    if (l.length > 1) l.sort((a, b) => a.nom > b.nom ? 1 : (a.nom === b.nom ? 0 : -1))
+    return l
   }
 
   async fromRow (row) {

@@ -1,14 +1,18 @@
 <template>
 <q-page>
-  <q-card v-if="tabcompte === 'apropos'" class="column align-start items-start q-pa-xs">
-      <div class="titre q-my-md"><span>Code du compte : {{compte.sid}}</span><bouton-help page="page1"/></div>
-      <div style="width:100%">
-        <editeur-md :texte="compte.memo" taille-init="1" titre="'Mon mémo'" editable v-on:ok="memook"></editeur-md>
-      </div>
-  </q-card>
 
-  <q-card v-if="tabcompte === 'motscles'" class="column align-start items-start">
-    <mots-cles></mots-cles>
+  <q-card v-if="tabcompte === 'etc'" class="column align-start items-start q-pa-xs">
+    <q-list bordered style="width:100%;">
+      <q-expansion-item group="etc" label="Identité" default-opened header-class="titre-2 bg-primary text-white">
+        <div class="titre q-my-md"><span>Code du compte : {{compte.sid}}</span><bouton-help page="page1"/></div>
+        <div style="width:100%">
+          <editeur-md ref="memoed" :texte="compte.memo" taille-m editable label-ok="OK" v-on:ok="memook"></editeur-md>
+        </div>
+      </q-expansion-item>
+      <q-expansion-item group="etc" label="Mots clés" header-class="titre-2 bg-secondary text-white">
+        <mots-cles></mots-cles>
+      </q-expansion-item>
+    </q-list>
   </q-card>
 
   <q-card v-if="tabcompte === 'avatars'" class="column align-start items-start">
@@ -32,7 +36,7 @@
 
 <script>
 import { MemoCompte } from '../app/operations'
-import { computed /* , watch */ } from 'vue'
+import { computed, ref /* , watch */ } from 'vue'
 import { useStore } from 'vuex'
 import { get, u8ToString } from '../app/util.mjs'
 import { onBoot, remplacePage } from '../app/modele.mjs'
@@ -52,6 +56,7 @@ export default ({
 
   methods: {
     async memook (m) {
+      this.memoed.undo()
       // console.log(m)
       // eslint-disable-next-line no-undef
       await new MemoCompte().run(m)
@@ -90,6 +95,7 @@ export default ({
   },
 
   setup () {
+    const memoed = ref(null)
     onBoot()
     const $store = useStore()
     const org = computed(() => $store.state.ui.org)
@@ -122,6 +128,7 @@ export default ({
     */
 
     return {
+      memoed,
       org,
       compte,
       avatar,
