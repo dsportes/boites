@@ -1,5 +1,3 @@
-Liste des avatars : carte de visite / photo. A poursuivre
-
 Bloquer les maj en mode avion
 
 Garder la trace du dernier SQL émis (ex console.log) pour l'afficher en cas d'exception
