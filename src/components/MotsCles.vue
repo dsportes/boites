@@ -180,22 +180,15 @@ export default ({
     watch(
       () => compte.value, // OUI .value !!!
       (val, prevVal) => {
-        console.log('watch compte : ' + val.sid + ' ' + val.v + '/' + prevVal.v)
-        if (val.v > prevVal.v) {
-          motscles.recharger()
+        // A la déconnexion, val est null !!!
+        if (val) {
+          console.log('watch compte : ' + val.sid + ' ' + val.v + '/' + prevVal.v)
+          if (val.v > prevVal.v) {
+            motscles.recharger()
+          }
         }
       }
     )
-
-    /* Pas d'action sur ce watch : juste pour test
-    watch(
-      () => mc,
-      (val, prevVal) => {
-        console.log('watch mc : ' + val.categs.size)
-      },
-      { deep: true }
-    )
-    */
 
     return {
       root,

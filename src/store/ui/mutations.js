@@ -152,10 +152,6 @@ export function majmenuouvert (state, val) {
   state.menuouvert = val
 }
 
-export function majcartevisite (state, val) {
-  state.cartevisite = val
-}
-
 export function majidblec (state, { table, st, vol, nbl }) {
   const x = state.idblec
   x[table] = { st, vol, nbl }

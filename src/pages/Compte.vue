@@ -6,7 +6,7 @@
       <q-expansion-item group="etc" label="Identité" default-opened header-class="titre-2 bg-primary text-white">
         <div class="titre q-my-md"><span>Code du compte : {{compte.sid}}</span><bouton-help page="page1"/></div>
         <div style="width:100%">
-          <editeur-md ref="memoed" :texte="compte.memo" taille-m editable label-ok="OK" v-on:ok="memook"></editeur-md>
+          <editeur-md ref="memoed" :texte="compte.memo" :sid="compte.sid" taille-m editable label-ok="OK" v-on:ok="memook"></editeur-md>
         </div>
       </q-expansion-item>
       <q-expansion-item group="etc" label="Mots clés" header-class="titre-2 bg-secondary text-white">
@@ -17,11 +17,14 @@
 
   <q-card v-if="tabcompte === 'avatars'" class="column align-start items-start">
     <h6>Liste des avatars du compte</h6>
-    <div v-for="e in compte.mac" :key="e.na.sid">
-        <div>{{e.na.sid}} - {{e.na.nomc}} {{e.cpriv.length}}</div>
-        <q-btn label="GET cv" color="primary" @click="getcv(e.na.sid)" />
-        <q-btn label="GET clepub" color="primary" @click="getclepub(e.na.sid)" />
-        <q-btn label="Vue Avatar" color="primary" @click="toAvatar(e.na.sid)" />
+    <div v-for="e in compte.mac" :key="e.na.id" style="width:100%">
+      <apercu-avatar :avatar-id="e.na.id"/>
+<!--
+      <div>{{e.na.sid}} - {{e.na.nomc}} {{e.cpriv.length}}</div>
+      <q-btn label="Edit CV" color="primary" @click="editcv(e.na.id)" />
+      <q-btn label="GET clepub" color="primary" @click="getclepub(e.na.sid)" />
+      <q-btn label="Vue Avatar" color="primary" @click="toAvatar(e.na.id)" />
+-->
     </div>
   </q-card>
 
@@ -35,22 +38,22 @@
 </template>
 
 <script>
-import { MemoCompte } from '../app/operations'
+import { MemoCompte } from '../app/operations.mjs'
 import { computed, ref /* , watch */ } from 'vue'
 import { useStore } from 'vuex'
-import { get, u8ToString } from '../app/util.mjs'
-import { onBoot, remplacePage } from '../app/modele.mjs'
-import { schemas } from '../app/schemas.mjs'
+// import { get, u8ToString } from '../app/util.mjs'
+import { onBoot } from '../app/modele.mjs'
+// import { schemas } from '../app/schemas.mjs'
 import EditeurMd from '../components/EditeurMd.vue'
 import BoutonHelp from '../components/BoutonHelp.vue'
 import MotsCles from '../components/MotsCles.vue'
+import ApercuAvatar from '../components/ApercuAvatar.vue'
 
 export default ({
   name: 'Compte',
-  components: { EditeurMd, BoutonHelp, MotsCles },
+  components: { EditeurMd, BoutonHelp, MotsCles, ApercuAvatar },
   data () {
     return {
-      tab: 'apropos'
     }
   },
 
@@ -69,7 +72,8 @@ export default ({
         console.log('Après setCompte : ' + this.compte.memo)
       }, 5000)
       */
-    },
+    }
+    /*
     async getcv (sid) {
       const r = await get('m1', 'getcv', { sid: sid })
       if (r) {
@@ -84,14 +88,11 @@ export default ({
         console.log(c)
       }
     },
-    toAvatar (sid) {
-      this.avatar = this.avatars[sid]
+    toAvatar (id) {
+      this.avatar = data.avatar(id)
       remplacePage('Avatar')
     },
-    toGroupe (sid) {
-      this.groupe = this.groupes[sid]
-      remplacePage('Groupe')
-    }
+    */
   },
 
   setup () {

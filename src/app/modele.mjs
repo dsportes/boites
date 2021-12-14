@@ -983,7 +983,8 @@ export class NomAvatar {
     } else {
       const i = n.lastIndexOf('@')
       this.nom = n.substring(0, i)
-      this.rndb = b64ToU8(n.substring(i + 1))
+      this.sfx = n.substring(i + 1)
+      this.rndb = b64ToU8(this.sfx)
     }
   }
 
@@ -1059,8 +1060,12 @@ export class Avatar {
     return this.photo || ''
   }
 
+  async cvToRow (ph, info) {
+    return await crypt.crypter(this.na.cle, serial([ph, info]))
+  }
+
   async toRow () { // après maj éventuelle de cv et / ou lct
-    this.cva = await crypt.crypter(this.na.cle, serial([this.photo, this.info]))
+    this.cva = await this.cvToRow(this.photo, this.info)
     this.lctk = await crypt.crypter(data.clek, serial(this.lct))
     const buf = schemas.serialize('rowavatar', this)
     delete this.cva

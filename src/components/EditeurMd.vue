@@ -1,18 +1,33 @@
 <template>
-<div ref="root" :class="('flow' + taille) + dlclass + ' column justify start'">
-  <q-toolbar>
-    <q-btn :disable="taille===(tailleM?1:0)" class="icon" icon="zoom_out" size="md" dense flat push @click="taille=taille-1"></q-btn>
-    <q-btn :disable="taille===2" class="icon" icon="zoom_in" size="md" push flat dense @click="taille=taille+1"></q-btn>
-    <q-btn :disable="!md" class="icon" size="md" label="TXT" :color="md ? 'warning' : 'purple'" push flat dense @click="md=false"></q-btn>
-    <q-btn :disable="md" class="icon" size="md" label="HTML" dense flat push @click="md=true"></q-btn>
-    <q-btn v-if="editable" :disable="md" class="icon" icon="face" size="md" dense flat push @click="emoji=true"></q-btn>
-    <q-btn v-if="modifie" class="icon" icon="undo" size="md" dense flat push @click="undo"></q-btn>
-    <q-btn v-if="modifie && labelOk" class="icon" icon="check" :label="labelOk" size="md" dense flat push color="warning" @click="ok"></q-btn>
-  </q-toolbar>
-  <textarea v-if="!md" :class="taclass + ' font-mono'" v-model="textelocal" :readonly="!editable"/>
-  <div v-else :class="taclass">
-    <show-html class="markdown-body" :texte="textelocal"/>
+<div>
+  <div ref="root1" v-if="!max" :class="'column justify start flow' + taille + dlclass">
+    <q-toolbar>
+      <q-btn :disable="taille===(tailleM?1:0)" class="icon" icon="zoom_out" size="md" dense flat push @click="taille=taille-1;max=false"></q-btn>
+      <q-btn :disable="taille===2" class="icon" icon="zoom_in" size="md" push flat dense @click="taille=taille+1;max=taille===2"></q-btn>
+      <q-btn :disable="!md" class="icon" size="md" label="TXT" :color="md ? 'warning' : 'purple'" push flat dense @click="md=false"></q-btn>
+      <q-btn :disable="md" class="icon" size="md" label="HTML" dense flat push @click="md=true"></q-btn>
+      <q-btn v-if="editable" :disable="md" class="icon" icon="face" size="md" dense flat push @click="emoji=true"></q-btn>
+      <q-btn v-if="modifie" class="icon" icon="undo" size="md" dense flat push @click="undo"></q-btn>
+      <q-btn v-if="modifie && labelOk" class="icon" icon="check" :label="labelOk" size="md" dense flat push color="warning" @click="ok"></q-btn>
+    </q-toolbar>
+    <textarea v-if="!md" :class="taclass + ' font-mono'" v-model="textelocal" :readonly="!editable"/>
+    <div v-else :class="taclass"><show-html class="markdown-body" :texte="textelocal"/></div>
   </div>
+  <q-dialog v-model="max" maximized transition-show="slide-up" transition-hide="slide-down">
+    <div ref="root2" :class="'column justify start flow' + taille + dlclass">
+      <q-toolbar>
+        <q-btn :disable="taille===(tailleM?1:0)" class="icon" icon="zoom_out" size="md" dense flat push @click="taille=taille-1;max=false"></q-btn>
+        <q-btn :disable="taille===2" class="icon" icon="zoom_in" size="md" push flat dense @click="taille=taille+1;max=taille===2"></q-btn>
+        <q-btn :disable="!md" class="icon" size="md" label="TXT" :color="md ? 'warning' : 'purple'" push flat dense @click="md=false"></q-btn>
+        <q-btn :disable="md" class="icon" size="md" label="HTML" dense flat push @click="md=true"></q-btn>
+        <q-btn v-if="editable" :disable="md" class="icon" icon="face" size="md" dense flat push @click="emoji=true"></q-btn>
+        <q-btn v-if="modifie" class="icon" icon="undo" size="md" dense flat push @click="undo"></q-btn>
+        <q-btn v-if="modifie && labelOk" class="icon" icon="check" :label="labelOk" size="md" dense flat push color="warning" @click="ok"></q-btn>
+      </q-toolbar>
+      <textarea v-if="!md" :class="taclass + ' font-mono'" v-model="textelocal" :readonly="!editable"/>
+      <div v-else :class="taclass"><show-html class="markdown-body" :texte="textelocal"/></div>
+    </div>
+  </q-dialog>
   <q-dialog v-model="emoji">
     <VuemojiPicker @emojiClick="emojiclick" data-source="emoji.json"/>
   </q-dialog>
@@ -38,7 +53,7 @@ export default ({
       return this.$q.dark.isActive ? ' sombre' : ' clair'
     },
     taclass () {
-      return 'ta' + this.taille + ' col' + (this.$q.dark.isActive ? ' sombre' : ' clair') + (this.modifie ? ' borderw' : ' borderp')
+      return 'col ta' + this.taille + (this.$q.dark.isActive ? ' sombre' : ' clair') + (this.modifie ? ' borderw' : ' borderp') + ' font-mono'
     },
     modifie () {
       return this.textelocal !== this.texteinp
@@ -54,12 +69,16 @@ export default ({
   data () {
     return {
       md: true,
-      emoji: false
+      emoji: false,
+      max: false
     }
   },
 
   methods: {
     ok () {
+      this.max = false
+      this.taille = this.tailleM ? 1 : 0
+      this.md = false
       this.$emit('ok', this.textelocal)
     },
     undo () {
@@ -69,14 +88,16 @@ export default ({
       // console.log(JSON.stringify(emoji.emoji.shortcodes))
       // const code = ':' + emoji.emoji.shortcodes[0] + ':'
       const code = emoji.emoji.unicode
-      const ta = this.root.querySelector('textarea')
+      const r = this.max ? this.root2 : this.root1
+      const ta = r.querySelector('textarea')
       this.textelocal = ta.value.substring(0, ta.selectionStart) + code + ta.value.substring(ta.selectionEnd, ta.value.length)
       this.emoji = false
     }
   },
 
   setup (props) {
-    const root = ref(null)
+    const root1 = ref(null)
+    const root2 = ref(null)
     const taille = ref(0)
     const tailleM = toRef(props, 'tailleM')
     const textelocal = ref('') // en Ref parce que sa valeur dépend du changement de la prop texte ET de l'état d'édition
@@ -101,7 +122,8 @@ export default ({
     affidbmsg('Quand Firefox est en mode privé, le premier affichage des emojis peut être long (plus d\'une minute)')
 
     return {
-      root,
+      root1,
+      root2,
       taille,
       texteinp,
       textelocal
@@ -127,25 +149,19 @@ $ht1: 200px
   padding: 2px 0 !important
   height: 25px !important
 .icon
-  margin-right: 8px
+  margin-right: 2px
 .flow0
-  position: relative
   height: $ht0 !important
   padding: 2px
   overflow: hidden
 .flow1
-  position: relative
   height: $ht1 !important
   padding: 2px
   overflow: hidden
 .flow2
-  position: fixed
-  top: 0
-  left: 0
-  z-index: 2000
-  width: 100vw
   height: 100vh
-  padding: 2px
+  width: 100vw
+  padding: 5px
 .borderw
   border: 1px solid $warning
 .borderp
@@ -156,6 +172,6 @@ $ht1: 200px
   padding: 2px
 .ta0
   overflow-y: hidden
-.ta1, .ta2
+.ta1, ta2
   overflow-y: scroll
 </style>

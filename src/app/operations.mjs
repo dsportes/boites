@@ -868,7 +868,6 @@ Mise à jour du mémo du compte
 export class MemoCompte extends OperationUI {
   constructor () {
     super('Mise à jour du mémo du compte', OUI, SELONMODE)
-    this.opsync = true
   }
 
   excAffichages () { return [this.excAffichage1f] }
@@ -896,7 +895,6 @@ Mise à jour des mots clés du compte
 export class MmcCompte extends OperationUI {
   constructor () {
     super('Mise à jour des mots clés du compte', OUI, SELONMODE)
-    this.opsync = true
   }
 
   excAffichages () { return [this.excAffichage1f] }
@@ -910,6 +908,30 @@ export class MmcCompte extends OperationUI {
       this.BRK()
       const args = { sessionId: data.sessionId, id: c.id, mmck: mmck }
       const ret = await post(this, 'm1', 'mmcCompte', args)
+      if (data.dh < ret.dh) data.dh = ret.dh
+      this.finOK()
+    } catch (e) {
+      await this.finKO(e)
+    }
+  }
+}
+
+/******************************************************
+Mise à jour de la carte de visite d'un avatar
+*/
+export class CvAvatar extends OperationUI {
+  constructor () {
+    super('Mise à jour de la carte de visite d\'un avatar', OUI, SELONMODE)
+  }
+
+  excAffichages () { return [this.excAffichage1f] }
+
+  // excActions(), défaut de Operation
+
+  async run (id, phinfo) {
+    try {
+      const args = { sessionId: data.sessionId, id: id, phinfo: phinfo }
+      const ret = await post(this, 'm1', 'cvAvatar', args)
       if (data.dh < ret.dh) data.dh = ret.dh
       this.finOK()
     } catch (e) {

@@ -5,7 +5,7 @@
           <div class="titre-2">Crytographie</div>
           <q-btn flat label="Test de crypto" color="primary" @click="testcrypto" />
           <q-btn flat label="Test écho" color="primary" @click="testEcho"/>
-          <q-btn flat label="CV" color="primary" @click="cartevisite=true"/>
+          <q-btn flat label="CV" color="primary" @click="cvloc=true"/>
           <bouton-help page="page1"/>
           <editeur-md ref="edmd" :texte="memo" v-model="texteedite" editable label-ok="Valider" v-on:ok="memook"></editeur-md>
         </q-card-section>
@@ -29,7 +29,15 @@
           <q-btn flat label="Fermer" icon-right="close" color="primary" @click="ps=null;$store.commit('ui/majdialoguecrypto',false)" />
         </q-card-actions>
       </q-card>
-      <carte-visite info-init="Mon info initiale" photo-init="" v-on:ok="okcv"></carte-visite>
+      <q-dialog v-model="cvloc">
+        <carte-visite
+          :nomc="nomc"
+          info-init="Mon info initiale"
+          photo-init=""
+          @ok="okcv"
+          @annuler="annulercv">
+        </carte-visite>
+      </q-dialog>
     </q-dialog>
 </template>
 
@@ -37,6 +45,7 @@
 import { useStore } from 'vuex'
 import { computed, ref } from 'vue'
 import { crypt } from '../app/crypto.mjs'
+import { NomAvatar } from '../app/modele.mjs'
 import PhraseSecrete from '../components/PhraseSecrete.vue'
 import MdpAdmin from '../components/MdpAdmin.vue'
 import EditeurMd from '../components/EditeurMd.vue'
@@ -62,7 +71,9 @@ export default ({
       ps: null,
       mdp: null,
       memo: 'Mon beau memo',
-      texteedite: ''
+      cvloc: false,
+      texteedite: '',
+      nomc: new NomAvatar('Toto', true).nomc
     }
   },
 
@@ -80,6 +91,10 @@ export default ({
     },
     okcv (resultat) {
       console.log('CV changée : ' + resultat.info + '\n' + resultat.ph.substring(0, 30))
+      this.cvloc = false
+    },
+    annulercv () {
+      this.cvloc = false
     },
     async testcrypto () {
       await crypt.test1()
@@ -126,10 +141,6 @@ export default ({
       dialoguecrypto: computed({
         get: () => $store.state.ui.dialoguecrypto,
         set: (val) => $store.commit('ui/majdialoguecrypto', val)
-      }),
-      cartevisite: computed({
-        get: () => $store.state.ui.cartevisite,
-        set: (val) => $store.commit('ui/majcartevisite', val)
       })
     }
   }
