@@ -5,14 +5,17 @@
     <div class="col column items-center q-pl-md">
       <div><span class='titre-3'>{{ids[1]}}</span><span class='titre-5'>@{{ids[2]}}</span><bouton-help page="p1"/></div>
       <div>Identifiant: <span class='font-mono'>{{ids[0]}}</span></div>
-      <q-btn flat dense size="md" color="primary" label="Editer la carte de visite" @click="cvloc=true"/>
+      <div class="row q-px-md">
+        <q-btn v-if="editer" class="q-px-md" flat dense size="sm" color="primary" icon="edit" label="Editer" @click="cvloc=true"/>
+        <q-btn v-if="page" class="q-px-md" flat dense size="sm" color="primary" icon="navigate_next" label="Page" @click="toAvatar"/>
+      </div>
     </div>
   </div>
   <div class="showhtml">
     <show-html :texte="info"/>
   </div>
   <q-dialog v-model="cvloc">
-    <carte-visite :nomc="nomc" :photo-init="photo" :info-init="info" @ok="validercv" @annuler="annulercv"/>
+    <carte-visite :nomc="nomc" :close="closedialog" :photo-init="photo" :info-init="info" @ok="validercv"/>
   </q-dialog>
 </div>
 </template>
@@ -24,14 +27,16 @@ import BoutonHelp from './BoutonHelp.vue'
 import ShowHtml from './ShowHtml.vue'
 import CarteVisite from './CarteVisite.vue'
 import { cfg } from '../app/util.mjs'
-import { data } from '../app/modele.mjs'
+import { data, remplacePage } from '../app/modele.mjs'
 import { CvAvatar } from '../app/operations.mjs'
 
 export default ({
   name: 'ApercuAvatar',
 
   props: {
-    avatarId: Number
+    avatarId: Number,
+    editer: Boolean,
+    page: Boolean
   },
 
   components: {
@@ -39,23 +44,13 @@ export default ({
   },
 
   computed: {
-    photo () {
-      return this.a.av && this.a.av.photo ? this.a.av.photo : this.personne
-    },
-    ids () {
-      if (this.a.av) return [this.a.av.sid, this.a.av.na.nom, this.a.av.na.sfx]
-      else return ['', '', '']
-    },
-    nomc () {
-      return this.a.av ? this.a.av.na.nomc : ''
-    },
-    info () {
-      return this.a.av ? this.a.av.info : ''
-    }
+    photo () { return this.a.av && this.a.av.photo ? this.a.av.photo : this.personne },
+    ids () { return this.a.av ? [this.a.av.sid, this.a.av.na.nom, this.a.av.na.sfx] : ['', '', ''] },
+    nomc () { return this.a.av ? this.a.av.na.nomc : '' },
+    info () { return this.a.av ? this.a.av.info : '' }
   },
 
-  watch: {
-  },
+  watch: { },
 
   data () {
     return {
@@ -64,14 +59,17 @@ export default ({
   },
 
   methods: {
-    async validercv (resultat) {
-      this.cvloc = false
-      // console.log('CV changée : ' + resultat.info + '\n' + resultat.ph.substring(0, 30))
-      const cvinfo = await this.a.av.cvToRow(resultat.ph, resultat.info)
-      await new CvAvatar().run(this.a.av.id, cvinfo)
+    toAvatar () {
+      this.avatar = this.a.av
+      remplacePage('Avatar')
     },
-    annulercv () {
-      this.cvloc = false
+    closedialog () { this.cvloc = false },
+    async validercv (resultat) {
+      if (resultat) {
+        // console.log('CV changée : ' + resultat.info + '\n' + resultat.ph.substring(0, 30))
+        const cvinfo = await this.a.av.cvToRow(resultat.ph, resultat.info)
+        await new CvAvatar().run(this.a.av.id, cvinfo)
+      }
     }
   },
 
@@ -88,6 +86,11 @@ export default ({
 
     const avatars = computed({ // Pour tracker les retours mettant à jour l'avatar
       get: () => { return $store.state.db.avatars }
+    })
+
+    const avatar = computed({
+      get: () => { const a = $store.state.db.avatar; return a || { ko: true } },
+      set: (val) => $store.commit('db/majavatar', val)
     })
 
     onMounted(() => {
@@ -107,6 +110,7 @@ export default ({
 
     return {
       a,
+      avatar,
       avatarDeId,
       personne
     }
@@ -124,10 +128,10 @@ export default ({
   border-radius: 5px
   border: 1px solid grey
 .ph
-  border-radius: 32px
+  border-radius: $tphradius
   border: 1px solid grey
-  width: 64px
-  height: 64px
+  width: $tph
+  height: $tph
 .showhtml
   width: 100%
   height: 3rem

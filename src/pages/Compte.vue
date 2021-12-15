@@ -18,13 +18,7 @@
   <q-card v-if="tabcompte === 'avatars'" class="column align-start items-start">
     <h6>Liste des avatars du compte</h6>
     <div v-for="e in compte.mac" :key="e.na.id" style="width:100%">
-      <apercu-avatar :avatar-id="e.na.id"/>
-<!--
-      <div>{{e.na.sid}} - {{e.na.nomc}} {{e.cpriv.length}}</div>
-      <q-btn label="Edit CV" color="primary" @click="editcv(e.na.id)" />
-      <q-btn label="GET clepub" color="primary" @click="getclepub(e.na.sid)" />
-      <q-btn label="Vue Avatar" color="primary" @click="toAvatar(e.na.id)" />
--->
+      <apercu-avatar page editer :avatar-id="e.na.id"/>
     </div>
   </q-card>
 

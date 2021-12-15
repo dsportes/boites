@@ -6,7 +6,7 @@
     </q-card-section>
     <q-separator />
     <q-card-section class="row justify-start">
-      <div><img :src="photolocal" width="64" height="64" class="ph"/></div>
+      <div><img :src="photolocal" :width="taillephoto.width" :height="taillephoto.height" class="ph"/></div>
       <div class="col column jusitify-center">
         <q-btn icon="mode_edit" label="Changer la photo" @click="enedition=true" />
         <q-btn :disable="!modifph" icon="undo" label="Garder la photo initiale" @click="undoph" />
@@ -19,6 +19,7 @@
         <div class="row justify-center">
           <q-btn flat :disable="camOn" color="primary" label="Start caméra" @click="startCam" />
           <q-btn flat :disable="!camOn" label="Stop caméra" @click="stopCam" />
+          <q-btn flat :disable="camOn" icon="flip_camera_ios" @click="flipCam" />
         </div>
         <q-btn flat :disable="!camOn" color="primary" label="Prendre une photo" @click="snapCam" />
         <div class="row justify-center">
@@ -37,7 +38,7 @@
           <cropper ref="cropper" class="cropper"
             :src="file.b64"
             :stencil-props="{aspectRatio:1/1}"
-            :canvas="{height:64,width:64}"></cropper>
+            :canvas="taillephoto"></cropper>
         </div>
       </div>
     </q-card-section>
@@ -62,13 +63,16 @@ import { NomAvatar } from '../app/modele.mjs'
 import Webcam from 'webcam-easy'
 import { Cropper } from 'vue-advanced-cropper'
 
+const TPH = { height: 32, width: 32 }
+
 export default ({
   name: 'CarteVisite',
 
   props: {
     photoInit: String,
     infoInit: String,
-    nomc: String
+    nomc: String,
+    close: Function
   },
 
   components: {
@@ -76,6 +80,7 @@ export default ({
   },
 
   computed: {
+    taillephoto () { return TPH },
     modif () {
       return this.resultat.info !== this.infoInit || this.modifph
     },
@@ -104,19 +109,14 @@ export default ({
   },
 
   methods: {
-    valider () {
-      if (!this.modif) {
-        console.log('CV inchangée')
-      } else {
-        console.log('CV changée : ' + this.resultat.info + '\n' + this.resultat.ph.substring(0, 30))
-        this.$emit('ok', this.resultat)
-      }
-    },
     undogen () {
       this.undoph()
-      const mdelt = this.md
-      mdelt.undo()
-      this.$emit('annuler')
+      this.md.undo()
+      this.valider()
+    },
+    valider () {
+      this.$emit('ok', !this.modif ? false : this.resultat)
+      if (this.close) this.close()
     },
     undoph () {
       this.enedition = false
@@ -151,6 +151,9 @@ export default ({
         this.file.type = x.substring(x.indexOf(':') + 1, x.indexOf(';'))
         this.file.b64 = x
       }
+    },
+    flipCam () {
+      if (!this.camOn) this.cam.flip()
     },
     cliccamera () {
       return cfg().cliccamera.default
@@ -220,8 +223,9 @@ export default ({
 
 <style lang="sass">
 @import '../css/app.sass'
+
 .ph
-  border-radius: 32px
+  border-radius: $tphradius
   border: 1px solid grey
 .d-none
   display: none

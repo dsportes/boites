@@ -30,13 +30,7 @@
         </q-card-actions>
       </q-card>
       <q-dialog v-model="cvloc">
-        <carte-visite
-          :nomc="nomc"
-          info-init="Mon info initiale"
-          photo-init=""
-          @ok="okcv"
-          @annuler="annulercv">
-        </carte-visite>
+        <carte-visite :nomc="nomc" :close="closecv" info-init="Mon info initiale" photo-init="" @ok="okcv"/>
       </q-dialog>
     </q-dialog>
 </template>
@@ -90,10 +84,11 @@ export default ({
       this.mdp = mdp
     },
     okcv (resultat) {
-      console.log('CV changée : ' + resultat.info + '\n' + resultat.ph.substring(0, 30))
-      this.cvloc = false
+      if (resultat) {
+        console.log('CV changée : ' + resultat.info + ' lgph: ' + resultat.ph.length)
+      }
     },
-    annulercv () {
+    closecv () {
       this.cvloc = false
     },
     async testcrypto () {

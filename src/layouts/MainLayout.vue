@@ -51,8 +51,9 @@
       <q-toolbar inset>
         <q-toolbar-title class="row no-wrap justify-around">
           <div :class="'col-4 cag ' + (page === 'Synchro' || compte == null ? 'disabled' : '')" @click="tocompte">Compte</div>
-          <div :class="'col-4 cag ' + (page === 'Synchro' || compte == null ? 'disabled' : '')" @click="toavatar">
-            {{ avatar != null ? avatar.label : 'Avatar' }}
+          <div :class="'row items-center col-4 cag ' + (page === 'Synchro' || compte == null ? 'disabled' : '')" @click="toavatar">
+            <img class="photo" :src="avatar && avatar.photo ? avatar.photo : personne"/>
+            <span>{{avatar && avatar.label ? avatar.label : 'Avatar'}}</span>
           </div>
           <div :class="'col-4 cag ' + (page === 'Synchro' || compte == null ? 'disabled' : '')" @click="togroupe">
             {{ groupe != null ? groupe.label : 'Groupe' }}
@@ -183,7 +184,8 @@
 import { useQuasar } from 'quasar'
 import { computed } from 'vue'
 import { useStore } from 'vuex'
-import { remplacePage, onBoot, data, MODES } from '../app/modele'
+import { remplacePage, onBoot, data, MODES } from '../app/modele.mjs'
+import { cfg } from '../app/util.mjs'
 import DialogueCreationCompte from 'components/DialogueCreationCompte.vue'
 import DialogueInfoMode from 'components/DialogueInfoMode.vue'
 import DialogueInfoReseau from 'components/DialogueInfoReseau.vue'
@@ -268,6 +270,7 @@ export default {
     $q.dark.set(true)
     onBoot()
 
+    const personne = cfg().personne.default
     const $store = useStore()
     const menuouvert = computed({
       get: () => $store.state.ui.menuouvert,
@@ -345,6 +348,7 @@ export default {
     }
 
     return {
+      personne,
       page,
       menuouvert,
       confirmerdrc,
@@ -447,4 +451,10 @@ export default {
 
 .bord
   border: 2px solid warning
+
+.photo
+  width: 24px
+  height: 24px
+  border-radius: 12px
+  border: 1px solid grey
 </style>
