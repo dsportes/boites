@@ -6,6 +6,7 @@
           <q-btn flat label="Test de crypto" color="primary" @click="testcrypto" />
           <q-btn flat label="Test écho" color="primary" @click="testEcho"/>
           <q-btn flat label="CV" color="primary" @click="cvloc=true"/>
+          <q-btn flat label="TS" color="primary" @click="testsecrets=true"/>
           <bouton-help page="page1"/>
           <editeur-md ref="edmd" :texte="memo" v-model="texteedite" editable label-ok="Valider" v-on:ok="memook"></editeur-md>
         </q-card-section>
@@ -32,6 +33,9 @@
       <q-dialog v-model="cvloc">
         <carte-visite :nomc="nomc" :close="closecv" info-init="Mon info initiale" photo-init="" @ok="okcv"/>
       </q-dialog>
+      <q-dialog v-model="testsecrets">
+        <test-secrets></test-secrets>
+      </q-dialog>
     </q-dialog>
 </template>
 
@@ -45,13 +49,14 @@ import MdpAdmin from '../components/MdpAdmin.vue'
 import EditeurMd from '../components/EditeurMd.vue'
 import BoutonHelp from '../components/BoutonHelp.vue'
 import CarteVisite from '../components/CarteVisite.vue'
+import TestSecrets from '../components/TestSecrets.vue'
 import { post, affichermessage, afficherdiagnostic, testEcho } from '../app/util'
 
 export default ({
   name: 'DialogueCrypto',
 
   components: {
-    PhraseSecrete, MdpAdmin, EditeurMd, BoutonHelp, CarteVisite
+    PhraseSecrete, MdpAdmin, EditeurMd, BoutonHelp, CarteVisite, TestSecrets
   },
 
   watch: {
@@ -66,6 +71,7 @@ export default ({
       mdp: null,
       memo: 'Mon beau memo',
       cvloc: false,
+      testsecrets: false,
       texteedite: '',
       nomc: new NomAvatar('Toto', true).nomc
     }

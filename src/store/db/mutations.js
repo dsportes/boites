@@ -1,6 +1,22 @@
 import { NomAvatar, Cv } from '../../app/modele.mjs'
 import { crypt } from '../../app/crypto.mjs'
 
+export function setSecSrc (state, sid) {
+  if (!state.listsec[sid]) {
+    const l = state.listsec
+    l[sid] = true
+    state.listsec = { ...l }
+    state['secrets_' + sid] = {}
+  }
+  return state['secrets_' + sid]
+}
+
+export function setSec (state, obj) { // obj : { sid, ns, dh }
+  const st = setSecSrc(state, obj.sid)
+  st[obj.ns] = obj
+  state['secrets_' + obj.sid] = { ...st }
+}
+
 export function raz (state) {
   state.compte = null
   state.avatar = null
@@ -71,6 +87,7 @@ export function purgeCvs (state, val) { // val : Set des ids des avatars utiles
   return s.size
 }
 
+/*
 export function setObjets (state, { table, lobj }) { // val : array d'objets Avatar
   switch (table) {
     case 'compte' : return setCompte(state, lobj)
@@ -86,6 +103,7 @@ export function setObjets (state, { table, lobj }) { // val : array d'objets Ava
     case 'cv' : return setCvs(state, lobj)
   }
 }
+*/
 
 export function setAvatars (state, val) { // val : array d'objets Avatar
   const x = state.avatars
