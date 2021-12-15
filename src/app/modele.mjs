@@ -241,7 +241,6 @@ export function commitMapObjets (mapObj) { // SAUF mapObj.compte
         if (x.vcv > vcv) vcv = x.vcv
       }
     })
-    store().commit('db/setCvs', mapObj.cv)
     push('cv')
   }
   data.commitRepertoire()
@@ -1096,9 +1095,19 @@ schemas.forSchema({
 /*
   name: 'rowcv',
   cols: ['id', 'vcv', 'st', 'phinf']
+
+  Trois propriétés sont maintenues à jour EN MEMOIRE (ni sur le serveur, ni sur idb)
+  - lctc : liste des ids des avatars du compte ayant l'avatar de la CV comme contact
+  - lmbr : liste des ids des groupes ayant l'avatar de la CV comme membre
+  - fake : normalement temporaire. Un membre ou un contact est déclaré AVANT que sa vraie CV n'ait été enregistrée.
+    Dans ce cas l'attribut 'fake' indique que la CV a été fabriquée par défaut avec juste le nom complet.
+  Un objet CV est conservé dans la map data.repertoire
+  Le store/db conserve l'image de data.repertoire à chaque changement
 */
 
 export class Cv {
+  get table () { return 'cv' }
+
   constructor () {
     this.lctc = []
     this.lmbr = []
@@ -1117,8 +1126,6 @@ export class Cv {
     this.lmbr.forEach((x) => cl.lmbr.push(x))
     return cl
   }
-
-  get table () { return 'cv' }
 
   nouveau (id, vcv, st, nomc, photo, info) {
     this.id = id
@@ -1208,11 +1215,13 @@ schemas.forSchema({
 export class Contact {
   get table () { return 'contact' }
 
-  get sidav () { return crypt.idToSid(this.id) }
+  get sid () { return crypt.idToSid(this.id) }
 
-  get sid () { return crypt.idToSid(this.id) + '/' + this.ic }
+  get sid2 () { return '' + this.id }
 
   get pk () { return [this.id, this.ic] }
+
+  get sidav () { return this.sid }
 
   get nact () { return this.data ? new NomAvatar(this.data.nomc) : null }
 
@@ -1256,8 +1265,7 @@ export class Contact {
   }
 
   get toIdb () {
-    const vs = 0
-    return { id: this.id, ic: this.ic, vs: vs, data: schemas.serialize('lidbContact', this) }
+    return { id: this.id, ic: this.ic, data: schemas.serialize('lidbContact', this) }
   }
 
   fromIdb (idb, vs) {
@@ -1288,19 +1296,15 @@ schemas.forSchema({
 export class Groupe {
   get table () { return 'groupe' }
 
-  get sidgr () { return crypt.idToSid(this.id) }
-
   get sid () { return crypt.idToSid(this.id) }
 
   get pk () { return this.id }
 
-  get label () {
-    return this.info ? this.info : this.sid
-  }
+  get sidgr () { return this.sid }
 
-  get icone () {
-    return this.photo || ''
-  }
+  get label () { return this.info ? this.info : this.sid }
+
+  get icone () { return this.photo || '' }
 
   /*
   Map ayant pour clé les sid des avatars du compte
@@ -1398,11 +1402,13 @@ schemas.forSchema({
 export class Invitct {
   get table () { return 'invitct' }
 
-  get sidav () { return crypt.idToSid(this.id) }
+  get sid () { return crypt.idToSid(this.id) }
 
-  get sid () { return crypt.idToSid(this.id) + '/' + crypt.idToSid(this.ni) }
+  get sid2 () { return crypt.idToSid(this.ni) }
 
   get pk () { return [this.id, this.ni] }
+
+  get sidav () { return this.sid }
 
   get nact () { return this.data ? new NomAvatar(this.data.nomc) : null }
 
@@ -1476,11 +1482,13 @@ schemas.forSchema({
 export class Invitgr {
   get table () { return 'invitgr' }
 
-  get sidav () { return crypt.idToSid(this.id) }
+  get sid () { return crypt.idToSid(this.id) }
 
-  get sid () { return crypt.idToSid(this.id) + '/' + crypt.idToSid(this.ni) }
+  get sid2 () { return crypt.idToSid(this.ni) }
 
   get pk () { return [this.id, this.ni] }
+
+  get sidav () { return this.sid }
 
   get idg () { return this.data ? this.ng.id : null }
 
@@ -1580,11 +1588,13 @@ schemas.forSchema({
 export class Membre {
   get table () { return 'membre' }
 
-  get sidgr () { return crypt.idToSid(this.id) }
+  get sid () { return crypt.idToSid(this.id) }
 
-  get sid () { return crypt.idToSid(this.id) + '/' + this.im }
+  get sid2 () { return '' + this.im }
 
   get pk () { return [this.id, this.im] }
+
+  get sidgr () { return this.sid }
 
   get na () { return this.data ? new NomAvatar(this.data.nomc) : null }
 
@@ -1638,8 +1648,7 @@ export class Membre {
   }
 
   get toIdb () {
-    const vs = 0
-    return { id: this.id, im: this.im, vs: vs, data: schemas.serialize('idbMembre', this) }
+    return { id: this.id, im: this.im, data: schemas.serialize('idbMembre', this) }
   }
 
   fromIdb (idb, vs) {
@@ -1675,11 +1684,11 @@ schemas.forSchema({
 export class Parrain {
   get table () { return 'parrain' }
 
-  get sidav () { return crypt.idToSid(this.id) }
-
   get sid () { return crypt.idToSid(this.pph) }
 
   get pk () { return this.pph }
+
+  get sidav () { return crypt.idToSid(this.id) }
 
   async fromRow (row) {
     this.vsh = row.vsh || 0
@@ -1713,7 +1722,7 @@ export class Parrain {
   }
 
   get toIdb () {
-    return { pph: this.pph, id: this.id, data: schemas.serialize('idbParrain', this) }
+    return { pph: this.pph, data: schemas.serialize('idbParrain', this) }
   }
 
   fromIdb (idb) {
@@ -1742,11 +1751,11 @@ schemas.forSchema({
 export class Rencontre {
   get table () { return 'rencontre' }
 
-  get sidav () { return crypt.idToSid(this.id) }
-
   get sid () { return crypt.idToSid(this.prh) }
 
   get pk () { return this.prh }
+
+  get sidav () { return crypt.idToSid(this.id) }
 
   async fromRow (row) {
     this.vsh = row.vsh || 0
@@ -1771,7 +1780,7 @@ export class Rencontre {
   }
 
   get toIdb () {
-    return { prh: this.prh, id: this.id, data: schemas.serialize('idbRencontre', this) }
+    return { prh: this.prh, data: schemas.serialize('idbRencontre', this) }
   }
 
   fromIdb (idb) {
@@ -1808,15 +1817,17 @@ schemas.forSchema({
 export class Secret {
   get table () { return 'secret' }
 
-  get sidavgr () { return crypt.idToSid(this.id) }
+  get sid () { return crypt.idToSid(this.id) }
 
-  get estAv () { return (this.ns % 2) === 0 }
+  get sid2 () { return crypt.idToSid(this.ns) }
 
-  get sid () { return crypt.idToSid(this.id) + '/' + crypt.idToSid(this.ns) }
+  get pk () { return [this.id, this.ns] }
 
   get sidc () { return crypt.idToSid(this.id) + '/' + this.ic }
 
-  get pk () { return [this.id, this.ns] }
+  get sidavgr () { return this.sid }
+
+  get estAv () { return (this.ns % 2) === 0 }
 
   get ts () { return this.ic ? 1 : (this.ns % 2 ? 0 : 2) } // 0:avatar 1:couple 2:groupe
 
@@ -1871,8 +1882,7 @@ export class Secret {
   }
 
   get toIdb () {
-    const vs = 0
-    return { id: this.id, ns: this.ns, vs: vs, data: schemas.seialise('idbSecret', this) }
+    return { id: this.id, ns: this.ns, data: schemas.seialise('idbSecret', this) }
   }
 
   fromIdb (idb, vs) {

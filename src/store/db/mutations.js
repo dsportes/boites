@@ -1,51 +1,50 @@
-import { NomAvatar, Cv } from '../../app/modele.mjs'
 import { crypt } from '../../app/crypto.mjs'
 
-export function setSecSrc (state, sid) {
-  if (!state.listsec[sid]) {
-    const l = state.listsec
-    l[sid] = true
-    state.listsec = { ...l }
-    state['secrets_' + sid] = {}
-  }
-  return state['secrets_' + sid]
-}
+/*
+avatars: {}, // Tous les avatars (liste sur le compte)
+groupes: {}, // Tous les groupes
+parrains: {}, // Tous les parrains (pph) : un getter par id d'avatar
+rencontres: {} // Toutes les rencontres (prh) : un getter par id d'avatar
 
-export function setSec (state, obj) { // obj : { sid, ns, dh }
-  const st = setSecSrc(state, obj.sid)
-  st[obj.ns] = obj
-  state['secrets_' + obj.sid] = { ...st }
-}
+Groupés par sid d'avatar : contacts_sid invitcts_sid invitgrs_sid
+Groupés par sid de groupe : membres_sid
+Groupés par sid d'avatar ou de groupe : secrets_sid
+
+repertoire: {} // Toutes les CVs (enrichies des propriétés lctc et lmbr)
+Les objets CV sont conservés dans la map data.repertoire
+Le store/db conserve l'image de data.repertoire à chaque changement
+*/
+
+const l1 = { compte: true, avatar: true, groupe: true }
+const l2 = { avatars: true, groupes: true, parrains: true, rencontres: true, repertoire: true }
+const l3 = { contact: true, invitct: true, invitgr: true, membre: true, secret: true }
+const l4 = { avatar: true, groupe: true, parrain: true, rencontre: true }
 
 export function raz (state) {
-  state.compte = null
-  state.avatar = null
-  state.groupe = null
-  state.avatars = {}
-  state.contacts = {}
-  state.invitcts = {}
-  state.invitgrs = {}
-  state.groupes = {}
-  state.membres = {}
-  state.secrets = {}
-  state.parrains = {}
-  state.rencontres = {}
-  state.cvs = {}
+  for (const e in state) {
+    if (l1[e]) {
+      state[e] = null
+    } else if (l2[e]) {
+      state[e] = {}
+    } else {
+      delete state[e]
+    }
+  }
 }
 
-export function commitRepertoire (state, repertoire) {
-  state.cvs = { ...repertoire }
-}
-
+/* Déclaration de l'avatar courant */
 export function majavatar (state, val) {
   state.avatar = val
 }
 
+/* Déclaration du groupe courant */
 export function majgroupe (state, val) {
   state.groupe = val
 }
 
-export function purgeAvatars (state, val) { // val : Set des ids des avatars utiles
+/* Purges des avatars et groupes inutiles */
+
+export function purgeAvatars (state, val) { // val : Set des ids des avatars UTILES
   const x = state.avatars
   const s = new Set()
   for (const sid in x) {
@@ -59,7 +58,7 @@ export function purgeAvatars (state, val) { // val : Set des ids des avatars uti
   return s.size
 }
 
-export function purgeGroupes (state, val) { // val : Set des ids des groupes utiles
+export function purgeGroupes (state, val) { // val : Set des ids des groupes UTILES
   const x = state.groupes
   const s = new Set()
   for (const sid in x) {
@@ -73,166 +72,64 @@ export function purgeGroupes (state, val) { // val : Set des ids des groupes uti
   return s.size
 }
 
-export function purgeCvs (state, val) { // val : Set des ids des avatars utiles
-  const x = state.cvs
-  const s = new Set()
-  for (const sid in x) {
-    const id = crypt.sidToId(sid)
-    if (!val.has(id)) s.add(sid)
+/* Mises à jour brutes des objets dans le store */
+export function setEntree (state, [table, sid]) {
+  if (!state[table + '@' + sid]) {
+    state[table + 's@' + sid] = {}
   }
-  if (s.size) {
-    for (const sid of s) delete x[sid]
-    state.cvs = { ...x }
-  }
-  return s.size
+  return state[table + 's@' + sid]
 }
 
-/*
-export function setObjets (state, { table, lobj }) { // val : array d'objets Avatar
-  switch (table) {
-    case 'compte' : return setCompte(state, lobj)
-    case 'avatar' : return setAvatars(state, lobj)
-    case 'contact' : return setContacts(state, lobj)
-    case 'invitct' : return setInvitcts(state, lobj)
-    case 'invitgr' : return setInvitgrs(state, lobj)
-    case 'parrain' : return setParrains(state, lobj)
-    case 'rencontre' : return setRencontres(state, lobj)
-    case 'groupe' : return setGroupes(state, lobj)
-    case 'membre' : return setMembres(state, lobj)
-    case 'secret' : return setSecrets(state, lobj)
-    case 'cv' : return setCvs(state, lobj)
-  }
-}
-*/
-
-export function setAvatars (state, val) { // val : array d'objets Avatar
-  const x = state.avatars
-  val.forEach(a => {
-    a.dernier = false
-    const y = x[a.sid]
-    if (!y || y.v < a.v) { x[a.sid] = a; a.dernier = true }
-  })
-  state.avatars = { ...x }
-}
-
-export function setContacts (state, val) { // val : array d'objets Contact
-  const x = state.contacts
-  val.forEach(a => {
-    a.dernier = false
-    const ids = crypt.idToSid(a.id)
-    let y = x[ids]
-    if (!y) { y = {}; x[ids] = y }
-    const a2 = y[a.ic]
-    if (!a2 || a2.v < a.v) { y[a.ic] = a; a.dernier = true }
-  })
-  state.contacts = { ...x }
-}
-
-export function setInvitcts (state, val) { // val : array d'objets Invitct
-  const x = state.invitcts
-  val.forEach(a => {
-    a.dernier = false
-    const ids = crypt.idToSid(a.id)
-    const nis = crypt.idToSid(a.ni)
-    let y = x[ids]
-    if (!y) { y = {}; x[ids] = y }
-    const a2 = y[nis]
-    if (!a2 || a2.v < a.v) { y[nis] = a; a.dernier = true }
-  })
-  state.invitcts = { ...x }
-}
-
-export function setInvitgrs (state, val) { // val : array d'objets Invitgr
-  const x = state.invitgrs
-  val.forEach(a => {
-    const ids = crypt.idToSid(a.id)
-    const nis = crypt.idToSid(a.ni)
-    if (a.st < 0) {
-      const d = x[ids]
-      if (d) delete d[nis]
-    } else {
-      a.dernier = false
-      let y = x[ids]
-      if (!y) { y = {}; x[ids] = y }
-      const a2 = y[nis]
-      if (!a2 || a2.v < a.v) { y[nis] = a; a.dernier = true }
+/* Stockage (et suppression) d'une liste d'objets de la MEME table, SAUF cvs fait par commitRepertoire */
+export function setObjets (state, [table, lobj]) { // lobj : array d'objets
+  if (!lobj || !lobj.length) return
+  if (l3[table]) {
+    // gérés par sous-groupe
+    const m = {}
+    lobj.forEach(obj => {
+      if (!m[obj.sid]) {
+        m[obj.sid] = [obj]
+      } else {
+        m[obj.sid].push(obj)
+      }
+    })
+    for (const sid in m) {
+      const st = setEntree(state, [table, sid])
+      m[sid].forEach(obj => {
+        const av = st[obj.sid2]
+        if (obj.st < 0) {
+          if (av) delete st[obj.sid2]
+        } else if (!av || av.v < obj.v) {
+          st[obj.sid2] = obj
+        }
+      })
+      state[table + 's@' + sid] = { ...st }
     }
-  })
-  state.invitgrs = { ...x }
+  } else if (l4[table]) {
+    // gérés une seule entrée
+    const st = state[table + 's']
+    lobj.forEach(obj => {
+      const av = st[obj.sid]
+      if (obj.st < 0) {
+        if (av) delete st[obj.sid]
+      } else if (!av || av.v < obj.v) {
+        st[obj.sid] = obj
+      }
+    })
+    state[table + 's'] = { ...st }
+  }
 }
 
-export function setParrains (state, val) { // val : array d'objets Parrain
-  const x = state.parrains
-  val.forEach(a => {
-    a.dernier = false
-    const a2 = x[a.sid]
-    if (!a2 || a2.v < a.v) { x[a.sid] = a; a.dernier = true }
-  })
-  state.parrains = { ...x }
-}
+export function setCompte (state, obj) { if (!state.compte || state.compte.v < obj.v) state.compte = obj }
+export function setAvatars (state, lobj) { setObjets(state, ['avatar', lobj]) }
+export function setContacts (state, lobj) { setObjets(state, ['contact', lobj]) }
+export function setInvitcts (state, lobj) { setObjets(state, ['invitct', lobj]) }
+export function setInvitgrs (state, lobj) { setObjets(state, ['invitgr', lobj]) }
+export function setParrains (state, lobj) { setObjets(state, ['parrain', lobj]) }
+export function setRencontres (state, lobj) { setObjets(state, ['rencontre', lobj]) }
+export function setGroupes (state, lobj) { setObjets(state, ['groupe', lobj]) }
+export function setMembres (state, lobj) { setObjets(state, ['membre', lobj]) }
+export function setSecrets (state, lobj) { setObjets(state, ['secret', lobj]) }
 
-export function setRencontres (state, val) { // val : array d'objets Rencontre
-  const x = state.rencontre
-  val.forEach(a => {
-    a.dernier = false
-    const a2 = x[a.sid]
-    if (!a2 || a2.v < a.v) { x[a.sid] = a; a.dernier = true }
-  })
-  state.rencontre = { ...x }
-}
-
-export function setGroupes (state, val) { // val : array d'objets Groupe
-  const x = state.groupes
-  val.forEach(a => {
-    a.dernier = false
-    const y = x[a.sid]
-    if (!y || y.v < a.v) { x[a.sid] = a; a.dernier = true }
-  })
-  state.groupes = { ...x }
-}
-
-export function setMembres (state, val) { // val : array d'objets Membre
-  const x = state.membres
-  val.forEach(a => {
-    a.dernier = false
-    const ids = crypt.idToSid(a.id)
-    let y = x[ids]
-    if (!y) { y = {}; x[ids] = y }
-    const a2 = y[a.ic]
-    if (!a2 || a2.v < a.v) { y[a.ic] = a; a.dernier = true }
-  })
-  state.membres = { ...x }
-}
-
-export function setSecrets (state, val) { // val : array d'objets Secret
-  const x = state.membres
-  val.forEach(a => {
-    a.dernier = false
-    const ids = crypt.idToSid(a.id)
-    const nss = crypt.idToSid(a.ns)
-    let y = x[ids]
-    if (!y) { y = {}; x[ids] = y }
-    const a2 = y[nss]
-    if (!a2 || a2.v < a.v) { y[nss] = a; a.dernier = true }
-  })
-  state.secrets = { ...x }
-}
-
-export function setCvs (state, val) { // val : array d'objets Cv OU NomAvatar
-  const x = state.cvs
-  val.forEach(c => {
-    if (c instanceof NomAvatar) {
-      if (x[c.sid]) x[c.sid] = new Cv().fromNomAvatar(c)
-    } else {
-      c.dernier = false
-      const y = x[c.sid]
-      if (!y || y.vcv < c.vcv) { x[c.sid] = c; c.dernier = true }
-    }
-  })
-  state.cvs = { ...x }
-}
-
-export function setCompte (state, val) { // val : objet Compte
-  val.dernier = false
-  if (!state.compte || state.compte.v < val.v) { state.compte = val; val.dernier = true }
-}
+/* Enregistrement de toutes les cv d'un coup */
+export function commitRepertoire (state, repertoire) { state.repertoire = { ...repertoire } }

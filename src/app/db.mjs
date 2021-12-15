@@ -12,8 +12,8 @@ const STORES = {
   invitgr: '[id+ni]',
   contact: '[id+ic]',
   invitct: '[id+ni]',
-  parrain: 'pph,id',
-  rencontre: 'prh,id',
+  parrain: 'pph',
+  rencontre: 'prh',
   groupe: 'id',
   membre: '[id+im]',
   secret: '[id+ns]',
@@ -382,7 +382,7 @@ export async function commitRows (lobj) {
       const idb = obj.toIdb
       if (!suppr) {
         idb.data = await crypt.crypter(obj.table === 'compte' ? d.ps.pcb : d.clek, idb.data)
-        lidb.push({ table: obj.table, suppr: suppr, idb: idb, sid: obj.sid })
+        lidb.push({ table: obj.table, suppr: suppr, idb: idb })
       } else {
         lidb.push({ table: obj.table, suppr: suppr, pk: obj.pk })
       }
