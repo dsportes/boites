@@ -74,7 +74,7 @@ export function purgeGroupes (state, val) { // val : Set des ids des groupes UTI
 
 /* Mises à jour brutes des objets dans le store */
 export function setEntree (state, [table, sid]) {
-  if (!state[table + '@' + sid]) {
+  if (!state[table + 's@' + sid]) {
     state[table + 's@' + sid] = {}
   }
   return state[table + 's@' + sid]

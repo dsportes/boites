@@ -14,28 +14,40 @@
 
 <script>
 // import { computed } from 'vue'
-import { useStore } from 'vuex'
+import { data, Secret } from '../app/modele.mjs'
+import { crypt } from '../app/crypto.mjs'
+
+const sidA = crypt.idToSid(10)
+const sidC = crypt.idToSid(12)
 
 export default ({
   name: 'TestSecrets',
 
   data () {
     return {
-      listSid: ['A', 'C']
+      listSid: [sidA, sidC],
+      v: 1
     }
   },
 
   methods: {
     doit (sid, n) {
-      this.$store.commit('db/setSec', { sid: sid, ns: n, dh: new Date().getTime() % 1000 })
+      const s = new Secret()
+      s.id = crypt.sidToId(sid)
+      s.ns = n
+      s.v = this.v++
+      s.st = 99999
+      s.ic = 0
+      s.ora = 0
+      s.txt = new Date().getTime() % 1000
+      s.mc = {}
+      data.setSecrets([s])
     }
   },
 
   setup () {
-    const $store = useStore()
-
     function listSec (sid) {
-      return $store.state.db['secrets_' + sid] || {}
+      return data.getSecret(sid)
     }
 
     return {

@@ -17,26 +17,26 @@ export const parrain = (state) => (pph) => {
 }
 
 export const contact = (state) => (sid, sid2) => {
-  const lc = state.contacts[sid]
+  const lc = state['contacts@' + sid]
   return !sid2 ? lc || { } : (lc ? lc[sid2] : null)
 }
 
 export const invitct = (state) => (sid, sid2) => {
-  const lc = state.invitcts[sid]
+  const lc = state['invitcts@' + sid]
   return !sid2 ? lc || { } : (lc ? lc[sid2] : null)
 }
 
 export const invitgr = (state) => (sid, sid2) => {
-  const lc = state.invitgrs[sid]
+  const lc = state['invitgrs@' + sid]
   return !sid2 ? lc || { } : (lc ? lc[sid2] : null)
 }
 
 export const membre = (state) => (sid, sid2) => {
-  const lc = state.membres[sid]
+  const lc = state['membres@' + sid]
   return !sid2 ? lc || { } : (lc ? lc[sid2] : null)
 }
 
 export const secret = (state) => (sid, sid2) => {
-  const lc = state.membres[sid]
-  return !sid2 ? lc || { } : (lc ? lc[sid2] : null)
+  const lc = state['secrets@' + sid]
+  return !sid2 ? lc || {} : lc ? lc[sid2] : null
 }
