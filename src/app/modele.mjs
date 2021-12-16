@@ -514,9 +514,10 @@ class Repertoire {
     return cv
   }
 
-  purge (setCvsInutiles) {
-    if (setCvsInutiles.size) {
-      setCvsInutiles.forEach((sid) => { delete this.rep[sid] })
+  purge (cvi) {
+    if (!cvi) cvi = this.setCvsInutiles
+    if (cvi.size) {
+      cvi.forEach((sid) => { delete this.rep[sid] })
       this.modif = true
     }
   }
@@ -526,6 +527,33 @@ class Repertoire {
       store().commit('db/commitRepertoire', this)
       this.modif = false
     }
+  }
+
+  get setCvsUtiles () {
+    const s = new Set()
+    for (const sid in this.rep) {
+      const cv = this.rep[sid]
+      if (cv.lctc.length || cv.lmbr.length) s.add(sid)
+    }
+    return s
+  }
+
+  get setCvsManquantes () {
+    const s = new Set()
+    for (const sid in this.rep) {
+      const cv = this.rep[sid]
+      if (cv.fake && (cv.lctc.length || cv.lmbr.length)) s.add(sid)
+    }
+    return s
+  }
+
+  get setCvsInutiles () {
+    const s = new Set()
+    for (const sid in this.rep) {
+      const cv = this.rep[sid]
+      if (!cv.lctc.length && !cv.lmbr.length) s.add(sid)
+    }
+    return s
   }
 }
 
@@ -760,33 +788,6 @@ class Session {
     return s
   }
 
-  get setCvsUtiles () {
-    const s = new Set()
-    for (const sid in this.repertoire) {
-      const cv = this.repertoire[sid]
-      if (cv.lctc.length || cv.lmbr.length) s.add(sid)
-    }
-    return s
-  }
-
-  get setCvsManquantes () {
-    const s = new Set()
-    for (const sid in this.repertoire) {
-      const cv = this.repertoire[sid]
-      if (cv.fake && (cv.lctc.length || cv.lmbr.length)) s.add(sid)
-    }
-    return s
-  }
-
-  get setCvsInutiles () {
-    const s = new Set()
-    for (const sid in this.repertoire) {
-      const cv = this.repertoire[sid]
-      if (!cv.lctc.length && !cv.lmbr.length) s.add(sid)
-    }
-    return s
-  }
-
   /* Getters / Setters ****************************************/
   getCompte () { return store().state.db.compte }
 
@@ -799,7 +800,7 @@ class Session {
   setAvatars (lobj, hls) {
     if (lobj.length) {
       if (hls) lobj.forEach(obj => { if (obj.suppr) hls.push(obj) })
-      store().commits('db/setObjets', ['avatar', lobj])
+      store().commit('db/setObjets', ['avatar', lobj])
     }
   }
 
@@ -808,7 +809,7 @@ class Session {
   setGroupes (lobj, hls) {
     if (lobj.length) {
       if (hls) lobj.forEach(obj => { if (obj.suppr) hls.push(obj) })
-      store().commits('db/setObjets', ['groupe', lobj])
+      store().commit('db/setObjets', ['groupe', lobj])
     }
   }
 
@@ -817,7 +818,7 @@ class Session {
   setRencontres (lobj, hls) {
     if (lobj.length) {
       if (hls) lobj.forEach(obj => { if (obj.suppr || obj.horslimite) hls.push(obj) })
-      store().commits('db/setObjets', ['rencontre', lobj])
+      store().commit('db/setObjets', ['rencontre', lobj])
     }
   }
 
@@ -826,7 +827,7 @@ class Session {
   setParrains (lobj, hls) {
     if (lobj.length) {
       if (hls) lobj.forEach(obj => { if (obj.suppr || obj.horslimite) hls.push(obj) })
-      store().commits('db/setObjets', ['parrain', lobj])
+      store().commit('db/setObjets', ['parrain', lobj])
     }
   }
 
@@ -837,7 +838,7 @@ class Session {
   setContacts (lobj, hls) {
     if (lobj.length) {
       if (hls) lobj.forEach(obj => { if (obj.suppr) hls.push(obj) })
-      store().commits('db/setObjets', ['contact', lobj])
+      store().commit('db/setObjets', ['contact', lobj])
     }
   }
 
@@ -846,7 +847,7 @@ class Session {
   setInvitcts (lobj, hls) {
     if (lobj.length) {
       if (hls) lobj.forEach(obj => { if (obj.suppr || obj.horslimite) hls.push(obj) })
-      store().commits('db/setObjets', ['invitct', lobj])
+      store().commit('db/setObjets', ['invitct', lobj])
     }
   }
 
@@ -855,7 +856,7 @@ class Session {
   setInvitgrs (lobj, hls) {
     if (lobj.length) {
       if (hls) lobj.forEach(obj => { if (obj.suppr || obj.horslimite) hls.push(obj) })
-      store().commits('db/setObjets', ['invitgr', lobj])
+      store().commit('db/setObjets', ['invitgr', lobj])
     }
   }
 
@@ -864,7 +865,7 @@ class Session {
   setMembres (lobj, hls) {
     if (lobj.length) {
       if (hls) lobj.forEach(obj => { if (obj.suppr || obj.horslimite) hls.push(obj) })
-      store().commits('db/setObjets', ['membre', lobj])
+      store().commit('db/setObjets', ['membre', lobj])
     }
   }
 
@@ -873,7 +874,7 @@ class Session {
   setSecrets (lobj, hls) {
     if (lobj.length) {
       if (hls) lobj.forEach(obj => { if (obj.suppr || obj.horslimite) hls.push(obj) })
-      store().commits('db/setObjets', ['secret', lobj])
+      store().commit('db/setObjets', ['secret', lobj])
     }
   }
 
@@ -1101,7 +1102,7 @@ export class Avatar {
 
   get pk () { return this.id }
 
-  get suppr () { return this.suppr < 0 }
+  get suppr () { return this.st < 0 }
 
   get horsLimite () { return false }
 
@@ -1433,7 +1434,7 @@ export class Groupe {
 
   get pk () { return this.id }
 
-  get suppr () { return this.suppr < 0 }
+  get suppr () { return this.st < 0 }
 
   get horsLimite () { return false }
 
@@ -1743,7 +1744,7 @@ export class Membre {
 
   get pk () { return [this.id, this.im] }
 
-  get suppr () { return this.suppr < 0 }
+  get suppr () { return this.st < 0 }
 
   get horsLimite () { return !this.suppr ? (this.stx === 2 && dlvDepassee(this.dlv)) : false }
 
@@ -1843,7 +1844,7 @@ export class Parrain {
 
   get pk () { return this.pph }
 
-  get suppr () { return this.suppr < 0 }
+  get suppr () { return this.st < 0 }
 
   get horsLimite () { return !this.suppr ? dlvDepassee(this.dlv) : false }
 

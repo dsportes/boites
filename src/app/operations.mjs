@@ -210,10 +210,10 @@ export class Operation {
   /* Synchronisation et abonnements des CVs */
   async syncCVs (nvvcv) {
     const estws = this instanceof OperationWS
-    data.repertoire.purge(data.setCvsInutiles)
+    data.repertoire.purge()
     data.repertoire.commit()
-    const lcvmaj = Array.from(data.setCvsUtiles)
-    const lcvchargt = Array.from(data.setCvsManquantes)
+    const lcvmaj = Array.from(data.repertoire.setCvsUtiles)
+    const lcvchargt = Array.from(data.repertoire.setCvsManquantes)
     const args = { sessionId: data.sessionId, vcv: data.vcv, lcvmaj, lcvchargt }
     const ret = await post(this, 'm1', 'chargtCVs', args)
     if (data.dh < ret.dh) data.dh = ret.dh
@@ -493,11 +493,10 @@ export class OperationUI extends Operation {
     // purge des CVs inutiles
     this.BRK()
     {
-      const nbp = await purgeCvs(data.setCvInutiles)
-      data.setCvsInutiles.forEach((sid) => {
-        delete data.repertoire[sid]
-      })
-      data.commitRepertoire()
+      const cvi = data.repertoire.setCvsInutiles
+      const nbp = await purgeCvs(cvi)
+      data.repertoire.purge(cvi)
+      data.repertoire.commit()
       this.majidblec({ table: 'purgecv', st: true, vol: 0, nbl: nbp })
     }
 
@@ -742,7 +741,7 @@ export class ConnexionCompte extends OperationUI {
 
       data.idbSetAvatars = data.setDesAvatars
       data.idbSetGroupes = data.setDesGroupes
-      data.idbsetCvsUtiles = data.setCvsUtiles
+      data.idbsetCvsUtiles = data.repertoire.setCvsUtiles
 
       if (data.db) {
         /* Relecture du compte qui pourrait avoir changé durant le chargement IDB qui peut être long
