@@ -1,3 +1,9 @@
+modele.mjs
+- propriété suppr sur tous (sauf compte)
+- fromRow :
+  - gérer suppr sur st
+  - gérer les dlv -> suppr
+
 Bloquer les maj en mode avion
 
 Garder la trace du dernier SQL émis (ex console.log) pour l'afficher en cas d'exception

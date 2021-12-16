@@ -230,8 +230,9 @@ export class Operation {
     const lavAvant = data.setAvatars
     const lgrAvant = data.setGroupes
 
-    const items = []
-    let dhc = 0
+    const items = [] // tous les items à traiter reçus en synchro
+    let dhc = 0 // date-heure courante : plus haute date-heure reçue sur les liste d'items à synchroniser
+
     q.forEach((syncList) => {
       if (syncList.dh > dhc) dhc = syncList.dh
       if (syncList.rowItems) {
@@ -241,11 +242,12 @@ export class Operation {
       }
     })
 
+    // Transforme tous les items en objet (décryptés / désrialisés) et les retourne ventilés dans une map par table
     const mapObj = await rowItemsToMapObjets(items)
 
     let compte = null
     if (mapObj.compte) {
-      // Une mise à jour de compte notifiée
+      // Une mise à jour de compte est notifiée
       const row = mapObj.compte
       if (row.pcbh !== data.ps.pcbh) throw EXPS // phrase secrète changée => déconnexion
       compte = new Compte()

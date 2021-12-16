@@ -118,22 +118,30 @@ export async function remplacePage (page) {
   await $router.replace(x)
 }
 
+/* Transforme un row sérialisé en objet par les méthodes fromRow
+- si st < 0 : article à supprimer
+- dlv transformée en suppression pour :
+  - invitgr, invitct, parrain, rencontre
+  - membre si stx = 2 (invité)
+  - secret : dlv est st si > 0 et < 99999
+*/
 export async function objetDeItem (item) {
   const row = schemas.deserialize('row' + item.table, item.serial)
   let x
   switch (item.table) {
     case 'compte' : return row
-    case 'avatar' : { x = new Avatar(); return await x.fromRow(row) }
-    case 'contact' : { x = new Contact(); return await x.fromRow(row) }
-    case 'invitct' : { x = new Invitct(); return await x.fromRow(row) }
-    case 'invitgr' : { x = new Invitgr(); return await x.fromRow(row) }
-    case 'parrain' : { x = new Parrain(); return await x.fromRow(row) }
-    case 'rencontre' : { x = new Rencontre(); return await x.fromRow(row) }
-    case 'groupe' : { x = new Groupe(); return await x.fromRow(row) }
-    case 'membre' : { x = new Membre(); return await x.fromRow(row) }
-    case 'secret' : { x = new Secret(); return await x.fromRow(row) }
-    case 'cv' : { x = new Cv(); return await x.fromRow(row) }
+    case 'avatar' : { x = new Avatar(); break }
+    case 'contact' : { x = new Contact(); break }
+    case 'invitct' : { x = new Invitct(); break }
+    case 'invitgr' : { x = new Invitgr(); break }
+    case 'parrain' : { x = new Parrain(); break }
+    case 'rencontre' : { x = new Rencontre(); break }
+    case 'groupe' : { x = new Groupe(); break }
+    case 'membre' : { x = new Membre(); break }
+    case 'secret' : { x = new Secret(); break }
+    case 'cv' : { x = new Cv() }
   }
+  return await x.fromRow(row)
 }
 
 /*
@@ -157,6 +165,16 @@ export async function rowItemsToMapObjets (rowItems) {
   return res
 }
 
+/* mapObj : clé par table, valeur : array des objets
+- ne traite pas 'compte'
+- inscrit en store OU les supprime du store s'il y était
+Retourne [objets, vcv]
+- objets : tous les objets à mettre en IDB
+- vcv : version de la plus CV trouvée
+*/
+// !!!!!!! remplacer des 'this.' par data.
+// commitMapObjets est une fonction PAS une méthode de Session
+// revoir les arguments des getters (à unifier en sid sid2)
 export function commitMapObjets (mapObj) { // SAUF mapObj.compte
   const objets = []
 
@@ -171,8 +189,9 @@ export function commitMapObjets (mapObj) { // SAUF mapObj.compte
   }
 
   if (mapObj.contact) {
+    // pour chaque contact, gestion d'une CV (éventuellement fake)
     mapObj.idbContact.forEach((x) => {
-      if (x.st < 0) {
+      if (x.suppr) {
         const avant = this.contact(x.id, x.ic)
         if (avant) this.cvMoinsCtc(avant.data.na.sid, x.id)
       } else {

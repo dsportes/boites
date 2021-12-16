@@ -81,6 +81,15 @@ export function sleep (delai) {
   return new Promise((resolve) => { setTimeout(() => resolve(), delai) })
 }
 
+let jourJ // nombre de jours écoulés depuis le 1/1/2020. Recalculé toutes les heures.
+const j0 = Math.floor(new Date('2020-01-01T00:00:00').getTime() / 86400000)
+setInterval(() => { jourJ = Math.floor(new Date().getTime() / 86400000) - j0 }, 60000)
+
+export function getJourJ () { return jourJ }
+
+/* `dlv` : date limite de validité, en nombre de jours depuis le 1/1/2021. */
+export function dlvDepassee (dlv) { return dlv < jourJ }
+
 export async function readFile (file) {
   return new Promise((resolve, reject) => {
     const image = { size: file.size, name: file.name, type: file.type }
