@@ -97,7 +97,7 @@ export function setObjets (state, [table, lobj]) { // lobj : array d'objets
       const st = setEntree(state, [table, sid])
       m[sid].forEach(obj => {
         const av = st[obj.sid2]
-        if (obj.st < 0) {
+        if (obj.suppr || obj.horsLimite) {
           if (av) delete st[obj.sid2]
         } else if (!av || av.v < obj.v) {
           st[obj.sid2] = obj
@@ -110,7 +110,7 @@ export function setObjets (state, [table, lobj]) { // lobj : array d'objets
     const st = state[table + 's']
     lobj.forEach(obj => {
       const av = st[obj.sid]
-      if (obj.st < 0) {
+      if (obj.suppr || obj.horsLimite) {
         if (av) delete st[obj.sid]
       } else if (!av || av.v < obj.v) {
         st[obj.sid] = obj

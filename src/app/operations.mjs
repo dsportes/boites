@@ -370,10 +370,12 @@ export class OperationUI extends Operation {
   - détermine les avatars et groupes référencés dans les rows de Idb
   - supprime de la base comme de la mémoire les rows / objets inutiles
   - puis récupère les CVs et supprime celles non référencées
+  Les items de dlv dépassée sont lus, non stockés et mis à supprimer de IDB
   */
   async chargementIdb () {
     data.refsAv = new Set()
     data.refsGr = new Set()
+    const hls = []
 
     this.razidblec()
     this.BRK()
@@ -389,7 +391,7 @@ export class OperationUI extends Operation {
       const { objs, vol } = await getCvs()
       if (objs && objs.length) {
         objs.forEach((cv) => {
-          data.repertoire[cv.sid] = cv
+          data.repertoire.setCv(cv)
         })
       }
       this.majidblec({ table: 'cv', st: true, vol: vol, nbl: objs.length })
@@ -398,7 +400,7 @@ export class OperationUI extends Operation {
     this.BRK()
     {
       const { objs, vol } = await getInvitgrs()
-      data.setInvitgrs(objs)
+      data.setInvitgrs(objs, hls)
       this.majidblec({ table: 'invitgr', st: true, vol: vol, nbl: objs.length })
     }
 
@@ -407,8 +409,7 @@ export class OperationUI extends Operation {
       const { objs, vol } = await getContacts()
       if (objs && objs.length) {
         objs.forEach((c) => {
-          const na = new NomAvatar(c.data.nomc)
-          data.cvPlusCtc(na, c.id)
+          data.repertoire(c.nactc).plusCtc(c.id)
         })
       }
       data.setContacts(objs)
@@ -420,25 +421,24 @@ export class OperationUI extends Operation {
       const { objs, vol } = await getInvitcts()
       if (objs && objs.length) {
         objs.forEach((i) => {
-          const na = new NomAvatar(i.data.nomc)
-          data.cvPlusCtc(na, i.id)
+          data.repertoire(i.nact).plusCtc(i.id)
         })
       }
-      data.setInvitcts(objs)
+      data.setInvitcts(objs, hls)
       this.majidblec({ table: 'invitct', st: true, vol: vol, nbl: objs.length })
     }
 
     this.BRK()
     {
       const { objs, vol } = await getParrains()
-      data.setParrains(objs)
+      data.setParrains(objs, hls)
       this.majidblec({ table: 'parrain', st: true, vol: vol, nbl: objs.length })
     }
 
     this.BRK()
     {
       const { objs, vol } = await getRencontres()
-      data.setRencontres(objs)
+      data.setRencontres(objs, hls)
       this.majidblec({ table: 'rencontre', st: true, vol: vol, nbl: objs.length })
     }
 
@@ -454,8 +454,7 @@ export class OperationUI extends Operation {
       const { objs, vol } = await getMembres()
       if (objs && objs.length) {
         objs.forEach((m) => {
-          const na = new NomAvatar(m.data.nomc)
-          data.cvPlusMbr(na, m.id)
+          data.repertoire(m.namb).plusMbr(m.id)
         })
       }
       data.setMembres(objs)
@@ -465,7 +464,7 @@ export class OperationUI extends Operation {
     this.BRK()
     {
       const { objs, vol } = await getSecrets()
-      data.setSecrets(objs)
+      data.setSecrets(objs, hls)
       this.majidblec({ table: 'secret', st: true, vol: vol, nbl: objs.length })
     }
 
@@ -500,6 +499,12 @@ export class OperationUI extends Operation {
       })
       data.commitRepertoire()
       this.majidblec({ table: 'purgecv', st: true, vol: 0, nbl: nbp })
+    }
+
+    if (hls.length) {
+      // Des objets à supprimer de IDB
+      hls.forEach(obj => { obj.st = -1 })
+      commitRows(hls)
     }
 
     data.refsAv = null

@@ -4,7 +4,7 @@ const u8ToB64 = crypt.u8ToB64
 const b64ToU8 = crypt.b64ToU8
 import { openIDB, closeIDB } from './db.mjs'
 import { openWS, closeWS } from './ws.mjs'
-import { cfg, store, appexc, serial, deserial } from './util.mjs'
+import { cfg, store, appexc, serial, deserial, dlvDepassee } from './util.mjs'
 import { ConnexionCompteAvion, ConnexionCompte } from './operations.mjs'
 
 import { useRouter, useRoute } from 'vue-router'
@@ -125,7 +125,7 @@ export async function remplacePage (page) {
   - membre si stx = 2 (invité)
   - secret : dlv est st si > 0 et < 99999
 */
-export async function objetDeItem (item) {
+async function objetDeItem (item) {
   const row = schemas.deserialize('row' + item.table, item.serial)
   let x
   switch (item.table) {
@@ -796,41 +796,86 @@ class Session {
 
   getAvatar (id) { return store().getters['db/avatar'](id) }
 
-  setAvatars (lobj) { return store().commits('db/setObjets', ['avatar', lobj]) }
+  setAvatars (lobj, hls) {
+    if (lobj.length) {
+      if (hls) lobj.forEach(obj => { if (obj.suppr) hls.push(obj) })
+      store().commits('db/setObjets', ['avatar', lobj])
+    }
+  }
 
   getGroupe (id) { return store().getters['db/groupe'](id) }
 
-  setGroupes (lobj) { return store().commits('db/setObjets', ['groupe', lobj]) }
+  setGroupes (lobj, hls) {
+    if (lobj.length) {
+      if (hls) lobj.forEach(obj => { if (obj.suppr) hls.push(obj) })
+      store().commits('db/setObjets', ['groupe', lobj])
+    }
+  }
 
   getRencontre (prh) { return store().getters['db/rencontre'](prh) }
 
-  setRencontres (lobj) { return store().commits('db/setObjets', ['rencontre', lobj]) }
+  setRencontres (lobj, hls) {
+    if (lobj.length) {
+      if (hls) lobj.forEach(obj => { if (obj.suppr || obj.horslimite) hls.push(obj) })
+      store().commits('db/setObjets', ['rencontre', lobj])
+    }
+  }
 
   getParrain (pph) { return store().getters['db/parrain'](pph) }
 
-  setParrains (lobj) { return store().commits('db/setObjets', ['parrain', lobj]) }
+  setParrains (lobj, hls) {
+    if (lobj.length) {
+      if (hls) lobj.forEach(obj => { if (obj.suppr || obj.horslimite) hls.push(obj) })
+      store().commits('db/setObjets', ['parrain', lobj])
+    }
+  }
 
   getCv (id) { return this.repertoire[id] }
 
   getContact (sid, sid2) { return store().getters['db/contact'](sid, sid2) }
 
-  setContacts (lobj) { return store().commits('db/setObjets', ['contact', lobj]) }
+  setContacts (lobj, hls) {
+    if (lobj.length) {
+      if (hls) lobj.forEach(obj => { if (obj.suppr) hls.push(obj) })
+      store().commits('db/setObjets', ['contact', lobj])
+    }
+  }
 
   getInvitct (sid, sid2) { return store().getters['db/invitct'](sid, sid2) }
 
-  setInvitcts (lobj) { return store().commits('db/setObjets', ['invitct', lobj]) }
+  setInvitcts (lobj, hls) {
+    if (lobj.length) {
+      if (hls) lobj.forEach(obj => { if (obj.suppr || obj.horslimite) hls.push(obj) })
+      store().commits('db/setObjets', ['invitct', lobj])
+    }
+  }
 
   getInvitgr (sid, sid2) { return store().getters['db/invitgr'](sid, sid2) }
 
-  setInvitgrs (lobj) { return store().commits('db/setObjets', ['invitgr', lobj]) }
+  setInvitgrs (lobj, hls) {
+    if (lobj.length) {
+      if (hls) lobj.forEach(obj => { if (obj.suppr || obj.horslimite) hls.push(obj) })
+      store().commits('db/setObjets', ['invitgr', lobj])
+    }
+  }
 
   getMembre (sid, sid2) { return store().getters['db/membre'](sid, sid2) }
 
-  setMembres (lobj) { return store().commits('db/setObjets', ['membre', lobj]) }
+  setMembres (lobj, hls) {
+    if (lobj.length) {
+      if (hls) lobj.forEach(obj => { if (obj.suppr || obj.horslimite) hls.push(obj) })
+      store().commits('db/setObjets', ['membre', lobj])
+    }
+  }
 
   getSecret (sid, sid2) { return store().getters['db/secret'](sid, sid2) }
 
-  setSecrets (lobj) { return store().commits('db/setObjets', ['secret', lobj]) }
+  setSecrets (lobj, hls) {
+    if (lobj.length) {
+      if (hls) lobj.forEach(obj => { if (obj.suppr || obj.horslimite) hls.push(obj) })
+      store().commits('db/setObjets', ['secret', lobj])
+    }
+  }
 
   purgeAvatars (lav) { if (lav.size) store().commit('db/purgeAvatars', lav) }
 
@@ -900,6 +945,20 @@ schemas.forSchema({
 export class Compte {
   get table () { return 'compte' }
 
+  get sid () { return crypt.idToSid(this.id) }
+
+  get pk () { return this.id }
+
+  get suppr () { return false }
+
+  get horsLimite () { return false }
+
+  get titre () {
+    if (!this.memo) return this.sid
+    const i = this.memo.indexOf('/n')
+    return i === -1 ? this.memo : this.memo.substring(0, i)
+  }
+
   nouveau (nomAvatar, cpriv) {
     this.id = crypt.rnd6()
     this.v = 0
@@ -914,16 +973,6 @@ export class Compte {
     this.memo = 'Mémo de ' + nomAvatar.nom
     this.vsh = 0
     return this
-  }
-
-  get sid () { return crypt.idToSid(this.id) }
-
-  get pk () { return this.id }
-
-  get titre () {
-    if (!this.memo) return this.sid
-    const i = this.memo.indexOf('/n')
-    return i === -1 ? this.memo : this.memo.substring(0, i)
   }
 
   get avatars () {
@@ -1054,6 +1103,8 @@ export class Avatar {
 
   get suppr () { return this.suppr < 0 }
 
+  get horsLimite () { return false }
+
   get label () { return this.na.nom }
 
   get icone () { return this.photo || '' }
@@ -1141,6 +1192,8 @@ export class Cv {
   get pk () { return this.id }
 
   get suppr () { return this.st < 0 }
+
+  get horsLimite () { return false }
 
   constructor (na) {
     // Si na est présent, c'est un "fake"
@@ -1236,7 +1289,7 @@ export class Cv {
     data.repertoire.setCv(this)
   }
 
-  moinsMbr (id) { // id de l'avatar du compte dont this N'EST PLUS contact
+  moinsMbr (id) { // id du groupe dont this N'EST PLUS membre
     const idx = this.lmbr.indexOf(id)
     if (idx !== -1) {
       this.lmbr.splice(idx, 1)
@@ -1245,7 +1298,7 @@ export class Cv {
     } // sinon il n'y était déjà plus
   }
 
-  plusMbr (id) { // id de l'avatar du compte dont this est contact
+  plusMbr (id) { // id du groupe dont this est membre
     if (this.lmbr.indexOf(id) !== -1) return // y était déja
     this.lmbr.push(id)
     data.repertoire.setCv(this)
@@ -1297,6 +1350,8 @@ export class Contact {
   get pk () { return [this.id, this.ic] }
 
   get suppr () { return this.st < 0 }
+
+  get horsLimite () { return false }
 
   get sidav () { return this.sid }
 
@@ -1379,6 +1434,8 @@ export class Groupe {
   get pk () { return this.id }
 
   get suppr () { return this.suppr < 0 }
+
+  get horsLimite () { return false }
 
   get sidgr () { return this.sid }
 
@@ -1492,6 +1549,8 @@ export class Invitct {
 
   get suppr () { return this.st < 0 }
 
+  get horsLimite () { return !this.suppr ? dlvDepassee(this.dlv) : false }
+
   get sidav () { return this.sid }
 
   get nact () { return new NomAvatar(this.data.nomc) }
@@ -1575,6 +1634,8 @@ export class Invitgr {
   get pk () { return [this.id, this.ni] }
 
   get suppr () { return this.st < 0 }
+
+  get horsLimite () { return !this.suppr ? dlvDepassee(this.dlv) : false }
 
   get sidav () { return this.sid }
 
@@ -1684,6 +1745,8 @@ export class Membre {
 
   get suppr () { return this.suppr < 0 }
 
+  get horsLimite () { return !this.suppr ? (this.stx === 2 && dlvDepassee(this.dlv)) : false }
+
   get sidgr () { return this.sid }
 
   /* na du membre */
@@ -1782,6 +1845,8 @@ export class Parrain {
 
   get suppr () { return this.suppr < 0 }
 
+  get horsLimite () { return !this.suppr ? dlvDepassee(this.dlv) : false }
+
   get sidav () { return crypt.idToSid(this.id) }
 
   async fromRow (row) {
@@ -1857,6 +1922,8 @@ export class Rencontre {
 
   get sidav () { return crypt.idToSid(this.id) }
 
+  get horsLimite () { return !this.suppr ? dlvDepassee(this.dlv) : false }
+
   async fromRow (row) {
     this.vsh = row.vsh || 0
     this.prh = row.prh
@@ -1899,7 +1966,10 @@ export class Rencontre {
 - `ns` : numéro du secret.
 - `ic` : indice du contact pour un secret de couple, sinon 0.
 - `v` :
-- `st` : < 0 pour un secret _supprimé_, numéro de semaine de création pour un _temporaire_, 99999 pour un *permanent*.
+- `st` :
+  - < 0 pour un secret _supprimé_.
+  - 99999 pour un *permanent*.
+  - `dlv` pour un _temporaire_.
 - `ora` : 0:ouvert, 1:restreint, 2:archivé
 - `v1` : volume du texte
 - `v2` : volume de la pièce jointe
@@ -1928,6 +1998,8 @@ export class Secret {
   get pk () { return [this.id, this.ns] }
 
   get suppr () { return this.st < 0 }
+
+  get horsLimite () { return this.st < 0 || this.st >= 99999 ? false : dlvDepassee(this.st) }
 
   get sidc () { return crypt.idToSid(this.id) + '/' + this.ic }
 

@@ -378,13 +378,12 @@ export async function commitRows (lobj) {
     const lidb = []
     for (let i = 0; i < lobj.length; i++) {
       const obj = lobj[i]
-      const suppr = obj.st !== undefined && obj.st < 0
       const idb = obj.toIdb
-      if (!suppr) {
+      if (!obj.suppr) {
         idb.data = await crypt.crypter(obj.table === 'compte' ? d.ps.pcb : d.clek, idb.data)
-        lidb.push({ table: obj.table, suppr: suppr, idb: idb })
+        lidb.push({ table: obj.table, idb: idb })
       } else {
-        lidb.push({ table: obj.table, suppr: suppr, pk: obj.pk })
+        lidb.push({ table: obj.table, suppr: true, pk: obj.pk })
       }
     }
     await d.db.transaction('rw', TABLES, async () => {
