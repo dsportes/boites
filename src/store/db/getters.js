@@ -1,61 +1,42 @@
 import { crypt } from '../../app/crypto.mjs'
 
 export const avatar = (state) => (id) => {
-  return state.avatars[crypt.idToSid(id)]
-}
-
-export const contact = (state) => (id, ic) => {
-  const lc = state.contacts[crypt.idToSid(id)]
-  if (!ic) return lc || { }
-  return lc ? lc[ic] : null
-}
-
-export const invitct = (state) => (id, ni) => {
-  const lc = state.invitcts[crypt.idToSid(id)]
-  if (!ni) return lc || { }
-  return lc ? lc[crypt.idToSid(ni)] : null
-}
-
-export const invitgr = (state) => (id, ni) => {
-  const lc = state.invitgrs[crypt.idToSid(id)]
-  if (!ni) return lc || { }
-  return lc ? lc[crypt.idToSid(ni)] : null
-}
-
-export const rencontre = (state) => (id, prh) => {
-  if (prh) return state.rencontres[crypt.idToSid(prh)] || null
-  for (const sid in state.rencontres) {
-    const obj = state.rencontres[sid]
-    if (obj.id === id) return obj
-  }
-  return null
-}
-
-export const parrain = (state) => (id, pph) => {
-  if (pph) return state.parrains[crypt.idToSid(pph)] || null
-  for (const sid in state.parrains) {
-    const obj = state.parrains[sid]
-    if (obj.id === id) return obj
-  }
-  return null
+  return id ? state.avatars[crypt.idToSid(id)] : state.avatars
 }
 
 export const groupe = (state) => (id) => {
-  return state.groupes[crypt.idToSid(id)]
+  return id ? state.groupes[crypt.idToSid(id)] : state.groupes
 }
 
-export const membre = (state) => (id, im) => {
-  const lc = state.membres[crypt.idToSid(id)]
-  if (!im) return lc || { }
-  return lc ? lc[im] : null
+export const rencontre = (state) => (id, prh) => {
+  return prh ? state.rencontres[crypt.idToSid(prh)] : state.rencontres
 }
 
-export const secret = (state) => (id, ns) => {
-  const lc = state.membres[crypt.idToSid(id)]
-  if (!ns) return lc || { }
-  return lc ? lc[crypt.idToSid(ns)] : null
+export const parrain = (state) => (pph) => {
+  return pph ? state.parrains[crypt.idToSid(pph)] : state.parrains
 }
 
-export const cv = (state) => (id) => {
-  return state.cvs[crypt.idToSid(id)]
+export const contact = (state) => (sid, sid2) => {
+  const lc = state.contacts[sid]
+  return !sid2 ? lc || { } : (lc ? lc[sid2] : null)
+}
+
+export const invitct = (state) => (sid, sid2) => {
+  const lc = state.invitcts[sid]
+  return !sid2 ? lc || { } : (lc ? lc[sid2] : null)
+}
+
+export const invitgr = (state) => (sid, sid2) => {
+  const lc = state.invitgrs[sid]
+  return !sid2 ? lc || { } : (lc ? lc[sid2] : null)
+}
+
+export const membre = (state) => (sid, sid2) => {
+  const lc = state.membres[sid]
+  return !sid2 ? lc || { } : (lc ? lc[sid2] : null)
+}
+
+export const secret = (state) => (sid, sid2) => {
+  const lc = state.membres[sid]
+  return !sid2 ? lc || { } : (lc ? lc[sid2] : null)
 }

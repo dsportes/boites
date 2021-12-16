@@ -168,75 +168,92 @@ export async function rowItemsToMapObjets (rowItems) {
 /* mapObj : clé par table, valeur : array des objets
 - ne traite pas 'compte'
 - inscrit en store OU les supprime du store s'il y était
-Retourne [objets, vcv]
-- objets : tous les objets à mettre en IDB
-- vcv : version de la plus CV trouvée
+- objets : array remplie par tous les objets à mettre en IDB
+Retourne vcv : version de la plus CV trouvée
 */
-// !!!!!!! remplacer des 'this.' par data.
-// commitMapObjets est une fonction PAS une méthode de Session
-// revoir les arguments des getters (à unifier en sid sid2)
-export function commitMapObjets (mapObj) { // SAUF mapObj.compte
-  const objets = []
-
-  function push (n) {
-    mapObj[n].forEach((x) => { objets.push(x) })
-  }
-
+export function commitMapObjets (objets, mapObj) { // SAUF mapObj.compte
   let vcv = 0
+
+  function push (n) { mapObj[n].forEach((x) => { objets.push(x) }) }
+
   if (mapObj.avatar) {
-    store().commit('db/setAvatars', mapObj.avatar)
+    /* Quand un nouvel avatar apprait en synchro, il a été créé dans une autre session
+    après le chargement initial synchronisé : les autres rows mis à jour / créés depuis
+    vont donc parvenir en messages de synchro */
+    data.setAvatars(mapObj.avatar)
     push('avatar')
   }
 
   if (mapObj.contact) {
-    // pour chaque contact, gestion d'une CV (éventuellement fake)
+    /* Pour chaque contact, gestion de sa CV dans le répertoire :
+    - soit création (fake)
+    - soit suppression
+    - soit mise à jour de la liste des contacts dans la CV
+    */
     mapObj.idbContact.forEach((x) => {
       if (x.suppr) {
-        const avant = this.contact(x.id, x.ic)
-        if (avant) this.cvMoinsCtc(avant.data.na.sid, x.id)
+        const avant = data.getContact(x.sid, x.sid2)
+        if (avant && !avant.suppr) {
+          data.repertoire.getCv(avant.nactc).moinsCtc(x.id)
+        }
       } else {
-        this.cvPlusCtc(x.data.na, x.id)
+        data.repertoire.getCv(x.nactc).plusCtc(x.id)
       }
     })
-    store().commit('db/setContacts', mapObj.contact)
+    data.setContacts(mapObj.contact)
     push('contact')
   }
 
   if (mapObj.invitct) {
+    // Comme contact
     mapObj.invitct.forEach((x) => {
-      if (x.st < 0) {
-        const avant = this.invitct(x.id, x.ic)
-        if (avant) this.cvMoinsCtc(avant.data.na.sid, x.id)
+      if (x.suppr) {
+        const avant = data.getInvitct(x.sid, x.sid2)
+        if (avant && !avant.suppr) {
+          data.repertoire.getCv(avant.nactc).moinsCtc(x.id)
+        }
       } else {
-        this.cvPlusCtc(x.data.na, x.id)
+        data.repertoire.getCv(x.nactc).plusCtc(x.id)
       }
     })
-    store().commit('db/setInvitCts', mapObj.invitct)
+    data.setInvitCts(mapObj.invitct)
     push('invitct')
   }
 
   if (mapObj.invitgr) {
-    store().commit('db/setInvitGrs', mapObj.invitgr)
+    /* Les groupes n'ont pas de CV.
+    La liste des groupes peut changer par invitgr
+    */
+    data.setInvitGrs(mapObj.invitgr)
     push('invitgr')
   }
 
   if (mapObj.parrain) {
-    store().commit('db/setParrains', mapObj.parrain)
+    data.setParrains(mapObj.parrain)
     push('parrain')
   }
 
   if (mapObj.rencontre) {
-    store().commit('db/setRencontres', mapObj.rencontre)
+    data.setRencontres(mapObj.rencontre)
     push('rencontre')
   }
 
   if (mapObj.groupe) {
-    store().commit('db/setGroupes', mapObj.groupe)
+    data.setGroupes(mapObj.groupe)
     push('groupe')
   }
 
   if (mapObj.membre) {
+    // Gérer la CV comme pour un contact
     mapObj.membre.forEach((x) => {
+      if (x.suppr) {
+        const avant = data.getMembre(x.sid, x.sid2)
+        if (avant && !avant.suppr) {
+          data.repertoire.getCv(avant.namb).moinsMbr(x.id)
+        }
+      } else {
+        data.repertoire.getCv(x.namb).plusMbr(x.id)
+      }
       if (x.st < 0) {
         const avant = this.membre(x.id, x.im)
         if (avant) this.cvMoinsMbr(avant.data.na.sid, x.id)
@@ -244,26 +261,33 @@ export function commitMapObjets (mapObj) { // SAUF mapObj.compte
         this.cvPlusMbr(x.data.na, x.id)
       }
     })
-    store().commit('db/setMembres', mapObj.membre)
+    data.setMembres(mapObj.membre)
     push('membre')
   }
 
   if (mapObj.secret) {
-    store().commit('db/setSecrets', mapObj.secret)
+    data.setSecrets(mapObj.secret)
     push('secret')
   }
 
   if (mapObj.cv) {
     mapObj.cv.forEach((x) => {
-      if (x.st >= 0) {
-        this.cvFusionCV(x)
+      if (!x.suppr) {
+        const cv = data.repertoire.getCvParSid(x.sid)
+        if (cv) {
+          const xok = cv.fusionCV(x)
+          if (!xok) data.repertoire.setCv(cv)
+        } else {
+          data.repertoire.setCv(x.sid)
+        }
         if (x.vcv > vcv) vcv = x.vcv
       }
     })
     push('cv')
   }
-  data.commitRepertoire()
-  return [objets, vcv]
+
+  data.repertoire.commit() // un seul à la fin
+  return vcv
 }
 
 export const SIZEAV = 7
@@ -334,12 +358,12 @@ export class Motscles {
     this.mc.lcategs.length = 0
     this.fusion(cfg().motscles)
     if (this.mode === 1 || (this.mode === 3 && !this.idg)) {
-      this.mapc = data.compte().mmc
+      this.mapc = data.getCompte().mmc
       this.fusion(this.mapc)
       if (this.mode === 1) this.src = this.mapc
     }
     if (this.mode === 2 || (this.mode === 3 && this.idg)) {
-      const gr = data.groupe(this.idg)
+      const gr = data.getGroupe(this.idg)
       this.mapg = gr.mc
       if (this.mode === 2 && gr.maxSty === 2) this.src = this.mapg
       this.fusion(this.mapg)
@@ -447,6 +471,61 @@ export class Motscles {
     this.tri()
     this.apres = this.flatMap(this.localIdx)
     this.mc.st.modifie = this.apres !== this.avant
+  }
+}
+
+/* Répertoire des CV **********************************************************/
+class Repertoire {
+  constructor () {
+    this.rep = {}
+    this.modif = false
+  }
+
+  setCv (cv) {
+    if (cv.suppr || (cv.fake && !cv.lctc.length && !cv.lmbr.length)) {
+      // cv inutile : on l'efface du répertoire
+      delete this.rep[cv.sid]
+    } else {
+      // On clone Cv pour que le store détecte un changement d'objet
+      this.rep[cv.sid] = cv.clone()
+    }
+    this.modif = true
+  }
+
+  getCv (na) {
+    const sid = na.sid
+    let cv = this.rep[sid]
+    if (!cv) {
+      cv = new Cv(na)
+      this.rep[sid] = cv
+      this.modif = true
+    }
+    return cv
+  }
+
+  getCvParSid (na) {
+    const sid = na.sid
+    let cv = this.rep[sid]
+    if (!cv) {
+      cv = new Cv(na)
+      this.rep[sid] = cv
+      this.modif = true
+    }
+    return cv
+  }
+
+  purge (setCvsInutiles) {
+    if (setCvsInutiles.size) {
+      setCvsInutiles.forEach((sid) => { delete this.rep[sid] })
+      this.modif = true
+    }
+  }
+
+  commit () {
+    if (this.modif) {
+      store().commit('db/commitRepertoire', this)
+      this.modif = false
+    }
   }
 }
 
@@ -591,7 +670,7 @@ class Session {
     this.ws = null // WebSocket quand il est ouvert
     this.erWS = 0 // 0:OK 1:WS en erreur NON traitée 2:WS en erreur traitée
     this.exNET = null // exception sur NET
-    this.repertoire = {}
+    this.repertoire = new Repertoire()
 
     if (!init) {
       this.statutnet = 0 // 0: net pas ouvert, 1:net OK, 2: net KO
@@ -662,25 +741,13 @@ class Session {
     return this.nomc[sid]
   }
 
-  compte () {
-    return store().state.db.compte
-  }
-
-  setCompte (compte) {
-    store().commit('db/setCompte', compte)
-  }
-
-  avc (id) {
-    return this.compte().av(id)
-  }
-
-  get setAvatars () {
+  get setDesAvatars () {
     const s = new Set()
-    for (const sid in this.compte().mac) s.add(this.compte().mac[sid].na.id)
+    for (const sid in this.getCompte().mac) s.add(this.getCompte().mac[sid].na.id)
     return s
   }
 
-  get setGroupes () {
+  get setDesGroupes () {
     const s = new Set()
     const l1 = store().state.db.invitgrs
     for (const ids in l1) {
@@ -720,110 +787,54 @@ class Session {
     return s
   }
 
-  avatar (id) {
-    return store().getters['db/avatar'](id)
-  }
+  /* Getters / Setters ****************************************/
+  getCompte () { return store().state.db.compte }
 
-  contact (id, ic) {
-    return store().getters['db/contact'](id, ic)
-  }
+  setCompte (compte) { store().commit('db/setCompte', compte) }
 
-  invitct (id, ni) {
-    return store().getters['db/invitct'](id, ni)
-  }
+  avc (id) { return this.getCompte().av(id) }
 
-  invitgr (id, ni) {
-    return store().getters['db/invitgr'](id, ni)
-  }
+  getAvatar (id) { return store().getters['db/avatar'](id) }
 
-  rencontre (prh, id) {
-    return store().getters['db/rencontre'](prh, id)
-  }
+  setAvatars (lobj) { return store().commits('db/setObjets', ['avatar', lobj]) }
 
-  parrain (pph, id) {
-    return store().getters['db/parrain'](pph, id)
-  }
+  getGroupe (id) { return store().getters['db/groupe'](id) }
 
-  groupe (id) {
-    return store().getters['db/groupe'](id)
-  }
+  setGroupes (lobj) { return store().commits('db/setObjets', ['groupe', lobj]) }
 
-  membre (id, im) {
-    return store().getters['db/membre'](id, im)
-  }
+  getRencontre (prh) { return store().getters['db/rencontre'](prh) }
 
-  secret (id, ns) {
-    return store().getters['db/secret'](id, ns)
-  }
+  setRencontres (lobj) { return store().commits('db/setObjets', ['rencontre', lobj]) }
 
-  cv (id) {
-    return this.repertoire[id]
-  }
+  getParrain (pph) { return store().getters['db/parrain'](pph) }
 
-  commitRepertoire () {
-    store().commit('db/commitRepertoire', this.repertoire)
-  }
+  setParrains (lobj) { return store().commits('db/setObjets', ['parrain', lobj]) }
 
-  cvPlusCtc (naCtc, id) { // na du contact, id de l'avatar du compte
-    const cv = this.repertoire[naCtc.sid]
-    if (cv && cv.lctc.indexOf(id) !== -1) return null // y était déja
-    let cl
-    if (cv) {
-      cl = cv.clone()
-    } else {
-      cl = new Cv().nouveau(naCtc.id, 0, 0, naCtc.nomc, '', naCtc.nomc)
-      cl.fake = true
-    }
-    cl.lctc.push(naCtc.id)
-    this.repertoire[naCtc.sid] = cl
-    return cl
-  }
+  getCv (id) { return this.repertoire[id] }
 
-  cvMoinsCtc (sid, id) { // sid du contact, id de l'avatar du compte
-    const cv = this.repertoire[sid]
-    const idx = cv ? cv.lctc.indexOf(id) : -1
-    if (idx === -1) return null // n'y était pas
-    const cl = cv.clone()
-    cl.lctc.splice(idx, 1)
-    this.repertoire[sid] = cl
-    return cl
-  }
+  getContact (sid, sid2) { return store().getters['db/contact'](sid, sid2) }
 
-  cvPlusMbr (naCtc, id) { // na du membre, id : du groupe
-    const cv = this.repertoire[naCtc.sid]
-    if (cv && cv.lmbr.indexOf(id) !== -1) return null // y était déja
-    let cl
-    if (cv) {
-      cl = cv.clone()
-    } else {
-      cl = new Cv().nouveau(naCtc.id, 0, 0, naCtc.nomc, '', naCtc.nomc)
-      cl.fake = true
-    }
-    cl.lmbr.push(naCtc.id)
-    this.repertoire[naCtc.sid] = cl
-    return cl
-  }
+  setContacts (lobj) { return store().commits('db/setObjets', ['contact', lobj]) }
 
-  cvMoinsMbr (sid, id) { // sid du membre, id du groupe
-    const cv = this.repertoire[sid]
-    const idx = cv ? cv.lmbr.indexOf(id) : -1
-    if (idx === -1) return null // n'y était pas
-    const cl = cv.clone()
-    cl.lctc.splice(idx, 1)
-    this.repertoire[sid] = cl
-    return cl
-  }
+  getInvitct (sid, sid2) { return store().getters['db/invitct'](sid, sid2) }
 
-  cvFusionCV (cv) {
-    const c = this.repertoire[cv.sid]
-    if (c && !c.fake && c.vcv > cv.vcv) return null // existante plus récente
-    if (c) {
-      cv.lctc = c.lctc
-      cv.lmbr = c.lmbr
-    }
-    this.repertoire[cv.sid] = cv
-    return cv
-  }
+  setInvitcts (lobj) { return store().commits('db/setObjets', ['invitct', lobj]) }
+
+  getInvitgr (sid, sid2) { return store().getters['db/invitgr'](sid, sid2) }
+
+  setInvitgrs (lobj) { return store().commits('db/setObjets', ['invitgr', lobj]) }
+
+  getMembre (sid, sid2) { return store().getters['db/membre'](sid, sid2) }
+
+  setMembres (lobj) { return store().commits('db/setObjets', ['membre', lobj]) }
+
+  getSecret (sid, sid2) { return store().getters['db/secret'](sid, sid2) }
+
+  setSecrets (lobj) { return store().commits('db/setObjets', ['secret', lobj]) }
+
+  purgeAvatars (lav) { if (lav.size) store().commit('db/purgeAvatars', lav) }
+
+  purgeGroupes (lgr) { if (lgr.size) store().commit('db/purgeGroupes', lgr) }
 }
 export const data = new Session()
 
@@ -1035,6 +1046,18 @@ schemas.forSchema({
 export class Avatar {
   get table () { return 'avatar' }
 
+  get sid () { return crypt.idToSid(this.id) }
+
+  get sidav () { return crypt.idToSid(this.id) }
+
+  get pk () { return this.id }
+
+  get suppr () { return this.suppr < 0 }
+
+  get label () { return this.na.nom }
+
+  get icone () { return this.photo || '' }
+
   nouveau (nomAvatar) {
     this.na = nomAvatar
     this.id = this.na.id
@@ -1062,20 +1085,6 @@ export class Avatar {
     this.info = x[1]
     this.lct = deserial(await crypt.decrypter(data.clek, row.lctk))
     return this
-  }
-
-  get sid () { return crypt.idToSid(this.id) }
-
-  get sidav () { return crypt.idToSid(this.id) }
-
-  get pk () { return this.id }
-
-  get label () {
-    return this.na.nom
-  }
-
-  get icone () {
-    return this.photo || ''
   }
 
   async cvToRow (ph, info) {
@@ -1127,10 +1136,22 @@ schemas.forSchema({
 export class Cv {
   get table () { return 'cv' }
 
-  constructor () {
+  get sid () { return crypt.idToSid(this.id) }
+
+  get pk () { return this.id }
+
+  get suppr () { return this.st < 0 }
+
+  constructor (na) {
+    // Si na est présent, c'est un "fake"
     this.lctc = []
     this.lmbr = []
-    this.fake = false
+    // eslint-disable-next-line no-unneeded-ternary
+    this.fake = na ? true : false
+    this.vcv = 0
+    this.st = 0
+    this.photo = ''
+    this.info = na ? na.nomc : ''
   }
 
   clone () {
@@ -1165,10 +1186,6 @@ export class Cv {
     this.info = na.nomc
   }
 
-  get sid () { return crypt.idToSid(this.id) }
-
-  get pk () { return this.id }
-
   fromAvatar (av) { // av : objet Avatar
     this.id = av.id
     this.vcv = av.vcv
@@ -1183,11 +1200,13 @@ export class Cv {
     this.id = row.id
     this.vcv = row.vcv
     this.st = row.cv
-    this.nomc = data.nomcDe(crypt.idToSid(this.id))
-    this.na = new NomAvatar(this.nomc)
-    const x = row.phinf ? deserial(await crypt.decrypter(this.na.cle, row.phinf)) : null
-    this.photo = x ? x[0] : null
-    this.info = x ? x[1] : null
+    if (!this.suppr) {
+      this.nomc = data.nomcDe(crypt.idToSid(this.id))
+      this.na = new NomAvatar(this.nomc)
+      const x = row.phinf ? deserial(await crypt.decrypter(this.na.cle, row.phinf)) : null
+      this.photo = x ? x[0] : null
+      this.info = x ? x[1] : null
+    }
     return this
   }
 
@@ -1200,6 +1219,43 @@ export class Cv {
     schemas.deserialize('cvIdb', idb, this)
     this.na = new NomAvatar(this.nomc)
     return this
+  }
+
+  moinsCtc (id) { // id de l'avatar du compte dont this N'EST PLUS contact
+    const idx = this.lctc.indexOf(id)
+    if (idx !== -1) {
+      this.lctc.splice(idx, 1)
+      // Dans le répertoire la CV origine est remplacée par son clone
+      data.repertoire.setCv(this)
+    } // sinon il n'y était déjà plus
+  }
+
+  plusCtc (id) { // id de l'avatar du compte dont this est contact
+    if (this.lctc.indexOf(id) !== -1) return // y était déja
+    this.lctc.push(id)
+    data.repertoire.setCv(this)
+  }
+
+  moinsMbr (id) { // id de l'avatar du compte dont this N'EST PLUS contact
+    const idx = this.lmbr.indexOf(id)
+    if (idx !== -1) {
+      this.lmbr.splice(idx, 1)
+      // Dans le répertoire la CV origine est remplacée par son clone
+      data.repertoire.setCv(this)
+    } // sinon il n'y était déjà plus
+  }
+
+  plusMbr (id) { // id de l'avatar du compte dont this est contact
+    if (this.lmbr.indexOf(id) !== -1) return // y était déja
+    this.lmbr.push(id)
+    data.repertoire.setCv(this)
+  }
+
+  fusionCV (cv) {
+    if (!this.fake && this.vcv > cv.vcv) return true // existante plus récente
+    cv.lctc = this.lctc
+    cv.lmbr = this.lmbr
+    return false
   }
 }
 
@@ -1240,16 +1296,17 @@ export class Contact {
 
   get pk () { return [this.id, this.ic] }
 
+  get suppr () { return this.st < 0 }
+
   get sidav () { return this.sid }
 
-  get nact () { return this.data ? new NomAvatar(this.data.nomc) : null }
+  /* NomAvatar de l'avatar contact de l'avatar du compte id */
+  get nactc () { return !this.suppr ? new NomAvatar(this.data.nomc) : null }
 
   majCc () {
-    if (this.data) {
-      data.clec[this.sid] = this.data.cc
-      const na = new NomAvatar(this.data.nomc)
-      data.nomc[na.sid] = this.data.nomc
-    }
+    data.clec[this.sid] = this.data.cc
+    const na = new NomAvatar(this.data.nomc)
+    data.nomc[na.sid] = this.data.nomc
   }
 
   async fromRow (row) {
@@ -1258,19 +1315,21 @@ export class Contact {
     this.ic = row.ic
     this.v = row.v
     this.st = row.st
-    this.q1 = row.q1
-    this.q2 = row.q2
-    this.qm1 = row.qm1
-    this.qm2 = row.qm2
-    this.data = row.datak ? deserial(await crypt.decrypter(data.clek, row.datak)) : null
-    this.majCc()
-    this.ard = await crypt.decrypterStr(this.data.cc, row.ardc)
-    this.icb = crypt.u8ToInt(await crypt.decrypter(this.data.cc, row.icbc))
-    this.an = row.ank ? deserial(await crypt.decrypter(data.clek, row.ank)) : null
+    if (!this.suppr) {
+      this.q1 = row.q1
+      this.q2 = row.q2
+      this.qm1 = row.qm1
+      this.qm2 = row.qm2
+      this.data = deserial(await crypt.decrypter(data.clek, row.datak))
+      this.majCc()
+      this.ard = await crypt.decrypterStr(this.data.cc, row.ardc)
+      this.icb = crypt.u8ToInt(await crypt.decrypter(this.data.cc, row.icbc))
+      this.an = row.ank ? deserial(await crypt.decrypter(data.clek, row.ank)) : null
+    }
     return this
   }
 
-  async toRow () {
+  async toRow () { // pas de toRow pour un supprimé
     this.datak = await crypt.crypter(data.clek, serial(this.data))
     this.ank = this.an ? await crypt.crypter(data.clek, serial(this.an)) : null
     this.ardc = await crypt.crypter(this.data.cc, this.ard)
@@ -1283,12 +1342,12 @@ export class Contact {
     return buf
   }
 
-  get toIdb () {
-    return { id: this.id, ic: this.ic, data: schemas.serialize('lidbContact', this) }
+  get toIdb () { // Un supprimé n'est pas écrit en IDB
+    return { id: this.id, ic: this.ic, data: schemas.serialize('idbContact', this) }
   }
 
-  fromIdb (idb, vs) {
-    schemas.desrialise('lidbContact', idb, this)
+  fromIdb (idb) { // Jamais de supprimé en IDB
+    schemas.desrialise('idbContact', idb, this)
     this.majCc()
     return this
   }
@@ -1319,6 +1378,8 @@ export class Groupe {
 
   get pk () { return this.id }
 
+  get suppr () { return this.suppr < 0 }
+
   get sidgr () { return this.sid }
 
   get label () { return this.info ? this.info : this.sid }
@@ -1337,7 +1398,7 @@ export class Groupe {
       const na = new NomAvatar(membre.nomc)
       const avid = na.id
       if (data.avec(avid)) { // c'est un avatar du compte
-        const invitgr = data.invitgr(avid, parseInt(im)) // peut retourner null si résilié
+        const invitgr = data.getInvitgr(na.sid, im) // peut retourner null si résilié
         res[na.sid] = [invitgr, membre]
       }
     }
@@ -1366,20 +1427,22 @@ export class Groupe {
     this.v = row.v
     this.dds = row.dds
     this.st = row.st
-    const cleg = data.clegDe(this.sid)
-    const cv = row.cvg ? deserial(await crypt.decrypter(cleg, row.cvg)) : null
-    this.photo = cv ? (cv[0] || '') : ''
-    this.info = cv ? (cv[1] || '') : ''
-    this.mc = row.mcg ? deserial(await crypt.decrypter(cleg, row.mcg)) : null
-    this.lstm = row.lstmg ? deserial(await crypt.decrypter(cleg, row.lstmg)) : null
+    if (!this.suppr) {
+      const cleg = data.clegDe(this.sid)
+      const cv = row.cvg ? deserial(await crypt.decrypter(cleg, row.cvg)) : ['', '']
+      this.photo = cv[0]
+      this.info = cv[1]
+      this.mc = row.mcg ? deserial(await crypt.decrypter(cleg, row.mcg)) : []
+      this.lstm = row.lstmg ? deserial(await crypt.decrypter(cleg, row.lstmg)) : []
+    }
     return this
   }
 
   async toRow () {
     const cleg = data.clegDe(this.sid)
     this.cvg = await crypt.crypter(cleg, serial([this.photo, this.info]))
-    this.mcg = this.mcg ? await crypt.crypter(cleg, serial(this.mc)) : null
-    this.lstmg = this.lstm ? await crypt.crypter(cleg, serial(this.lstm)) : null
+    this.mcg = await crypt.crypter(cleg, serial(this.mc))
+    this.lstmg = await crypt.crypter(cleg, serial(this.lstm))
     const buf = schemas.serialize('rowgroupe', this)
     delete this.cvg
     delete this.mcg
@@ -1427,9 +1490,11 @@ export class Invitct {
 
   get pk () { return [this.id, this.ni] }
 
+  get suppr () { return this.st < 0 }
+
   get sidav () { return this.sid }
 
-  get nact () { return this.data ? new NomAvatar(this.data.nomc) : null }
+  get nact () { return new NomAvatar(this.data.nomc) }
 
   majCc () {
     if (this.data) data.clec[this.sid] = this.data.cc
@@ -1442,22 +1507,24 @@ export class Invitct {
     this.v = row.v
     this.dlv = row.dlv
     this.st = row.st
-    let rowData = null
-    if (row.datak) {
-      rowData = await crypt.decrypter(data.clek, row.datak)
-    } else if (row.datap) {
-      const cpriv = data.avc(this.id).cpriv
-      rowData = await crypt.decrypterRSA(cpriv, row.datap)
+    if (!this.suppr) {
+      let rowData = null
+      if (row.datak) {
+        rowData = await crypt.decrypter(data.clek, row.datak)
+      } else {
+        const cpriv = data.avc(this.id).cpriv
+        rowData = await crypt.decrypterRSA(cpriv, row.datap)
+      }
+      this.data = deserial(rowData)
+      this.majCc()
+      this.ard = row.ardc ? await crypt.decrypter(this.data.cc, row.ardc) : ''
     }
-    this.data = rowData ? deserial(rowData) : null
-    this.majCc()
-    this.ard = row.ardc ? await crypt.decrypter(this.data.cc, row.ardc) : null
     return this
   }
 
   async toRow () {
-    this.datak = this.data ? await crypt.crypter(data.clek, serial(this.data)) : null
-    this.ardc = this.ard ? await crypt.crypter(this.data.cc, this.ard) : null
+    this.datak = await crypt.crypter(data.clek, serial(this.data))
+    this.ardc = await crypt.crypter(this.data.cc, this.ard)
     const buf = schemas.serialize('rowinvitct', this)
     delete this.datak
     delete this.ardc
@@ -1507,6 +1574,8 @@ export class Invitgr {
 
   get pk () { return [this.id, this.ni] }
 
+  get suppr () { return this.st < 0 }
+
   get sidav () { return this.sid }
 
   get idg () { return this.data ? this.ng.id : null }
@@ -1530,7 +1599,7 @@ export class Invitgr {
     const x = this.stx
     if (x !== 2 && x !== 3) return null
     const m = data.membre(this.idg, this.data.im)
-    const g = data.groupe(this.idg)
+    const g = data.getGroupe(this.idg)
     return [m, g]
   }
 
@@ -1541,28 +1610,28 @@ export class Invitgr {
     this.v = row.v
     this.dlv = row.dlv
     this.st = row.st
-    let rowData = null
-    if (row.datak) {
-      rowData = await crypt.decrypter(data.clek, row.datak)
-    } else if (row.datap) {
-      const cpriv = data.avc(this.id).cpriv
-      rowData = await crypt.decrypterRSA(cpriv, row.datap)
-    }
-    this.data = rowData ? deserial(rowData) : null
-    this.annot = null
-    if (this.stx === 2 || this.stx === 3) {
-      const x = row.ank ? await crypt.decrypter(data.clek, row.ank) : null
-      if (x) {
-        this.an = deserial(x)
+    if (!this.suppr) {
+      let rowData = null
+      if (row.datak) {
+        rowData = await crypt.decrypter(data.clek, row.datak)
+      } else {
+        const cpriv = data.avc(this.id).cpriv
+        rowData = await crypt.decrypterRSA(cpriv, row.datap)
       }
+      this.data = deserial(rowData)
+      this.an = null
+      if (this.stx === 2 || this.stx === 3) {
+        const x = row.ank ? await crypt.decrypter(data.clek, row.ank) : null
+        this.an = x ? deserial(x) : ['', '']
+      }
+      this.majCg()
     }
-    this.majCg()
     return this
   }
 
   async toRow () {
-    this.datak = this.data ? await crypt.crypter(data.clek, serial(this.data)) : null
-    this.ank = this.an ? await crypt.crypter(data.clek, serial(this.an)) : null
+    this.datak = await crypt.crypter(data.clek, serial(this.data))
+    this.ank = this.stx === 2 || this.stx === 3 ? await crypt.crypter(data.clek, serial(this.an)) : null
     const buf = schemas.serialize('rowinvitgr', this)
     delete this.datak
     delete this.ank
@@ -1613,9 +1682,12 @@ export class Membre {
 
   get pk () { return [this.id, this.im] }
 
+  get suppr () { return this.suppr < 0 }
+
   get sidgr () { return this.sid }
 
-  get na () { return this.data ? new NomAvatar(this.data.nomc) : null }
+  /* na du membre */
+  get namb () { return this.data ? new NomAvatar(this.data.nomc) : null }
 
   get stx () { return this.st < 0 ? -1 : Math.floor(this.st / 10) }
 
@@ -1629,9 +1701,8 @@ export class Membre {
   invitgr () {
     const na = this.na
     if (!na) return null
-    const ida = na.id
     const x = this.stx
-    return (x === 2 || x === 3) && data.avc(ida) ? data.invitgr(ida, this.data.ni) : null
+    return (x === 2 || x === 3) && data.avc(na.id) ? data.getInvitgr(na.sid, crypt.idToSid(this.data.ni)) : null
   }
 
   majCc () {
@@ -1647,19 +1718,21 @@ export class Membre {
     this.im = row.im
     this.v = row.v
     this.st = row.st
-    this.dlv = row.dlv
-    const cg = row.datag || row.ardg ? data.cleg(this.id) : null
-    const rowData = row.datag ? await crypt.decrypter(cg, row.datag) : null
-    this.data = rowData ? deserial(rowData) : null
-    this.majCc()
-    this.ard = row.ardg ? await crypt.decrypterStr(cg, row.ardg) : null
+    if (!this.suppr) {
+      this.dlv = row.dlv
+      const cg = data.cleg(this.id)
+      const rowData = await crypt.decrypter(cg, row.datag)
+      this.data = deserial(rowData)
+      this.majCc()
+      this.ard = row.ardg ? await crypt.decrypterStr(cg, row.ardg) : ''
+    }
     return this
   }
 
   async toRow () {
-    const cg = this.data || this.ard || this.lmc ? data.clegDe(this.sid) : null
-    this.datag = this.data ? await crypt.crypter(cg, serial(this.data)) : null
-    this.ardg = this.ard ? await crypt.crypter(cg, this.ard) : null
+    const cg = data.clegDe(this.sid)
+    this.datag = await crypt.crypter(cg, serial(this.data))
+    this.ardg = await crypt.crypter(cg, this.ard)
     const buf = schemas.serialize('rowmembre', this)
     delete this.datag
     delete this.ardg
@@ -1680,7 +1753,7 @@ export class Membre {
 /** Parrain **********************************/
 /*
 - `pph` : hash du PBKFD2 de la phrase de parrainage.
-- `id` : id du parrain.
+- `id` : id du parrain. (avatar du compte)
 - `v`
 - `ic` : numéro de contact du filleul chez le parrain.
 - `dlv` : la date limite de validité permettant de purger les parrainages (quels qu'en soient les statuts).
@@ -1707,6 +1780,8 @@ export class Parrain {
 
   get pk () { return this.pph }
 
+  get suppr () { return this.suppr < 0 }
+
   get sidav () { return crypt.idToSid(this.id) }
 
   async fromRow (row) {
@@ -1717,22 +1792,26 @@ export class Parrain {
     this.dlv = row.dlv
     this.st = row.st
     this.v = row.v
-    this.q1 = row.q1
-    this.q2 = row.q2
-    this.qm1 = row.qm1
-    this.qm2 = row.qm2
-    const rowDatak = row.datak ? await crypt.decrypter(data.clek, row.datak) : null
-    this.phcx = rowDatak ? deserial(rowDatak) : null
-    const rowDatax = row.datax && this.phcx ? await crypt.decrypter(this.phcx.cx, row.datax) : null
-    this.data = rowDatax ? deserial(rowDatax) : null
-    this.ard = row.ardc && this.data ? await crypt.decrypter(this.data.cc, row.ardc) : null
+    if (!this.suppr) {
+      this.q1 = row.q1
+      this.q2 = row.q2
+      this.qm1 = row.qm1
+      this.qm2 = row.qm2
+      const rowData = await crypt.decrypter(data.clek, row.datak)
+      const x = deserial(rowData)
+      this.phrase = x[0]
+      this.clex = x[1]
+      const rowDatax = await crypt.decrypter(this.clex, row.datax)
+      this.data = deserial(rowDatax)
+      this.ard = row.ardc ? await crypt.decrypter(this.data.cc, row.ardc) : ''
+    }
     return this
   }
 
   async toRow () {
-    this.datak = this.phcx ? await crypt.crypter(data.clek, serial(this.phcx)) : null
-    this.datax = this.phcx && this.data ? await crypt.crypter(this.phcx.cx, serial(this.data)) : null
-    this.ardc = this.data && this.ard ? await crypt.crypter(this.data.cc, this.ard) : null
+    this.datak = await crypt.crypter(data.clek, serial([this.phrase, this.clex]))
+    this.datax = await crypt.crypter(this.clex, serial(this.data))
+    this.ardc = await crypt.crypter(this.data.cc, this.ard)
     const buf = schemas.serialize('rowparrain', this)
     delete this.datak
     delete this.ardg
@@ -1753,11 +1832,13 @@ export class Parrain {
 /** Rencontre **********************************/
 /*
 - `prh` : hash du PBKFD2 de la phrase de rencontre.
-- `id` : id de l'avatar A ayant initié la rencontre.
+- `id` : id de l'avatar du compte ayant initié la rencontre.
 - `v` :
 - `dlv` : date limite de validité permettant de purger les rencontres.
 - `st` : <= 0:annulée, 1:en attente, 2:acceptée, 3:refusée
-- `datak` : **phrase de rencontre et son PBKFD2** (clé X) cryptée par la clé K du compte A pour que A puisse retrouver les rencontres qu'il a initiées avec leur phrase.
+- `datak` : **phrase de rencontre et son PBKFD (clé X)** [phrase, clex]
+  cryptée par la clé K du compte A pour que A puisse retrouver
+  les rencontres qu'il a initiées avec leur phrase.
 - `nomcx` : nom complet de A (pas de B, son nom complet n'est justement pas connu de A) crypté par la clé X.
 - `vsh`
 */
@@ -1783,15 +1864,19 @@ export class Rencontre {
     this.dlv = row.dlv
     this.st = row.st
     this.v = row.v
-    const rowDatak = row.datak ? await crypt.decrypter(data.clek, row.datak) : null
-    this.phcx = rowDatak ? deserial(rowDatak) : null
-    this.nomc = row.nomcx && this.phcx ? await crypt.decrypter(this.phcx.cx, row.nomcx) : null
+    if (!this.suppr) {
+      const rowData = await crypt.decrypter(data.clek, row.datak)
+      const x = deserial(rowData) // ['phrase', Uint8Array(32)]
+      this.phrase = x[0]
+      this.clex = x[1]
+      this.nomc = await crypt.decrypter(this.clex, row.nomcx)
+    }
     return this
   }
 
   async toRow () {
-    this.datak = this.phcx ? await crypt.crypter(data.clek, serial(this.phcx)) : null
-    this.nomcx = this.phcx && this.nomc ? await crypt.crypter(this.phcx.cx, this.nomc) : null
+    this.datak = await crypt.crypter(data.clek, serial([this.phrase, this.clex]))
+    this.nomcx = await crypt.crypter(this.clex, this.nomc)
     const buf = schemas.serialize('rowrencontre', this)
     delete this.datak
     delete this.nomcx
@@ -1823,7 +1908,7 @@ export class Rencontre {
   - `gz` : texte gzippé
   - `ref` : référence à un autre secret.
 - `mcs` : liste des mots clés crypté par la clé du secret.
-- `mpjs` : sérialisation de la map des pièces jointes { nom: [version, volume] }.
+- `mpjs` : sérialisation de la map des pièces jointes { nom: [stars, version, volume] }.
 - `dups` : couple `[id, ns]` crypté par la clé du secret de l'autre exemplaire pour un secret de couple A/B.
 - `vsh`
 */
@@ -1842,6 +1927,8 @@ export class Secret {
 
   get pk () { return [this.id, this.ns] }
 
+  get suppr () { return this.st < 0 }
+
   get sidc () { return crypt.idToSid(this.id) + '/' + this.ic }
 
   get sidavgr () { return this.sid }
@@ -1851,7 +1938,7 @@ export class Secret {
   get ts () { return this.ic ? 1 : (this.ns % 2 ? 0 : 2) } // 0:avatar 1:couple 2:groupe
 
   get cles () {
-    return this.ts ? (this.ts === 1 ? data.clecDe(this.sidc) : data.clegDe(crypt.idToSid(this.id))) : data.clek
+    return this.ts ? (this.ts === 1 ? data.clecDe(this.sidc) : data.clegDe(this.sid)) : data.clek
   }
 
   async fromRow (row) {
@@ -1861,42 +1948,47 @@ export class Secret {
     this.ic = row.ic
     this.st = row.st
     this.v = row.v
-    this.ora = row.ora
-    this.v1 = row.v1
-    this.v2 = row.v2
-    const cles = this.cles
-    this.txt = cles && row.txts ? await crypt.decrypter(cles, row.txts) : null
-    this.mc = cles && row.mcs ? deserial(await crypt.decrypter(cles, row.mcs)) : null
-    this.mpj = {}
-    if (this.v2 && row.mpjs) {
-      for (const ns in row.mpjs) {
-        const nom = await crypt.decrypter(cles, ns)
-        this.mpj[nom] = row.mpjs[ns]
+    if (!this.suppr) {
+      this.ora = row.ora
+      this.v1 = row.v1
+      this.v2 = row.v2
+      const cles = this.cles
+      this.txt = await crypt.decrypter(cles, row.txts)
+      this.mc = deserial(await crypt.decrypter(cles, row.mcs))
+      this.mpj = {}
+      if (this.v2 && row.mpjs) {
+        for (const ns in row.mpjs) { // ns est en base64
+          const nom = await crypt.decrypterStr(cles, crypt.b64ToU8(ns))
+          this.mpj[nom] = row.mpjs[ns]
+        }
       }
+      if (this.ts === 1) {
+        const dup = deserial(await crypt.decrypter(cles, row.dups))
+        this.dupid = dup[0]
+        this.dupns = dup[1]
+      }
+      return this
     }
-    const dup = cles && row.dups ? deserial(await crypt.decrypter(cles, row.dups)) : [0, 0]
-    this.dupid = dup[0]
-    this.dupns = dup[1]
     return this
   }
 
   async toRow () {
     const cles = this.cles
-    this.txts = cles && this.txt ? await crypt.crypter(cles, this.txt) : null
-    this.mcs = cles && this.mc ? await crypt.crypter(cles, serial(this.mc)) : null
-    if (this.v2 && cles && this.mpj) {
+    this.txts = await crypt.crypter(cles, this.txt)
+    this.mcs = await crypt.crypter(cles, serial(this.mc))
+    if (this.v2) {
       this.mpjs = {}
-      for (const ns in this.mpjs) {
-        const nom = await crypt.crypter(cles, ns)
-        this.mpjs[nom] = this.mpj[ns]
+      for (const ns in this.mpj) {
+        const nomb64 = crypt.u8ToB64(await crypt.crypter(cles, ns), true)
+        this.mpjs[nomb64] = this.mpj[ns]
       }
     }
-    this.dups = cles && this.dupid && this.dupns ? await crypt.crypter(cles, serial([this.dupid, this.dupns])) : null
+    if (this.ts === 1) this.dups = await crypt.crypter(cles, serial([this.dupid, this.dupns]))
     const buf = schemas.serialize('rowsecret', this)
     delete this.txts
     delete this.mcs
-    delete this.mpjs
-    delete this.dups
+    if (this.v2) delete this.mpjs
+    if (this.ts === 1) delete this.dups
     return buf
   }
 

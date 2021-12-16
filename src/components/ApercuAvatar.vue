@@ -76,10 +76,6 @@ export default ({
   setup (props) {
     const $store = useStore()
 
-    function avatarDeId (id) {
-      return data.avatar(id)
-    }
-
     const personne = cfg().personne.default
     const a = reactive({ av: null })
     const avatarId = toRef(props, 'avatarId')
@@ -94,24 +90,23 @@ export default ({
     })
 
     onMounted(() => {
-      if (avatarId.value) a.av = avatarDeId(avatarId.value)
+      if (avatarId.value) a.av = data.getAvatar(avatarId.value)
     })
 
     watch(avatarId, (ap, av) => {
-      a.av = avatarDeId(ap)
+      a.av = data.getAvatar(ap)
     })
 
     watch(
       () => avatars.value,
       (ap, av) => {
-        a.av = avatarDeId(avatarId.value)
+        a.av = data.getAvatar(avatarId.value)
       }
     )
 
     return {
       a,
       avatar,
-      avatarDeId,
       personne
     }
   }

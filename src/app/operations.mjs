@@ -27,13 +27,21 @@ export class Operation {
     this.sessionId = data.sessionId
   }
 
+  ouvrircreationcompte () { store().commit('ui/majdialoguecreationcompte', true) }
+
+  majopencours (op) { store().commit('ui/majopencours', op) }
+
+  razidblec () { store().commit('ui/razidblec') }
+
+  majidblec (obj) { store().commit('ui/majidblec', obj) }
+
+  majsynclec (obj) { store().commit('ui/majsynclec', obj) }
+
   deconnexion () { data.deconnexion() }
 
   reconnexion () { data.reconnexion() }
 
-  excActions () {
-    return { d: this.deconnexion, r: this.reconnexion, default: null }
-  }
+  excActions () { return { d: this.deconnexion, r: this.reconnexion, default: null } }
 
   excAffichage1 () {
     const options1 = [
@@ -71,9 +79,7 @@ export class Operation {
     return [options, null]
   }
 
-  messageOK () {
-    affichermessage('Succès de l\'opération "' + this.nom + '"')
-  }
+  messageOK () { affichermessage('Succès de l\'opération "' + this.nom + '"') }
 
   messageKO () {
     if (data.statut === 0) {
@@ -86,7 +92,7 @@ export class Operation {
   finOK (res) {
     if (this instanceof OperationUI) {
       data.opUI = null
-      store().commit('ui/majopencours', null)
+      this.majopencours(null)
       this.messageOK()
     } else {
       data.opWS = null
@@ -98,7 +104,7 @@ export class Operation {
     this.appexc = appexc(exc)
     if (this instanceof OperationUI) {
       data.opUI = null
-      store().commit('ui/majopencours', null)
+      this.majopencours(null)
       this.messageKO()
     } else {
       data.opWS = null
@@ -123,9 +129,7 @@ export class Operation {
     return [false, this.appexc]
   }
 
-  BRK () {
-    if (this.break) throw EXBRK
-  }
+  BRK () { if (this.break) throw EXBRK }
 
   stop () {
     if (this.cancelToken) {
@@ -138,8 +142,8 @@ export class Operation {
   async abonnements (compte) {
     // Abonner / signer la session au compte, avatars et groupes
     // si compte est absent, PAS de signature
-    const lav = data.setAvatars
-    const lgr = data.setGroupes
+    const lav = data.setDesAvatars
+    const lgr = data.setDesGroupes
     const args = {
       sessionId: data.sessionId,
       idc: compte ? compte.id : '',
@@ -152,7 +156,11 @@ export class Operation {
     return [lav, lgr]
   }
 
-  async chargerAvGr (lav, lgr, manquants) {
+  /*
+  Recharge depuis le serveur les avatars (et les tables associées)
+  et les groupes (et membres) des listes lav et lgr
+  */
+  async chargerAvGr (lav, lgr) {
     const estws = this instanceof OperationWS
     // synchroniser les avatars
     if (lav && lav.size) {
@@ -163,12 +171,11 @@ export class Operation {
         const lv = !estws && data.verAv.get(sid) ? data.verAv.get(sid) : new Array(SIZEAV).fill(0)
         const ret = await post(this, 'm1', 'syncAv', { sessionId: data.sessionId, avgr: id, lv })
         if (data.dh < ret.dh) data.dh = ret.dh
-        const [objets] = commitMapObjets(await rowItemsToMapObjets(ret.rowItems)) // stockés en modele
+        const objets = []
+        commitMapObjets(objets, await rowItemsToMapObjets(ret.rowItems)) // stockés en modele
         if (!estws) {
-          const av = data.avatar(id)
-          store().commit('ui/majsynclec', {
-            st: 1, sid: sid, nom: 'Avatar ' + av.na.nomc, nbl: objets.length
-          })
+          const av = data.getAvatar(id)
+          this.majsynclec({ st: 1, sid: sid, nom: 'Avatar ' + av.na.nomc, nbl: objets.length })
         }
         if (data.db) {
           await commitRows(objets)
@@ -183,15 +190,14 @@ export class Operation {
       for (let i = 0; i < ar.length; i++) {
         const id = ar[i]
         const sid = crypt.idToSid(id)
-        const lv = !manquants && data.verGr.get(sid) ? data.verGr.get(sid) : new Array(SIZEGR).fill(0)
+        const lv = data.verGr.get(sid) ? data.verGr.get(sid) : new Array(SIZEGR).fill(0)
         const ret = await post(this, 'm1', 'syncGr', { sessionId: data.sessionId, avgr: id, lv })
         if (data.dh < ret.dh) data.dh = ret.dh
-        const [objets] = commitMapObjets(await rowItemsToMapObjets(ret.rowItems)) // stockés en modele
+        const objets = []
+        commitMapObjets(objets, await rowItemsToMapObjets(ret.rowItems)) // stockés en modele
         if (!estws) {
-          const gr = data.groupe(id)
-          store().commit('ui/majsynclec', {
-            st: 1, sid: sid, nom: 'Groupe ' + gr.info, nbl: objets.length
-          })
+          const gr = data.getGroupe(id)
+          this.majsynclec({ st: 1, sid: sid, nom: 'Groupe ' + gr.info, nbl: objets.length })
         }
         if (data.db) {
           await commitRows(objets)
@@ -201,23 +207,21 @@ export class Operation {
     }
   }
 
-  // Synchronisation et abonnements des CVs
+  /* Synchronisation et abonnements des CVs */
   async syncCVs (nvvcv) {
     const estws = this instanceof OperationWS
-    data.setCvsInutiles.forEach((sid) => {
-      delete data.repertoire[sid]
-    })
+    data.repertoire.purge(data.setCvsInutiles)
+    data.repertoire.commit()
     const lcvmaj = Array.from(data.setCvsUtiles)
     const lcvchargt = Array.from(data.setCvsManquantes)
     const args = { sessionId: data.sessionId, vcv: data.vcv, lcvmaj, lcvchargt }
     const ret = await post(this, 'm1', 'chargtCVs', args)
     if (data.dh < ret.dh) data.dh = ret.dh
-    const [objets, vcv] = commitMapObjets(await rowItemsToMapObjets(ret.rowItems)) // stockés en modele
+    const objets = []
+    const vcv = commitMapObjets(objets, await rowItemsToMapObjets(ret.rowItems)) // stockés en modele
     if (vcv > nvvcv) nvvcv = vcv
     if (!estws) {
-      store().commit('ui/majsynclec', {
-        st: 1, sid: '$CV', nom: 'Cartes de visite', nbl: objets.length
-      })
+      this.majsynclec({ st: 1, sid: '$CV', nom: 'Cartes de visite', nbl: objets.length })
     }
     if (data.db) {
       await commitRows(objets)
@@ -227,8 +231,8 @@ export class Operation {
   }
 
   async traiteQueue (q) {
-    const lavAvant = data.setAvatars
-    const lgrAvant = data.setGroupes
+    const lavAvant = data.setDesAvatars
+    const lgrAvant = data.setDesGroupes
 
     const items = [] // tous les items à traiter reçus en synchro
     let dhc = 0 // date-heure courante : plus haute date-heure reçue sur les liste d'items à synchroniser
@@ -242,29 +246,41 @@ export class Operation {
       }
     })
 
-    // Transforme tous les items en objet (décryptés / désrialisés) et les retourne ventilés dans une map par table
+    /* Transforme tous les items en objet (décryptés / désrialisés)
+    - les retourne ventilés dans une map par table
+    */
     const mapObj = await rowItemsToMapObjets(items)
+    const objets = [] // Tous les objets à enregistrer dans IDB
 
-    let compte = null
+    /* Traitement spécial du compte */
     if (mapObj.compte) {
       // Une mise à jour de compte est notifiée
       const row = mapObj.compte
       if (row.pcbh !== data.ps.pcbh) throw EXPS // phrase secrète changée => déconnexion
-      compte = new Compte()
+      const compte = new Compte()
       await compte.fromRow(row)
       data.setCompte(compte)
+      objets.push(compte)
     }
 
-    const [objets] = commitMapObjets(mapObj)
-    if (compte) objets.push(compte)
+    /* Mise en store de tous les autres objets */
+    const vcv = commitMapObjets(objets, mapObj)
 
     if (data.db) {
       await commitRows(objets)
       this.BRK()
     }
 
-    const lavApres = data.setAvatars
-    const lgrApres = data.setGroupes
+    /*
+    Il y a :
+    - des avatars du compte devenus inutiles (supprimés)
+    - des groupes devenus inutiles (disparus / accès résilés)
+    - de nouveaux avatars du compte (utiles)
+    - de nouveaux groupes utiles ET DONT IL FAUT CHARGER LES MEMBRES et leurs CV
+    */
+
+    const lavApres = data.setDesAvatars
+    const lgrApres = data.setDesGroupes
 
     // Purge des avatars / groupes inutiles et détection des manquants
     const lavAPurger = new Set()
@@ -275,8 +291,8 @@ export class Operation {
     lavApres.forEach((sid) => { if (!lavAvant.has(sid)) lavAPurger.add(sid) })
     lgrAvant.forEach((sid) => { if (!lgrApres.has(sid)) lgrManquants.add(sid) })
     lgrApres.forEach((sid) => { if (!lgrAvant.has(sid)) lgrAPurger.add(sid) })
-    if (lavAPurger.size) store().commit('db/purgeAvatars', lavApres)
-    if (lgrAPurger.size) store().commit('db/purgeGroupes', lgrApres)
+    if (lavAPurger.size) data.purgeAvatars(lavApres)
+    if (lgrAPurger.size) data.purgeGroupes(lgrApres)
     if (data.db) {
       if (lavAPurger.size) {
         await data.db.purgeAvatars(lavAPurger)
@@ -294,7 +310,7 @@ export class Operation {
     await this.chargerAvGr(lavManquants, lgrManquants)
 
     // Synchroniser les CVs (et s'abonner)
-    const nvvcv = await this.syncCVs(data.vcv)
+    const nvvcv = await this.syncCVs(vcv)
     if (data.vcv < nvvcv) data.vcv = nvvcv
 
     return [dhc, nvvcv]
@@ -306,7 +322,7 @@ export class OperationUI extends Operation {
   constructor (nomop, net, idb) {
     super(nomop, net, idb)
     data.opUI = this
-    store().commit('ui/majopencours', this)
+    this.majopencours(this)
   }
 
   excActionc () {
@@ -316,7 +332,7 @@ export class OperationUI extends Operation {
   excActionx () {
     data.deconnexion()
     setTimeout(() => {
-      store().commit('ui/majdialoguecreationcompte', true)
+      this.ouvrircreationcompte()
     }, 100)
   }
 
@@ -359,12 +375,12 @@ export class OperationUI extends Operation {
     data.refsAv = new Set()
     data.refsGr = new Set()
 
-    store().commit('ui/razidblec')
+    this.razidblec()
     this.BRK()
     {
       const { objs, vol } = await getAvatars()
-      store().commit('db/setAvatars', objs)
-      store().commit('ui/majidblec', { table: 'avatar', st: true, vol: vol, nbl: objs.length })
+      data.setAvatars(objs)
+      this.majidblec({ table: 'avatar', st: true, vol: vol, nbl: objs.length })
     }
 
     // chargement des CVs. Au début pour avoir le moins de fake possible dans le répertoire
@@ -376,14 +392,14 @@ export class OperationUI extends Operation {
           data.repertoire[cv.sid] = cv
         })
       }
-      store().commit('ui/majidblec', { table: 'cv', st: true, vol: vol, nbl: objs.length })
+      this.majidblec({ table: 'cv', st: true, vol: vol, nbl: objs.length })
     }
 
     this.BRK()
     {
       const { objs, vol } = await getInvitgrs()
-      store().commit('db/setInvitgrs', objs)
-      store().commit('ui/majidblec', { table: 'invitgr', st: true, vol: vol, nbl: objs.length })
+      data.setInvitgrs(objs)
+      this.majidblec({ table: 'invitgr', st: true, vol: vol, nbl: objs.length })
     }
 
     this.BRK()
@@ -395,8 +411,8 @@ export class OperationUI extends Operation {
           data.cvPlusCtc(na, c.id)
         })
       }
-      store().commit('db/setContacts', objs)
-      store().commit('ui/majidblec', { table: 'contact', st: true, vol: vol, nbl: objs.length })
+      data.setContacts(objs)
+      this.majidblec({ table: 'contact', st: true, vol: vol, nbl: objs.length })
     }
 
     this.BRK()
@@ -408,29 +424,29 @@ export class OperationUI extends Operation {
           data.cvPlusCtc(na, i.id)
         })
       }
-      store().commit('db/setInvitcts', objs)
-      store().commit('ui/majidblec', { table: 'invitct', st: true, vol: vol, nbl: objs.length })
+      data.setInvitcts(objs)
+      this.majidblec({ table: 'invitct', st: true, vol: vol, nbl: objs.length })
     }
 
     this.BRK()
     {
       const { objs, vol } = await getParrains()
-      store().commit('db/setParrains', objs)
-      store().commit('ui/majidblec', { table: 'parrain', st: true, vol: vol, nbl: objs.length })
+      data.setParrains(objs)
+      this.majidblec({ table: 'parrain', st: true, vol: vol, nbl: objs.length })
     }
 
     this.BRK()
     {
       const { objs, vol } = await getRencontres()
-      store().commit('db/setRencontres', objs)
-      store().commit('ui/majidblec', { table: 'rencontre', st: true, vol: vol, nbl: objs.length })
+      data.setRencontres(objs)
+      this.majidblec({ table: 'rencontre', st: true, vol: vol, nbl: objs.length })
     }
 
     this.BRK()
     {
       const { objs, vol } = await getGroupes()
-      store().commit('db/setGroupes', objs)
-      store().commit('ui/majidblec', { table: 'groupe', st: true, vol: vol, nbl: objs.length })
+      data.setGroupes(objs)
+      this.majidblec({ table: 'groupe', st: true, vol: vol, nbl: objs.length })
     }
 
     this.BRK()
@@ -442,37 +458,37 @@ export class OperationUI extends Operation {
           data.cvPlusMbr(na, m.id)
         })
       }
-      store().commit('db/setMembres', objs)
-      store().commit('ui/majidblec', { table: 'membre', st: true, vol: vol, nbl: objs.length })
+      data.setMembres(objs)
+      this.majidblec({ table: 'membre', st: true, vol: vol, nbl: objs.length })
     }
 
     this.BRK()
     {
       const { objs, vol } = await getSecrets()
-      store().commit('db/setSecrets', objs)
-      store().commit('ui/majidblec', { table: 'secret', st: true, vol: vol, nbl: objs.length })
+      data.setSecrets(objs)
+      this.majidblec({ table: 'secret', st: true, vol: vol, nbl: objs.length })
     }
 
     // purge des avatars inutiles
     this.BRK()
     {
       const avInutiles = new Set()
-      const avUtiles = new Set(data.setAvatars)
+      const avUtiles = new Set(data.setDesAvatars)
       for (const id of data.refsAv) if (!avUtiles.has(id)) avInutiles.add(id)
       const nbp = await purgeAvatars(avInutiles)
-      store().commit('db/purgeAvatars', avUtiles)
-      store().commit('ui/majidblec', { table: 'purgeav', st: true, vol: 0, nbl: nbp })
+      data.purgeAvatars(avUtiles)
+      this.majidblec({ table: 'purgeav', st: true, vol: 0, nbl: nbp })
     }
 
     // purge des groupes inutiles
     this.BRK()
     {
       const grInutiles = new Set()
-      const grUtiles = new Set(data.setGroupes)
+      const grUtiles = new Set(data.setDesGroupes)
       for (const id of data.refsGr) if (!grUtiles.has(id)) grInutiles.add(id)
       const nbp = await purgeGroupes(grInutiles)
-      store().commit('db/purgeGroupes', grUtiles)
-      store().commit('ui/majidblec', { table: 'purgegr', st: true, vol: 0, nbl: nbp })
+      data.purgeGroupes(grUtiles)
+      this.majidblec({ table: 'purgegr', st: true, vol: 0, nbl: nbp })
     }
 
     // purge des CVs inutiles
@@ -483,7 +499,7 @@ export class OperationUI extends Operation {
         delete data.repertoire[sid]
       })
       data.commitRepertoire()
-      store().commit('ui/majidblec', { table: 'purgecv', st: true, vol: 0, nbl: nbp })
+      this.majidblec({ table: 'purgecv', st: true, vol: 0, nbl: nbp })
     }
 
     data.refsAv = null
@@ -719,8 +735,8 @@ export class ConnexionCompte extends OperationUI {
         await this.chargementIdb()
       }
 
-      data.idbSetAvatars = data.setAvatars
-      data.idbSetGroupes = data.setGroupes
+      data.idbSetAvatars = data.setDesAvatars
+      data.idbSetGroupes = data.setDesGroupes
       data.idbsetCvsUtiles = data.setCvsUtiles
 
       if (data.db) {
@@ -734,10 +750,10 @@ export class ConnexionCompte extends OperationUI {
           compte = compte2
           data.setCompte(compte2)
           const avInutiles = new Set()
-          const avUtiles = data.setAvatars
+          const avUtiles = data.setDesAvatars
           for (const id of data.idbSetAvatars) if (!avUtiles.has(id)) avInutiles.add(id)
           if (avInutiles.size) {
-            store().commit('db/purgeAvatars', avUtiles)
+            data.purgeAvatars(avUtiles)
             for (const id of avInutiles) {
               const sid = crypt.idToSid(id)
               delete data.verAv[sid]
@@ -801,13 +817,13 @@ export class ConnexionCompte extends OperationUI {
         }
 
         if (grAPurger.size) {
-          store().commit('db/purgeGroupes', grAPurger)
+          data.purgeGroupes(grAPurger)
           if (data.db) {
             await data.db.purgeGroupes(grAPurger)
           }
         }
         if (maj.length) {
-          store.commit('db/setInvitgrs', maj) // maj du modèle
+          data.setInvitgrs(maj) // maj du modèle
           if (data.db) {
             await commitRows(maj) // et de IDB
             this.BRK()
@@ -817,21 +833,15 @@ export class ConnexionCompte extends OperationUI {
 
       for (const sid in compte.mac) {
         const mac = compte.mac[sid]
-        store().commit('ui/majsynclec', {
-          st: 0, sid: sid, nom: 'Avatar ' + mac.na.nomc, nbl: 0
-        })
+        this.majsynclec({ st: 0, sid: sid, nom: 'Avatar ' + mac.na.nomc, nbl: 0 })
       }
       const mgr = store().state.db.invitgrs
       for (const x in mgr) {
         const av = mgr[x]
         const sidg = crypt.idToSid(av.data.idg)
-        store().commit('ui/majsynclec', {
-          st: 0, sid: sidg, nom: 'Groupe ' + sidg, nbl: 0
-        })
+        this.majsynclec({ st: 0, sid: sidg, nom: 'Groupe ' + sidg, nbl: 0 })
       }
-      store().commit('ui/majsynclec', {
-        st: 0, sid: '$CV', nom: 'Cartes de visite', nbl: 0
-      })
+      this.majsynclec({ st: 0, sid: '$CV', nom: 'Cartes de visite', nbl: 0 })
 
       const [lav, lgr] = await this.abonnements(compte)
 
@@ -878,7 +888,7 @@ export class MemoCompte extends OperationUI {
 
   async run (memo) {
     try {
-      const c = data.compte()
+      const c = data.getCompte()
       const memok = await crypt.crypter(data.clek, memo)
       this.BRK()
       const args = { sessionId: data.sessionId, id: c.id, memok: memok }
@@ -905,7 +915,7 @@ export class MmcCompte extends OperationUI {
 
   async run (mmc) {
     try {
-      const c = data.compte()
+      const c = data.getCompte()
       const mmck = await crypt.crypter(data.clek, serial(mmc))
       this.BRK()
       const args = { sessionId: data.sessionId, id: c.id, mmck: mmck }

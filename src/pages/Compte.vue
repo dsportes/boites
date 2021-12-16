@@ -83,7 +83,7 @@ export default ({
       }
     },
     toAvatar (id) {
-      this.avatar = data.avatar(id)
+      this.avatar = data.getAvatar(id)
       remplacePage('Avatar')
     },
     */

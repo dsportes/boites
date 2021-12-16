@@ -233,7 +233,7 @@ export default {
       const la = this.compte.avatars // leurs na
       if (la.length === 1) {
         const na = la[0]
-        const av = data.avatar(na.id)
+        const av = data.getAvatar(na.id)
         this.$store.commit('db/majavatar', av)
         remplacePage('Avatar')
       } else {

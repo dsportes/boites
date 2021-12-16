@@ -121,15 +121,6 @@ export function setObjets (state, [table, lobj]) { // lobj : array d'objets
 }
 
 export function setCompte (state, obj) { if (!state.compte || state.compte.v < obj.v) state.compte = obj }
-export function setAvatars (state, lobj) { setObjets(state, ['avatar', lobj]) }
-export function setContacts (state, lobj) { setObjets(state, ['contact', lobj]) }
-export function setInvitcts (state, lobj) { setObjets(state, ['invitct', lobj]) }
-export function setInvitgrs (state, lobj) { setObjets(state, ['invitgr', lobj]) }
-export function setParrains (state, lobj) { setObjets(state, ['parrain', lobj]) }
-export function setRencontres (state, lobj) { setObjets(state, ['rencontre', lobj]) }
-export function setGroupes (state, lobj) { setObjets(state, ['groupe', lobj]) }
-export function setMembres (state, lobj) { setObjets(state, ['membre', lobj]) }
-export function setSecrets (state, lobj) { setObjets(state, ['secret', lobj]) }
 
 /* Enregistrement de toutes les cv d'un coup */
 export function commitRepertoire (state, repertoire) { state.repertoire = { ...repertoire } }
