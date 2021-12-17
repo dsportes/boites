@@ -69,11 +69,8 @@ export default ({
   },
 
   watch: {
-    /* Ecrire le watch dans le setup
-    compte (apres, avant) {
-      console.log('watch COMPTE ' + JSON.stringify(apres.mmc))
-    }
-    */
+    /* Ecrire plutôt le watch dans le setup
+    compte (apres, avant) { console.log('watch COMPTE ' + JSON.stringify(apres.mmc)) } */
   },
 
   methods: {
@@ -178,15 +175,7 @@ export default ({
 
     watch(
       () => compte.value, // OUI .value !!!
-      (val, prevVal) => {
-        // A la déconnexion, val est null !!!
-        if (val) {
-          console.log('watch compte : ' + val.sid + ' ' + val.v + '/' + prevVal.v)
-          if (val.v > prevVal.v) {
-            motscles.recharger()
-          }
-        }
-      }
+      (ap, av) => { if (ap && ap.v > av.v) { motscles.recharger() } } // ap est undef au début
     )
 
     return {

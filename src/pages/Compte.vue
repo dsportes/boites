@@ -23,9 +23,10 @@
   </q-card>
 
   <q-card v-if="tabcompte === 'groupes'" class="column align-start items-start">
-    <h6>Liste des cartes de visite</h6>
-    <div v-for="cv in cvs" :key="cv.sid">
-        <div>{{cv.sid}} - {{cv.na.nomc}}</div>
+    <h6>Test des aperçus de mots clés</h6>
+    <q-checkbox left-label v-model="court" label="Format court" />
+    <div>
+      <apercu-motscles :motscles="motscles" :src="u8mc" :court="court" :argsClick="{loc: 'ici', n: 3}" @clickMc="mcclick"></apercu-motscles>
     </div>
   </q-card>
 </q-page>
@@ -33,37 +34,33 @@
 
 <script>
 import { MemoCompte } from '../app/operations.mjs'
-import { computed, ref } from 'vue'
+import { computed, ref, reactive, onMounted, watch } from 'vue'
 import { useStore } from 'vuex'
 import { onBoot } from '../app/page.mjs'
 import EditeurMd from '../components/EditeurMd.vue'
 import BoutonHelp from '../components/BoutonHelp.vue'
 import MotsCles from '../components/MotsCles.vue'
 import ApercuAvatar from '../components/ApercuAvatar.vue'
+import ApercuMotscles from '../components/ApercuMotscles.vue'
+import { Motscles } from '../app/util.mjs'
 
 export default ({
   name: 'Compte',
-  components: { EditeurMd, BoutonHelp, MotsCles, ApercuAvatar },
+  components: { EditeurMd, BoutonHelp, MotsCles, ApercuAvatar, ApercuMotscles },
   data () {
     return {
+      u8mc: new Uint8Array([200, 202, 1, 203, 2]),
+      court: false
     }
   },
 
   methods: {
+    mcclick (args) {
+      console.log('mcclick', JSON.stringify(args))
+    },
     async memook (m) {
       this.memoed.undo()
-      // console.log(m)
-      // eslint-disable-next-line no-undef
       await new MemoCompte().run(m)
-      /* simulation locale
-      setTimeout(() => {
-        const c = this.compte.clone
-        c.memo = m
-        c.v++
-        data.setCompte(c)
-        console.log('Après setCompte : ' + this.compte.memo)
-      }, 5000)
-      */
     }
     /*
     async getcv (sid) {
@@ -111,16 +108,18 @@ export default ({
     const mode = computed(() => $store.state.ui.mode)
     const modeleactif = computed(() => $store.state.ui.modeleactif)
 
-    /*
+    const mc = reactive({ categs: new Map(), lcategs: [], st: { enedition: false, modifie: false } })
+    const motscles = new Motscles(mc, 1)
+
+    onMounted(() => { motscles.recharger() })
+
     watch(
-      () => compte.value,
-      (ap, av) => {
-        console.log('Mémo : ' + ap.memo + '\n' + av.memo)
-      }
+      () => compte.value, // OUI .value !!!
+      (ap, av) => { if (ap && ap.v > av.v) { motscles.recharger() } }
     )
-    */
 
     return {
+      motscles,
       memoed,
       org,
       compte,

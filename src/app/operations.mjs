@@ -6,13 +6,10 @@ import {
   purgeAvatars, purgeCvs, purgeGroupes, openIDB, enregLScompte, setEtat, getEtat
 } from './db.mjs'
 import { Compte, Avatar, Invitgr, newObjet, commitMapObjets, data, SIZEAV, SIZEGR } from './modele.mjs'
-import { AppExc, E_BRK, F_BRO, X_SRV, INDEXT } from './api.mjs'
+import { AppExc, EXBRK, EXPS, F_BRO, X_SRV, INDEXT } from './api.mjs'
 
 import { crypt } from './crypto.mjs'
 import { schemas } from './schemas.mjs'
-
-export const EXBRK = new AppExc(E_BRK, 'Interruption volontaire')
-export const EXPS = new AppExc(F_BRO, 'La phrase secrète a changé depuis l\'authentification du comptE Déconnexion et reconnexion requise')
 
 const OUI = 1
 const NON = 0

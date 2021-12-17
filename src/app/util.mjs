@@ -1,7 +1,6 @@
 import axios from 'axios'
 import { data } from './modele.mjs'
-import { AppExc, version, E_BRO, E_SRV } from './api.mjs'
-import { EXBRK } from './operations.mjs'
+import { AppExc, version, E_BRO, E_SRV, EXBRK } from './api.mjs'
 import { u8ToB64, crypt, b64ToU8 } from './crypto.mjs'
 import { encode, decode } from '@msgpack/msgpack'
 
@@ -333,6 +332,16 @@ export class Motscles {
     this.mode = mode
     this.idg = idg
     this.mc = mc
+    this.mapAll = new Map()
+  }
+
+  edit (u8, court) {
+    const l = []
+    for (let i = 0; i < u8.length; i++) {
+      const s = this.mapAll.get(u8[i])
+      if (s && s.length) l.push(court ? s.substring(0, 2) : s)
+    }
+    return l.join(court ? ' ' : ' / ')
   }
 
   debutEdition () {
@@ -375,6 +384,7 @@ export class Motscles {
 
   recharger () {
     if (this.mc.st.enedition) return
+    this.mapAll.clear()
     delete this.localIdx
     delete this.localNom
     delete this.apres
@@ -445,6 +455,7 @@ export class Motscles {
       const nc = map[i]
       const [categ, nom] = this.split(nc)
       this.setCateg(categ, idx, nom)
+      this.mapAll.set(idx, nom)
     }
   }
 
@@ -471,6 +482,7 @@ export class Motscles {
     this.delCateg(anccateg, idx)
     this.apres = this.flatMap(this.localIdx)
     this.mc.st.modifie = this.apres !== this.avant
+    this.mapAll.delete(idx)
   }
 
   changerMC (idx, nc) {
@@ -496,6 +508,7 @@ export class Motscles {
     this.tri()
     this.apres = this.flatMap(this.localIdx)
     this.mc.st.modifie = this.apres !== this.avant
+    this.mapAll.set(idx, nom)
   }
 }
 
