@@ -43,14 +43,13 @@
 import { useStore } from 'vuex'
 import { computed, ref } from 'vue'
 import { crypt } from '../app/crypto.mjs'
-import { NomAvatar } from '../app/modele.mjs'
 import PhraseSecrete from '../components/PhraseSecrete.vue'
 import MdpAdmin from '../components/MdpAdmin.vue'
 import EditeurMd from '../components/EditeurMd.vue'
 import BoutonHelp from '../components/BoutonHelp.vue'
 import CarteVisite from '../components/CarteVisite.vue'
 import TestSecrets from '../components/TestSecrets.vue'
-import { post, affichermessage, afficherdiagnostic, testEcho } from '../app/util'
+import { post, affichermessage, afficherdiagnostic, testEcho, NomAvatar } from '../app/util.mjs'
 
 export default ({
   name: 'DialogueCrypto',

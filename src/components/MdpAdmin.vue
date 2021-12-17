@@ -12,8 +12,7 @@
     </q-card-section>
 </template>
 <script>
-import { MdpAdmin } from '../app/modele'
-import { cfg } from '../app/util'
+import { cfg, MdpAdmin } from '../app/util.mjs'
 export default ({
   name: 'MdpAdmin',
   props: {

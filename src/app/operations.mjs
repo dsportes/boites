@@ -1,10 +1,11 @@
-import { store, post, affichermessage, cfg, sleep, affichererreur, appexc, serial } from './util.mjs'
+import { NomAvatar, store, post, affichermessage, cfg, sleep, affichererreur, appexc, serial } from './util.mjs'
+import { remplacePage } from './page.mjs'
 import {
   deleteIDB, idbSidCompte, commitRows, getCompte, getAvatars, getContacts, getCvs,
   getGroupes, getInvitcts, getInvitgrs, getMembres, getParrains, getRencontres, getSecrets,
   purgeAvatars, purgeCvs, purgeGroupes, openIDB, enregLScompte, setEtat, getEtat
 } from './db.mjs'
-import { NomAvatar, Compte, Avatar, data, remplacePage, Invitgr, rowItemsToMapObjets, commitMapObjets, SIZEAV, SIZEGR } from './modele.mjs'
+import { Compte, Avatar, Invitgr, newObjet, commitMapObjets, data, SIZEAV, SIZEGR } from './modele.mjs'
 import { AppExc, E_BRK, F_BRO, X_SRV, INDEXT } from './api.mjs'
 
 import { crypt } from './crypto.mjs'
@@ -16,6 +17,19 @@ export const EXPS = new AppExc(F_BRO, 'La phrase secrète a changé depuis l\'au
 const OUI = 1
 const NON = 0
 const SELONMODE = 2
+
+export function deconnexion () { data.deconnexion() }
+
+export function reconnexion () {
+  const ps = data.ps
+  data.deconnexion(true)
+  data.mode = data.modeInitial
+  if (data.mode === 3) {
+    new ConnexionCompteAvion().run(ps)
+  } else {
+    new ConnexionCompte().run(ps)
+  }
+}
 
 export class Operation {
   constructor (nomop, net, idb) {
@@ -37,11 +51,7 @@ export class Operation {
 
   majsynclec (obj) { store().commit('ui/majsynclec', obj) }
 
-  deconnexion () { data.deconnexion() }
-
-  reconnexion () { data.reconnexion() }
-
-  excActions () { return { d: this.deconnexion, r: this.reconnexion, default: null } }
+  excActions () { return { d: deconnexion, r: reconnexion, default: null } }
 
   excAffichage1 () {
     const options1 = [
@@ -139,6 +149,31 @@ export class Operation {
     this.break = true
   }
 
+  /*
+  Retourne une map avec une entrée pour chaque table et en valeur,
+  - pour compte : LE DERNIER objet reçu, pas la liste historique
+  - pour les autres, l'array des objets
+  */
+  async rowItemsToMapObjets (rowItems) {
+    const res = {}
+    for (let i = 0; i < rowItems.length; i++) {
+      const item = rowItems[i]
+      const row = schemas.deserialize('row' + item.table, item.serial)
+      if (item.table === 'compte') {
+        // le dernier quand on en a reçu plusieurs et non la liste
+        if (row.pcbh !== data.ps.pcbh) throw EXPS // phrase secrète changée => déconnexion
+        const obj = new Compte()
+        res.compte = await obj.fromRow(row)
+      } else {
+        if (!res[item.table]) res[item.table] = []
+        const obj = newObjet(item.table)
+        await obj.fromRow(row)
+        res[item.table].push(obj)
+      }
+    }
+    return res
+  }
+
   async abonnements (compte) {
     // Abonner / signer la session au compte, avatars et groupes
     // si compte est absent, PAS de signature
@@ -172,7 +207,7 @@ export class Operation {
         const ret = await post(this, 'm1', 'syncAv', { sessionId: data.sessionId, avgr: id, lv })
         if (data.dh < ret.dh) data.dh = ret.dh
         const objets = []
-        commitMapObjets(objets, await rowItemsToMapObjets(ret.rowItems)) // stockés en modele
+        commitMapObjets(objets, await this.rowItemsToMapObjets(ret.rowItems)) // stockés en modele
         if (!estws) {
           const av = data.getAvatar(id)
           this.majsynclec({ st: 1, sid: sid, nom: 'Avatar ' + av.na.nomc, nbl: objets.length })
@@ -194,7 +229,7 @@ export class Operation {
         const ret = await post(this, 'm1', 'syncGr', { sessionId: data.sessionId, avgr: id, lv })
         if (data.dh < ret.dh) data.dh = ret.dh
         const objets = []
-        commitMapObjets(objets, await rowItemsToMapObjets(ret.rowItems)) // stockés en modele
+        commitMapObjets(objets, await this.rowItemsToMapObjets(ret.rowItems)) // stockés en modele
         if (!estws) {
           const gr = data.getGroupe(id)
           this.majsynclec({ st: 1, sid: sid, nom: 'Groupe ' + gr.info, nbl: objets.length })
@@ -218,7 +253,7 @@ export class Operation {
     const ret = await post(this, 'm1', 'chargtCVs', args)
     if (data.dh < ret.dh) data.dh = ret.dh
     const objets = []
-    const vcv = commitMapObjets(objets, await rowItemsToMapObjets(ret.rowItems)) // stockés en modele
+    const vcv = commitMapObjets(objets, await this.rowItemsToMapObjets(ret.rowItems)) // stockés en modele
     if (vcv > nvvcv) nvvcv = vcv
     if (!estws) {
       this.majsynclec({ st: 1, sid: '$CV', nom: 'Cartes de visite', nbl: objets.length })
@@ -249,18 +284,14 @@ export class Operation {
     /* Transforme tous les items en objet (décryptés / désrialisés)
     - les retourne ventilés dans une map par table
     */
-    const mapObj = await rowItemsToMapObjets(items)
+    const mapObj = await this.rowItemsToMapObjets(items)
     const objets = [] // Tous les objets à enregistrer dans IDB
 
     /* Traitement spécial du compte */
     if (mapObj.compte) {
       // Une mise à jour de compte est notifiée
-      const row = mapObj.compte
-      if (row.pcbh !== data.ps.pcbh) throw EXPS // phrase secrète changée => déconnexion
-      const compte = new Compte()
-      await compte.fromRow(row)
-      data.setCompte(compte)
-      objets.push(compte)
+      data.setCompte(mapObj.compte)
+      objets.push(mapObj.compte)
     }
 
     /* Mise en store de tous les autres objets */
@@ -330,7 +361,7 @@ export class OperationUI extends Operation {
   }
 
   excActionx () {
-    data.deconnexion()
+    deconnexion()
     setTimeout(() => {
       this.ouvrircreationcompte()
     }, 100)
@@ -524,7 +555,7 @@ export class OperationWS extends Operation {
 
   excAffichages () { return [this.excAffichage1, this.excAffichage1f] }
 
-  excActions () { return { d: this.deconnexion, r: this.reconnexion, default: null } }
+  excActions () { return { d: deconnexion, r: reconnexion, default: null } }
 }
 
 export class ProcessQueue extends OperationWS {
@@ -589,7 +620,7 @@ export class CreationCompte extends OperationUI {
 
   excAffichages () { return [this.excAffichage1, this.excAffichage2, this.excAffichage1f] }
 
-  excActions () { return { d: this.deconnexion, c: this.excActionx, default: null } }
+  excActions () { return { d: deconnexion, c: this.excActionx, default: null } }
 
   async run (mdp, ps, nom, quotas) {
     try {
@@ -616,9 +647,8 @@ export class CreationCompte extends OperationUI {
       Le compte vient d'être créé et est déjà dans le modèle (clek enregistrée)
       On peut désérialiser la liste d'items (compte et avatar)
       */
-      const mapObj = await rowItemsToMapObjets(ret.rowItems)
-      const compte2 = new Compte()
-      await compte2.fromRow(mapObj.compte) // le dernier ROW (pas objet) quand on en a reçu plusieurs
+      const mapObj = await this.rowItemsToMapObjets(ret.rowItems)
+      const compte2 = mapObj.compte // le DERNIER objet compte quand on en a reçu plusieurs (pas la liste)
       data.setCompte(compte2)
       const [rows] = commitMapObjets(mapObj)
       rows.push(compte2)
@@ -661,7 +691,7 @@ export class ConnexionCompteAvion extends OperationUI {
   excAffichages () { return [this.excAffichage1c, this.excAffichage2c, this.excAffichage1fc] }
 
   excActions () {
-    return { d: this.deconnexion, x: this.excActionx, r: this.reconnexion, default: null }
+    return { d: deconnexion, x: this.excActionx, r: reconnexion, default: null }
   }
 
   async run (ps) {
@@ -703,7 +733,7 @@ export class ConnexionCompte extends OperationUI {
   excAffichages () { return [this.excAffichage1c, this.excAffichage2c, this.excAffichage1fc] }
 
   excActions () {
-    return { d: this.deconnexion, x: this.excActionx, r: this.reconnexion, default: null }
+    return { d: deconnexion, x: this.excActionx, r: reconnexion, default: null }
   }
 
   async lectureCompte () {

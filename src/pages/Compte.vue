@@ -33,11 +33,9 @@
 
 <script>
 import { MemoCompte } from '../app/operations.mjs'
-import { computed, ref /* , watch */ } from 'vue'
+import { computed, ref } from 'vue'
 import { useStore } from 'vuex'
-// import { get, u8ToString } from '../app/util.mjs'
-import { onBoot } from '../app/modele.mjs'
-// import { schemas } from '../app/schemas.mjs'
+import { onBoot } from '../app/page.mjs'
 import EditeurMd from '../components/EditeurMd.vue'
 import BoutonHelp from '../components/BoutonHelp.vue'
 import MotsCles from '../components/MotsCles.vue'

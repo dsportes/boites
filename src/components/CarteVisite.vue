@@ -58,8 +58,7 @@
 import { ref, onMounted, watch, toRef, reactive } from 'vue'
 import BoutonHelp from './BoutonHelp.vue'
 import EditeurMd from './EditeurMd.vue'
-import { readFile, cfg } from '../app/util.mjs'
-import { NomAvatar } from '../app/modele.mjs'
+import { readFile, cfg, NomAvatar } from '../app/util.mjs'
 import Webcam from 'webcam-easy'
 import { Cropper } from 'vue-advanced-cropper'
 

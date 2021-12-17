@@ -184,8 +184,6 @@
 import { useQuasar } from 'quasar'
 import { computed } from 'vue'
 import { useStore } from 'vuex'
-import { remplacePage, onBoot, data, MODES } from '../app/modele.mjs'
-import { cfg } from '../app/util.mjs'
 import DialogueCreationCompte from 'components/DialogueCreationCompte.vue'
 import DialogueInfoMode from 'components/DialogueInfoMode.vue'
 import DialogueInfoReseau from 'components/DialogueInfoReseau.vue'
@@ -196,6 +194,10 @@ import DialogueErreur from 'components/DialogueErreur.vue'
 import DialogueCrypto from 'components/DialogueCrypto.vue'
 import RapportSynchro from 'components/RapportSynchro.vue'
 import DialogueHelp from 'components/DialogueHelp.vue'
+import { data, MODES } from '../app/modele.mjs'
+import { cfg } from '../app/util.mjs'
+import { remplacePage, onBoot } from '../app/page.mjs'
+import { deconnexion, reconnexion } from '../app/operations.mjs'
 
 export default {
   name: 'MainLayout',
@@ -252,13 +254,9 @@ export default {
       remplacePage('Compte')
     },
 
-    deconnexion () {
-      data.deconnexion()
-    },
+    deconnexion () { deconnexion() },
 
-    reconnexion () {
-      data.reconnexion()
-    },
+    reconnexion () { reconnexion() },
 
     stop () {
       data.stopOp()

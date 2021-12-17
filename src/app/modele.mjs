@@ -1,169 +1,9 @@
 import { schemas } from './schemas.mjs'
 import { crypt } from './crypto.mjs'
-const u8ToB64 = crypt.u8ToB64
-const b64ToU8 = crypt.b64ToU8
 import { openIDB, closeIDB } from './db.mjs'
 import { openWS, closeWS } from './ws.mjs'
-import { cfg, store, appexc, serial, deserial, dlvDepassee } from './util.mjs'
-import { ConnexionCompteAvion, ConnexionCompte } from './operations.mjs'
-
-import { useRouter, useRoute } from 'vue-router'
-
-let bootfait = false
-let $router
-
-export function onBoot () {
-  if (bootfait) return
-  bootfait = true
-  $router = useRouter()
-  $router.beforeEach((to, from) => {
-    const $store = store()
-    const org = $store.state.ui.org
-    const compte = $store.state.db.compte
-    const avatar = $store.state.db.avatar
-    const groupe = $store.state.db.groupe
-    const neworg = to.params.org
-
-    if (!neworg) {
-      // il faut aller sur Org
-      if (org && compte) return false // pas déconnecté : refusé
-      $store.commit('ui/majorg', null)
-      $store.commit('ui/majpage', 'Org')
-      if (to.name === 'Org') return true // devrait toujours être vrai
-      return '/'
-    }
-
-    if (!cfg().orgs[neworg]) return false
-
-    if (!org) {
-      // définition de l'organisation, il n'y en avait pas
-      $store.commit('ui/majorg', neworg)
-      $store.commit('ui/majpage', 'Login')
-      if (to.name === 'Login') return true
-      return '/' + org // vers Login
-    }
-
-    if (org !== neworg) {
-      // changement d'organisation
-      if (compte) return false // pas déconnecté : refusé
-      $store.commit('ui/majorg', neworg)
-      $store.commit('ui/majpage', 'Login')
-      if (to.name === 'Login') return true
-      return '/' + neworg
-    }
-
-    // l'organisation était définie et elle est inchangée
-    if (!compte) {
-      // on peut aller sur Login ou Synvhro
-      if (to.name === 'Login') {
-        $store.commit('ui/majpage', 'Login')
-        return true
-      }
-      if (to.name === 'Synchro') {
-        $store.commit('ui/majpage', 'Synchro')
-        return true
-      }
-      return '/' + org
-    }
-
-    // org inchangée, compte existant : on peut aller sur synchro / compte / avatar / groupe
-    if (to.name === 'Synchro') {
-      $store.commit('ui/majpage', 'Synchro')
-      return true // condition à ajouter
-    }
-    if (to.name === 'Compte') {
-      $store.commit('ui/majpage', 'Compte')
-      return true
-    }
-    if (to.name === 'Avatar') {
-      if (avatar) {
-        $store.commit('ui/majpage', 'Avatar')
-        return true
-      }
-      return false
-    }
-    if (to.name === 'Groupe') {
-      if (groupe) {
-        $store.commit('ui/majpage', 'Groupe')
-        return true
-      }
-      return false
-    }
-    return false
-  })
-  // Traitement de la route au boot
-  const $route = useRoute()
-  const urlorg = $route.params.org
-  console.log('URL org : ' + urlorg + ' Boot page : ' + $route.name)
-  store().commit('ui/majorg', (urlorg && cfg().orgs[urlorg]) ? urlorg : null)
-  const org = store().state.ui.org
-  if (!org && $route.name === 'Org') {
-    store().commit('ui/majpage', 'Org')
-    return
-  }
-  if (!org) {
-    remplacePage('Org')
-    return
-  }
-  if ($route.name === 'Login') {
-    store().commit('ui/majpage', 'Login')
-    return
-  }
-  remplacePage('Login')
-}
-
-export async function remplacePage (page) {
-  const x = { name: page }
-  if (page !== 'Org') x.params = { org: store().state.ui.org }
-  await $router.replace(x)
-}
-
-/* Transforme un row sérialisé en objet par les méthodes fromRow
-- si st < 0 : article à supprimer
-- dlv transformée en suppression pour :
-  - invitgr, invitct, parrain, rencontre
-  - membre si stx = 2 (invité)
-  - secret : dlv est st si > 0 et < 99999
-*/
-async function objetDeItem (item) {
-  const row = schemas.deserialize('row' + item.table, item.serial)
-  let x
-  switch (item.table) {
-    case 'compte' : return row
-    case 'avatar' : { x = new Avatar(); break }
-    case 'contact' : { x = new Contact(); break }
-    case 'invitct' : { x = new Invitct(); break }
-    case 'invitgr' : { x = new Invitgr(); break }
-    case 'parrain' : { x = new Parrain(); break }
-    case 'rencontre' : { x = new Rencontre(); break }
-    case 'groupe' : { x = new Groupe(); break }
-    case 'membre' : { x = new Membre(); break }
-    case 'secret' : { x = new Secret(); break }
-    case 'cv' : { x = new Cv() }
-  }
-  return await x.fromRow(row)
-}
-
-/*
-Retourne une map avec une entrée pour chaque table et en valeur,
-- pour compte : LE dernier ROW (pas objet) reçu en notification
-- pour les autres, l'array des objets
-*/
-export async function rowItemsToMapObjets (rowItems) {
-  const res = {}
-  for (let i = 0; i < rowItems.length; i++) {
-    const item = rowItems[i]
-    if (item.table === 'compte') {
-      // le dernier quand on en a reçu plusieurs et non la liste
-      res.compte = await objetDeItem(item)
-    } else {
-      if (!res[item.table]) res[item.table] = []
-      const obj = await objetDeItem(item)
-      res[item.table].push(obj)
-    }
-  }
-  return res
-}
+import { store, appexc, serial, deserial, dlvDepassee, NomAvatar } from './util.mjs'
+import { remplacePage } from './page.mjs'
 
 /* mapObj : clé par table, valeur : array des objets
 - ne traite pas 'compte'
@@ -293,186 +133,6 @@ export function commitMapObjets (objets, mapObj) { // SAUF mapObj.compte
 export const SIZEAV = 7
 export const SIZEGR = 3
 export const MODES = ['inconnu', 'synchronisé', 'incognito', 'avion', 'visio']
-
-/* Motscles ************************************************************/
-const OBS = 'obsolète'
-
-export class Motscles {
-  /*
-  Mode 1 : chargement des mots clés du compte et l'organisation en vue d'éditer ceux du compte
-  Mode 2 : chargement des mots clés du groupe idg et l'organisation en vue d'éditer ceux du groupe
-  Mode 3 : chargement des mots clés du compte OU du groupe idg et de l'organisation
-  en vue d'afficher une liste de mots clés pour SELECTION
-  */
-  constructor (mc, mode, idg) {
-    this.mode = mode
-    this.idg = idg
-    this.mc = mc
-  }
-
-  debutEdition () {
-    if (this.mode === 3 || !this.src) return
-    this.premier = this.mode === 1 ? 1 : 100
-    this.dernier = this.mode === 1 ? 99 : 199
-    this.mc.st.enedition = true
-    this.localIdx = {}
-    this.localNom = {}
-    for (const idx in this.src) {
-      const nc = this.src[idx]
-      const [categ, nom] = this.split(nc)
-      this.localIdx[idx] = nc
-      this.localNom[nom] = [idx, categ]
-    }
-    this.avant = this.flatMap(this.src)
-    this.apres = this.avant
-  }
-
-  flatMap (map) {
-    const a = []
-    for (const idx in map) a.push(parseInt(idx))
-    a.sort()
-    const b = []
-    for (let i = 0; i < a.length; i++) {
-      const idx = a[i]
-      b.push(idx + '/' + map[idx])
-    }
-    return b.join('&')
-  }
-
-  finEdition () {
-    if (this.mode === 3) return
-    this.mc.st.enedition = false
-    this.mc.st.modifie = false
-    const r = this.localIdx
-    this.recharger()
-    return r
-  }
-
-  recharger () {
-    if (this.mc.st.enedition) return
-    delete this.localIdx
-    delete this.localNom
-    delete this.apres
-    delete this.avant
-    this.mc.categs.clear()
-    this.mc.lcategs.length = 0
-    this.fusion(cfg().motscles)
-    if (this.mode === 1 || (this.mode === 3 && !this.idg)) {
-      this.mapc = data.getCompte().mmc
-      this.fusion(this.mapc)
-      if (this.mode === 1) this.src = this.mapc
-    }
-    if (this.mode === 2 || (this.mode === 3 && this.idg)) {
-      const gr = data.getGroupe(this.idg)
-      this.mapg = gr.mc
-      if (this.mode === 2 && gr.maxSty === 2) this.src = this.mapg
-      this.fusion(this.mapg)
-    }
-    this.tri()
-    return this
-  }
-
-  split (nc) {
-    const j = nc.indexOf('/')
-    const categ = j === -1 ? OBS : nc.substring(0, j)
-    const nom = j === -1 ? nc : nc.substring(j + 1)
-    return [categ, nom]
-  }
-
-  setCateg (categ, idx, nom) {
-    let x = this.mc.categs.get(categ)
-    if (!x) {
-      x = []
-      this.mc.categs.set(categ, x)
-    }
-    let trouve = false
-    for (let i = 0; i < x.length; i++) {
-      if (x[i][1] === idx) {
-        x[i][0] = nom
-        trouve = true
-        break
-      }
-    }
-    if (!trouve) x.push([nom, idx])
-  }
-
-  delCateg (categ, idx) {
-    const x = this.mc.categs.get(categ)
-    if (!x) return
-    let j = -1
-    for (let i = 0; i < x.length; i++) {
-      if (x[i][1] === idx) {
-        j = i
-        break
-      }
-    }
-    if (j !== -1) {
-      x.splice(j, 1)
-      if (!x.length) {
-        this.mc.categs.delete(categ)
-      }
-    }
-  }
-
-  fusion (map) {
-    for (const i in map) {
-      const idx = parseInt(i)
-      const nc = map[i]
-      const [categ, nom] = this.split(nc)
-      this.setCateg(categ, idx, nom)
-    }
-  }
-
-  tri () {
-    this.mc.lcategs.length = 0
-    const s = new Set()
-    this.mc.categs.forEach((v, k) => {
-      if (!s.has(k)) {
-        this.mc.lcategs.push(k)
-        s.add(k)
-      }
-      if (v.length > 1) v.sort((a, b) => { return a[0] < b[0] ? -1 : a[0] === b[0] ? 0 : 1 })
-    })
-    if (this.mc.lcategs.length > 1) this.mc.lcategs.sort()
-  }
-
-  supprMC (idx) {
-    if (!this.mc.enedition || idx < this.premier || idx > this.dernier) return 'Pas en édition ou index incoorect'
-    const ancnc = this.localIdx[idx]
-    if (!ancnc) return
-    const [anccateg, ancnom] = this.split(ancnc)
-    delete this.localNom[ancnom]
-    delete this.localIdx[idx]
-    this.delCateg(anccateg, idx)
-    this.apres = this.flatMap(this.localIdx)
-    this.mc.st.modifie = this.apres !== this.avant
-  }
-
-  changerMC (idx, nc) {
-    if (!this.mc.st.enedition || (idx !== 0 && (idx < this.premier || idx > this.dernier))) return 'Pas en édition ou index incoorect'
-    if (idx && !nc) return this.supprMC(idx)
-    const [categ, nom] = this.split(nc)
-    const x = this.localNom[nom]
-    if (x && x[0] !== idx) return 'Le nom est déjà attribué à l\'index "' + x[0] + '" (catégorie "' + x[1] + '")'
-    if (idx) {
-      const ancnc = this.localIdx[idx]
-      const [anccateg, ancnom] = this.split(ancnc)
-      delete this.localNom[ancnom]
-      this.delCateg(anccateg, idx)
-    } else {
-      for (let i = this.premier; i < this.dernier; i++) {
-        if (!this.localIdx[i]) { idx = i; break }
-      }
-      if (!idx) return 'Plus d\'index libres pour ajouter un mot clé'
-    }
-    this.localIdx[idx] = nc
-    this.localNom[nom] = [idx, categ]
-    this.setCateg(categ, idx, nom)
-    this.tri()
-    this.apres = this.flatMap(this.localIdx)
-    this.mc.st.modifie = this.apres !== this.avant
-  }
-}
 
 /* Répertoire des CV **********************************************************/
 class Repertoire {
@@ -621,17 +281,6 @@ class Session {
       remplacePage(store().state.ui.org ? 'Login' : 'Org')
     } else {
       this.nbreconnexion++
-    }
-  }
-
-  reconnexion () { // Depuis un bouton
-    const ps = data.ps
-    this.deconnexion(true)
-    data.mode = data.modeInitial
-    if (data.mode === 3) {
-      new ConnexionCompteAvion().run(ps)
-    } else {
-      new ConnexionCompte().run(ps)
     }
   }
 
@@ -884,39 +533,20 @@ class Session {
 }
 export const data = new Session()
 
-/** classes Phrase, MdpAdmin, Quotas ****************/
-export class Phrase {
-  async init (debut, fin) {
-    this.pcb = await crypt.pbkfd(debut + '\n' + fin)
-    this.pcb64 = u8ToB64(this.pcb)
-    this.pcbh = crypt.hashBin(this.pcb)
-    this.dpbh = crypt.hashBin(await crypt.pbkfd(debut))
-  }
-}
-
-export class MdpAdmin {
-  async init (mdp) {
-    this.mdp = mdp
-    this.mdpb = await crypt.pbkfd(mdp)
-    this.mdp64 = u8ToB64(this.mdpb, true)
-    this.mdph = crypt.hashBin(this.mdpb)
-  }
-}
-
-export class Quotas {
-  constructor (src) {
-    this.q1 = src ? src.q1 : 0
-    this.q2 = src ? src.q2 : 0
-    this.qm1 = src ? src.qm1 : 0
-    this.qm2 = src ? src.qm2 : 0
-  }
-
-  raz () {
-    this.q1 = 0
-    this.q2 = 0
-    this.qm1 = 0
-    this.qm2 = 0
-    return this
+/* Création des objets selon leur table *******/
+export function newObjet (table) {
+  switch (table) {
+    case 'compte' : return new Compte()
+    case 'avatar' : return new Avatar()
+    case 'contact' : return new Contact()
+    case 'invitct' : return new Invitct()
+    case 'invitgr' : return new Invitgr()
+    case 'parrain' : return new Parrain()
+    case 'rencontre' : return new Rencontre()
+    case 'groupe' : return new Groupe()
+    case 'membre' : return new Membre()
+    case 'secret' : return new Secret()
+    case 'cv' : return new Cv()
   }
 }
 
@@ -1051,29 +681,6 @@ export class Compte {
   av (id) {
     return this.mac[crypt.idToSid(id)]
   }
-}
-
-/** NomAvatar **********************************/
-export class NomAvatar {
-  constructor (n, nouveau) {
-    if (nouveau) {
-      this.rndb = crypt.random(15)
-      this.nom = n
-    } else {
-      const i = n.lastIndexOf('@')
-      this.nom = n.substring(0, i)
-      this.sfx = n.substring(i + 1)
-      this.rndb = b64ToU8(this.sfx)
-    }
-  }
-
-  get id () { return crypt.hashBin(this.rndb) }
-
-  get nomc () { return this.nom + '@' + u8ToB64(this.rndb, true) }
-
-  get sid () { return crypt.idToSid(this.id) }
-
-  get cle () { return crypt.sha256(this.rndb) }
 }
 
 /** Avatar **********************************/

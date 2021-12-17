@@ -27,7 +27,8 @@ import BoutonHelp from './BoutonHelp.vue'
 import ShowHtml from './ShowHtml.vue'
 import CarteVisite from './CarteVisite.vue'
 import { cfg } from '../app/util.mjs'
-import { data, remplacePage } from '../app/modele.mjs'
+import { data } from '../app/modele.mjs'
+import { remplacePage } from '../app/page.mjs'
 import { CvAvatar } from '../app/operations.mjs'
 
 export default ({

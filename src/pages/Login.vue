@@ -34,7 +34,7 @@ import { computed } from 'vue'
 import { useStore } from 'vuex'
 import { ConnexionCompte, ConnexionCompteAvion } from '../app/operations'
 import PhraseSecrete from '../components/PhraseSecrete.vue'
-import { onBoot } from '../app/modele'
+import { onBoot } from '../app/page.mjs'
 
 export default ({
   name: 'Login',

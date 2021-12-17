@@ -5,7 +5,7 @@
 </template>
 
 <script>
-import { onBoot } from '../app/modele'
+import { onBoot } from '../app/page.mjs'
 import RapportSynchro from '../components/RapportSynchro.vue'
 
 export default ({

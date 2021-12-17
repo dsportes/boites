@@ -7,7 +7,7 @@
 <script>
 import { computed } from 'vue'
 import { useStore } from 'vuex'
-import { onBoot } from '../app/modele'
+import { onBoot } from '../app/page.mjs'
 
 export default ({
   name: 'Avatar',

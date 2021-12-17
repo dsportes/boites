@@ -64,7 +64,7 @@ import MdpAdmin from './MdpAdmin.vue'
 import NomAvatar from './NomAvatar.vue'
 import QuotasVolume from './QuotasVolume.vue'
 import { CreationCompte } from '../app/operations.mjs'
-import { Quotas } from '../app/modele.mjs'
+import { Quotas } from '../app/util.mjs'
 
 export default ({
   name: 'DialogueCreationCompte',

@@ -31,8 +31,7 @@
   </q-card-section>
 </template>
 <script>
-import { Phrase } from '../app/modele'
-import { cfg } from '../app/util'
+import { cfg, Phrase } from '../app/util.mjs'
 const msg = ['Saisir la phrase secrète', 'Phrase non confirmée, la re-saisir', 'Confirmer la phrase secréte']
 export default ({
   name: 'PhraseSecrete',

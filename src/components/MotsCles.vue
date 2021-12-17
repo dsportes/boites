@@ -50,8 +50,7 @@
 import { MmcCompte } from '../app/operations'
 import { useStore } from 'vuex'
 import { computed, ref, reactive, watch, onMounted } from 'vue'
-import { Motscles } from '../app/modele.mjs'
-import { afficherdiagnostic } from '../app/util.mjs'
+import { afficherdiagnostic, Motscles } from '../app/util.mjs'
 import { VuemojiPicker } from 'vuemoji-picker'
 
 export default ({

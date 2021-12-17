@@ -25,7 +25,7 @@
     </q-card-section>
 </template>
 <script>
-import { Quotas } from '../app/modele'
+import { Quotas } from '../app/util.mjs'
 
 export default ({
   name: 'QuotasVolume',

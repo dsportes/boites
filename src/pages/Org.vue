@@ -14,7 +14,7 @@
 import { cfg } from '../app/util'
 import { computed } from 'vue'
 import { useStore } from 'vuex'
-import { remplacePage, onBoot } from '../app/modele'
+import { remplacePage, onBoot } from '../app/page.mjs'
 
 export default ({
   name: 'Org',
