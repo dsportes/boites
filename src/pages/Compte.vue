@@ -28,6 +28,9 @@
     <div>
       <apercu-motscles :motscles="motscles" :src="u8mc" :court="court" :argsClick="{loc: 'ici', n: 3}" @clickMc="mcclick"></apercu-motscles>
     </div>
+    <q-dialog v-model="selecteur">
+      <select-motscles :close="closeSel" :src="u8mc" :motscles="motscles" @ok="selection"/>
+    </q-dialog>
   </q-card>
 </q-page>
 </template>
@@ -42,25 +45,34 @@ import BoutonHelp from '../components/BoutonHelp.vue'
 import MotsCles from '../components/MotsCles.vue'
 import ApercuAvatar from '../components/ApercuAvatar.vue'
 import ApercuMotscles from '../components/ApercuMotscles.vue'
+import SelectMotscles from '../components/SelectMotscles.vue'
 import { Motscles } from '../app/util.mjs'
 
 export default ({
   name: 'Compte',
-  components: { EditeurMd, BoutonHelp, MotsCles, ApercuAvatar, ApercuMotscles },
+  components: { EditeurMd, BoutonHelp, MotsCles, ApercuAvatar, ApercuMotscles, SelectMotscles },
   data () {
     return {
       u8mc: new Uint8Array([200, 202, 1, 203, 2]),
-      court: false
+      court: false,
+      selecteur: false
     }
   },
 
   methods: {
+    closeSel () {
+      this.selecteur = false
+    },
     mcclick (args) {
       console.log('mcclick', JSON.stringify(args))
+      this.selecteur = true
     },
     async memook (m) {
       this.memoed.undo()
       await new MemoCompte().run(m)
+    },
+    selection (u8) {
+      this.u8mc = u8
     }
     /*
     async getcv (sid) {

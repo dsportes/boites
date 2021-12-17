@@ -325,8 +325,7 @@ export class Motscles {
   /*
   Mode 1 : chargement des mots clés du compte et l'organisation en vue d'éditer ceux du compte
   Mode 2 : chargement des mots clés du groupe idg et l'organisation en vue d'éditer ceux du groupe
-  Mode 3 : chargement des mots clés du compte OU du groupe idg et de l'organisation
-  en vue d'afficher une liste de mots clés pour SELECTION
+  Mode 3 : chargement des mots clés du compte OU du groupe idg et de l'organisation pour SELECTION
   */
   constructor (mc, mode, idg) {
     this.mode = mode
@@ -335,11 +334,19 @@ export class Motscles {
     this.mapAll = new Map()
   }
 
+  aMC (idx) {
+    return this.mapAll.has(idx) || false
+  }
+
+  getMC (idx) {
+    return this.mapAll.get(idx)
+  }
+
   edit (u8, court) {
     const l = []
     for (let i = 0; i < u8.length; i++) {
-      const s = this.mapAll.get(u8[i])
-      if (s && s.length) l.push(court ? s.substring(0, 2) : s)
+      const x = this.mapAll.get(u8[i])
+      if (x && x.n && x.n.length) l.push(court ? x.n.substring(0, 2) : x.n)
     }
     return l.join(court ? ' ' : ' / ')
   }
@@ -399,7 +406,7 @@ export class Motscles {
     }
     if (this.mode === 2 || (this.mode === 3 && this.idg)) {
       const gr = data.getGroupe(this.idg)
-      this.mapg = gr.mc
+      this.mapg = gr ? gr.mc : {}
       if (this.mode === 2 && gr.maxSty === 2) this.src = this.mapg
       this.fusion(this.mapg)
     }
@@ -455,7 +462,7 @@ export class Motscles {
       const nc = map[i]
       const [categ, nom] = this.split(nc)
       this.setCateg(categ, idx, nom)
-      this.mapAll.set(idx, nom)
+      this.mapAll.set(idx, { n: nom, c: categ })
     }
   }
 
@@ -508,7 +515,7 @@ export class Motscles {
     this.tri()
     this.apres = this.flatMap(this.localIdx)
     this.mc.st.modifie = this.apres !== this.avant
-    this.mapAll.set(idx, nom)
+    this.mapAll.set(idx, { n: nom, c: categ })
   }
 }
 
