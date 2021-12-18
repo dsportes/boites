@@ -1,8 +1,4 @@
-modele.mjs
-- propriété suppr sur tous (sauf compte)
-- fromRow :
-  - gérer suppr sur st
-  - gérer les dlv -> suppr
+Mots clés : ne pas sélectionner d'obsolètes, les enlever sur OK.
 
 Bloquer les maj en mode avion
 

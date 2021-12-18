@@ -346,7 +346,18 @@ export class Motscles {
     const l = []
     for (let i = 0; i < u8.length; i++) {
       const x = this.mapAll.get(u8[i])
-      if (x && x.n && x.n.length) l.push(court ? x.n.substring(0, 2) : x.n)
+      if (x && x.n && x.n.length) {
+        if (court) {
+          if (x.n.charCodeAt(0) > 1000) {
+            // commence par un emoji
+            l.push(String.fromCodePoint(x.n.codePointAt(0)))
+          } else {
+            l.push(String.fromCodePoint(x.n.codePointAt(0), x.n.codePointAt(1)))
+          }
+        } else {
+          l.push(x.n)
+        }
+      }
     }
     return l.join(court ? ' ' : ' / ')
   }

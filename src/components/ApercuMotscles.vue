@@ -1,5 +1,5 @@
 <template>
-  <span :class="argsClick ? 'cursor-pointer' : ''" @click="clic()">{{ed}}
+  <span :class="'mc ' + (argsClick ? 'cursor-pointer' : '')" @click="clic()">{{ed}}
     <q-tooltip v-if="court">{{edl}}</q-tooltip>
   </span>
 </template>
@@ -29,4 +29,7 @@ export default ({
 </script>
 
 <style lang="sass" scoped>
+.mc
+  font-family: 'Roboto Mono'
+  font-size: 0.9rem
 </style>
