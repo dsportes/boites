@@ -1,10 +1,10 @@
 <template>
 <div ref="root" class='colomn' style="width:100%">
   <div class="q-pa-md">
-    <q-btn v-if="!mc.st.enedition" flat dense size="md" color="warning" label="Editer" @click="startEdit"/>
-    <q-btn v-if="mc.st.enedition" dense size="md" color="primary" label="Ajouter un mot clé" @click="ajoutermc"/>
-    <q-btn v-if="mc.st.enedition" flat dense size="md" color="primary" label="Annuler" @click="cancelEdit"/>
-    <q-btn v-if="mc.st.enedition" :disable="!mc.st.modifie" flat dense size="md" color="warning" label="Valider" @click="okEdit"/>
+    <q-btn v-if="!motscles.mc.st.enedition" flat dense size="md" color="warning" label="Editer" @click="startEdit"/>
+    <q-btn v-if="motscles.mc.st.enedition" dense size="md" color="primary" label="Ajouter un mot clé" @click="ajoutermc"/>
+    <q-btn v-if="motscles.mc.st.enedition" flat dense size="md" color="primary" label="Annuler" @click="cancelEdit"/>
+    <q-btn v-if="motscles.mc.st.enedition" :disable="!motscles.mc.st.modifie" flat dense size="md" color="warning" label="Valider" @click="okEdit"/>
   </div>
   <div v-if="ajouter" class="column q-px-sm q-pb-md" style="width:100%">
     <div class="row justify-end">
@@ -24,15 +24,15 @@
   <q-splitter v-model="splitterModel" class="col" style="width:100%">
     <template v-slot:before>
       <q-tabs v-model="tab" no-caps vertical >
-        <q-tab v-for="categ in mc.lcategs" :key="categ" :name="categ" :label="categ" />
+        <q-tab v-for="categ in motscles.mc.lcategs" :key="categ" :name="categ" :label="categ" />
       </q-tabs>
     </template>
     <template v-slot:after>
       <q-tab-panels v-model="tab" animated swipeable vertical transition-prev="jump-up" transition-next="jump-up" >
-        <q-tab-panel v-for="categ in mc.lcategs" :key="categ" :name="categ">
-          <div v-for="item in mc.categs.get(categ)" :key="item[1]+item[0]" style="width:100%">
+        <q-tab-panel v-for="categ in motscles.mc.lcategs" :key="categ" :name="categ">
+          <div v-for="item in motscles.mc.categs.get(categ)" :key="item[1]+item[0]" style="width:100%">
             <span class="nom">{{item[0]}}</span><span class="idx font-mono">[{{item[1]}}]</span>
-            <span v-if="mc.st.enedition && item[1] < 200">
+            <span v-if="motscles.mc.st.enedition && item[1] < 200">
               <q-btn icon="mode_edit" size="sm" dense @click="edit(categ, item[0], item[1])"></q-btn>
               <q-btn v-if="categ === 'obsolète'" icon="close" size="sm" dense @click="suppr(categ, item[0], item[1])"></q-btn>
             </span>
@@ -49,12 +49,14 @@
 <script>
 import { MmcCompte } from '../app/operations'
 import { useStore } from 'vuex'
-import { computed, ref, reactive, watch, onMounted } from 'vue'
-import { afficherdiagnostic, Motscles } from '../app/util.mjs'
+import { computed, ref, toRef, onMounted, watch } from 'vue'
+import { afficherdiagnostic } from '../app/util.mjs'
 import { VuemojiPicker } from 'vuemoji-picker'
 
 export default ({
   name: 'MotsCles',
+
+  props: { motscles: Object },
 
   components: { VuemojiPicker },
 
@@ -66,11 +68,6 @@ export default ({
       nom: '',
       categ: ''
     }
-  },
-
-  watch: {
-    /* Ecrire plutôt le watch dans le setup
-    compte (apres, avant) { console.log('watch COMPTE ' + JSON.stringify(apres.mmc)) } */
   },
 
   methods: {
@@ -117,10 +114,10 @@ export default ({
       if (err) {
         afficherdiagnostic(err)
       } else {
-        if (this.mc.categs.has(categ)) {
+        if (this.motscles.mc.categs.has(categ)) {
           this.tab = categ
         } else {
-          this.tab = this.mc.lcategs[0]
+          this.tab = this.motscles.mc.lcategs[0]
         }
       }
     },
@@ -132,57 +129,29 @@ export default ({
     },
     async okEdit () {
       const mmc = this.motscles.finEdition()
-      // eslint-disable-next-line no-undef
       await new MmcCompte().run(mmc)
-      /* simulation du retour sync de maj serveur
-      setTimeout(() => {
-        const c = this.compte.clone
-        c.mmc = mmc
-        c.mmc[32] = 'Statut/toto'
-        c.v++
-        data.setCompte(c)
-      }, 5000)
-      */
     }
   },
 
-  setup () {
+  setup (props) {
+    const motscles = toRef(props, 'motscles')
     const root = ref(null)
     const tab = ref('')
     const $store = useStore()
     const compte = computed(() => $store.state.db.compte)
-    const mc = reactive({ categs: new Map(), lcategs: [], st: { enedition: false, modifie: false } })
-    const motscles = new Motscles(mc, 1)
 
     onMounted(() => {
-      motscles.recharger()
-      tab.value = mc.lcategs[0]
+      tab.value = motscles.value.mc.lcategs[0]
     })
 
-    /* watch multiple (concommittant) : inutile dans ce cas. Plusieurs watch sont possibles
     watch(
-      [() => mc, () => compte.value],
-      (val, prevVal) => {
-        console.log('watch 0 : ' + val[0].categs.size)
-        console.log('watch 1 : ' + val[1].v + '/' + prevVal[1].v)
-        if (val[1].v > prevVal[1].v) {
-          motscles.recharger()
-        }
-      },
-      { deep: true }
-    )
-    */
-
-    watch(
-      () => compte.value, // OUI .value !!!
-      (ap, av) => { if (ap && ap.v > av.v) { motscles.recharger() } } // ap est undef au début
+      () => motscles.value,
+      (ap, av) => { tab.value = motscles.value.mc.lcategs[0] }
     )
 
     return {
       root,
       compte,
-      mc,
-      motscles,
       tab,
       splitterModel: ref(33) // start at 33%
     }

@@ -56,7 +56,8 @@ export default ({
 
   computed: {
     texte () {
-      return this.helpstack.length ? this.page(this.pagec()).md : ''
+      const p = this.helpstack.length ? this.page(this.pagec()) : null
+      return p ? p.md : ''
     },
     stackvide () { return this.helpstack.length <= 1 }
   },
@@ -66,7 +67,8 @@ export default ({
       return this.helpstack[this.helpstack.length - 1]
     },
     page (p) {
-      return cfg().help[p]
+      const x = cfg().help
+      return x[p] || x.bientot
     },
     push (p) {
       this.$store.commit('ui/pushhelp', p)

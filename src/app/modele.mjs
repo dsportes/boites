@@ -717,6 +717,8 @@ export class Avatar {
 
   get icone () { return this.photo || '' }
 
+  get nomc () { return this.na.nomc }
+
   nouveau (nomAvatar) {
     this.na = nomAvatar
     this.id = this.na.id
@@ -1589,6 +1591,17 @@ export class Rencontre {
 - `mpjs` : sérialisation de la map des pièces jointes { nom: [stars, version, volume] }.
 - `dups` : couple `[id, ns]` crypté par la clé du secret de l'autre exemplaire pour un secret de couple A/B.
 - `vsh`
+
+**Map des pièces jointes :**
+Une pièce jointe est identifiée par : `nom.ext/dh`
+- le `nom.ext` d'une pièce jointe est un nom de fichier, qui indique donc son type MIME par `ext`, d'où un certain nombre de caractères interdits (dont le `/`).
+- `dh` est la date-heure d'écriture UTC (en secondes) : `YYYY-MM-JJ hh:mm:ss`
+sont relatifs au secret et cryptés par la clé du secret. En base64 ils sont les clés de la map.
+
+- _clé_ : hash (court) de nom.ext en base64 URL. Permet d'effectuer des remplacements par une version ultérieure.
+- _valeur_ : `[idc, taille]`
+  - `idc` : id complète de la pièce jointe, cryptée par la clé du secret et en base64 URL.
+  - `taille` : en bytes.
 */
 
 schemas.forSchema({
@@ -1636,10 +1649,14 @@ export class Secret {
       this.txt = await crypt.decrypter(cles, row.txts)
       this.mc = deserial(await crypt.decrypter(cles, row.mcs))
       this.mpj = {}
+      this.nbpj = 0
       if (this.v2 && row.mpjs) {
-        for (const ns in row.mpjs) { // ns est en base64
-          const nom = await crypt.decrypterStr(cles, crypt.b64ToU8(ns))
-          this.mpj[nom] = row.mpjs[ns]
+        for (const cpj in row.mpjs) {
+          const x = row.mpjs[cpj]
+          const nomc = await crypt.decrypterStr(cles, crypt.b64ToU8(x[0]))
+          const i = nomc.indexOf('/')
+          this.nbpj++
+          this.mpj[cpj] = { n: nomc.substring(0, i), dh: nomc.substring(i + 1), t: x[1] }
         }
       }
       if (this.ts === 1) {
@@ -1658,9 +1675,10 @@ export class Secret {
     this.mcs = await crypt.crypter(cles, serial(this.mc))
     if (this.v2) {
       this.mpjs = {}
-      for (const ns in this.mpj) {
-        const nomb64 = crypt.u8ToB64(await crypt.crypter(cles, ns), true)
-        this.mpjs[nomb64] = this.mpj[ns]
+      for (const cpj in this.mpj) {
+        const x = this.mpj[cpj]
+        const nomcb64 = crypt.u8ToB64(await crypt.crypter(cles, x.n + '/' + x.dh), true)
+        this.mpjs[cpj] = [nomcb64, x.t]
       }
     }
     if (this.ts === 1) this.dups = await crypt.crypter(cles, serial([this.dupid, this.dupns]))

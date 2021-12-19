@@ -50,12 +50,12 @@
 
       <q-toolbar inset>
         <q-toolbar-title class="row no-wrap justify-around">
-          <div :class="'col-4 cag ' + (page === 'Synchro' || compte == null ? 'disabled' : '')" @click="tocompte">Compte</div>
-          <div :class="'row items-center col-4 cag ' + (page === 'Synchro' || compte == null ? 'disabled' : '')" @click="toavatar">
+          <div :class="tabcptcl" @click="tocompte">Compte</div>
+          <div :class="tabavcl" @click="toavatar">
             <img class="photo" :src="avatar && avatar.photo ? avatar.photo : personne"/>
             <span>{{avatar && avatar.label ? avatar.label : 'Avatar'}}</span>
           </div>
-          <div :class="'col-4 cag ' + (page === 'Synchro' || compte == null ? 'disabled' : '')" @click="togroupe">
+          <div :class="tabgrcl" @click="togroupe">
             {{ groupe != null ? groupe.label : 'Groupe' }}
           </div>
         </q-toolbar-title>
@@ -77,7 +77,6 @@
         <div style="width:100vw;">
         <q-tabs v-model="tabavatar" inline-label no-caps dense>
           <q-tab name="etc" label="Etc." />
-          <q-tab name="contacts" label="Contacts" />
           <q-tab name="secrets" label="Secrets" />
         </q-tabs>
         </div>
@@ -204,6 +203,21 @@ export default {
 
   components: {
     RapportSynchro, PanelMenu, DialogueErreur, DialogueCrypto, DialogueCreationCompte, DialogueTestPing, DialogueInfoMode, DialogueInfoReseau, DialogueInfoIdb, DialogueHelp
+  },
+
+  computed: {
+    tabavcl () {
+      const x = 'col-4 cag row justify-center items-center ' + (this.page === 'Synchro' || this.compte == null ? 'disabled' : '')
+      return this.page === 'Avatar' ? x + ' tabcourant' : x
+    },
+    tabcptcl () {
+      const x = 'col-4 cag ' + (this.page === 'Synchro' || this.compte == null ? 'disabled' : '')
+      return this.page === 'Compte' ? x + ' tabcourant' : x
+    },
+    tabgrcl () {
+      const x = 'col-4 cag ' + (this.page === 'Synchro' || this.compte == null ? 'disabled' : '')
+      return this.page === 'Groupe' ? x + ' tabcourant' : x
+    }
   },
 
   data () {
@@ -390,10 +404,13 @@ export default {
   opacity: 0
   transform: translateX(50%) /* CA BUG : Login ne se réaffichae pas */
 
+.tabcourant
+  border-radius: 5px !important
+  border: 2px solid $warning !important
 .cag
   text-align: center
   padding: 2px 0
-  max-height: 1.5rem
+  max-height: 2rem
   font-family: Calibri-Light
   font-size: 1.2rem
   overflow: hidden

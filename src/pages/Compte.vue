@@ -10,7 +10,7 @@
         </div>
       </q-expansion-item>
       <q-expansion-item group="etc" label="Mots clés" header-class="titre-2 bg-secondary text-white">
-        <mots-cles></mots-cles>
+        <mots-cles :motscles="motscles"></mots-cles>
       </q-expansion-item>
     </q-list>
   </q-card>
@@ -37,7 +37,7 @@
 
 <script>
 import { MemoCompte } from '../app/operations.mjs'
-import { computed, ref, reactive, onMounted, watch } from 'vue'
+import { computed, ref, reactive, /* onMounted, */ watch } from 'vue'
 import { useStore } from 'vuex'
 import { onBoot } from '../app/page.mjs'
 import EditeurMd from '../components/EditeurMd.vue'
@@ -118,16 +118,21 @@ export default ({
     const avatars = computed(() => $store.state.db.avatars)
     const groupes = computed(() => $store.state.db.groupes)
     const mode = computed(() => $store.state.ui.mode)
-    const modeleactif = computed(() => $store.state.ui.modeleactif)
 
     const mc = reactive({ categs: new Map(), lcategs: [], st: { enedition: false, modifie: false } })
     const motscles = new Motscles(mc, 1)
+    motscles.recharger()
 
-    onMounted(() => { motscles.recharger() })
+    // onMounted(() => { console.log('onMounted Compte: ' + motscles.mapAll.size) })
 
     watch(
       () => compte.value, // OUI .value !!!
-      (ap, av) => { if (ap && ap.v > av.v) { motscles.recharger() } }
+      (ap, av) => {
+        if (ap && ap.v > av.v) {
+          motscles.recharger()
+          console.log('watch compte Compte: ' + motscles.mapAll.size)
+        }
+      }
     )
 
     return {
@@ -138,7 +143,6 @@ export default ({
       avatar,
       groupe,
       mode,
-      modeleactif,
       cvs,
       avatars,
       groupes,

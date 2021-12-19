@@ -1,4 +1,5 @@
 {
+  "bientot" : { "titre": "En cours de rédaction", "voir": ["page1"] },  
   "page1" : { "titre": "Titre de la page 1", "voir": ["page2", "page3"] },
   "page2" : { "titre": "Titre de la page 2", "voir": ["page1", "page3"] },
   "page3" : { "titre": "Titre de la page 3", "voir": ["page2", "page1"] }

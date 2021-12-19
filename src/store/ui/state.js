@@ -44,7 +44,7 @@ export default function () {
     page: 'Org',
 
     tabcompte: 'etc',
-    tabavatar: 'etc',
+    tabavatar: 'secrets',
     tabgroupe: 'etc'
 
   }

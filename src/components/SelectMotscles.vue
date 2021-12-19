@@ -2,7 +2,7 @@
 <div :class="'border q-ma-sm q-pa-sm column '+ dark" style="width:100%">
   <div>
     <span class="titre-3 q-pr-md">Sélection des mots clés</span>
-    <q-btn class="q-ml-md" :disable="!modif" dense color="primary" flat icon="undo" label="Annuler" @click="undo"/>
+    <q-btn class="q-ml-md" dense color="primary" flat icon="undo" label="Annuler" @click="undo"/>
     <q-btn class="q-ml-md" :disable="!modif" dense color="warning" icon="check" label="OK" @click="ok"/>
     <bouton-help page="p1" />
   </div>

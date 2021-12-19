@@ -1,8 +1,14 @@
 <template>
   <q-card class="q-ma-xs moyennelargeur">
     <q-card-section class="column justify-start">
-      <div><span class='titre-2'>{{n.na.nom}}</span><span class='titre-5'>@{{n.na.sfx}}</span><bouton-help page="p1"/></div>
-      <div>Identifiant: <span class='font-mono'>{{n.na.sid}}</span></div>
+      <div class="row justify-between">
+        <div>
+          <span class='titre-2'>{{n.na.nom}}</span>
+          <span class='q-pl-md titre-5'>@{{n.na.sfx}}</span>
+        </div>
+        <bouton-help page="p1"/>
+      </div>
+      <div>Code: <span class='font-mono'>{{n.na.sid}}</span></div>
     </q-card-section>
     <q-separator />
     <q-card-section class="row justify-start">
