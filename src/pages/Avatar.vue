@@ -15,7 +15,7 @@
   </q-card>
 
   <div v-if="tabavatar === 'secrets'" class="q-pa-xs column justify-start" style="width:100%">
-    <vue-secret v-for="secret in lstSecrets" :key="secret.sid" :secret="secret" :motscles="motscles"></vue-secret>
+    <vue-secret v-for="secret in lstSecrets.lst" :key="secret.sid" :secret="secret" :motscles="motscles"></vue-secret>
   </div>
 </q-page>
 </template>
@@ -31,17 +31,13 @@ import CarteVisite from '../components/CarteVisite.vue'
 import VueSecret from '../components/VueSecret.vue'
 import { CvAvatar } from '../app/operations.mjs'
 
-const lstSecrets = [
-  { sid: 'abc', titre: 'titre du secret 1', mc: new Uint8Array([3, 4, 202]), dh: '2020/12/19 15:07:32', nbpj: 2 },
-  { sid: 'def', titre: 'titre du secret 2', mc: new Uint8Array([1, 201, 202]), dh: '2020/12/19 15:07:59' }
-]
-
 export default ({
   name: 'Avatar',
+
   components: { /* BoutonHelp, */ CarteVisite, MotsCles, VueSecret },
+
   data () {
     return {
-      lstSecrets: lstSecrets
     }
   },
 
@@ -70,6 +66,12 @@ export default ({
     const motscles = new Motscles(mc, 1)
     motscles.recharger()
 
+    const tests = [
+      { sid: 'abc', titre: 'titre du secret 1', mc: new Uint8Array([3, 4, 202]), dh: '2020/12/19 15:07:32', nbpj: 2 },
+      { sid: 'def', titre: 'titre du secret 2', mc: new Uint8Array([1, 201, 202]), dh: '2020/12/19 15:07:59' }
+    ]
+    const lstSecrets = reactive({ lst: tests })
+
     // onMounted(() => { console.log('onMounted Avatar: ' + motscles.mapAll.size) })
 
     watch(
@@ -87,6 +89,7 @@ export default ({
       avatar,
       tabavatar,
       motscles,
+      lstSecrets,
       mode
     }
   }

@@ -19,10 +19,9 @@
   </q-card-section>
 </q-card>
 </template>
+
 <script>
-// import { cfg } from '../app/util.mjs'
-import { toRef /*, onMounted, computed, */ } from 'vue'
-// import { useStore } from 'vuex'
+import { toRef } from 'vue'
 import ApercuMotscles from './ApercuMotscles.vue'
 import SelectMotscles from './SelectMotscles.vue'
 
@@ -46,28 +45,22 @@ export default ({
   methods: {
     fermermc () { this.mcedit = false },
 
-    clickmc () {
-      this.mcedit = true
-      // console.log('click mc ' + this.secret.sid)
-    },
+    clickmc () { this.mcedit = true },
+
     changermc (mc) {
-      console.log(JSON.stringify(mc))
+      // POUR TESTER
+      this.locsecret.mc = mc
     },
-    clickpj () {
-      this.ouvert = true
-    }
+
+    clickpj () { this.ouvert = true }
   },
 
   setup (props) {
     toRef(props, 'motscles')
-    toRef(props, 'secret')
-    // const $store = useStore()
-    // const compte = computed(() => { const c = $store.state.db.compte; return c || { ko: true } })
-
-    // onMounted(() => { console.log('mc.mapAll ' + motscles.value.mapAll.size) })
+    const locsecret = toRef(props, 'secret')
 
     return {
-      // compte
+      locsecret
     }
   }
 })
