@@ -1574,6 +1574,7 @@ export class Rencontre {
 /*
 - `id` : id du groupe ou de l'avatar.
 - `ns` : numéro du secret.
+- `nr` : numéro du secret de référence à propos duquel ce secret se rapporte. Si b est à propos de a, c pourra être à propos de a (pas de b).
 - `ic` : indice du contact pour un secret de couple, sinon 0.
 - `v` :
 - `st` :
@@ -1584,30 +1585,28 @@ export class Rencontre {
 - `v1` : volume du texte
 - `v2` : volume de la pièce jointe
 - `txts` : crypté par la clé du secret.
-  - 'd' : date-heure en secondes
-  - `l` [] : liste des auteurs (pour un secret de couple ou de groupe).
-  - `t` : bytes du texte gzippé ou non selon sa taille
-  - `r` : référence à un autre secret.
+  - `d` : date-heure de dernière modification du texte
+  - `l` : liste des auteurs (pour un secret de couple ou de groupe).
+  - `t` : texte gzippé ou non
 - `mcs` : liste des mots clés crypté par la clé du secret.
-- `mpjs` : sérialisation de la map des pièces jointes { nom: [stars, version, volume] }.
-- `dups` : couple `[id, ns]` crypté par la clé du secret de l'autre exemplaire pour un secret de couple A/B.
+- `mpjs` : sérialisation de la map des pièces jointes.
+- `dups` : triplet `[id, ns, nr]` crypté par la clé du secret de l'autre exemplaire pour un secret de couple A/B.
 - `vsh`
 
 **Map des pièces jointes :**
 Une pièce jointe est identifiée par : `nom.ext/dh`
 - le `nom.ext` d'une pièce jointe est un nom de fichier, qui indique donc son type MIME par `ext`, d'où un certain nombre de caractères interdits (dont le `/`).
-- `dh` est la date-heure d'écriture UTC (en secondes) : `YYYY-MM-JJ hh:mm:ss`
-sont relatifs au secret et cryptés par la clé du secret. En base64 ils sont les clés de la map.
+- `dh` est la date-heure d'écriture UTC (en secondes) : `YYYY-MM-JJThh:mm:ss`.
 
 - _clé_ : hash (court) de nom.ext en base64 URL. Permet d'effectuer des remplacements par une version ultérieure.
 - _valeur_ : `[idc, taille]`
   - `idc` : id complète de la pièce jointe, cryptée par la clé du secret et en base64 URL.
-  - `taille` : en bytes.
+  - `taille` : en bytes. Par convention une taille négative indique que la pièce jointe a été gzippée.
 */
 
 schemas.forSchema({
   name: 'idbSecret',
-  cols: ['id', 'ns', 'ic', 'v', 'st', 'ora', 'v1', 'v2', 'txt', 'mc', 'mpj', 'dupid', 'dupns', 'vsh']
+  cols: ['id', 'ns', 'nr', 'ic', 'v', 'st', 'ora', 'v1', 'v2', 'txt', 'mc', 'mpj', 'dup', 'vsh']
 })
 
 export class Secret {
@@ -1642,10 +1641,11 @@ export class Secret {
     return this.ts ? (this.ts === 1 ? data.clecDe(this.sidc) : data.clegDe(this.sid)) : data.clek
   }
 
-  nouveauP (temp, txt, mc, ref) { // ref: [id, ns]
+  nouveauP (temp, nr, txt, mc) {
     this.id = crypt.rnd6()
     const n = crypt.rnd4()
-    this.ns = (Math.floor(n / 10) * 10)
+    this.ns = Math.floor(n / 10) * 10
+    this.nr = nr
     this.ic = 0
     this.v = 0
     this.st = !temp ? 99999 : (getJourJ() + cfg().limitesjour[0])
@@ -1653,7 +1653,6 @@ export class Secret {
     this.v2 = 0
     this.mc = mc
     this.txt = { t: txt, d: Math.floor(new Date().getTime() / 1000) }
-    if (ref) this.txt.r = ref
     this.vsh = 0
     return this
   }
@@ -1685,9 +1684,7 @@ export class Secret {
         }
       }
       if (this.ts === 1) {
-        const dup = deserial(await crypt.decrypter(cles, row.dups))
-        this.dupid = dup[0]
-        this.dupns = dup[1]
+        this.dup = deserial(await crypt.decrypter(cles, row.dups))
       }
       return this
     }
@@ -1708,7 +1705,7 @@ export class Secret {
         this.mpjs[cpj] = [nomcb64, x.t]
       }
     }
-    if (this.ts === 1) this.dups = await crypt.crypter(cles, serial([this.dupid, this.dupns]))
+    if (this.ts === 1) this.dups = await crypt.crypter(cles, serial(this.dup))
     const buf = schemas.serialize('rowsecret', this)
     this.txt.t = t
     delete this.txts

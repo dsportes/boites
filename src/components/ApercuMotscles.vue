@@ -11,7 +11,7 @@ export default ({
   props: { motscles: Object, src: Object, court: Boolean, argsClick: Object },
 
   computed: {
-    ed () { return this.motscles.edit(this.src, this.court) },
+    ed () { return this.motscles.edit(this.src, this.court) || '(aucun)' },
     edl () { return this.motscles.edit(this.src, false) }
   },
 
