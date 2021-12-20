@@ -30,6 +30,7 @@ import MotsCles from '../components/MotsCles.vue'
 import CarteVisite from '../components/CarteVisite.vue'
 import VueSecret from '../components/VueSecret.vue'
 import { CvAvatar } from '../app/operations.mjs'
+import { Secret } from '../app/modele.mjs'
 
 export default ({
   name: 'Avatar',
@@ -66,10 +67,12 @@ export default ({
     const motscles = new Motscles(mc, 1)
     motscles.recharger()
 
-    const tests = [
-      { sid: 'abc', titre: 'titre du secret 1', mc: new Uint8Array([3, 4, 202]), dh: '2020/12/19 15:07:32', nbpj: 2 },
-      { sid: 'def', titre: 'titre du secret 2', mc: new Uint8Array([1, 201, 202]), dh: '2020/12/19 15:07:59' }
-    ]
+    let txt1 = []; for (let i = 0; i < 200; i++) txt1.push('Mon titre 1 et **mon texte 1**'); txt1 = txt1.join('\n')
+    let txt2 = []; for (let i = 0; i < 10; i++) txt2.push('Mon **titre 2** et mon texte 2'); txt2 = txt2.join('\n')
+    // temp, txt, mc, ref
+    const s1 = new Secret().nouveauP(true, txt1, new Uint8Array([3, 4, 202]))
+    const s2 = new Secret().nouveauP(true, txt2, new Uint8Array([1, 2, 203, 205]), [s1.sid, s1.sid2])
+    const tests = [s1, s2]
     const lstSecrets = reactive({ lst: tests })
 
     // onMounted(() => { console.log('onMounted Avatar: ' + motscles.mapAll.size) })

@@ -42,7 +42,7 @@ export function random (nbytes) {
   return u8
 }
 
-function arrayBuffer (u8) {
+export function arrayBuffer (u8) {
   // https://stackoverflow.com/questions/37228285/uint8array-to-arraybuffer
   return u8.buffer.slice(u8.byteOffset, u8.byteLength + u8.byteOffset)
 }

@@ -35,6 +35,7 @@
 <script>
 import { toRef, ref, watch, onMounted, reactive } from 'vue'
 import BoutonHelp from './BoutonHelp.vue'
+import { equ8 } from '../app/util.mjs'
 
 export default ({
   name: 'SelectMotscles',
@@ -114,16 +115,6 @@ export default ({
       () => motscles.value,
       (ap, av) => { motscles.value.recharger() }
     )
-
-    function equ8 (a, b) {
-      if (!a && !b) return true
-      if ((a && !b) || (b && !a) || (a.length !== b.length)) return false
-      if (!a.length) return true
-      const xa = []; a.forEach(i => xa.push(i)); xa.sort()
-      const xb = []; b.forEach(i => xb.push(i)); xb.sort()
-      for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false
-      return true
-    }
 
     watch(
       () => src.value,

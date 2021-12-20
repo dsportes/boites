@@ -2,7 +2,7 @@ import { schemas } from './schemas.mjs'
 import { crypt } from './crypto.mjs'
 import { openIDB, closeIDB } from './db.mjs'
 import { openWS, closeWS } from './ws.mjs'
-import { store, appexc, serial, deserial, dlvDepassee, NomAvatar } from './util.mjs'
+import { store, appexc, serial, deserial, dlvDepassee, NomAvatar, getJourJ, cfg, gzip, ungzip, dhstring } from './util.mjs'
 import { remplacePage } from './page.mjs'
 
 /* mapObj : clé par table, valeur : array des objets
@@ -1584,9 +1584,10 @@ export class Rencontre {
 - `v1` : volume du texte
 - `v2` : volume de la pièce jointe
 - `txts` : crypté par la clé du secret.
-  - `la` [] : liste des auteurs (pour un secret de couple ou de groupe).
-  - `gz` : texte gzippé
-  - `ref` : référence à un autre secret.
+  - 'd' : date-heure en secondes
+  - `l` [] : liste des auteurs (pour un secret de couple ou de groupe).
+  - `t` : bytes du texte gzippé ou non selon sa taille
+  - `r` : référence à un autre secret.
 - `mcs` : liste des mots clés crypté par la clé du secret.
 - `mpjs` : sérialisation de la map des pièces jointes { nom: [stars, version, volume] }.
 - `dups` : couple `[id, ns]` crypté par la clé du secret de l'autre exemplaire pour un secret de couple A/B.
@@ -1628,10 +1629,33 @@ export class Secret {
 
   get estAv () { return (this.ns % 2) === 0 }
 
-  get ts () { return this.ic ? 1 : (this.ns % 2 ? 0 : 2) } // 0:avatar 1:couple 2:groupe
+  get ts () { return this.ns % 3 } // 0:personnel 1:couple 2:groupe
+
+  get titre () {
+    const i = this.txt.t.indexOf('\n')
+    return i === -1 ? this.txt.t.substring(0, 100) : this.txt.t.substring(0, (i < 100 ? i : 100))
+  }
+
+  get dh () { return dhstring(new Date(this.txt.d * 1000)) }
 
   get cles () {
     return this.ts ? (this.ts === 1 ? data.clecDe(this.sidc) : data.clegDe(this.sid)) : data.clek
+  }
+
+  nouveauP (temp, txt, mc, ref) { // ref: [id, ns]
+    this.id = crypt.rnd6()
+    const n = crypt.rnd4()
+    this.ns = (Math.floor(n / 10) * 10)
+    this.ic = 0
+    this.v = 0
+    this.st = !temp ? 99999 : (getJourJ() + cfg().limitesjour[0])
+    this.v1 = txt.length
+    this.v2 = 0
+    this.mc = mc
+    this.txt = { t: txt, d: Math.floor(new Date().getTime() / 1000) }
+    if (ref) this.txt.r = ref
+    this.vsh = 0
+    return this
   }
 
   async fromRow (row) {
@@ -1647,6 +1671,7 @@ export class Secret {
       this.v2 = row.v2
       const cles = this.cles
       this.txt = await crypt.decrypter(cles, row.txts)
+      this.txt.t = ungzip(this.txt.t)
       this.mc = deserial(await crypt.decrypter(cles, row.mcs))
       this.mpj = {}
       this.nbpj = 0
@@ -1671,6 +1696,8 @@ export class Secret {
 
   async toRow () {
     const cles = this.cles
+    const t = this.txt.t
+    this.txt.t = gzip(this.txt.t)
     this.txts = await crypt.crypter(cles, this.txt)
     this.mcs = await crypt.crypter(cles, serial(this.mc))
     if (this.v2) {
@@ -1683,6 +1710,7 @@ export class Secret {
     }
     if (this.ts === 1) this.dups = await crypt.crypter(cles, serial([this.dupid, this.dupns]))
     const buf = schemas.serialize('rowsecret', this)
+    this.txt.t = t
     delete this.txts
     delete this.mcs
     if (this.v2) delete this.mpjs
@@ -1691,11 +1719,16 @@ export class Secret {
   }
 
   get toIdb () {
-    return { id: this.id, ns: this.ns, data: schemas.seialise('idbSecret', this) }
+    const t = this.txt.t
+    this.txt.t = gzip(this.txt.t)
+    const idb = { id: this.id, ns: this.ns, data: schemas.seialise('idbSecret', this) }
+    this.txt.t = t
+    return idb
   }
 
-  fromIdb (idb, vs) {
+  fromIdb (idb) {
     schemas.deserialize('idbSecret', idb, this)
+    this.txt.t = ungzip(this.txt.t)
     return this
   }
 }

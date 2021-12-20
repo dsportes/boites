@@ -1,6 +1,7 @@
 import { boot } from 'quasar/wrappers'
 import { setup, getJsonPub, getImagePub, getBinPub } from '../app/util.mjs'
 import { setSalts } from '../app/webcrypto.mjs'
+const pako = require('pako')
 
 import FakeIndexedDB from 'fake-indexeddb/build/fakeIndexedDB'
 import FDBKeyRange from 'fake-indexeddb/build/FDBKeyRange'
@@ -65,5 +66,5 @@ export default boot(async ({ app, router, store /* Vue */ }) => {
   const salts = await getBinPub('salts')
   setSalts(salts)
   cfg.mimes = require('../assets/mime-db.json')
-  setup(gp, cfg, router, store)
+  setup(gp, cfg, router, store, pako)
 })

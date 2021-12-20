@@ -20,9 +20,11 @@ let $store
 let $router
 let dtf
 let idbalerte
+let pako
 const extensions = {}
 
-export function setup (gp, appconfig, router, store) {
+export function setup (gp, appconfig, router, store, pako1) {
+  pako = pako1
   $cfg = appconfig
   idbalerte = $cfg.idb
   globalProperties = gp
@@ -42,6 +44,57 @@ export function setup (gp, appconfig, router, store) {
       })
     }
   }
+  // testgz()
+}
+
+/*
+function testgz () {
+  const t1 = 'toto est beau'
+  let t2 = []
+  for (let i = 0; i < 200; i++) t2.push(t1)
+  t2 = t2.join(' ')
+  let gz = gzip(t1)
+  let ugz = ungzip(gz)
+  gz = gzip(t2)
+  ugz = ungzip(gz)
+  let u8 = encoder.encode(t2)
+  gz = gzip(u8)
+  ugz = ungzip(gz)
+  u8 = decoder.decode(ugz)
+}
+*/
+
+export function eqref (a, b) {
+  if (!a && !b) return true
+  if ((a && !b) || (b && !a) || (a.length !== 2) || (b.length !== 2)) return false
+  return (a[0] === b[0]) && (a[1] === b[1])
+}
+
+export function equ8 (a, b) {
+  if (!a && !b) return true
+  if ((a && !b) || (b && !a) || (a.length !== b.length)) return false
+  if (!a.length) return true
+  const xa = []; a.forEach(i => xa.push(i)); xa.sort()
+  const xb = []; b.forEach(i => xb.push(i)); xb.sort()
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false
+  return true
+}
+
+export function gzip (arg) {
+  if (!arg) return null
+  // t: 0:binaire, 1:texte zippé, 2:texte non zippé
+  const t = typeof arg === 'string' ? (arg.length > 1024 ? 1 : 2) : 0
+  let u8 = t ? encoder.encode(arg) : arg
+  if (t < 2) u8 = pako.deflate(u8)
+  return crypt.concat([new Uint8Array([t]), u8])
+}
+
+export function ungzip (arg) {
+  if (!arg || arg.length < 1) return null
+  const t = arg[0]
+  const c = arg.slice(1)
+  const res = t < 2 ? pako.inflate(c) : c
+  return t ? decoder.decode(crypt.arrayBuffer(res)) : res
 }
 
 export function mimesDeExt (n) {
