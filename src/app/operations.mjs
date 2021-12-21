@@ -982,3 +982,27 @@ export class CvAvatar extends OperationUI {
     }
   }
 }
+
+/******************************************************
+Création d'un nouveau secret P
+*/
+export class NouveauSecretP extends OperationUI {
+  constructor () {
+    super('Création d\'un nouveau secret personnel', OUI, SELONMODE)
+  }
+
+  excAffichages () { return [this.excAffichage1f] }
+
+  // excActions(), défaut de Operation
+
+  async run (rowSecret) {
+    try {
+      const args = { sessionId: data.sessionId, rowSecret }
+      const ret = await post(this, 'm1', 'nouveauSecretP', args)
+      if (data.dh < ret.dh) data.dh = ret.dh
+      this.finOK()
+    } catch (e) {
+      await this.finKO(e)
+    }
+  }
+}

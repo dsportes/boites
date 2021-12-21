@@ -5,6 +5,8 @@ import { openWS, closeWS } from './ws.mjs'
 import { store, appexc, serial, deserial, dlvDepassee, NomAvatar, getJourJ, cfg, gzip, ungzip, dhstring } from './util.mjs'
 import { remplacePage } from './page.mjs'
 
+const u8vide = new Uint8Array([0])
+
 /* mapObj : clé par table, valeur : array des objets
 - ne traite pas 'compte'
 - inscrit en store OU les supprime du store s'il y était
@@ -393,7 +395,7 @@ class Session {
     if (!this.verAv.has(sid)) {
       t = new Array(SIZEAV).fill(0)
       this.verAv.set(sid, t)
-    } else t = this.verAv(sid)
+    } else t = this.verAv.get(sid)
     if (v > t[idt]) t[idt] = v
   }
 
@@ -402,7 +404,7 @@ class Session {
     if (!this.verGr.has(sid)) {
       t = new Array(SIZEGR).fill(0)
       this.verGr.set(sid, t)
-    } else t = this.verGr(sid)
+    } else t = this.verGr.get(sid)
     if (v > t[idt]) t[idt] = v
   }
 
@@ -1417,7 +1419,7 @@ export class Membre {
   }
 
   fromIdb (idb, vs) {
-    schemas.deserialise('idbMembre', idb, this)
+    schemas.deserialize('idbMembre', idb, this)
     this.majCc()
     return this
   }
@@ -1641,14 +1643,14 @@ export class Secret {
     return this.ts ? (this.ts === 1 ? data.clecDe(this.sidc) : data.clegDe(this.sid)) : data.clek
   }
 
-  nouveauP (temp, nr, txt, mc) {
-    this.id = crypt.rnd6()
-    const n = crypt.rnd4()
-    this.ns = Math.floor(n / 10) * 10
+  nouveauP (ts, id, nr, txt, mc, temp) {
+    this.id = id
+    this.ns = (Math.floor(crypt.rnd4() / 3) * 3) + ts
     this.nr = nr
     this.ic = 0
     this.v = 0
     this.st = !temp ? 99999 : (getJourJ() + cfg().limitesjour[0])
+    this.ora = 0
     this.v1 = txt.length
     this.v2 = 0
     this.mc = mc
@@ -1669,14 +1671,15 @@ export class Secret {
       this.v1 = row.v1
       this.v2 = row.v2
       const cles = this.cles
-      this.txt = await crypt.decrypter(cles, row.txts)
+      this.txt = deserial(await crypt.decrypter(cles, row.txts))
       this.txt.t = ungzip(this.txt.t)
       this.mc = deserial(await crypt.decrypter(cles, row.mcs))
       this.mpj = {}
       this.nbpj = 0
-      if (this.v2 && row.mpjs) {
-        for (const cpj in row.mpjs) {
-          const x = row.mpjs[cpj]
+      if (this.v2) {
+        const map = deserial(this.mpjs)
+        for (const cpj in map) {
+          const x = map[cpj]
           const nomc = await crypt.decrypterStr(cles, crypt.b64ToU8(x[0]))
           const i = nomc.indexOf('/')
           this.nbpj++
@@ -1685,7 +1688,7 @@ export class Secret {
       }
       if (this.ts === 1) {
         this.dup = deserial(await crypt.decrypter(cles, row.dups))
-      }
+      } else this.dup = []
       return this
     }
     return this
@@ -1695,30 +1698,33 @@ export class Secret {
     const cles = this.cles
     const t = this.txt.t
     this.txt.t = gzip(this.txt.t)
-    this.txts = await crypt.crypter(cles, this.txt)
+    this.txts = await crypt.crypter(cles, serial(this.txt))
+    this.txt.t = t
     this.mcs = await crypt.crypter(cles, serial(this.mc))
+    const map = {}
     if (this.v2) {
-      this.mpjs = {}
       for (const cpj in this.mpj) {
         const x = this.mpj[cpj]
         const nomcb64 = crypt.u8ToB64(await crypt.crypter(cles, x.n + '/' + x.dh), true)
-        this.mpjs[cpj] = [nomcb64, x.t]
+        map[cpj] = [nomcb64, x.t]
       }
     }
-    if (this.ts === 1) this.dups = await crypt.crypter(cles, serial(this.dup))
+    this.mpjs = serial(map)
+    if (this.ts === 1) {
+      this.dups = await crypt.crypter(cles, serial(this.dup))
+    } else this.dups = u8vide
     const buf = schemas.serialize('rowsecret', this)
-    this.txt.t = t
     delete this.txts
     delete this.mcs
-    if (this.v2) delete this.mpjs
-    if (this.ts === 1) delete this.dups
+    delete this.mpjs
+    delete this.dups
     return buf
   }
 
   get toIdb () {
     const t = this.txt.t
     this.txt.t = gzip(this.txt.t)
-    const idb = { id: this.id, ns: this.ns, data: schemas.seialise('idbSecret', this) }
+    const idb = { id: this.id, ns: this.ns, data: schemas.serialize('idbSecret', this) }
     this.txt.t = t
     return idb
   }

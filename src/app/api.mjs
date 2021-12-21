@@ -241,11 +241,12 @@ schemas.forSchema({
 
 schemas.forSchema({
   name: 'rowsecret',
-  cols: ['id', 'ns', 'ic', 'v', 'st', 'ora', 'v1', 'v2', 'txts', 'mcs', 'mpjs', 'dups', 'vsh']
+  cols: ['id', 'ns', 'nr', 'ic', 'v', 'st', 'ora', 'v1', 'v2', 'txts', 'mcs', 'mpjs', 'dups', 'vsh']
 })
 /*
     "id"  INTEGER,
     "ns"  INTEGER,
+    "nr"  INTEGER,
     "ic"  INTEGER,
     "v"   INTEGER,
     "st   INTEGER,

@@ -26,7 +26,7 @@
         <apercu-motscles v-if="!enedition" :motscles="motscles" :src="locsecret.mc"></apercu-motscles>
         <div v-if="locsecret.v===0" class="mced">
           <span>Par défaut ce secret s'auto détruira au bout de {{limjours}} jours. </span>
-          <q-checkbox left-label size="sm" color="primary" v-model="perm" label="Le créer 'PERMANENT'" />
+          <q-checkbox left-label size="sm" color="primary" v-model="permlocal" label="Le créer 'PERMANENT'" />
         </div>
         <editeur-md v-model="textelocal" :idx="idx" :modetxt="enedition" :texte="!enedition ? locsecret.txt.t : textelocal" :editable="enedition" taille-m></editeur-md>
       </div>
@@ -62,9 +62,10 @@
 import { toRef } from 'vue'
 import ApercuMotscles from './ApercuMotscles.vue'
 import SelectMotscles from './SelectMotscles.vue'
-import EditeurMd from './EditeurMd.vue'
-// props: { modelValue: String, texte: String, labelOk: String, editable: Boolean, tailleM: Boolean },
+import EditeurMd from './EditeurMd.vue' // props: { modelValue: String, texte: String, labelOk: String, editable: Boolean, tailleM: Boolean },
 import { equ8, getJourJ, cfg } from '../app/util.mjs'
+import { Secret } from '../app/modele.mjs'
+import { NouveauSecretP } from '../app/operations.mjs'
 
 export default ({
   name: 'VueSecret',
@@ -100,7 +101,7 @@ export default ({
       enedition: false,
       textelocal: '',
       temporaire: false,
-      perm: false,
+      permlocal: false,
       alertesaisie: false,
       mclocal: null
     }
@@ -128,11 +129,17 @@ export default ({
       if (!this.locsecret.v) this.ouvert = false
     },
 
-    valider () {
+    async valider () {
       this.enedition = false
-      // Pour tester
-      this.locsecret.txt.t = this.textelocal
-      this.locsecret.mc = this.mclocal
+      const s = this.locsecret
+      if (s.v) {
+        // aj
+      } else {
+        // création : ts, id, nr, txt, mc, temp
+        const sec = new Secret().nouveauP(s.ts, s.id, s.nr, this.textelocal, this.mclocal, this.permlocal)
+        const rowSecret = await sec.toRow()
+        await new NouveauSecretP().run(rowSecret)
+      }
       this.ouvert = false
     }
   },
