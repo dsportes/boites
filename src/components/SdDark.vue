@@ -15,9 +15,13 @@ export default ({
 <style lang="css" scoped>
 .markdown-body {
   font-family:  Calibri-Light !important;
-}
-.markdown-body h1, .markdown-body h2 {
-  font-family:  Comfortaa !important;
+  background-color: #1D1D1D !important;
+  color: #FDFDFD !important;
 }
 @import 'github-markdown-css/github-markdown-dark.css'
+</style>
+
+<style lang="sass">
+.markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4, .markdown-body h5
+  font-family: Comfortaa
 </style>

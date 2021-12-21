@@ -11,7 +11,7 @@
       <q-btn v-if="modifie && labelOk" class="icon" icon="check" :label="labelOk" size="md" dense flat push color="warning" @click="ok"></q-btn>
     </q-toolbar>
     <textarea v-if="!md" :class="taclass + ' font-mono'" v-model="textelocal" :readonly="!editable"/>
-    <div v-else :class="taclass"><show-html class="markdown-body" :texte="textelocal"/></div>
+    <div v-else :class="taclass"><show-html :idx="idx" :texte="textelocal"/></div>
   </div>
   <q-dialog v-model="max" maximized transition-show="slide-up" transition-hide="slide-down">
     <div ref="root2" :class="'column justify start flow' + taille + dlclass">
@@ -25,7 +25,7 @@
         <q-btn v-if="modifie && labelOk" class="icon" icon="check" :label="labelOk" size="md" dense flat push color="warning" @click="ok"></q-btn>
       </q-toolbar>
       <textarea v-if="!md" :class="taclass + ' font-mono'" v-model="textelocal" :readonly="!editable"/>
-      <div v-else :class="taclass"><show-html class="markdown-body" :texte="textelocal"/></div>
+      <div v-else :class="taclass"><show-html :idx="idx" :texte="textelocal"/></div>
     </div>
   </q-dialog>
   <q-dialog v-model="emoji">
@@ -46,14 +46,15 @@ export default ({
 
   emits: ['update:modelValue', 'ok'],
 
-  props: { modelValue: String, texte: String, labelOk: String, editable: Boolean, tailleM: Boolean },
+  props: { modelValue: String, texte: String, labelOk: String, editable: Boolean, tailleM: Boolean, idx: Number, modetxt: Boolean },
 
   computed: {
     dlclass () {
-      return this.$q.dark.isActive ? ' sombre' : ' clair'
+      if (this.$q.dark.isActive) return this.idx ? ' sombre' + (this.idx % 2) : ' sombre0'
+      return this.idx ? ' clair' + (this.idx % 2) : ' clair0'
     },
     taclass () {
-      return 'col ta' + this.taille + (this.$q.dark.isActive ? ' sombre' : ' clair') + (this.modifie ? ' borderw' : ' borderp') + ' font-mono'
+      return 'col ta' + this.taille + this.dlclass + (this.modifie ? ' borderw' : ' borderp') + ' font-mono'
     },
     modifie () {
       return this.textelocal !== this.texteinp
@@ -68,7 +69,6 @@ export default ({
 
   data () {
     return {
-      md: true,
       emoji: false,
       max: false
     }
@@ -102,12 +102,15 @@ export default ({
     const tailleM = toRef(props, 'tailleM')
     const textelocal = ref('') // en Ref parce que sa valeur dépend du changement de la prop texte ET de l'état d'édition
     const texte = toRef(props, 'texte') // pour pouvoir mettre un watch sur le changement de la propriété
+    const modetxt = toRef(props, 'modetxt')
     const texteinp = ref('') // dernière valeur source passée sur la prop 'texte'
+    const md = ref(true)
 
     onMounted(() => { // initialisation de textelocal par défaut à texte
       textelocal.value = texte.value
       texteinp.value = texte.value
       taille.value = tailleM.value ? 1 : 0
+      if (modetxt.value) md.value = false
     })
 
     watch(texte, (ap, av) => { // quand texte change, textelocal ne change pas si en édition
@@ -119,9 +122,14 @@ export default ({
       texteinp.value = ap
     })
 
+    watch(modetxt, (ap, av) => {
+      if (ap) md.value = false
+    })
+
     affidbmsg('Quand Firefox est en mode privé, le premier affichage des emojis peut être long (plus d\'une minute)')
 
     return {
+      md,
       root1,
       root2,
       taille,

@@ -16,7 +16,7 @@
 
   <div v-if="tabavatar === 'secrets'" class="q-pa-xs column justify-start" style="width:100%">
     <vue-secret :secret="nouveausecret" :motscles="motscles"></vue-secret>
-    <vue-secret v-for="secret in lstSecrets.lst" :key="secret.sid" :secret="secret" :motscles="motscles"></vue-secret>
+    <vue-secret v-for="(secret, idx) in lstSecrets.lst" :key="secret.sid" :idx="idx" :secret="secret" :motscles="motscles"></vue-secret>
   </div>
 </q-page>
 </template>
@@ -70,11 +70,11 @@ export default ({
 
     let txt1 = []; for (let i = 0; i < 200; i++) txt1.push('Mon titre 1 et **mon texte 1**'); txt1 = txt1.join('\n')
     let txt2 = []; for (let i = 0; i < 10; i++) txt2.push('Mon **titre 2** et mon texte 2'); txt2 = txt2.join('\n')
-    // temp, nr, txt, mc
+    // temp, nr, txt, mc, st, nbpj
     const nouveausecret = new Secret().nouveauP(true, 0, 'Nouveau secret ...', new Uint8Array([]))
     const s1 = new Secret().nouveauP(true, 0, txt1, new Uint8Array([3, 4, 202]))
     s1.v = 1
-    const s2 = new Secret().nouveauP(true, s1.nc, txt2, new Uint8Array([1, 2, 203, 205]))
+    const s2 = new Secret().nouveauP(false, s1.nc, txt2, new Uint8Array([1, 2, 203, 205]))
     s2.v = 1
     const tests = [s1, s2]
     const lstSecrets = reactive({ lst: tests })

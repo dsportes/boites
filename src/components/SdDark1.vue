@@ -4,22 +4,21 @@
 <script>
 import { VueShowdown } from 'vue-showdown'
 export default ({
-  name: 'SdLight',
+  name: 'SdDark',
 
   components: { VueShowdown },
 
   props: { texte: String }
-
 })
 </script>
 
 <style lang="css" scoped>
 .markdown-body {
   font-family:  Calibri-Light !important;
-  background-color: #FDFDFD !important;
-  color: #1D1D1D !important;
+  background-color: #3C3C3C !important;
+  color: white !important;
 }
-@import 'github-markdown-css/github-markdown-light.css'
+@import 'github-markdown-css/github-markdown-dark.css'
 </style>
 
 <style lang="sass">

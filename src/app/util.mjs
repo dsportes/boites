@@ -64,12 +64,6 @@ function testgz () {
 }
 */
 
-export function eqref (a, b) {
-  if (!a && !b) return true
-  if ((a && !b) || (b && !a) || (a.length !== 2) || (b.length !== 2)) return false
-  return (a[0] === b[0]) && (a[1] === b[1])
-}
-
 export function equ8 (a, b) {
   if (!a && !b) return true
   if ((a && !b) || (b && !a) || (a.length !== b.length)) return false
@@ -133,11 +127,16 @@ export function sleep (delai) {
   return new Promise((resolve) => { setTimeout(() => resolve(), delai) })
 }
 
-let jourJ // nombre de jours écoulés depuis le 1/1/2020. Recalculé toutes les heures.
 const j0 = Math.floor(new Date('2020-01-01T00:00:00').getTime() / 86400000)
-setInterval(() => { jourJ = Math.floor(new Date().getTime() / 86400000) - j0 }, 60000)
-
-export function getJourJ () { return jourJ }
+function cjourj () {
+  return Math.floor(new Date().getTime() / 86400000) - j0
+}
+let jourJ // nombre de jours écoulés depuis le 1/1/2020. Recalculé toutes les heures.
+setInterval(() => { jourJ = cjourj() }, 60000)
+export function getJourJ () {
+  if (!jourJ) jourJ = cjourj()
+  return jourJ
+}
 
 /* `dlv` : date limite de validité, en nombre de jours depuis le 1/1/2021. */
 export function dlvDepassee (dlv) { return dlv < jourJ }
