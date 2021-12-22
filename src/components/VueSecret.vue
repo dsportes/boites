@@ -28,7 +28,7 @@
           <span>Par défaut ce secret s'auto détruira au bout de {{limjours}} jours. </span>
           <q-checkbox left-label size="sm" color="primary" v-model="permlocal" label="Le créer 'PERMANENT'" />
         </div>
-        <editeur-md v-model="textelocal" :idx="idx" :modetxt="enedition" :texte="!enedition ? locsecret.txt.t : textelocal" :editable="enedition" taille-m></editeur-md>
+        <editeur-md v-model="textelocal" :idx="idx" :modetxt="enedition" :texte="locsecret.txt.t" :editable="enedition" taille-m></editeur-md>
       </div>
     </q-expansion-item>
   </q-card-section>
@@ -65,7 +65,7 @@ import SelectMotscles from './SelectMotscles.vue'
 import EditeurMd from './EditeurMd.vue' // props: { modelValue: String, texte: String, labelOk: String, editable: Boolean, tailleM: Boolean },
 import { equ8, getJourJ, cfg } from '../app/util.mjs'
 import { Secret } from '../app/modele.mjs'
-import { NouveauSecretP } from '../app/operations.mjs'
+import { NouveauSecretP, Maj1SecretP } from '../app/operations.mjs'
 
 export default ({
   name: 'VueSecret',
@@ -133,6 +133,8 @@ export default ({
       this.enedition = false
       const s = this.locsecret
       if (s.v) {
+        const [txts, mcs] = await s.toRowTxtMc(this.textelocal, this.mclocal)
+        await new Maj1SecretP().run({ id: s.id, ns: s.ns, v1: this.textelocal.length, txts: txts, mcs: mcs })
         // aj
       } else {
         // création : ts, id, nr, txt, mc, temp

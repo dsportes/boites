@@ -1694,6 +1694,13 @@ export class Secret {
     return this
   }
 
+  async toRowTxtMc (txt, mc) {
+    const x = { d: Math.floor(new Date().getTime() / 1000), t: gzip(txt) }
+    const txts = await crypt.crypter(this.cles, serial(x))
+    const mcs = await crypt.crypter(this.cles, serial(mc))
+    return [txts, mcs]
+  }
+
   async toRow () {
     const cles = this.cles
     const t = this.txt.t

@@ -15,14 +15,15 @@
   </q-card>
 
   <div v-if="tabavatar === 'secrets'" class="q-pa-xs column justify-start" style="width:100%">
-    <vue-secret :secret="nouveausecret" :motscles="motscles"></vue-secret>
-    <vue-secret v-for="(secret, idx) in lstSecrets.lst" :key="secret.sid" :idx="idx" :secret="secret" :motscles="motscles"></vue-secret>
+    <q-btn flat label="PLUS" @click="plus(1)"/><q-btn flat label="MOINS" @click="plus(-1)"/>
+    <vue-secret :secret="nouveausecret" :motscles="motscles" :idx="0"></vue-secret>
+    <vue-secret v-for="(secret, idx) in lstSecrets.lst" :key="secret.sid + secret.v" :idx="idx" :secret="secret" :motscles="motscles"></vue-secret>
   </div>
 </q-page>
 </template>
 
 <script>
-import { computed, /* onMounted, */ reactive, watch } from 'vue'
+import { computed, onMounted, reactive, watch } from 'vue'
 import { useStore } from 'vuex'
 import { onBoot } from '../app/page.mjs'
 import { Motscles } from '../app/util.mjs'
@@ -31,7 +32,23 @@ import MotsCles from '../components/MotsCles.vue'
 import CarteVisite from '../components/CarteVisite.vue'
 import VueSecret from '../components/VueSecret.vue'
 import { CvAvatar } from '../app/operations.mjs'
-import { Secret } from '../app/modele.mjs'
+import { Secret, data } from '../app/modele.mjs'
+
+function amc (secret, n) {
+  if (!secret || !secret.mc) return false
+  return !n || secret.mc.indexOf(n) !== -1
+}
+
+function filtrer (secrets, filtre) {
+  const lst = []
+  if (secrets) {
+    for (const k in secrets) {
+      const s = secrets[k]
+      if (amc(s, filtre.n1)) lst.push(secrets[k])
+    }
+  }
+  return lst
+}
 
 export default ({
   name: 'Avatar',
@@ -47,6 +64,11 @@ export default ({
   },
 
   methods: {
+    plus (n) { // Il faut réassigner un nouvel objet
+      const x = { ...this.lstSecrets.filtre }
+      x.n1 += n
+      this.lstSecrets.filtre = { ...x }
+    },
     async validercv (resultat) {
       if (resultat) {
         // console.log('CV changée : ' + resultat.info + '\n' + resultat.ph.substring(0, 30))
@@ -71,38 +93,19 @@ export default ({
     // ts, id, nr, txt, mc, temp
     const nouveausecret = new Secret().nouveauP(0, avatar.value.id, 0, 'Nouveau secret ...', new Uint8Array([]), false)
 
-    /* Pour test
-    let txt1 = []; for (let i = 0; i < 200; i++) txt1.push('Mon titre 1 et **mon texte 1**'); txt1 = txt1.join('\n')
-    let txt2 = []; for (let i = 0; i < 10; i++) txt2.push('Mon **titre 2** et mon texte 2'); txt2 = txt2.join('\n')
-    const s1 = new Secret().nouveauP(0, avatar.value.id, 0, txt1, new Uint8Array([3, 4, 202]), true)
-    s1.v = 1
-    const s2 = new Secret().nouveauP(0, avatar.value.id, s1.nc, txt2, new Uint8Array([1, 2, 203, 205]), false)
-    s2.v = 1
-    const tests = [s1, s2]
-    */
+    const secrets = computed(() => { return data.getSecret(avatar.value.sid) })
 
-    function filtre (secrets) {
-      const lst = []
-      for (const k in secrets) lst.push(secrets[k])
-      return lst
-    }
+    const lstSecrets = reactive({ lst: [], filtre: { n1: 2 } })
 
-    const secrets = computed(() => {
-      const sid = avatar.value.sid
-      const c = $store.state.db['secrets@' + sid]
-      return c || { }
+    onMounted(() => {
+      lstSecrets.lst = filtrer(secrets.value, lstSecrets.filtre)
     })
-    // const secrets = data.getSecret(avatar.value.sid)
-    const lstSecrets = reactive({ lst: filtre(secrets.value) })
-
-    // onMounted(() => { console.log('onMounted Avatar: ' + motscles.mapAll.size) })
 
     watch(
       () => compte.value, // OUI .value !!!
       (ap, av) => {
         if (ap && ap.v > av.v) {
           motscles.recharger()
-          console.log('watch compte Avatar: ' + motscles.mapAll.size)
         }
       }
     )
@@ -110,7 +113,14 @@ export default ({
     watch(
       () => secrets.value,
       (ap, av) => {
-        lstSecrets.lst = filtre(ap)
+        lstSecrets.lst = filtrer(ap, lstSecrets.filtre)
+      }
+    )
+
+    watch(
+      () => lstSecrets.filtre, // NON pas .value
+      (ap, av) => {
+        lstSecrets.lst = filtrer(secrets.value, ap)
       }
     )
 

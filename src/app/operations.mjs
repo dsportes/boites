@@ -1006,3 +1006,27 @@ export class NouveauSecretP extends OperationUI {
     }
   }
 }
+
+/******************************************************
+Maj 1 d'un secret P : txt, mc, perm
+*/
+export class Maj1SecretP extends OperationUI {
+  constructor () {
+    super('Mise à jour d\'un secret personnel', OUI, SELONMODE)
+  }
+
+  excAffichages () { return [this.excAffichage1f] }
+
+  // excActions(), défaut de Operation
+
+  async run (arg) { // { id: s.id, ns: s.ns, v1, txts: txts, mcs: mcs }
+    try {
+      const args = { sessionId: data.sessionId, ...arg }
+      const ret = await post(this, 'm1', 'maj1SecretP', args)
+      if (data.dh < ret.dh) data.dh = ret.dh
+      this.finOK()
+    } catch (e) {
+      await this.finKO(e)
+    }
+  }
+}
