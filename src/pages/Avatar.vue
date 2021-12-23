@@ -17,7 +17,7 @@
   <div v-if="tabavatar === 'secrets'" class="q-pa-xs column justify-start" style="width:100%">
     <q-btn flat label="PLUS" @click="plus(1)"/><q-btn flat label="MOINS" @click="plus(-1)"/>
     <vue-secret :secret="nouveausecret" :motscles="motscles" :idx="0"></vue-secret>
-    <vue-secret v-for="(secret, idx) in lstSecrets.lst" :key="secret.sid + secret.v" :idx="idx" :secret="secret" :motscles="motscles"></vue-secret>
+    <vue-secret v-for="(secret, idx) in state.lst" :key="secret.sid + secret.v" :idx="idx" :secret="secret" :motscles="motscles"></vue-secret>
   </div>
 </q-page>
 </template>
@@ -65,9 +65,9 @@ export default ({
 
   methods: {
     plus (n) { // Il faut réassigner un nouvel objet
-      const x = { ...this.lstSecrets.filtre }
+      const x = { ...this.state.filtre }
       x.n1 += n
-      this.lstSecrets.filtre = { ...x }
+      this.state.filtre = { ...x }
     },
     async validercv (resultat) {
       if (resultat) {
@@ -95,10 +95,10 @@ export default ({
 
     const secrets = computed(() => { return data.getSecret(avatar.value.sid) })
 
-    const lstSecrets = reactive({ lst: [], filtre: { n1: 2 } })
+    const state = reactive({ lst: [], filtre: { n1: 2 } })
 
     onMounted(() => {
-      lstSecrets.lst = filtrer(secrets.value, lstSecrets.filtre)
+      state.lst = filtrer(secrets.value, state.filtre)
     })
 
     watch(
@@ -113,14 +113,14 @@ export default ({
     watch(
       () => secrets.value,
       (ap, av) => {
-        lstSecrets.lst = filtrer(ap, lstSecrets.filtre)
+        state.lst = filtrer(ap, state.filtre)
       }
     )
 
     watch(
-      () => lstSecrets.filtre, // NON pas .value
+      () => state.filtre, // NON pas .value
       (ap, av) => {
-        lstSecrets.lst = filtrer(secrets.value, ap)
+        state.lst = filtrer(secrets.value, ap)
       }
     )
 
@@ -129,7 +129,7 @@ export default ({
       avatar,
       tabavatar,
       motscles,
-      lstSecrets,
+      state,
       nouveausecret,
       mode
     }

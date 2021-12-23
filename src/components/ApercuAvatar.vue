@@ -1,13 +1,13 @@
 <template>
 <div class="column q-pa-sm q-my-md top">
+  <q-btn v-if="page" class="q-pa-md" style="padding:0!important;margin:0.5rem 1rem!important;" dense size="md" color="primary" icon="navigate_next" label="Ouvrir sa page" @click="toAvatar"/>
   <div class="row">
     <div><img class="ph" :src="photo"/></div>
     <div class="col column items-center q-pl-md">
       <div><span class='titre-3'>{{ids[1]}}</span><span class='titre-5'>@{{ids[2]}}</span><bouton-help page="p1"/></div>
-      <div>Identifiant: <span class='font-mono'>{{ids[0]}}</span></div>
-      <div class="row q-px-md">
-        <q-btn v-if="editer" class="q-px-md" flat dense size="sm" color="primary" icon="edit" label="Editer" @click="cvloc=true"/>
-        <q-btn v-if="page" class="q-px-md" flat dense size="sm" color="primary" icon="navigate_next" label="Page" @click="toAvatar"/>
+      <div>Identifiant:
+        <span class='font-mono'>{{ids[0]}}</span>
+        <q-btn v-if="editer" class="q-px-md" flat dense size="md" color="primary" icon="edit" label="Editer" @click="cvloc=true"/>
       </div>
     </div>
   </div>

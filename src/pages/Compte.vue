@@ -16,7 +16,6 @@
   </q-card>
 
   <q-card v-if="tabcompte === 'avatars'" class="column align-start items-start">
-    <h6>Liste des avatars du compte</h6>
     <div v-for="e in compte.mac" :key="e.na.id" style="width:100%">
       <apercu-avatar page editer :avatar-id="e.na.id"/>
     </div>

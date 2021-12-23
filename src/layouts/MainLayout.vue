@@ -4,63 +4,68 @@
       <q-toolbar>
         <q-toolbar-title>
           <span :class="sessionId == null ? 'cursor-pointer' : 'no-pointer-events'" @click="toorg">
-            <q-avatar size="sm">
-              <img :src="orgicon">
-            </q-avatar>
-            <span :class="orglabelclass">{{ orglabel }}</span>
-            <q-tooltip>Changer d'organisation</q-tooltip>
+            <q-avatar size="sm"><img :src="orgicon"></q-avatar>
+            <span v-if="page === 'Login'" :class="orglabelclass">{{ orglabel }}
+              <q-tooltip>Changer d'organisation</q-tooltip>
+            </span>
           </span>
-          <span v-if="org != null && sessionId == null && page === 'Login'" class="q-px-sm"  @click="login">Connexion ...</span>
           <span v-if="org != null && statut != 0 && compte != null" class="labeltitre q-px-sm">{{ compte.titre }}</span>
         </q-toolbar-title>
 
-        <q-btn v-if="org != null && sessionId != null" dense size="md" color="warning" icon="logout" @click="confirmerdrc = true">
+        <q-btn v-if="org != null && sessionId != null" dense size="sm" color="warning" icon="logout" @click="confirmerdrc = true">
           <q-tooltip>Déconnexion / Reconnexion du compte</q-tooltip>
         </q-btn>
 
         <div class="cursor-pointer q-px-xs" @click="infoidb = true">
-          <q-avatar v-if="mode === 0 || mode === 2 || sessionId == null" size="md">
+          <q-avatar v-if="mode === 0 || mode === 2 || sessionId == null" size="sm">
               <img src="~assets/database_gris.svg">
           </q-avatar>
           <div v-else>
-            <q-avatar v-if="(mode == 1 || mode == 3) && statutidb != 0 && sessionId != null" size="md">
+            <q-avatar v-if="(mode == 1 || mode == 3) && statutidb != 0 && sessionId != null" size="sm">
               <img src="~assets/database_vert.svg">
             </q-avatar>
-            <q-avatar v-else square size="md">
+            <q-avatar v-else square size="sm">
               <img src="~assets/database_rouge.svg" class="bord">
             </q-avatar>
           </div>
         </div>
 
         <div class="cursor-pointer q-px-xs" @click="inforeseau = true">
-           <q-icon size="md" name="sync_alt" :color="['grey-4','green','warning'][statutnet]" />
+           <q-icon size="sm" name="sync_alt" :color="['grey-4','green','warning'][statutnet]" />
          </div>
 
         <div class="cursor-pointer q-px-xs" @click="infomode = true">
-          <q-avatar size="md" :color="mode !== 0 && sessionId != null && mode !== modeInitial ? 'warning' : 'primary'">
-            <q-icon v-if="mode === 0" size="md" name="info"/>
-            <q-icon v-if="mode === 1" size="md" name="autorenew"/>
+          <q-avatar size="sm" :color="mode !== 0 && sessionId != null && mode !== modeInitial ? 'warning' : 'primary'">
+            <q-icon v-if="mode === 0" size="sm" name="info"/>
+            <q-icon v-if="mode === 1" size="sm" name="autorenew"/>
             <img v-if="mode === 2" src="~assets/incognito_blanc.svg">
-            <q-icon v-if="mode === 3" size="md" name="airplanemode_active"/>
-            <q-icon v-if="mode === 4" size="md" name="visibility"/>
+            <q-icon v-if="mode === 3" size="sm" name="airplanemode_active"/>
+            <q-icon v-if="mode === 4" size="sm" name="visibility"/>
           </q-avatar>
         </div>
 
+        <q-btn class="q-pr-sm" flat dense round size="sm" icon="settings" aria-label="Menu" @click="$store.commit('ui/majmenuouvert', true)"/>
+
       </q-toolbar>
 
-      <q-toolbar inset>
-        <q-toolbar-title class="row no-wrap justify-around">
-          <div :class="tabcptcl" @click="tocompte">Compte</div>
-          <div :class="tabavcl" @click="toavatar">
-            <img class="photo" :src="avatar && avatar.photo ? avatar.photo : personne"/>
-            <span>{{avatar && avatar.label ? avatar.label : 'Avatar'}}</span>
+      <q-toolbar inset :class="tbclass">
+        <q-btn v-if="page==='Avatar' || page==='Groupe'" class="q-pl-sm" flat dense round size="sm" icon="home" aria-label="Menu" @click="tocompte"/>
+        <q-toolbar-title class="text-center">
+          <div v-if="page==='Org'" class="tbpage">Choix de l'organisation</div>
+          <div v-if="page==='Login'" class="tbpage">Connexion à un compte</div>
+          <div v-if="page==='Synchro'" class="tbpage">Synchronisation des données</div>
+          <div v-if="page==='Compte'" class="tbpage">Compte : {{ compte.titre }}</div>
+          <div  v-if="page==='Avatar'" class="tbpage row justify-center">
+            <span class="q-px-sm">Avatar : </span>
+            <span class="q-px-sm">{{avatar.label}}</span>
+            <img class="photo q-px-sm" :src="avatar.photo ? avatar.photo : personne"/>
           </div>
-          <div :class="tabgrcl" @click="togroupe">
-            {{ groupe != null ? groupe.label : 'Groupe' }}
+          <div v-if="page==='Groupe'" class="tbpage row justify-center">
+            <span>Groupe : </span>
+            <span>{{groupe.label}}</span>
+            <img class="photo" :src="groupe.photo ? groupe.photo : personnes"/>
           </div>
         </q-toolbar-title>
-        <q-btn flat dense round icon="people" aria-label="Contacts"/>
-        <q-btn flat dense round icon="menu" aria-label="Menu" @click="$store.commit('ui/majmenuouvert', true)"/>
       </q-toolbar>
 
       <q-toolbar v-if="page === 'Compte'">
@@ -77,6 +82,33 @@
         <div style="width:100vw;">
         <q-tabs v-model="tabavatar" inline-label no-caps dense>
           <q-tab name="etc" label="Etc." />
+
+          <div class="btntab">
+            <q-btn dense size="sm" icon="search" @click="console.log('loupe click')"/>
+            <q-btn dense size="sm" icon="add_circle" @click="console.log('add click')"/>
+            <q-btn-dropdown class="btntab2" size="sm" color="pink" dropdown-icon="change_history">
+              <q-list>
+                <q-item clickable v-close-popup @click="console.log('loupe click')">
+                  <q-item-section>
+                    <q-item-label>Photos</q-item-label>
+                  </q-item-section>
+                </q-item>
+
+                <q-item clickable v-close-popup @click="console.log('loupe click')">
+                  <q-item-section>
+                    <q-item-label>Videos</q-item-label>
+                  </q-item-section>
+                </q-item>
+
+                <q-item clickable v-close-popup @click="console.log('loupe click')">
+                  <q-item-section>
+                    <q-item-label>Articles</q-item-label>
+                  </q-item-section>
+                </q-item>
+              </q-list>
+            </q-btn-dropdown>
+          </div>
+
           <q-tab name="secrets" label="Secrets" />
         </q-tabs>
         </div>
@@ -206,23 +238,14 @@ export default {
   },
 
   computed: {
-    tabavcl () {
-      const x = 'col-4 cag row justify-center items-center ' + (this.page === 'Synchro' || this.compte == null ? 'disabled' : '')
-      return this.page === 'Avatar' ? x + ' tabcourant' : x
-    },
-    tabcptcl () {
-      const x = 'col-4 cag ' + (this.page === 'Synchro' || this.compte == null ? 'disabled' : '')
-      return this.page === 'Compte' ? x + ' tabcourant' : x
-    },
-    tabgrcl () {
-      const x = 'col-4 cag ' + (this.page === 'Synchro' || this.compte == null ? 'disabled' : '')
-      return this.page === 'Groupe' ? x + ' tabcourant' : x
-    }
+    tbclass () { return this.$q.dark.isActive ? ' sombre1' : ' clair1' }
   },
 
   data () {
     return {
-      idbs: ['~assets/database_gris.svg', '~assets/database_vert.svg', '~assets/database_rouge.svg']
+      idbs: ['~assets/database_gris.svg', '~assets/database_vert.svg', '~assets/database_rouge.svg'],
+      console: console,
+      menu1: false
     }
   },
 
@@ -283,6 +306,8 @@ export default {
     onBoot()
 
     const personne = cfg().personne.default
+    const personnes = cfg().personnes.default
+
     const $store = useStore()
     const menuouvert = computed({
       get: () => $store.state.ui.menuouvert,
@@ -361,6 +386,7 @@ export default {
 
     return {
       personne,
+      personnes,
       page,
       menuouvert,
       confirmerdrc,
@@ -404,9 +430,16 @@ export default {
   opacity: 0
   transform: translateX(50%) /* CA BUG : Login ne se réaffichae pas */
 
-.tabcourant
-  border-radius: 5px !important
-  border: 2px solid $warning !important
+.q-tabs--dense .q-tab
+  min-height: 20px !important
+
+.q-toolbar
+  padding: 2px !important
+  min-height: 0 !important
+
+.btntab2
+  padding: 0 2px !important
+
 .cag
   text-align: center
   padding: 2px 0
@@ -460,10 +493,6 @@ export default {
 .gris
   color: $grey-6
 
-.q-toolbar
-  padding: 2px !important
-  min-height: 0 !important
-
 .bord
   border: 2px solid warning
 
@@ -472,4 +501,13 @@ export default {
   height: 24px
   border-radius: 12px
   border: 1px solid grey
+
+.tbpage
+  font-family: Comfortaa
+  font-size: 1rem
+
+.btntab
+  position: relative
+  left: 30px
+  z-index: 2
 </style>

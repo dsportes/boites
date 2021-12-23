@@ -43,7 +43,7 @@ export default function () {
 
     page: 'Org',
 
-    tabcompte: 'etc',
+    tabcompte: 'avatars',
     tabavatar: 'secrets',
     tabgroupe: 'etc'
 
