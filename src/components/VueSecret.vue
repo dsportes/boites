@@ -9,10 +9,6 @@
     </div>
   </q-card-section>
 
-  <q-card-section v-if="locsecret.v === 0">
-    <q-btn size="md" color="primary" dense icon="add_circle_outline" label="Nouveau secret" style="width:100%" @click="ouvert=true;editer()"></q-btn>
-  </q-card-section>
-
   <q-card-section v-if="locsecret.v !== 0 || enedition">
     <q-expansion-item dense v-model="ouvert" expand-separator :header-class="'titre-3' + (enedition ? ' text-warning' :'')" :label="locsecret.titre">
       <div class="column q-pa-xs btns">
@@ -32,10 +28,12 @@
       </div>
     </q-expansion-item>
   </q-card-section>
+
   <q-card-section>
     <q-dialog v-model="mcedit">
       <select-motscles :motscles="motscles" :src="mclocal" @ok="changermc" :close="fermermc"></select-motscles>
     </q-dialog>
+
     <q-dialog v-model="temporaire">
       <q-card>
         <q-card-section class="q-pa-md diag"><div>{{msgtemp}}</div></q-card-section>
@@ -45,6 +43,7 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
+
     <q-dialog v-model="alertesaisie">
       <q-card>
         <q-card-section class="q-pa-md diag"><div>Le secret a été fermé alors qu'il y a des saisies non validées.</div></q-card-section>
@@ -59,7 +58,7 @@
 </template>
 
 <script>
-import { toRef } from 'vue'
+import { toRef, onMounted, ref } from 'vue'
 import ApercuMotscles from './ApercuMotscles.vue'
 import SelectMotscles from './SelectMotscles.vue'
 import EditeurMd from './EditeurMd.vue' // props: { modelValue: String, texte: String, labelOk: String, editable: Boolean, tailleM: Boolean },
@@ -72,7 +71,7 @@ export default ({
 
   components: { ApercuMotscles, SelectMotscles, EditeurMd },
 
-  props: { motscles: Object, secret: Object, idx: Number },
+  props: { motscles: Object, secret: Object, idx: Number, close: Function },
 
   computed: {
     cl () {
@@ -96,14 +95,10 @@ export default ({
 
   data () {
     return {
-      ouvert: false,
       mcedit: false,
-      enedition: false,
-      textelocal: '',
       temporaire: false,
       permlocal: false,
-      alertesaisie: false,
-      mclocal: null
+      alertesaisie: false
     }
   },
 
@@ -116,17 +111,6 @@ export default ({
 
     rendrepermanent () {
       console.log('Rendre le secret permanent')
-    },
-
-    editer () {
-      this.enedition = true
-      this.textelocal = this.locsecret.txt.t
-      this.mclocal = this.locsecret.mc
-    },
-
-    annuler () {
-      this.enedition = false
-      if (!this.locsecret.v) this.ouvert = false
     },
 
     async valider () {
@@ -143,19 +127,51 @@ export default ({
         await new NouveauSecretP().run(rowSecret)
       }
       this.ouvert = false
+      if (this.close) this.close()
     }
   },
 
   setup (props) {
+    const enedition = ref(false)
+    const ouvert = ref(false)
+    const textelocal = ref('')
+    const mclocal = ref(null)
+
     toRef(props, 'motscles')
+    toRef(props, 'close')
     const locsecret = toRef(props, 'secret')
     const jourJ = getJourJ()
     const limjours = cfg().limitesjour[0]
 
+    function editer () {
+      ouvert.value = true
+      enedition.value = true
+      textelocal.value = locsecret.value.txt.t
+      mclocal.value = locsecret.value.mc
+    }
+
+    function annuler () {
+      enedition.value = false
+      if (!locsecret.value.v) {
+        ouvert.value = false
+        if (close.value) close.value()
+      }
+    }
+
+    onMounted(() => {
+      if (!locsecret.value.v) editer()
+    })
+
     return {
       locsecret,
       limjours,
-      jourJ
+      jourJ,
+      enedition,
+      ouvert,
+      textelocal,
+      mclocal,
+      editer,
+      annuler
     }
   }
 })

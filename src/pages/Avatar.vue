@@ -15,15 +15,17 @@
   </q-card>
 
   <div v-if="tabavatar === 'secrets'" class="q-pa-xs column justify-start" style="width:100%">
-    <q-btn flat label="PLUS" @click="plus(1)"/><q-btn flat label="MOINS" @click="plus(-1)"/>
-    <vue-secret :secret="nouveausecret" :motscles="motscles" :idx="0"></vue-secret>
     <vue-secret v-for="(secret, idx) in state.lst" :key="secret.sid + secret.v" :idx="idx" :secret="secret" :motscles="motscles"></vue-secret>
   </div>
+
+  <q-dialog v-model="nouvsec">
+    <vue-secret :secret="nouveausecret" :motscles="motscles" :idx="0" :close="fclose"></vue-secret>
+  </q-dialog>
 </q-page>
 </template>
 
 <script>
-import { computed, onMounted, reactive, watch } from 'vue'
+import { computed, onMounted, reactive, watch, ref } from 'vue'
 import { useStore } from 'vuex'
 import { onBoot } from '../app/page.mjs'
 import { Motscles } from '../app/util.mjs'
@@ -60,14 +62,9 @@ export default ({
     }
   },
 
-  watch: {
-  },
-
   methods: {
-    plus (n) { // Il faut réassigner un nouvel objet
-      const x = { ...this.state.filtre }
-      x.n1 += n
-      this.state.filtre = { ...x }
+    fclose () {
+      this.nouvsec = false
     },
     async validercv (resultat) {
       if (resultat) {
@@ -81,9 +78,11 @@ export default ({
   setup () {
     onBoot()
     const $store = useStore()
+    const nouvsec = ref(false)
     const compte = computed(() => { const c = $store.state.db.compte; return c || { ko: true } })
     const avatar = computed(() => { const a = $store.state.db.avatar; return a || { ko: true } })
     const mode = computed(() => $store.state.ui.mode)
+    const evtavatar = computed(() => $store.state.ui.evtavatar)
     const tabavatar = computed(() => $store.state.ui.tabavatar)
 
     const mc = reactive({ categs: new Map(), lcategs: [], st: { enedition: false, modifie: false } })
@@ -100,6 +99,13 @@ export default ({
     onMounted(() => {
       state.lst = filtrer(secrets.value, state.filtre)
     })
+
+    watch(
+      () => evtavatar.value,
+      (ap) => {
+        onEvtAvatar(ap.evt)
+      }
+    )
 
     watch(
       () => compte.value, // OUI .value !!!
@@ -124,6 +130,23 @@ export default ({
       }
     )
 
+    function onEvtAvatar (opt) {
+      if (opt === 'plus') {
+        plus(1)
+      } else if (opt === 'plus') {
+        plus(-1)
+      } else if (opt === 'nouveau') {
+        nouvsec.value = true
+      }
+      console.log('Evt reçu : ' + opt)
+    }
+
+    function plus (n) { // Il faut réassigner un nouvel objet
+      const x = { ...state.filtre }
+      x.n1 += n
+      state.filtre = { ...x }
+    }
+
     return {
       compte,
       avatar,
@@ -131,6 +154,7 @@ export default ({
       motscles,
       state,
       nouveausecret,
+      nouvsec,
       mode
     }
   }

@@ -1,6 +1,6 @@
 <template>
 <div class="column q-pa-sm q-my-md top">
-  <q-btn v-if="page" class="q-pa-md" style="padding:0!important;margin:0.5rem 1rem!important;" dense size="md" color="primary" icon="navigate_next" label="Ouvrir sa page" @click="toAvatar"/>
+  <q-btn v-if="page" class="q-pa-md" style="padding:0!important;margin:0.5rem 1rem!important;" dense size="md" color="secondary" icon="navigate_next" label="Ouvrir la page" @click="toAvatar"/>
   <div class="row">
     <div><img class="ph" :src="photo"/></div>
     <div class="col column items-center q-pl-md">

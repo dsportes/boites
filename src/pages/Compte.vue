@@ -3,7 +3,7 @@
 
   <q-card v-if="tabcompte === 'etc'" class="column align-start items-start q-pa-xs">
     <q-list bordered style="width:100%;">
-      <q-expansion-item group="etc" label="Identité" default-opened header-class="titre-2 bg-primary text-white">
+      <q-expansion-item group="etc" label="Identité" default-opened header-class="titre-2 bg-secondary text-white">
         <div class="titre q-my-md"><span>Code du compte : {{compte.sid}}</span><bouton-help page="page1"/></div>
         <div style="width:100%">
           <editeur-md ref="memoed" :texte="compte.memo" :sid="compte.sid" taille-m editable label-ok="OK" v-on:ok="memook"></editeur-md>

@@ -152,6 +152,10 @@ export function majmenuouvert (state, val) {
   state.menuouvert = val
 }
 
+export function majevtavatar (state, val) {
+  state.evtavatar = { evt: val }
+}
+
 export function majidblec (state, { table, st, vol, nbl }) {
   const x = state.idblec
   x[table] = { st, vol, nbl }

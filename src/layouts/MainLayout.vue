@@ -58,7 +58,7 @@
           <div  v-if="page==='Avatar'" class="tbpage row justify-center">
             <span class="q-px-sm">Avatar : </span>
             <span class="q-px-sm">{{avatar.label}}</span>
-            <img class="photo q-px-sm" :src="avatar.photo ? avatar.photo : personne"/>
+            <img class="photo q-ml-sm" :src="avatar.photo ? avatar.photo : personne"/>
           </div>
           <div v-if="page==='Groupe'" class="tbpage row justify-center">
             <span>Groupe : </span>
@@ -83,29 +83,16 @@
         <q-tabs v-model="tabavatar" inline-label no-caps dense>
           <q-tab name="etc" label="Etc." />
 
-          <div class="btntab">
-            <q-btn dense size="sm" icon="search" @click="console.log('loupe click')"/>
-            <q-btn dense size="sm" icon="add_circle" @click="console.log('add click')"/>
-            <q-btn-dropdown class="btntab2" size="sm" color="pink" dropdown-icon="change_history">
-              <q-list>
-                <q-item clickable v-close-popup @click="console.log('loupe click')">
-                  <q-item-section>
-                    <q-item-label>Photos</q-item-label>
-                  </q-item-section>
-                </q-item>
-
-                <q-item clickable v-close-popup @click="console.log('loupe click')">
-                  <q-item-section>
-                    <q-item-label>Videos</q-item-label>
-                  </q-item-section>
-                </q-item>
-
-                <q-item clickable v-close-popup @click="console.log('loupe click')">
-                  <q-item-section>
-                    <q-item-label>Articles</q-item-label>
-                  </q-item-section>
-                </q-item>
-              </q-list>
+          <div v-if="tabavatar==='secrets'" class="btntab">
+            <q-btn dense size="sm" icon="search" @click="optAvatar('recherche')"/>
+            <q-btn dense size="sm" icon="add_circle_outline" @click="optAvatar('nouveau')"/>
+            <q-btn-dropdown v-model="tabavatarsec" class="btntab2" size="sm" dropdown-icon="change_history">
+              <div class="column items-start q-pa-sm">
+                <q-btn class="q-pa-sm" flat dense icon="search" no-caps label="Recherche" @click="optAvatar('recherche')"/>
+                <q-btn class="q-pa-sm" flat dense icon="search" no-caps label="Plus" @click="optAvatar('plus')"/>
+                <q-btn class="q-pa-sm" flat dense icon="search" no-caps label="Moins" @click="optAvatar('moins')"/>
+                <q-btn class="q-pa-sm" flat dense icon="add_circle_outline" no-caps label="Nouveau secret" @click="optAvatar('nouveau')"/>
+              </div>
             </q-btn-dropdown>
           </div>
 
@@ -245,7 +232,7 @@ export default {
     return {
       idbs: ['~assets/database_gris.svg', '~assets/database_vert.svg', '~assets/database_rouge.svg'],
       console: console,
-      menu1: false
+      tabavatarsec: false
     }
   },
 
@@ -258,13 +245,16 @@ export default {
       remplacePage('Org')
     },
 
+    optAvatar (opt) {
+      this.tabavatarsec = false
+      this.$store.commit('ui/majevtavatar', opt)
+    },
+
     tocompte () {
-      if (this.page === 'Synchro' || !this.compte) return
       remplacePage('Compte')
     },
 
     toavatar () {
-      if (this.page === 'Synchro' || !this.compte) return
       if (this.avatar) {
         remplacePage('Avatar')
         return

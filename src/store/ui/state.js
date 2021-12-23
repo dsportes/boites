@@ -45,7 +45,8 @@ export default function () {
 
     tabcompte: 'avatars',
     tabavatar: 'secrets',
-    tabgroupe: 'etc'
+    tabgroupe: 'etc',
+    evtavatar: null
 
   }
 }
