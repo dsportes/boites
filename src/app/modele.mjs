@@ -2,10 +2,8 @@ import { schemas } from './schemas.mjs'
 import { crypt } from './crypto.mjs'
 import { openIDB, closeIDB } from './db.mjs'
 import { openWS, closeWS } from './ws.mjs'
-import { store, appexc, serial, deserial, dlvDepassee, NomAvatar, getJourJ, cfg, gzip, ungzip, dhstring } from './util.mjs'
+import { store, appexc, serial, deserial, dlvDepassee, NomAvatar, gzip, ungzip, dhstring } from './util.mjs'
 import { remplacePage } from './page.mjs'
-
-const u8vide = new Uint8Array([0])
 
 /* mapObj : clé par table, valeur : array des objets
 - ne traite pas 'compte'
@@ -486,6 +484,8 @@ class Session {
 
   getContact (sid, sid2) { return store().getters['db/contact'](sid, sid2) }
 
+  getContactParId (sid, sidc) { return store().getters['db/contactParId'](sid, sidc) }
+
   setContacts (lobj, hls) {
     if (lobj.length) {
       if (hls) lobj.forEach(obj => { if (obj.suppr) hls.push(obj) })
@@ -512,6 +512,8 @@ class Session {
   }
 
   getMembre (sid, sid2) { return store().getters['db/membre'](sid, sid2) }
+
+  getMembreParId (sidg, sidm) { return store().getters['db/membreParId'](sidg, sidm) }
 
   setMembres (lobj, hls) {
     if (lobj.length) {
@@ -1595,6 +1597,12 @@ export class Rencontre {
 - `dups` : triplet `[id, ns, nr]` crypté par la clé du secret de l'autre exemplaire pour un secret de couple A/B.
 - `vsh`
 
+** liste des auteurs pour un couple**
+- 0 est celui des deux dont l'id est le plus fort, l'autre est 1
+- successions possibles : 0:0 1:1 2:01 3:10
+- quand 0 écrit : 0->0 1->2 2->2 3->2
+- quand 1 écrit : 0->3 1->1 2->3 3->3
+
 **Map des pièces jointes :**
 Une pièce jointe est identifiée par : `nom.ext/dh`
 - le `nom.ext` d'une pièce jointe est un nom de fichier, qui indique donc son type MIME par `ext`, d'où un certain nombre de caractères interdits (dont le `/`).
@@ -1610,6 +1618,8 @@ schemas.forSchema({
   name: 'idbSecret',
   cols: ['id', 'ns', 'nr', 'ic', 'v', 'st', 'ora', 'v1', 'v2', 'txt', 'mc', 'mpj', 'dup', 'vsh']
 })
+
+const trauteurs = [[0, 2, 2, 2], [3, 1, 3, 3]]
 
 export class Secret {
   get table () { return 'secret' }
@@ -1628,13 +1638,16 @@ export class Secret {
 
   get sidavgr () { return this.sid }
 
-  get estAv () { return (this.ns % 2) === 0 }
-
   get ts () { return this.ns % 3 } // 0:personnel 1:couple 2:groupe
 
   get titre () {
     const i = this.txt.t.indexOf('\n')
     return i === -1 ? this.txt.t.substring(0, 100) : this.txt.t.substring(0, (i < 100 ? i : 100))
+  }
+
+  get icpl () {
+    // indice de l'avatar dans le couple : 1 ou 2
+    return this.ts === 1 ? (this.id > this.dup[0] ? 0 : 1) : 0
   }
 
   get dh () { return dhstring(new Date(this.txt.d * 1000)) }
@@ -1643,26 +1656,86 @@ export class Secret {
     return this.ts ? (this.ts === 1 ? data.clecDe(this.sidc) : data.clegDe(this.sid)) : data.clek
   }
 
-  nouveauP (ts, id, nr, txt, mc, temp) {
+  async nouveauP (id, nr) {
     this.id = id
-    this.ns = (Math.floor(crypt.rnd4() / 3) * 3) + ts
-    this.nr = nr
+    this.ns = (Math.floor(crypt.rnd4() / 3) * 3)
+    this.nr = nr || 0
     this.ic = 0
-    this.v = 0
-    this.st = !temp ? 99999 : (getJourJ() + cfg().limitesjour[0])
-    this.ora = 0
-    this.v1 = txt.length
-    this.v2 = 0
-    this.mc = mc
-    this.txt = { t: txt, d: Math.floor(new Date().getTime() / 1000) }
-    this.vsh = 0
+    this.txt = { t: '' }
     return this
   }
+
+  async nouveauC (id, nr, id2) {
+    const c = data.contactParId(crypt.idToSid(id), crypt.idToSid(id2))
+    this.id = id
+    this.ns = (Math.floor(crypt.rnd4() / 3) * 3) + 1
+    this.nr = nr || 0
+    this.ic = c.ic
+    this.txt = { t: '' }
+    this.id2 = id2
+    this.ns2 = (Math.floor(crypt.rnd4() / 3) * 3) + 1
+    this.ic2 = c.icb
+    this.dups = await crypt.crypter(this.cles, serial([this.id2, this.ns2]))
+    this.dups2 = await crypt.crypter(this.cles, serial([this.id, this.ns]))
+    return this
+  }
+
+  async nouveauG (idg, nr) {
+    this.id = idg
+    this.ns = (Math.floor(crypt.rnd4() / 3) * 3) + 2
+    this.nr = nr || 0
+    this.ic = 0
+    this.txt = { t: '', l: new Uint8Array([]) }
+    return this
+  }
+
+  async toRowTxt (txt, im) {
+    const x = { d: Math.floor(new Date().getTime() / 1000), t: gzip(txt) }
+    if (this.ts === 2) {
+      const nl = [im]
+      this.txt.l.forEach(t => { if (t !== im) nl.push(t) })
+      x.l = new Uint8Array(nl)
+    } else if (this.ts === 1) {
+      const ix = this.icpl
+      x.l = this.v === 0 ? ix : trauteurs[ix][this.txt.l]
+    }
+    return await crypt.crypter(this.cles, serial(x))
+  }
+
+  /*
+  async nouveauToRow (arg) {
+    // const arg = { ts, temp, v1, dup, id: s.id, ns: s.ns, mc: mc, mcg: mcg, im: im, ora: this.oralocal, txts: txts }
+    this.id = arg.id
+    this.ns = (Math.floor(crypt.rnd4() / 3) * 3) + arg.ts
+    this.nr = arg.nr
+    this.ic = arg.ts === 1 ? arg.im : 0
+    this.v = 0
+    this.st = !arg.temp ? 99999 : (getJourJ() + cfg().limitesjour[0])
+    this.ora = arg.ora
+    this.v1 = arg.v1
+    this.v2 = 0
+    if (this.ts) {
+      this.mcs = arg.mc
+    } else { // groupe
+      const mc = {}
+      if (arg.mc) mc[arg.im] = arg.mc
+      if (arg.mcg) mc[0] = arg.mcg
+      this.mcs = serial(this.mc)
+    }
+    this.txts = arg.txts
+    this.vsh = 0
+    if (this.ts === 1) {
+      this.dups = await crypt.crypter(this.cles, serial(this.dup))
+    } else this.dups = null
+    return schemas.serialize('rowsecret', this)
+  }
+  */
 
   async fromRow (row) {
     this.vsh = row.vsh || 0
     this.id = row.id
     this.ns = row.ns
+    this.nr = row.nr
     this.ic = row.ic
     this.st = row.st
     this.v = row.v
@@ -1673,7 +1746,7 @@ export class Secret {
       const cles = this.cles
       this.txt = deserial(await crypt.decrypter(cles, row.txts))
       this.txt.t = ungzip(this.txt.t)
-      this.mc = deserial(await crypt.decrypter(cles, row.mcs))
+      this.mc = this.ts > 0 ? row.mcs : deserial(row.mcs)
       this.mpj = {}
       this.nbpj = 0
       if (this.v2) {
@@ -1687,18 +1760,13 @@ export class Secret {
         }
       }
       if (this.ts === 1) {
-        this.dup = deserial(await crypt.decrypter(cles, row.dups))
-      } else this.dup = []
+        const x = deserial(await crypt.decrypter(cles, row.dups))
+        this.id2 = x[0]
+        this.ns2 = x[1]
+      }
       return this
     }
     return this
-  }
-
-  async toRowTxtMc (txt, mc) {
-    const x = { d: Math.floor(new Date().getTime() / 1000), t: gzip(txt) }
-    const txts = await crypt.crypter(this.cles, serial(x))
-    const mcs = await crypt.crypter(this.cles, serial(mc))
-    return [txts, mcs]
   }
 
   async toRow () {
@@ -1707,7 +1775,7 @@ export class Secret {
     this.txt.t = gzip(this.txt.t)
     this.txts = await crypt.crypter(cles, serial(this.txt))
     this.txt.t = t
-    this.mcs = await crypt.crypter(cles, serial(this.mc))
+    this.mcs = t > 0 ? this.mc : serial(this.mc)
     const map = {}
     if (this.v2) {
       for (const cpj in this.mpj) {
@@ -1719,7 +1787,7 @@ export class Secret {
     this.mpjs = serial(map)
     if (this.ts === 1) {
       this.dups = await crypt.crypter(cles, serial(this.dup))
-    } else this.dups = u8vide
+    } else this.dups = null
     const buf = schemas.serialize('rowsecret', this)
     delete this.txts
     delete this.mcs

@@ -74,6 +74,21 @@ export function equ8 (a, b) {
   return true
 }
 
+export function deselect (u8, idx) {
+  if (!u8) return null
+  const l = []
+  u8.forEach(x => { if (x !== idx) l.push(x) })
+  return l.length ? new Uint8Array(l.sort()) : null
+}
+
+export function select (u8, idx) {
+  if (!u8) return new Uint8Array([idx])
+  const l = []
+  this.srclocal.forEach(x => { if (x !== idx) l.push(x) })
+  l.push(idx)
+  return new Uint8Array(l.sort())
+}
+
 export function gzip (arg) {
   if (!arg) return null
   // t: 0:binaire, 1:texte zippé, 2:texte non zippé

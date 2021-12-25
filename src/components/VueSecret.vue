@@ -62,16 +62,17 @@ import { toRef, onMounted, ref } from 'vue'
 import ApercuMotscles from './ApercuMotscles.vue'
 import SelectMotscles from './SelectMotscles.vue'
 import EditeurMd from './EditeurMd.vue' // props: { modelValue: String, texte: String, labelOk: String, editable: Boolean, tailleM: Boolean },
-import { equ8, getJourJ, cfg } from '../app/util.mjs'
-import { Secret } from '../app/modele.mjs'
-import { NouveauSecretP, Maj1SecretP } from '../app/operations.mjs'
+import { equ8, getJourJ, cfg, serial } from '../app/util.mjs'
+import { NouveauSecret, Maj1Secret } from '../app/operations.mjs'
+import { crypt } from '../app/cryto.mjs'
 
 export default ({
   name: 'VueSecret',
 
   components: { ApercuMotscles, SelectMotscles, EditeurMd },
 
-  props: { motscles: Object, secret: Object, idx: Number, close: Function },
+  props: { motscles: Object, secret: Object, idx: Number, close: Function, im: Number },
+  // im : l'indice de membre de l'avatar du compte dans le groupe dont les secrets sont listés
 
   computed: {
     cl () {
@@ -113,18 +114,39 @@ export default ({
       console.log('Rendre le secret permanent')
     },
 
-    async valider () {
+    async valider () { // secret de couple à traiter et ref
       this.enedition = false
       const s = this.locsecret
-      if (s.v) {
-        const [txts, mcs] = await s.toRowTxtMc(this.textelocal, this.mclocal)
-        await new Maj1SecretP().run({ id: s.id, ns: s.ns, v1: this.textelocal.length, txts: txts, mcs: mcs })
-        // aj
+      const txts = this.textelocal === s.txt.t ? new Uint8Array([0]) : await s.toRowTxt(this.textelocal, this.im)
+      let mc = null, mcg = null
+      if (s.ts !== 2) {
+        mc = equ8(this.mclocal, s.mc) ? new Uint8Array([0]) : (!this.mclocal || !this.mclocal.length ? null : this.mclocal)
       } else {
-        // création : ts, id, nr, txt, mc, temp
-        const sec = new Secret().nouveauP(s.ts, s.id, s.nr, this.textelocal, this.mclocal, this.permlocal)
-        const rowSecret = await sec.toRow()
-        await new NouveauSecretP().run(rowSecret)
+        mc = equ8(this.mclocal, s.mc[this.im]) ? new Uint8Array([0]) : (!this.mclocal || !this.mclocal.length ? null : this.mclocal)
+        mcg = equ8(this.mcglocal, s.mc[0]) ? new Uint8Array([0]) : (!this.mcglocal || !this.mcglocal.length ? null : this.mcglocal)
+      }
+      const v1 = this.v && this.textelocal === s.txt.t ? s.v1 : this.textelocal.length
+      const arg = { id: s.id, ns: s.ns, nr: s.nr, mc: mc, txts: txts, v1: v1 }
+      if (s.ts === 2) {
+        arg.mcg = mcg
+        arg.im = this.im
+      }
+      if (s.ts === 1) {
+        arg.id2 = s.id2
+        arg.ns2 = s.ns2
+      }
+      if (s.v) {
+        // maj
+        await new Maj1Secret().run(arg)
+      } else {
+        // création
+        arg.ora = this.oralocal
+        arg.perm = this.permlocal
+        if (s.ts === 1) {
+          arg.dups = await crypt.crypter(s.cles, serial([arg.id2, arg.ns2]))
+          arg.dups2 = await crypt.crypter(s.cles, serial([arg.id, arg.ns]))
+        }
+        await new NouveauSecret().run(arg)
       }
       this.ouvert = false
       if (this.close) this.close()
@@ -136,18 +158,24 @@ export default ({
     const ouvert = ref(false)
     const textelocal = ref('')
     const mclocal = ref(null)
+    const mcglocal = ref(null)
+    const oralocal = ref(0)
 
     toRef(props, 'motscles')
     toRef(props, 'close')
+    const im = toRef(props, 'im')
     const locsecret = toRef(props, 'secret')
     const jourJ = getJourJ()
     const limjours = cfg().limitesjour[0]
 
     function editer () {
+      const s = locsecret.value
       ouvert.value = true
       enedition.value = true
-      textelocal.value = locsecret.value.txt.t
-      mclocal.value = locsecret.value.mc
+      oralocal.value = s.ora
+      textelocal.value = s.txt.t
+      mclocal.value = s.ts === 2 ? s.mc[im.value] : s.mc
+      mcglocal.value = s.ts === 2 ? s.mc[0] : null
     }
 
     function annuler () {
@@ -170,6 +198,8 @@ export default ({
       ouvert,
       textelocal,
       mclocal,
+      mcglocal,
+      oralocal,
       editer,
       annuler
     }

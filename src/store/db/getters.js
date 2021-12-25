@@ -40,3 +40,21 @@ export const secret = (state) => (sid, sid2) => {
   const lc = state['secrets@' + sid]
   return !sid2 ? lc || {} : lc ? lc[sid2] : null
 }
+
+export const membreParId = (state) => (sidg, sidm) => {
+  const lc = state['membres@' + sidg]
+  for (const sim in lc) {
+    const m = lc[sim]
+    if (m.namb.sid === sidm) return m
+  }
+  return null
+}
+
+export const contactParId = (state) => (sid, sidc) => {
+  const lc = state['contacts@' + sid]
+  for (const simc in lc) {
+    const c = lc[simc]
+    if (c.nactc.sid === sidc) return c
+  }
+  return null
+}

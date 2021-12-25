@@ -35,7 +35,7 @@
 <script>
 import { toRef, ref, watch, onMounted, reactive } from 'vue'
 import BoutonHelp from './BoutonHelp.vue'
-import { equ8 } from '../app/util.mjs'
+import { equ8, select, deselect } from '../app/util.mjs'
 
 export default ({
   name: 'SelectMotscles',
@@ -76,22 +76,11 @@ export default ({
       this.srclocal = this.srcinp
       if (this.close) this.close()
     },
-    deselect (idx) {
-      const l = []
-      this.srclocal.forEach(x => { if (x !== idx) l.push(x) })
-      this.srclocal = new Uint8Array(l)
-    },
-    select (idx) {
-      const l = []
-      this.srclocal.forEach(x => { if (x !== idx) l.push(x) })
-      l.push(idx)
-      this.srclocal = new Uint8Array(l)
-    },
     seldesel (idx) {
       if (this.selecte(idx)) {
-        this.deselect(idx)
+        this.srclocal = deselect(this.srclocal, idx)
       } else {
-        this.select(idx)
+        this.this.srclocal = select(this.srclocal, idx)
       }
     }
   },
@@ -107,8 +96,8 @@ export default ({
 
     onMounted(() => {
       tab.value = motscles.value.mc.lcategs[0]
-      srcinp.value = src.value
-      srclocal.value = src.value
+      srcinp.value = src.value || new Uint8Array([])
+      srclocal.value = src.value || new Uint8Array([])
     })
 
     watch(

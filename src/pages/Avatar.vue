@@ -15,11 +15,11 @@
   </q-card>
 
   <div v-if="tabavatar === 'secrets'" class="q-pa-xs column justify-start" style="width:100%">
-    <vue-secret v-for="(secret, idx) in state.lst" :key="secret.sid + secret.v" :idx="idx" :secret="secret" :motscles="motscles"></vue-secret>
+    <vue-secret v-for="(secret, idx) in state.lst" :key="secret.sid + secret.v" :idx="idx" :secret="secret" :motscles="motscles" :avobsid="avatar.id"></vue-secret>
   </div>
 
   <q-dialog v-model="nouvsec">
-    <vue-secret :secret="nouveausecret" :motscles="motscles" :idx="0" :close="fclose"></vue-secret>
+    <vue-secret :secret="await nouveausecret(0, 0)" :motscles="motscles" :avobsid="avatar.id" :idx="0" :close="fclose"></vue-secret>
   </q-dialog>
 </q-page>
 </template>
@@ -89,8 +89,10 @@ export default ({
     const motscles = new Motscles(mc, 1)
     motscles.recharger()
 
-    // ts, id, nr, txt, mc, temp
-    const nouveausecret = new Secret().nouveauP(0, avatar.value.id, 0, 'Nouveau secret ...', new Uint8Array([]), false)
+    async function nouveausecret (id2) { // pour un couple seulement, id2 du contact de l'avatar du compte
+      const s = new Secret()
+      return !id2 ? await s.nouveauP(avatar.value.id) : await s.nouveauC(avatar.value.id, id2)
+    }
 
     const secrets = computed(() => { return data.getSecret(avatar.value.sid) })
 
