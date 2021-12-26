@@ -1656,36 +1656,34 @@ export class Secret {
     return this.ts ? (this.ts === 1 ? data.clecDe(this.sidc) : data.clegDe(this.sid)) : data.clek
   }
 
-  async nouveauP (id, nr) {
+  nouveauP (id, ref) {
     this.id = id
     this.ns = (Math.floor(crypt.rnd4() / 3) * 3)
-    this.nr = nr || 0
     this.ic = 0
     this.txt = { t: '' }
+    this.ref = ref || null
     return this
   }
 
-  async nouveauC (id, nr, id2) {
+  nouveauC (id, id2, ref) {
     const c = data.contactParId(crypt.idToSid(id), crypt.idToSid(id2))
     this.id = id
     this.ns = (Math.floor(crypt.rnd4() / 3) * 3) + 1
-    this.nr = nr || 0
     this.ic = c.ic
     this.txt = { t: '' }
     this.id2 = id2
     this.ns2 = (Math.floor(crypt.rnd4() / 3) * 3) + 1
     this.ic2 = c.icb
-    this.dups = await crypt.crypter(this.cles, serial([this.id2, this.ns2]))
-    this.dups2 = await crypt.crypter(this.cles, serial([this.id, this.ns]))
+    this.ref = ref || null
     return this
   }
 
-  async nouveauG (idg, nr) {
+  nouveauG (idg, ref) {
     this.id = idg
     this.ns = (Math.floor(crypt.rnd4() / 3) * 3) + 2
-    this.nr = nr || 0
     this.ic = 0
     this.txt = { t: '', l: new Uint8Array([]) }
+    this.ref = ref || null
     return this
   }
 
@@ -1735,7 +1733,6 @@ export class Secret {
     this.vsh = row.vsh || 0
     this.id = row.id
     this.ns = row.ns
-    this.nr = row.nr
     this.ic = row.ic
     this.st = row.st
     this.v = row.v
@@ -1764,7 +1761,7 @@ export class Secret {
         this.id2 = x[0]
         this.ns2 = x[1]
       }
-      return this
+      this.ref = row.refs ? deserial(await crypt.decrypter(cles, row.refs)) : null
     }
     return this
   }
@@ -1788,11 +1785,15 @@ export class Secret {
     if (this.ts === 1) {
       this.dups = await crypt.crypter(cles, serial(this.dup))
     } else this.dups = null
+    if (this.ref) {
+      this.refs = await crypt.crypter(cles, serial(this.ref))
+    } else this.refs = null
     const buf = schemas.serialize('rowsecret', this)
     delete this.txts
     delete this.mcs
     delete this.mpjs
     delete this.dups
+    delete this.refs
     return buf
   }
 

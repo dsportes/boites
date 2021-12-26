@@ -1,25 +1,30 @@
 <template>
 <q-page>
-
-  <q-card v-if="tabavatar === 'etc'" class="column align-start items-start q-pa-xs">
-    <q-list bordered style="width:100%;">
-      <q-expansion-item group="etc" label="Carte de visite" default-opened header-class="titre-2 bg-primary text-white">
-        <div style="width:100%">
-          <carte-visite :nomc="avatar.nomc" :info-init="avatar.info" :photo-init="avatar.photo" @ok="validercv"/>
-        </div>
-      </q-expansion-item>
-      <q-expansion-item group="etc" label="Mots clés du compte" header-class="titre-2 bg-secondary text-white">
-        <mots-cles :motscles="motscles"></mots-cles>
-      </q-expansion-item>
-    </q-list>
-  </q-card>
-
   <div v-if="tabavatar === 'secrets'" class="q-pa-xs column justify-start" style="width:100%">
     <vue-secret v-for="(secret, idx) in state.lst" :key="secret.sid + secret.v" :idx="idx" :secret="secret" :motscles="motscles" :avobsid="avatar.id"></vue-secret>
   </div>
 
+  <q-card v-if="tabavatar === 'contacts'" class="column align-start items-start">
+    <div class="titre-3">Contacts de l'avatar</div>
+  </q-card>
+
+  <q-card v-if="tabavatar === 'groupes'" class="column align-start items-start">
+    <div class="titre-3">Groupes auxquels l'avatar participe</div>
+  </q-card>
+
+  <q-card v-if="tabavatar === 'etc'" class="column align-start items-start q-pa-xs">
+    <q-expansion-item group="etc" label="Carte de visite" default-opened header-class="titre-2 bg-primary text-white">
+      <div style="width:100%">
+        <carte-visite :nomc="avatar.nomc" :info-init="avatar.info" :photo-init="avatar.photo" @ok="validercv"/>
+      </div>
+    </q-expansion-item>
+    <q-expansion-item group="etc" label="Mots clés du compte" header-class="titre-2 bg-secondary text-white">
+      <mots-cles :motscles="motscles"></mots-cles>
+    </q-expansion-item>
+  </q-card>
+
   <q-dialog v-model="nouvsec">
-    <vue-secret :secret="await nouveausecret(0, 0)" :motscles="motscles" :avobsid="avatar.id" :idx="0" :close="fclose"></vue-secret>
+    <vue-secret :secret="nouveausecret(0, 0)" :motscles="motscles" :avobsid="avatar.id" :idx="0" :close="fclose"></vue-secret>
   </q-dialog>
 </q-page>
 </template>
@@ -89,9 +94,9 @@ export default ({
     const motscles = new Motscles(mc, 1)
     motscles.recharger()
 
-    async function nouveausecret (id2) { // pour un couple seulement, id2 du contact de l'avatar du compte
+    function nouveausecret (id2) { // pour un couple seulement, id2 du contact de l'avatar du compte
       const s = new Secret()
-      return !id2 ? await s.nouveauP(avatar.value.id) : await s.nouveauC(avatar.value.id, id2)
+      return !id2 ? s.nouveauP(avatar.value.id) : s.nouveauC(avatar.value.id, id2)
     }
 
     const secrets = computed(() => { return data.getSecret(avatar.value.sid) })

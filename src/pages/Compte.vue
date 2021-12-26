@@ -1,8 +1,13 @@
 <template>
 <q-page>
+  <q-card v-if="tabcompte === 'avatars'" class="column align-start items-start">
+    <div v-for="e in compte.mac" :key="e.na.id" class="full-width">
+      <apercu-avatar page editer :avatar-id="e.na.id"/>
+    </div>
+  </q-card>
 
   <q-card v-if="tabcompte === 'etc'" class="column align-start items-start q-pa-xs">
-    <q-list bordered style="width:100%;">
+    <q-list bordered class="full-width">
       <q-expansion-item group="etc" label="Identité" default-opened header-class="titre-2 bg-secondary text-white">
         <div class="titre q-my-md"><span>Code du compte : {{compte.sid}}</span><bouton-help page="page1"/></div>
         <div style="width:100%">
@@ -13,23 +18,6 @@
         <mots-cles :motscles="motscles"></mots-cles>
       </q-expansion-item>
     </q-list>
-  </q-card>
-
-  <q-card v-if="tabcompte === 'avatars'" class="column align-start items-start">
-    <div v-for="e in compte.mac" :key="e.na.id" style="width:100%">
-      <apercu-avatar page editer :avatar-id="e.na.id"/>
-    </div>
-  </q-card>
-
-  <q-card v-if="tabcompte === 'groupes'" class="column align-start items-start">
-    <h6>Test des aperçus de mots clés</h6>
-    <q-checkbox left-label v-model="court" label="Format court" />
-    <div>
-      <apercu-motscles :motscles="motscles" :src="u8mc" :court="court" :argsClick="{loc: 'ici', n: 3}" @clickMc="mcclick"></apercu-motscles>
-    </div>
-    <q-dialog v-model="selecteur">
-      <select-motscles :close="closeSel" :src="u8mc" :motscles="motscles" @ok="selection"/>
-    </q-dialog>
   </q-card>
 </q-page>
 </template>
@@ -43,13 +31,11 @@ import EditeurMd from '../components/EditeurMd.vue'
 import BoutonHelp from '../components/BoutonHelp.vue'
 import MotsCles from '../components/MotsCles.vue'
 import ApercuAvatar from '../components/ApercuAvatar.vue'
-import ApercuMotscles from '../components/ApercuMotscles.vue'
-import SelectMotscles from '../components/SelectMotscles.vue'
 import { Motscles } from '../app/util.mjs'
 
 export default ({
   name: 'Compte',
-  components: { EditeurMd, BoutonHelp, MotsCles, ApercuAvatar, ApercuMotscles, SelectMotscles },
+  components: { EditeurMd, BoutonHelp, MotsCles, ApercuAvatar },
   data () {
     return {
       u8mc: new Uint8Array([200, 202, 1, 203, 2]),

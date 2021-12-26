@@ -64,7 +64,7 @@ import SelectMotscles from './SelectMotscles.vue'
 import EditeurMd from './EditeurMd.vue' // props: { modelValue: String, texte: String, labelOk: String, editable: Boolean, tailleM: Boolean },
 import { equ8, getJourJ, cfg, serial } from '../app/util.mjs'
 import { NouveauSecret, Maj1Secret } from '../app/operations.mjs'
-import { crypt } from '../app/cryto.mjs'
+import { crypt } from '../app/crypto.mjs'
 
 export default ({
   name: 'VueSecret',
@@ -126,7 +126,7 @@ export default ({
         mcg = equ8(this.mcglocal, s.mc[0]) ? new Uint8Array([0]) : (!this.mcglocal || !this.mcglocal.length ? null : this.mcglocal)
       }
       const v1 = this.v && this.textelocal === s.txt.t ? s.v1 : this.textelocal.length
-      const arg = { id: s.id, ns: s.ns, nr: s.nr, mc: mc, txts: txts, v1: v1 }
+      const arg = { id: s.id, ns: s.ns, ref: s.ref, mc: mc, txts: txts, v1: v1 }
       if (s.ts === 2) {
         arg.mcg = mcg
         arg.im = this.im
@@ -146,6 +146,7 @@ export default ({
           arg.dups = await crypt.crypter(s.cles, serial([arg.id2, arg.ns2]))
           arg.dups2 = await crypt.crypter(s.cles, serial([arg.id, arg.ns]))
         }
+        arg.refs = arg.ref ? await crypt.crypter(s.cles, serial(arg.ref)) : null
         await new NouveauSecret().run(arg)
       }
       this.ouvert = false

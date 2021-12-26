@@ -986,7 +986,7 @@ export class CvAvatar extends OperationUI {
 /******************************************************
 Création d'un nouveau secret P
 */
-export class NouveauSecretP extends OperationUI {
+export class NouveauSecret extends OperationUI {
   constructor () {
     super('Création d\'un nouveau secret personnel', OUI, SELONMODE)
   }
@@ -1010,7 +1010,7 @@ export class NouveauSecretP extends OperationUI {
 /******************************************************
 Maj 1 d'un secret P : txt, mc, perm
 */
-export class Maj1SecretP extends OperationUI {
+export class Maj1Secret extends OperationUI {
   constructor () {
     super('Mise à jour d\'un secret personnel', OUI, SELONMODE)
   }

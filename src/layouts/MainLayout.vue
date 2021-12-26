@@ -1,5 +1,5 @@
 <template>
-  <q-layout view="hHh lpR fFf">
+  <q-layout view="hHh lpr fFf">
     <q-header reveal elevated>
       <q-toolbar>
         <q-toolbar-title>
@@ -9,7 +9,10 @@
               <q-tooltip>Changer d'organisation</q-tooltip>
             </span>
           </span>
-          <span v-if="org != null && statut != 0 && compte != null" class="labeltitre q-px-sm">{{ compte.titre }}</span>
+          <span v-if="compte != null" :class="page!=='Avatar' ? 'disabled' : 'cursor-pointer'" @click="tocompte">
+            <q-icon size="sm" name="home" aria-label="Accueil du compte"/>
+            <span class="labeltitre q-px-sm">{{ compte.titre }}</span>
+          </span>
         </q-toolbar-title>
 
         <q-btn v-if="org != null && sessionId != null" dense size="sm" color="warning" icon="logout" @click="confirmerdrc = true">
@@ -49,65 +52,65 @@
       </q-toolbar>
 
       <q-toolbar inset :class="tbclass">
-        <q-btn v-if="page==='Avatar' || page==='Groupe'" class="q-pl-sm" flat dense round size="sm" icon="home" aria-label="Menu" @click="tocompte"/>
         <q-toolbar-title class="text-center">
           <div v-if="page==='Org'" class="tbpage">Choix de l'organisation</div>
           <div v-if="page==='Login'" class="tbpage">Connexion à un compte</div>
           <div v-if="page==='Synchro'" class="tbpage">Synchronisation des données</div>
           <div v-if="page==='Compte'" class="tbpage">Compte : {{ compte.titre }}</div>
-          <div  v-if="page==='Avatar'" class="tbpage row justify-center">
-            <span class="q-px-sm">Avatar : </span>
-            <span class="q-px-sm">{{avatar.label}}</span>
-            <img class="photo q-ml-sm" :src="avatar.photo ? avatar.photo : personne"/>
+
+          <div v-if="page==='Avatar'" class="row">
+            <div class="col-8 col-sm-4 row justify-start tbpage">
+              <span class="q-px-sm text-italic">Avatar :</span>
+              <span class="q-px-sm">{{avatar.label}}</span>
+              <img class="photo q-ml-sm" :src="avatar.photo ? avatar.photo : personne"/>
+            </div>
+            <div class="col-6 col-sm-4 row justify-start tbpage2">
+              <span class="q-px-sm text-italic">Contact :</span>
+              <span class="q-px-sm">Victor Hugo</span>
+            </div>
+            <div class="col-6 col-sm-4 row justify-start tbpage2">
+              <span class="q-px-sm text-italic">Groupe :</span>
+              <span class="q-px-sm">Duke Orchestra</span>
+            </div>
+
           </div>
-          <div v-if="page==='Groupe'" class="tbpage row justify-center">
-            <span>Groupe : </span>
-            <span>{{groupe.label}}</span>
-            <img class="photo" :src="groupe.photo ? groupe.photo : personnes"/>
-          </div>
+
         </q-toolbar-title>
       </q-toolbar>
 
       <q-toolbar v-if="page === 'Compte'">
-        <div style="width:100vw;">
+        <div class="window-width">
         <q-tabs v-model="tabcompte" inline-label no-caps dense>
-          <q-tab name="etc" label="Etc." />
           <q-tab name="avatars" label="Avatars" />
-          <q-tab name="groupes" label="Groupes" />
+          <q-tab name="etc" label="Etc." />
         </q-tabs>
         </div>
       </q-toolbar>
 
       <q-toolbar v-if="page === 'Avatar'">
-        <div style="width:100vw;">
-        <q-tabs v-model="tabavatar" inline-label no-caps dense>
-          <q-tab name="etc" label="Etc." />
-
-          <div v-if="tabavatar==='secrets'" class="btntab">
-            <q-btn dense size="sm" icon="search" @click="optAvatar('recherche')"/>
-            <q-btn dense size="sm" icon="add_circle_outline" @click="optAvatar('nouveau')"/>
-            <q-btn-dropdown v-model="tabavatarsec" class="btntab2" size="sm" dropdown-icon="change_history">
-              <div class="column items-start q-pa-sm">
-                <q-btn class="q-pa-sm" flat dense icon="search" no-caps label="Recherche" @click="optAvatar('recherche')"/>
-                <q-btn class="q-pa-sm" flat dense icon="search" no-caps label="Plus" @click="optAvatar('plus')"/>
-                <q-btn class="q-pa-sm" flat dense icon="search" no-caps label="Moins" @click="optAvatar('moins')"/>
-                <q-btn class="q-pa-sm" flat dense icon="add_circle_outline" no-caps label="Nouveau secret" @click="optAvatar('nouveau')"/>
+        <div class="row window-width justify-center">
+          <q-tabs class="" v-model="tabavatar" inline-label no-caps dense>
+            <q-btn-dropdown v-if="tabavatar==='secrets'" size="md" dense dropdown-icon="change_history" color="secondary" v-model="menugauche1">
+              <div class="clair1 column items-start q-pa-sm">
+                <q-btn class="q-pa-sm" flat dense icon="search" no-caps label="Recherche" @click="menugauche1=false;optAvatar('recherche')"/>
+                <q-btn class="q-pa-sm" flat dense icon="search" no-caps label="Plus" @click="menugauche1=false;optAvatar('plus')"/>
+                <q-btn class="q-pa-sm" flat dense icon="search" no-caps label="Moins" @click="menugauche1=false;optAvatar('moins')"/>
+                <q-btn class="q-pa-sm" flat dense icon="add_circle_outline" no-caps label="Nouveau secret" @click="menugauche1=false;optAvatar('nouveau')"/>
               </div>
             </q-btn-dropdown>
-          </div>
-
-          <q-tab name="secrets" label="Secrets" />
-        </q-tabs>
-        </div>
-      </q-toolbar>
-
-      <q-toolbar v-if="page === 'Groupe'">
-        <div style="width:100vw;">
-        <q-tabs v-model="tabgroupe" inline-label no-caps dense>
-          <q-tab name="etc" label="Etc." />
-          <q-tab name="membres" label="Membres" />
-          <q-tab name="secrets" label="Secrets" />
-        </q-tabs>
+            <q-tab name="secrets" label="Secrets" />
+            <q-tab name="contacts" label="Contacts" />
+            <q-btn-dropdown class="q-ml-sm" v-if="(tabavatar=='groupes' ? 'disabled' : '')" size="md" dense dropdown-icon="change_history" color="secondary" v-model="menugauche4">
+              <div class="clair1 column items-start q-pa-sm">
+                <q-btn class="q-pa-sm" flat dense icon="search" no-caps label="Recherche" @click="menugauche4=false;optAvatar('recherche')"/>
+                <q-btn class="q-pa-sm" flat dense icon="search" no-caps label="Plus" @click="menugauche4=false;optAvatar('plus')"/>
+                <q-btn class="q-pa-sm" flat dense icon="search" no-caps label="Moins" @click="menugauche4=false;optAvatar('moins')"/>
+                <q-btn class="q-pa-sm" flat dense icon="add_circle_outline" no-caps label="Nouveau secret" @click="menugauche4=false;optAvatar('nouveau')"/>
+              </div>
+            </q-btn-dropdown>
+            <q-tab name="groupes" label="Groupes" />
+            <q-tab name="etc" label="Etc." />
+          </q-tabs>
         </div>
       </q-toolbar>
     </q-header>
@@ -232,7 +235,9 @@ export default {
     return {
       idbs: ['~assets/database_gris.svg', '~assets/database_vert.svg', '~assets/database_rouge.svg'],
       console: console,
-      tabavatarsec: false
+      tabavatarsec: false,
+      menugauche1: false,
+      menugauche4: false
     }
   },
 
@@ -347,10 +352,6 @@ export default {
       get: () => $store.state.ui.tabavatar,
       set: (val) => $store.commit('ui/majtabavatar', val)
     })
-    const tabgroupe = computed({
-      get: () => $store.state.ui.tabgroupe,
-      set: (val) => $store.commit('ui/majtabgroupe', val)
-    })
 
     const page = computed(() => $store.state.ui.page)
     const orgicon = computed(() => $store.getters['ui/orgicon'])
@@ -405,8 +406,7 @@ export default {
       msgdegrade,
       statut,
       tabcompte,
-      tabavatar,
-      tabgroupe
+      tabavatar
     }
   }
 }
@@ -487,14 +487,18 @@ export default {
   border: 2px solid warning
 
 .photo
-  width: 24px
-  height: 24px
-  border-radius: 12px
+  width: 1.8rem
+  height: 1.8rem
+  border-radius: 0.9rem
   border: 1px solid grey
 
 .tbpage
   font-family: Comfortaa
-  font-size: 1rem
+  font-size: 1.1rem
+
+.tbpage2
+  font-family: Comfortaa
+  font-size: 0.9rem
 
 .btntab
   position: relative
