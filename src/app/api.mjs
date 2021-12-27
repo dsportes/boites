@@ -121,7 +121,7 @@ schemas.forSchema({
 
 schemas.forSchema({
   name: 'rowcontact',
-  cols: ['id', 'ic', 'v', 'st', 'q1', 'q2', 'qm1', 'qm2', 'ardc', 'icbc', 'datak', 'ank', 'vsh']
+  cols: ['id', 'ic', 'v', 'st', 'q1', 'q2', 'qm1', 'qm2', 'ardc', 'icbc', 'datak', 'mc', 'infok', 'vsh']
 })
 /*
     "id"   INTEGER,
@@ -135,7 +135,8 @@ schemas.forSchema({
     "ardc"  BLOB,
     "icbc"  BLOB
     "datak" BLOB,
-    "ank" BLOB,
+    "mc"  BLOB,
+    "infok" BLOB,
     "vsh" INTEGER,
 */
 
@@ -184,21 +185,22 @@ schemas.forSchema({
 
 schemas.forSchema({
   name: 'rowmembre',
-  cols: ['id', 'im', 'v', 'st', 'vote', 'dlv', 'q1', 'q2', 'datak', 'datag', 'ardg', 'vsh']
+  cols: ['id', 'im', 'v', 'st', 'vote', 'dlv', 'q1', 'q2', 'mc', 'infok', 'datag', 'ardg', 'vsh']
 })
 /*
     "id"  INTEGER,
     "im"  INTEGER,
-    "v"   INTEGER,
+    "v" INTEGER,
     "st"  INTEGER,
     "vote"  INTEGER,
     "dlv"   INTEGER,
     "q1"   INTEGER,
     "q2"   INTEGER,
-    "datak" BLOB,
+    "mc"  BLOB,
+    "infok" BLOB,
     "datag" BLOB,
     "ardg"  BLOB,
-    "vsh"   INTEGER,
+    "vsh" INTEGER,
 */
 
 schemas.forSchema({
