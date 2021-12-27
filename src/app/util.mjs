@@ -1,7 +1,7 @@
 import axios from 'axios'
 import { data } from './modele.mjs'
 import { AppExc, version, E_BRO, E_SRV, EXBRK } from './api.mjs'
-import { u8ToB64, crypt, b64ToU8 } from './crypto.mjs'
+import { u8ToB64, crypt } from './crypto.mjs'
 import { encode, decode } from '@msgpack/msgpack'
 
 const headers = { 'x-api-version': version }
@@ -295,7 +295,7 @@ export async function post (op, module, fonction, args) {
       // 400 : anomalie fonctionnelle à traiter par l'application (pas en exception)
       if (status === 400) return appexc
       // 401 : anomalie fonctionnelle à afficher et traiter comme exception
-      // 402 : inattendue, récuprée sur le serveur
+      // 402 : inattendue, récupérée sur le serveur
       throw appexc
     } else throw new AppExc(E_SRV, e.message, e.stack) // inattendue, pas mise en forme
   }
@@ -635,23 +635,17 @@ export class Quotas {
 
 /** NomAvatar **********************************/
 export class NomAvatar {
-  constructor (n, nouveau) {
-    if (nouveau) {
-      this.rndb = crypt.random(15)
-      this.nom = n
-    } else {
-      const i = n.lastIndexOf('@')
-      this.nom = n.substring(0, i)
-      this.sfx = n.substring(i + 1)
-      this.rndb = b64ToU8(this.sfx)
-    }
+  constructor (nom, rnd) {
+    this.nom = nom
+    this.rnd = !rnd ? crypt.random(32) : rnd
+    this.id = crypt.hashBin(this.rnd)
   }
 
-  get id () { return crypt.hashBin(this.rndb) }
-
-  get nomc () { return this.nom + '@' + u8ToB64(this.rndb, true) }
+  get nomc () { return this.nom + '@' + this.sfx }
 
   get sid () { return crypt.idToSid(this.id) }
 
-  get cle () { return crypt.sha256(this.rndb) }
+  get cle () { return this.rnd }
+
+  get sfx () { const s = this.sid; return s.substring(0, 2) + s.substring(s.length - 2) }
 }

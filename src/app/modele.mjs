@@ -369,7 +369,7 @@ class Session {
     this.clek = null // clé K du compte authentifié
     this.cleg = {} // clés des groupes accédés
     this.clec = {} // clés C des contacts {id, {ic... }}
-    this.nomc = {} // nomc des contacts / membres (ayant CV)
+    this.nomRnd = {} // [nom, rnd] des contacts / membres (ayant CV)
 
     this.opWS = null // opération WS en cours
     this.opUI = null // opération UI en cours
@@ -412,10 +412,6 @@ class Session {
 
   clecDe (sid) { // clé d'un contact
     return this.clec[sid]
-  }
-
-  nomcDe (sid) { // nomc d'une CV (membre ou contact)
-    return this.nomc[sid]
   }
 
   get setDesAvatars () {
@@ -564,14 +560,14 @@ schemas.forSchema({
 - `id` : id du compte.
 - `v` :
 - `dds` : date (jour) de dernière signature.
-- `dpbh` : hashBin (53 bits) du PBKFD2 du début de la phrase secrète (32 bytes). Pour la connexion, l'id du compte n'étant pas connu de l'utilisateur.
-- `pcbh` : hashBin (53 bits) du PBKFD2 de la phrase complète pour quasi-authentifier une connexion avant un éventuel échec de décryptage de `kx`.
+- `dpbh` : hashBin (53 bits) du PBKFD du début de la phrase secrète (32 bytes). Pour la connexion, l'id du compte n'étant pas connu de l'utilisateur.
+- `pcbh` : hashBin (53 bits) du PBKFD de la phrase complète pour quasi-authentifier une connexion avant un éventuel échec de décryptage de `kx`.
 - `kx` : clé K du compte, crypté par la X (phrase secrète courante).
 - `mmck` {} : cryptées par la clé K, map des mots clés déclarés par le compte.
   - *clé* : id du mot clé de 1 à 99.
   - *valeur* : libellé du mot clé.
-- `mack` {} : map des avatars du compte `[nom@rnd, cpriv]`, cryptée par la clé K
-  - `nomc` : `nom@rnd`, nom complet.
+- `mack` {} : map des avatars du compte cryptée par la clé K. Clé: id, valeur: `[nom, rnd, cpriv]`
+  - `nom rnd` : nom complet.
   - `cpriv` : clé privée asymétrique.
 - `memok` : texte court libre (crypté par la clé K) vu par le seul titulaire du compte. Le début de la première ligne s'affiche en haut de l'écran.
 - `vsh`
@@ -590,7 +586,7 @@ export class Compte {
 
   get titre () {
     if (!this.memo) return this.sid
-    const i = this.memo.indexOf('/n')
+    const i = this.memo.indexOf('\n')
     return i === -1 ? this.memo : this.memo.substring(0, i)
   }
 
@@ -605,7 +601,7 @@ export class Compte {
     this.mac = { }
     this.mac[nomAvatar.sid] = { na: nomAvatar, cpriv: cpriv }
     this.mmc = {}
-    this.memo = 'Mémo de ' + nomAvatar.nom
+    this.memo = 'Mémo de ' + nomAvatar.nom + '@' + nomAvatar.sfx
     this.vsh = 0
     return this
   }
@@ -626,55 +622,46 @@ export class Compte {
     this.k = await crypt.decrypter(data.ps.pcb, row.kx)
     this.pcbh = row.pcbh
     data.clek = this.k
-    this.mmc = deserial(await crypt.decrypter(this.k, row.mmck))
-    this.mac = deserial(await crypt.decrypter(this.k, row.mack))
-    for (const sid in this.mac) {
-      const x = this.mac[sid]
-      x.na = new NomAvatar(x.nomc)
-      delete x.nomc
+
+    this.mac = {}
+    const m = deserial(await crypt.decrypter(this.k, row.mack))
+    for (const sid in m) {
+      const [nom, rnd, cpriv] = m[sid]
+      this.mac[sid] = { na: new NomAvatar(nom, rnd), cpriv: cpriv }
     }
+
+    this.mmc = deserial(await crypt.decrypter(this.k, row.mmck))
+
     this.memo = await crypt.decrypterStr(this.k, row.memok)
+
     return this
   }
 
-  async toRow () { // après maj éventuelle de mac et / ou mmc
-    this.memok = await crypt.crypter(data.clek, this.memo)
-    this.mmck = await crypt.crypter(data.clek, serial(this.mmc))
+  async toRow () {
+    const r = { ...this }
+    r.memok = await crypt.crypter(data.clek, this.memo)
+
+    r.mmck = await crypt.crypter(data.clek, serial(this.mmc))
+
+    const m = {}
     for (const sid in this.mac) {
       const x = this.mac[sid]
-      x.nomc = x.na.nomc
+      m[sid] = [x.na.nom, x.na.rnd, x.cpriv]
     }
-    this.mack = await crypt.crypter(data.clek, serial(this.mac))
-    for (const sid in this.mac) {
-      const x = this.mac[sid]
-      delete x.nomc
-    }
-    this.kx = await crypt.crypter(data.ps.pcb, this.k)
-    const buf = schemas.serialize('rowcompte', this)
-    delete this.mack
-    delete this.mmck
-    delete this.kx
-    return buf
+    r.mack = await crypt.crypter(data.clek, serial(m))
+
+    r.kx = await crypt.crypter(data.ps.pcb, this.k)
+
+    return schemas.serialize('rowcompte', r)
   }
 
   get toIdb () {
-    for (const sid in this.mac) {
-      const x = this.mac[sid]
-      x.nomc = x.na.nomc
-    }
-    const idb = { id: 1, vs: 0, data: schemas.serialize('idbCompte', this) }
-    for (const sid in this.mac) delete this.mac[sid].nomc
-    return idb
+    return { id: 1, data: schemas.serialize('idbCompte', this) }
   }
 
   fromIdb (idb, vs) {
     schemas.deserialize('idbCompte', idb, this)
     data.clek = this.k
-    for (const sid in this.mac) {
-      const x = this.mac[sid]
-      x.na = new NomAvatar(x.nomc)
-      delete x.nomc
-    }
     return this
   }
 
@@ -682,7 +669,7 @@ export class Compte {
     return schemas.clone('idbCompte', this, new Compte())
   }
 
-  av (id) {
+  av (id) { // retourne { na: , cpriv: }
     return this.mac[crypt.idToSid(id)]
   }
 }
@@ -695,13 +682,17 @@ export class Compte {
 - `vcv` : version de la carte de visite (séquence 0).
 - `dds` :
 - `cva` : carte de visite de l'avatar cryptée par la clé de l'avatar `[photo, info]`.
-- `lctk` : liste, cryptée par la clé K du compte, des ids des contacts de l'avatar afin de garantir l'unicité de ceux-ci. L'indice d'un contact est celui dans cette liste + 1 (la valeur 0 est réservée).
+- `lctk` : liste, cryptée par la clé K du compte, des couples `[id, ic]` des contacts de l'avatar afin de garantir l'unicité de ceux-ci.
+- `lgrk` : map :
+  - _clé_ : ni, numéro d'invitation (aléatoire 4 bytes) obtenue sur invitgr.
+  - _valeur_ : cryptée par la clé K du compte du triplet `[nom, rnd, im]` reçu sur invitgr et inscrit à l'acceptation de l'invitation.
+  - une entrée est effacée par la résiliation du membre au groupe (ce qui lui empêche de continuer à utiliser la clé du groupe).
 - `vsh`
 */
 
 schemas.forSchema({
   name: 'idbAvatar',
-  cols: ['id', 'v', 'st', 'vcv', 'dds', 'photo', 'info', 'lct', 'vsh']
+  cols: ['id', 'v', 'st', 'vcv', 'dds', 'photo', 'info', 'lct', 'lmg', 'vsh']
 })
 
 export class Avatar {
@@ -723,6 +714,12 @@ export class Avatar {
 
   get nomc () { return this.na.nomc }
 
+  constructor () {
+    this.m1ct = new Map() // clé:idc val:ic
+    this.m2ct = new Map() // clé:ic val:idc
+    this.m1gr = new Map() // clé:idg val: na, im
+  }
+
   nouveau (nomAvatar) {
     this.na = nomAvatar
     this.id = this.na.id
@@ -733,8 +730,35 @@ export class Avatar {
     this.photo = ''
     this.info = this.na.nomc
     this.lct = []
+    this.lgr = []
     this.vsh = 0
     return this
+  }
+
+  async compileLists (lct, lgr, brut) { // lct: [[id, ic] ...]  lgr: [[id, im] ...]
+    this.m1ct.clear()
+    this.m2ct.clear()
+    this.m1gr.clear()
+    lct.forEach(x => { this.m1ct.set(x[0], x[1]); this.m2ct.set(x[1], x[0]) })
+    for (const ni in lgr) {
+      const y = lgr[ni]
+      const x = deserial(brut ? y : await crypt.decrypter(data.clek, y))
+      const na = new NomAvatar(x[0], x[1])
+      data.cleg[na.sid] = na.cle
+      this.m1gr.set(ni, { na: na, im: x[2] })
+    }
+  }
+
+  async decompileLists (brut) {
+    const lct = []
+    const lgr = []
+    this.m1ct.forEach((v, k) => { lct.push([k, v]) })
+    for (const ni in lgr) {
+      const x = this.m1gr.get(ni)
+      const y = serial([x.na.nom, x.na.rnd, x.im])
+      lgr[ni] = brut ? y : await crypt.crypter(data.clek, y)
+    }
+    return [lct, lgr]
   }
 
   async fromRow (row) {
@@ -748,7 +772,8 @@ export class Avatar {
     const x = deserial(await crypt.decrypter(this.na.cle, row.cva))
     this.photo = x[0]
     this.info = x[1]
-    this.lct = deserial(await crypt.decrypter(data.clek, row.lctk))
+    const lct = deserial(await crypt.decrypter(data.clek, row.lctk))
+    await this.compileLists(lct, deserial(row.lgrk))
     return this
   }
 
@@ -756,22 +781,29 @@ export class Avatar {
     return await crypt.crypter(this.na.cle, serial([ph, info]))
   }
 
-  async toRow () { // après maj éventuelle de cv et / ou lct
-    this.cva = await this.cvToRow(this.photo, this.info)
-    this.lctk = await crypt.crypter(data.clek, serial(this.lct))
-    const buf = schemas.serialize('rowavatar', this)
-    delete this.cva
-    delete this.lctk
-    return buf
+  async toRow () {
+    const r = { ...this }
+    const [lct, lgrk] = await this.decompileLists()
+    r.cva = await this.cvToRow(this.photo, this.info)
+    r.lctk = await crypt.crypter(data.clek, serial(lct))
+    r.lgrk = serial(lgrk)
+    return schemas.serialize('rowavatar', r)
   }
 
   get toIdb () {
-    return { id: this.id, data: schemas.serialize('idbAvatar', this) }
+    const r = { ...this }
+    const [lct, lgr] = this.decompileLists(true)
+    r.lct = lct
+    r.lgr = lgr
+    return { id: this.id, data: schemas.serialize('idbAvatar', r) }
   }
 
   fromIdb (idb) {
     schemas.deserialize('idbAvatar', idb, this)
+    this.compileLists(this.lct, this.lgr, true)
     this.na = data.avc(this.id).na
+    delete this.lct
+    delete this.lgr
     return this
   }
 
@@ -780,10 +812,10 @@ export class Avatar {
   }
 }
 
-/** cvIdb ************************************/
+/** Cv ************************************/
 schemas.forSchema({
-  name: 'cvIdb',
-  cols: ['id', 'vcv', 'st', 'nomc', 'photo', 'info']
+  name: 'idbCv',
+  cols: ['id', 'vcv', 'st', 'nom', 'rnd', 'photo', 'info']
 })
 /*
   name: 'rowcv',
@@ -834,11 +866,11 @@ export class Cv {
     return cl
   }
 
-  nouveau (id, vcv, st, nomc, photo, info) {
+  nouveau (id, vcv, st, nom, rnd, photo, info) {
     this.id = id
     this.vcv = vcv
     this.st = st
-    this.na = new NomAvatar(nomc)
+    this.na = new NomAvatar(nom, rnd)
     this.photo = photo
     this.info = info
     return this
@@ -868,23 +900,22 @@ export class Cv {
     this.vcv = row.vcv
     this.st = row.cv
     if (!this.suppr) {
-      this.nomc = data.nomcDe(crypt.idToSid(this.id))
-      this.na = new NomAvatar(this.nomc)
+      const [nom, rnd] = data.nomRnd[this.sid]
+      this.na = new NomAvatar(nom, rnd)
       const x = row.phinf ? deserial(await crypt.decrypter(this.na.cle, row.phinf)) : null
-      this.photo = x ? x[0] : null
-      this.info = x ? x[1] : null
+      this.photo = x ? x[0] : ''
+      this.info = x ? x[1] : this.na.nomc
     }
     return this
   }
 
   get toIdb () {
-    const idb = { id: this.id, data: schemas.serialize('cvIdb', this) }
-    return idb
+    return { id: this.id, data: schemas.serialize('idbCv', this) }
   }
 
   fromIdb (idb) {
-    schemas.deserialize('cvIdb', idb, this)
-    this.na = new NomAvatar(this.nomc)
+    schemas.deserialize('idbCv', idb, this)
+    this.na = new NomAvatar(this.nom, this.rnd)
     return this
   }
 
@@ -937,17 +968,17 @@ schemas.forSchema({
 - `ic` : indice de contact de B pour A.
 - `v` :
 - `st` : statut entier de 3 chiffres, `x y z` : **les valeurs < 0 indiquent un row supprimé (les champs après sont null)**.
-  - `x` : 0: contact présumé actif, 1:disparu
+  - `x` : 0: contact présumé actif, 2:disparu
   - `y` : A accepte 1 (ou non 0) les partages de B.
   - `z` : B accepte 1 (ou non 0) les partages de A.
 - `q1 q2 qm1 qm2` : balance des quotas donnés / reçus par l'avatar A à l'avatar B (contact _fort_).
 - `ardc` : **ardoise** partagée entre A et B cryptée par la clé `cc` associée au contact _fort_ avec un avatar B.
 - `icbc` : pour un contact fort _accepté_, indice de A chez B (communiqué lors de l'acceptation par B) pour mise à jour dédoublée de l'ardoise et du statut, crypté par la clé `cc`.
 - `datak` : information cryptée par la clé K de A.
-  - `nomc` : nom complet de l'avatar `nom@rnd`.
-  - `cc` : 32 bytes aléatoires donnant la clé `cc` d'un contact _fort_ avec B (en attente ou accepté).
+  - `nom rnd` : nom complet de l'avatar.
+  - `cc` : 32 bytes aléatoires donnant la clé `cc` d'un contact _fort_ avec B (en attente ou accepté). Le hash de `cc` est **le numéro d'invitation** `ni` retrouvé en clé de invitct correspondant.
   - `dlv` : date limite de validité de l'invitation à être contact _fort_ ou du parrainage.
-  - `pph` : hash du PBKFD2 de la phrase de parrainage.
+  - `pph` : hash du PBKFD de la phrase de parrainage.
 - `ank` : annotation cryptée par la clé K du membre
   - `mc` : mots clés
   - `txt` : commentaires (personnel) de A sur B
@@ -959,7 +990,9 @@ export class Contact {
 
   get sid () { return crypt.idToSid(this.id) }
 
-  get sid2 () { return '' + this.id }
+  get sid2 () { return '' + this.ic }
+
+  get sidCtc () { return this.sid + '/' + this.sid2 }
 
   get pk () { return [this.id, this.ic] }
 
@@ -970,12 +1003,11 @@ export class Contact {
   get sidav () { return this.sid }
 
   /* NomAvatar de l'avatar contact de l'avatar du compte id */
-  get nactc () { return !this.suppr ? new NomAvatar(this.data.nomc) : null }
+  get nactc () { return !this.suppr ? new NomAvatar(this.data.nom, this.data.rnd) : null }
 
   majCc () {
-    data.clec[this.sid] = this.data.cc
-    const na = new NomAvatar(this.data.nomc)
-    data.nomc[na.sid] = this.data.nomc
+    data.clec[this.sidCtc] = this.data.cc
+    data.nomRnd[this.sidCtc] = [this.data.nom, this.data.rnd]
   }
 
   async fromRow (row) {
@@ -991,24 +1023,20 @@ export class Contact {
       this.qm2 = row.qm2
       this.data = deserial(await crypt.decrypter(data.clek, row.datak))
       this.majCc()
-      this.ard = await crypt.decrypterStr(this.data.cc, row.ardc)
-      this.icb = crypt.u8ToInt(await crypt.decrypter(this.data.cc, row.icbc))
+      this.ard = row.ardc ? await crypt.decrypterStr(this.data.cc, row.ardc) : ''
+      this.icb = row.icbc ? crypt.u8ToInt(await crypt.decrypter(this.data.cc, row.icbc)) : 0
       this.an = row.ank ? deserial(await crypt.decrypter(data.clek, row.ank)) : null
     }
     return this
   }
 
   async toRow () { // pas de toRow pour un supprimé
-    this.datak = await crypt.crypter(data.clek, serial(this.data))
-    this.ank = this.an ? await crypt.crypter(data.clek, serial(this.an)) : null
-    this.ardc = await crypt.crypter(this.data.cc, this.ard)
-    this.icbc = await crypt.crypter(this.data.cc, crypt.intTou8(this.icb))
-    const buf = schemas.serialize('rowcontact', this)
-    delete this.datak
-    delete this.icbc
-    delete this.ardc
-    delete this.ank
-    return buf
+    const r = { ...this }
+    this.datak = await crypt.crypter(data.clek, serial(r.data))
+    this.ank = r.an ? await crypt.crypter(data.clek, serial(r.an)) : null
+    this.ardc = r.ard ? await crypt.crypter(this.data.cc, r.ard) : null
+    this.icbc = r.icb ? await crypt.crypter(this.data.cc, crypt.intTou8(r.icb)) : 0
+    return schemas.serialize('rowcontact', this)
   }
 
   get toIdb () { // Un supprimé n'est pas écrit en IDB
@@ -1016,11 +1044,12 @@ export class Contact {
   }
 
   fromIdb (idb) { // Jamais de supprimé en IDB
-    schemas.desrialise('idbContact', idb, this)
+    schemas.deserialize('idbContact', idb, this)
     this.majCc()
     return this
   }
 }
+
 /** Groupe ***********************************/
 /*
 - `id` : id du groupe.
@@ -1031,13 +1060,13 @@ export class Contact {
   - `y` : 0-en écriture, 1-archivé
 - `cvg` : carte de visite du groupe `[photo, info]` cryptée par la clé G du groupe.
 - `mcg` : liste des mots clés définis pour le groupe cryptée par la clé du groupe cryptée par la clé G du groupe.
-- `lstmg` : liste des ids des membres du groupe.
+- `lmbg` : liste des couples `[idm, im]` des membres (possiblement seulement pressentis / invités) du groupe.
 - `vsh`
 */
 
 schemas.forSchema({
   name: 'idbGroupe',
-  cols: ['id', 'v', 'dds', 'st', 'cv', 'mc', 'lstm', 'vsh']
+  cols: ['id', 'v', 'dds', 'st', 'cv', 'mc', 'lmb', 'vsh']
 })
 
 export class Groupe {
@@ -1056,6 +1085,23 @@ export class Groupe {
   get label () { return this.info ? this.info : this.sid }
 
   get icone () { return this.photo || '' }
+
+  constructor () {
+    this.m1mb = new Map()
+    this.m2mb = new Map()
+  }
+
+  compileLists (lmb) { // lmb: [[ida, im] ...]
+    this.m1mb.clear()
+    this.m2mb.clear()
+    lmb.forEach(x => { this.m1mb.set(x[0], x[1]); this.m2mb.set(x[1], x[0]) })
+  }
+
+  decompileLists () {
+    const lmb = []
+    this.m1mb.forEach((v, k) => { lmb.push([k, v]) })
+    return lmb
+  }
 
   /*
   Map ayant pour clé les sid des avatars du compte
@@ -1104,52 +1150,54 @@ export class Groupe {
       this.photo = cv[0]
       this.info = cv[1]
       this.mc = row.mcg ? deserial(await crypt.decrypter(cleg, row.mcg)) : []
-      this.lstm = row.lstmg ? deserial(await crypt.decrypter(cleg, row.lstmg)) : []
+      const lmb = deserial(await crypt.decrypter(cleg, row.lmbg))
+      this.compileLists(lmb)
     }
     return this
   }
 
   async toRow () {
+    const r = { ...this }
     const cleg = data.clegDe(this.sid)
-    this.cvg = await crypt.crypter(cleg, serial([this.photo, this.info]))
-    this.mcg = await crypt.crypter(cleg, serial(this.mc))
-    this.lstmg = await crypt.crypter(cleg, serial(this.lstm))
-    const buf = schemas.serialize('rowgroupe', this)
-    delete this.cvg
-    delete this.mcg
-    delete this.lstmg
-    return buf
+    r.cvg = await crypt.crypter(cleg, serial([this.photo, this.info]))
+    r.mcg = r.mc.length ? await crypt.crypter(cleg, serial(this.mc)) : null
+    const lmb = this.decompileLists()
+    r.lmbg = await crypt.crypter(cleg, serial(lmb))
+    return schemas.serialize('rowgroupe', r)
   }
 
   get toIdb () {
-    return { id: this.id, data: schemas.serialize('idbGroupe', this) }
+    this.lmb = this.decompileLists()
+    const idb = { id: this.id, data: schemas.serialize('idbGroupe', this) }
+    delete this.lmb
+    return idb
   }
 
   fromIdb (idb) {
     schemas.deserialize('idbGroupe', idb, this)
+    this.compileLists(this.lmb)
+    delete this.lmb
     return this
   }
 }
 
-/** Invitct **********************************/
+/** Invitct reçue par A de B **********************************/
 /*
-- `id` : id de B.
-- `ni` : numéro aléatoire d'invitation en complément de `id`.
-- `v`
+- `id` : id de A.
+- `ni` : numéro aléatoire d'invitation en complément de `id` (généré par B).
+- `v` :
 - `dlv` : la date limite de validité permettant de purger les rencontres (quels qu'en soient les statuts).
-- `st` : <= 0: annulée, 0: en attente, 1: acceptée, 2: refusée
+- `st` : <= 0: annulée, 0: en attente
 - `datap` : données cryptées par la clé publique de B.
-  - `nom@rnd` : nom complet de A.
-  - `ic` : numéro du contact de A pour B (pour que B puisse écrire le statut et l'ardoise dans `contact` de A).
-  - `cc` : clé `cc` du contact *fort* A / B, définie par A.
-- `datak` : même données que `datap` mais cryptées par la clé K de B après acceptation ou refus.
-- `ardc` : texte de sollicitation écrit par A pour B et/ou réponse de B (après acceptation ou refus).
+  - `nom rnd` : nom complet de B.
+  - `ic` : index de A dans la liste des contacts de B (pour que A puisse écrire le statut et l'ardoise dans `contact` de B).
+  - `cc` : clé `cc` du contact *fort* A / B, définie par B.
 - `vsh`
 */
 
 schemas.forSchema({
   name: 'idbInvitct',
-  cols: ['id', 'ni', 'v', 'dlv', 'st', 'data', 'ard', 'vsh']
+  cols: ['id', 'ni', 'v', 'dlv', 'st', 'data', 'vsh']
 })
 
 export class Invitct {
@@ -1159,6 +1207,8 @@ export class Invitct {
 
   get sid2 () { return crypt.idToSid(this.ni) }
 
+  get sidCtc () { return this.nact.sid + '/' + this.data.ic }
+
   get pk () { return [this.id, this.ni] }
 
   get suppr () { return this.st < 0 }
@@ -1167,10 +1217,8 @@ export class Invitct {
 
   get sidav () { return this.sid }
 
-  get nact () { return new NomAvatar(this.data.nomc) }
-
   majCc () {
-    if (this.data) data.clec[this.sid] = this.data.cc
+    data.clec[this.sidCtc] = this.data.cc
   }
 
   async fromRow (row) {
@@ -1181,27 +1229,20 @@ export class Invitct {
     this.dlv = row.dlv
     this.st = row.st
     if (!this.suppr) {
-      let rowData = null
-      if (row.datak) {
-        rowData = await crypt.decrypter(data.clek, row.datak)
-      } else {
-        const cpriv = data.avc(this.id).cpriv
-        rowData = await crypt.decrypterRSA(cpriv, row.datap)
-      }
+      const cpriv = data.avc(this.id).cpriv
+      const rowData = await crypt.decrypterRSA(cpriv, row.datap)
       this.data = deserial(rowData)
+      this.nact = new NomAvatar(this.data.nom, this.data.rnd)
       this.majCc()
       this.ard = row.ardc ? await crypt.decrypter(this.data.cc, row.ardc) : ''
     }
     return this
   }
 
-  async toRow () {
-    this.datak = await crypt.crypter(data.clek, serial(this.data))
-    this.ardc = await crypt.crypter(this.data.cc, this.ard)
-    const buf = schemas.serialize('rowinvitct', this)
-    delete this.datak
-    delete this.ardc
-    return buf
+  async toRow (clepub) {
+    const r = { ...this }
+    r.datap = await crypt.crypterRSA(clepub, serial(this.data))
+    return schemas.serialize('rowinvitct', this)
   }
 
   get toIdb () {
@@ -1209,7 +1250,9 @@ export class Invitct {
   }
 
   fromIdb (idb) {
-    schemas.desrialise('idbInvitct', idb, this)
+    schemas.deserialize('idbInvitct', idb, this)
+    this.nact = new NomAvatar(this.data.nom, this.data.rnd)
+    this.majCc()
     return this
   }
 }
@@ -1220,22 +1263,17 @@ export class Invitct {
 - `ni` : numéro d'invitation.
 - `v` :
 - `dlv` :
-- `st` : statut. `xy` : < 0 signifie supprimé (redondance de `st` de `membre`)
-  - `x` : 2:invité, 3:actif.
-  - `y` : 0:lecteur, 1:auteur, 2:administrateur.
-- `datap` : pour une invitation _en cours_, crypté par la clé publique du membre invité, référence dans la liste des membres du groupe `[idg, cleg, im]`.
-  - `nomc` : nom complet du groupe.
+- `st` : statut.  < 0 signifie supprimé. 0: invité.
+- `datap` : crypté par la clé publique du membre invité.
+  - `nom rnd` : nom complet du groupe (donne sa clé).
   - `im` : indice de membre de l'invité dans le groupe.
-- `datak` : même données que `datap` mais cryptées par la clé K du compte de l'invité, après son acceptation.
-- `ank` : annotation cryptée par la clé K de l'invité
-  - `mc` : mots clés
-  - `txt` : commentaire personnel de l'invité
+  - `p` : 0:lecteur, 1:auteur, 2:administrateur.
 - `vsh`
 */
 
 schemas.forSchema({
   name: 'idbInvitgr',
-  cols: ['id', 'ni', 'v', 'dlv', 'st', 'data', 'an', 'vsh']
+  cols: ['id', 'ni', 'v', 'dlv', 'st', 'data', 'vsh']
 })
 
 export class Invitgr {
@@ -1255,10 +1293,6 @@ export class Invitgr {
 
   get idg () { return this.data ? this.ng.id : null }
 
-  get ng () { return this.data ? new NomAvatar(data.nomc) : null }
-
-  get cleg () { return this.data ? this.ng.cle : null }
-
   get sidg () { return this.data ? crypt.idToSid(this.idg) : null }
 
   get stx () { return this.st < 0 ? -1 : Math.floor(this.st / 10) }
@@ -1266,7 +1300,7 @@ export class Invitgr {
   get sty () { return this.st < 0 ? -1 : this.st % 10 }
 
   majCg () {
-    if (this.data) data.cleg[crypt.idToSid(this.id)] = this.data.cleg
+    if (this.data) data.cleg[this.sidg] = this.ng
   }
 
   // retourne le membre correspondant si cet invitgr est invité ou actif sinon null, et le groupe
@@ -1286,31 +1320,19 @@ export class Invitgr {
     this.dlv = row.dlv
     this.st = row.st
     if (!this.suppr) {
-      let rowData = null
-      if (row.datak) {
-        rowData = await crypt.decrypter(data.clek, row.datak)
-      } else {
-        const cpriv = data.avc(this.id).cpriv
-        rowData = await crypt.decrypterRSA(cpriv, row.datap)
-      }
-      this.data = deserial(rowData)
+      const cpriv = data.avc(this.id).cpriv
+      this.data = deserial(await crypt.decrypterRSA(cpriv, row.datap))
+      this.ng = new NomAvatar(this.data.nom, this.data.rnd)
       this.an = null
-      if (this.stx === 2 || this.stx === 3) {
-        const x = row.ank ? await crypt.decrypter(data.clek, row.ank) : null
-        this.an = x ? deserial(x) : ['', '']
-      }
       this.majCg()
     }
     return this
   }
 
-  async toRow () {
-    this.datak = await crypt.crypter(data.clek, serial(this.data))
-    this.ank = this.stx === 2 || this.stx === 3 ? await crypt.crypter(data.clek, serial(this.an)) : null
-    const buf = schemas.serialize('rowinvitgr', this)
-    delete this.datak
-    delete this.ank
-    return buf
+  async toRow (clepub) {
+    const r = { ...this }
+    r.datap = await crypt.crypter(clepub, serial(this.data))
+    return schemas.serialize('rowinvitgr', r)
   }
 
   get toIdb () {
@@ -1329,15 +1351,18 @@ export class Invitgr {
 - `id` : id du groupe.
 - `im` : numéro du membre dans le groupe.
 - `v` :
-- `st` : statut. `xy` : < 0 signifie supprimé.
-  - `x` : 1:pressenti, 2:invité, 3:ayant refusé, 3:actif, 8: résilié.
-  - `y` : 0:lecteur, 1:auteur, 2:administrateur.
+- `st` : statut. `xp` : < 0 signifie supprimé.
+  - `x` : 1:pressenti, 2:invité, 3:ayant refusé, 3:actif (invitation acceptée), 8: résilié.
+  - `p` : 0:lecteur, 1:auteur, 2:administrateur.
 - `vote` : vote de réouverture.
-- `dlv` : date limite de validité de l'invitation. N'est significative qu'en statut _invité_.
 - `q1 q2` : balance des quotas donnés / reçus par le membre au groupe.
+- `datak` : données cryptées par la clé K du membre.
+  - `info` : commentaire du membre à propos du groupe.
+  - `mc` : mots clés du membre à propos du groupe.
 - `datag` : données cryptées par la clé du groupe.
-  - `nomc` : nom complet de l'avatar `nom@rnd` (donne la clé d'accès à sa carte de visite)
-  - `ni` : numéro d'invitation du membre dans `invitgr` relativement à son `id` (issu de `nomc`). Permet de supprimer son accès au groupe (`st < 0, datap / datak null` dans `invitgr`) quand il est résilié / disparu.
+  - `nom, rnd` : nom complet de l'avatar.
+  - `ni` : numéro d'invitation du membre dans `invitgr`. Permet de supprimer supprimer l'invitation et d'effacer le groupe dans son avatar (`lmbk`).
+  - `dlv` : date limite de validité de l'invitation. N'est significative qu'en statut _invité_.
   - `idi` : id du premier membre qui l'a pressenti / invité.
 - `ardg` : ardoise du membre vis à vis du groupe. Contient le texte d'invitation puis la réponse de l'invité cryptée par la clé du groupe. Ensuite l'ardoise peut être écrite par le membre (actif) et les animateurs.
 - `vsh`
@@ -1345,7 +1370,7 @@ export class Invitgr {
 
 schemas.forSchema({
   name: 'idbMembre',
-  cols: ['id', 'im', 'v', 'st', 'vote', 'dlv', 'q1', 'q2', 'data', 'ard', 'vsh']
+  cols: ['id', 'im', 'v', 'st', 'vote', 'dlv', 'q1', 'q2', 'info', 'mc', 'data', 'ard', 'vsh']
 })
 
 export class Membre {
@@ -1362,9 +1387,6 @@ export class Membre {
   get horsLimite () { return !this.suppr ? (this.stx === 2 && dlvDepassee(this.dlv)) : false }
 
   get sidgr () { return this.sid }
-
-  /* na du membre */
-  get namb () { return this.data ? new NomAvatar(this.data.nomc) : null }
 
   get stx () { return this.st < 0 ? -1 : Math.floor(this.st / 10) }
 
@@ -1383,10 +1405,7 @@ export class Membre {
   }
 
   majCc () {
-    if (this.data) {
-      const na = new NomAvatar(this.data.nomc)
-      data.nomc[na.sid] = this.data.nomc
-    }
+    data.nomRnd[this.namb.sid] = [this.namb.nom, this.namb.rnd]
   }
 
   async fromRow (row) {
@@ -1398,22 +1417,24 @@ export class Membre {
     if (!this.suppr) {
       this.dlv = row.dlv
       const cg = data.cleg(this.id)
-      const rowData = await crypt.decrypter(cg, row.datag)
-      this.data = deserial(rowData)
+      this.data = deserial(await crypt.decrypter(cg, row.datag))
+      this.namb = new NomAvatar(this.data.nom, this.data.rnd)
       this.majCc()
       this.ard = row.ardg ? await crypt.decrypterStr(cg, row.ardg) : ''
+      const dk = row.datak ? deserial(await crypt.decrypter(data.clek, row.datak)) : null
+      this.info = dk ? dk[0] : ''
+      this.mc = dk ? dk[1] : null
     }
     return this
   }
 
   async toRow () {
+    const r = { ...this }
     const cg = data.clegDe(this.sid)
-    this.datag = await crypt.crypter(cg, serial(this.data))
-    this.ardg = await crypt.crypter(cg, this.ard)
-    const buf = schemas.serialize('rowmembre', this)
-    delete this.datag
-    delete this.ardg
-    return buf
+    r.datag = await crypt.crypter(cg, serial(this.data))
+    r.ardg = await crypt.crypter(cg, this.ard)
+    r.datak = await crypt.crypter(data.clek, [this.info, this.mc])
+    return schemas.serialize('rowmembre', r)
   }
 
   get toIdb () {
@@ -1422,6 +1443,7 @@ export class Membre {
 
   fromIdb (idb, vs) {
     schemas.deserialize('idbMembre', idb, this)
+    this.namb = new NomAvatar(this.data.nom, this.data.rnd)
     this.majCc()
     return this
   }

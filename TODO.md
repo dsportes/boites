@@ -1,3 +1,6 @@
+classe Avatar
+- suppression non gérée
+
 Avatar.vue :
 - création de secret rattaché
 - création de secret de couple

@@ -61,17 +61,18 @@ _**Tables aussi persistantes sur le client (IDB)**_
 
 schemas.forSchema({
   name: 'rowavatar',
-  cols: ['id', 'v', 'st', 'vcv', 'dds', 'cva', 'lctk', 'vsh']
+  cols: ['id', 'v', 'st', 'vcv', 'dds', 'cva', 'lctk', 'lgrk', 'vsh']
 })
 /*
-    "id"   INTEGER,
-    "v"   INTEGER,
-    "st"  INTEGER,
-    "vcv" INTEGER,
-    "dds" INTEGER,
-    "cva" BLOB,
-    "lctk" BLOB,
-    "vsh" INTEGER,
+  "id"  INTEGER,
+  "v"  INTEGER,
+  "st" INTEGER,
+  "vcv" INTEGER,
+  "dds" INTEGER,
+  "cva" BLOB,
+  "lctk" BLOB,
+  "lgrk" BLOB,
+  "vsh" INTEGER,
 */
 
 schemas.forSchema({
@@ -140,7 +141,7 @@ schemas.forSchema({
 
 schemas.forSchema({
   name: 'rowgroupe',
-  cols: ['id', 'v', 'dds', 'st', 'cvg', 'mcg', 'lstmg', 'vsh']
+  cols: ['id', 'v', 'dds', 'st', 'cvg', 'mcg', 'lmbg', 'vsh']
 })
 /*
     "id"  INTEGER,
@@ -149,13 +150,13 @@ schemas.forSchema({
     "st"  INTEGER,
     "cvg"  BLOB,
     "mcg"   BLOB,
-    "lstmg" BLOB,
+    "lmbg" BLOB,
     "vsh" INTEGER,
 */
 
 schemas.forSchema({
   name: 'rowinvitct',
-  cols: ['id', 'ni', 'v', 'dlv', 'st', 'datap', 'datak', 'ardc', 'vsh']
+  cols: ['id', 'ni', 'v', 'dlv', 'st', 'datap', 'vsh']
 })
 /*
     "id"  INTEGER,
@@ -164,14 +165,12 @@ schemas.forSchema({
     "dlv" INTEGER,
     "st"  INTEGER,
     "datap" BLOB,
-    "datak"  BLOB,
-    "ardc"  BLOB)
     "vsh" INTEGER,
 */
 
 schemas.forSchema({
   name: 'rowinvitgr',
-  cols: ['id', 'ni', 'v', 'dlv', 'st', 'datap', 'datak', 'ank', 'vsh']
+  cols: ['id', 'ni', 'v', 'dlv', 'st', 'datap', 'vsh']
 })
 /*
     "id"  INTEGER,
@@ -180,14 +179,12 @@ schemas.forSchema({
     "dlv" INTEGER,
     "st"  INTEGER,
     "datap" BLOB,
-    "datak" BLOB,
-    "ank" BLOB,
     "vsh" INTEGER,
 */
 
 schemas.forSchema({
   name: 'rowmembre',
-  cols: ['id', 'im', 'v', 'st', 'vote', 'dlv', 'q1', 'q2', 'datag', 'ardg', 'vsh']
+  cols: ['id', 'im', 'v', 'st', 'vote', 'dlv', 'q1', 'q2', 'datak', 'datag', 'ardg', 'vsh']
 })
 /*
     "id"  INTEGER,
@@ -198,6 +195,7 @@ schemas.forSchema({
     "dlv"   INTEGER,
     "q1"   INTEGER,
     "q2"   INTEGER,
+    "datak" BLOB,
     "datag" BLOB,
     "ardg"  BLOB,
     "vsh"   INTEGER,
@@ -205,13 +203,12 @@ schemas.forSchema({
 
 schemas.forSchema({
   name: 'rowparrain',
-  cols: ['pph', 'id', 'v', 'nc', 'dlv', 'st', 'q1', 'q2', 'qm1', 'qm2', 'datak', 'datax', 'ardc', 'vsh']
+  cols: ['pph', 'id', 'v', 'dlv', 'st', 'q1', 'q2', 'qm1', 'qm2', 'datak', 'datax', 'vsh']
 })
 /*
-   "pph"  INTEGER,
+    "pph"  INTEGER,
     "id" INTEGER,
     "v"   INTEGER,
-    "nc" INTEGER,
     "dlv"  INTEGER,
     "st"  INTEGER,
     "q1" INTEGER,
@@ -220,7 +217,6 @@ schemas.forSchema({
     "qm2" INTEGER,
     "datak"  BLOB,
     "datax"  BLOB,
-    "ardc"  BLOB,
     "vsh" INTEGER,
 */
 
@@ -241,22 +237,22 @@ schemas.forSchema({
 
 schemas.forSchema({
   name: 'rowsecret',
-  cols: ['id', 'ns', 'ic', 'v', 'st', 'ora', 'v1', 'v2', 'txts', 'mcs', 'mpjs', 'dups', 'refs', 'vsh']
+  cols: ['id', 'ns', 'ic', 'v', 'st', 'ora', 'v1', 'v2', 'mcs', 'txts', 'mpjs', 'dups', 'refs', 'vsh']
 })
 /*
     "id"  INTEGER,
     "ns"  INTEGER,
-    "nr"  INTEGER,
     "ic"  INTEGER,
-    "v"   INTEGER,
-    "st   INTEGER,
+    "v" INTEGER,
+    "st"  INTEGER,
     "ora" INTEGER,
-    "v1   INTEGER,
-    "v2   INTEGER,
-    "txts"  BLOB,
+    "v1"  INTEGER,
+    "v2"  INTEGER,
     "mcs"   BLOB,
+    "txts"  BLOB,
     "mpjs"  BLOB,
     "dups"  BLOB,
+    "refs"  BLOB,
     "vsh" INTEGER,
 */
 
