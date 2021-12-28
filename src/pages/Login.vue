@@ -8,9 +8,9 @@
       </q-card-section>
     <q-card-section>
         <div class="q-gutter-sm">
-          <q-radio dark dense v-model="mode" :val="1" label="Synchronisé" />
-          <q-radio dark dense v-model="mode" :val="2" label="Incognito" />
-          <q-radio dark dense v-model="mode" :val="3" label="Avion" />
+          <q-radio dense v-model="mode" :val="1" label="Synchronisé" />
+          <q-radio dense v-model="mode" :val="2" label="Incognito" />
+          <q-radio dense v-model="mode" :val="3" label="Avion" />
         </div>
     </q-card-section>
     </q-card>

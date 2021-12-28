@@ -119,20 +119,45 @@ export async function getCompte () {
   }
 }
 
-export async function getAvatars () {
+export async function getAvatars (avu) { // avu : set des ids des avatars utiles
   go()
   try {
     let vol = 0
+    const inutiles = new Set()
     const r = []
     await data.db.avatar.each(async (idb) => {
-      vol += idb.data.length
-      const y = await crypt.decrypter(data.clek, idb.data)
-      const x = new Avatar().fromIdb(y, idb.vs)
-      r.push(x)
-      data.setVerAv(x.sidav, INDEXT.AVATAR, x.v)
-      data.refsAv.add(x.id)
+      if (avu.has(idb.id)) {
+        vol += idb.data.length
+        const x = new Avatar().fromIdb(await crypt.decrypter(data.clek, idb.data))
+        r.push(x)
+        data.setVerAv(x.sid, INDEXT.AVATAR, x.v)
+      } else {
+        inutiles.add(idb.id)
+      }
     })
-    return { objs: r, vol: vol }
+    return { objs: r, vol: vol, inutiles }
+  } catch (e) {
+    throw data.setErDB(EX2(e))
+  }
+}
+
+export async function getGroupes (gru) { // gru : set des Ids des groupes utiles
+  go()
+  try {
+    let vol = 0
+    const inutiles = new Set()
+    const r = []
+    await data.db.groupe.each(async (idb) => {
+      if (gru.has(idb.id)) {
+        vol += idb.data.length
+        const x = new Groupe().fromIdb(await crypt.decrypter(data.clek, idb.data))
+        data.setVerGr(x.sid, INDEXT.GROUPE, x.v)
+        r.push(x)
+      } else {
+        inutiles.add(idb.id)
+      }
+    })
+    return { objs: r, vol: vol, inutiles: inutiles }
   } catch (e) {
     throw data.setErDB(EX2(e))
   }
@@ -149,8 +174,6 @@ export async function getInvitgrs () {
       const x = new Invitgr().fromIdb(y, idb.vs)
       r.push(x)
       data.setVerAv(x.sidav, INDEXT.INVITGR, x.v)
-      data.refsAv.add(x.id)
-      if (x.idg) data.refsGr.add(x.idg)
     })
     return { objs: r, vol: vol }
   } catch (e) {
@@ -168,7 +191,6 @@ export async function getInvitcts () {
       const x = new Invitct().fromIdb(await crypt.decrypter(data.clek, idb.data), idb.vs)
       r.push(x)
       data.setVerAv(x.sidav, INDEXT.INVITCT, x.v)
-      data.refsAv.add(x.id)
     })
     return { objs: r, vol: vol }
   } catch (e) {
@@ -186,7 +208,6 @@ export async function getContacts () {
       const x = new Contact().fromIdb(await crypt.decrypter(data.clek, idb.data), idb.vs)
       r.push(x)
       data.setVerAv(x.sidav, INDEXT.CONTACT, x.v)
-      data.refsAv.add(x.id)
     })
     return { objs: r, vol: vol }
   } catch (e) {
@@ -204,7 +225,6 @@ export async function getParrains () {
       const x = new Parrain().fromIdb(await crypt.decrypter(data.clek, idb.data), idb.vs)
       r.push(x)
       data.setVerAv(x.sidav, INDEXT.PARRAIN, x.v)
-      data.refsAv.add(x.id)
     })
     return { objs: r, vol: vol }
   } catch (e) {
@@ -219,28 +239,9 @@ export async function getRencontres () {
     const r = []
     await data.db.rencontre.each(async (idb) => {
       vol += idb.data.length
-      const x = new Rencontre().fromIdb(await crypt.decrypter(data.clek, idb.data), idb.vs)
+      const x = new Rencontre().fromIdb(await crypt.decrypter(data.clek, idb.data))
       r.push(x)
       data.setVerAv(x.sidav, INDEXT.RENCONTRE, x.v)
-      data.refsAv.add(x.id)
-    })
-    return { objs: r, vol: vol }
-  } catch (e) {
-    throw data.setErDB(EX2(e))
-  }
-}
-
-export async function getGroupes () {
-  go()
-  try {
-    let vol = 0
-    const r = []
-    await data.db.groupe.each(async (idb) => {
-      vol += idb.data.length
-      const x = new Groupe().fromIdb(await crypt.decrypter(data.clek, idb.data), idb.vs)
-      data.setVerGr(x.sidgr, INDEXT.GROUPE, x.v)
-      r.push(x)
-      data.refsGr.add(x.id)
     })
     return { objs: r, vol: vol }
   } catch (e) {
@@ -258,8 +259,6 @@ export async function getMembres () {
       const x = new Membre().fromIdb(await crypt.decrypter(data.clek, idb.data), idb.vs)
       r.push(x)
       data.setVerGr(x.sidgr, INDEXT.MEMBRE, x.v)
-      data.refsGr.add(x.id)
-      if (x.na) data.refsAv.add(x.na)
     })
     return { objs: r, vol: vol }
   } catch (e) {
@@ -281,8 +280,6 @@ export async function getSecrets () {
       } else {
         data.setVerGr(x.sidavgr, INDEXT.SECRET, x.v)
       }
-      if (x.ts === 2) data.refsGr.add(x.id)
-      else { data.refsAv.add(x.id) }
     })
     return { objs: r, vol: vol }
   } catch (e) {

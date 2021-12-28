@@ -106,6 +106,12 @@ export function ungzip (arg) {
   return t ? decoder.decode(crypt.arrayBuffer(res)) : res
 }
 
+export function difference (setA, setB) { // element de A pas dans B
+  const diff = new Set(setA)
+  for (const elem of setB) diff.delete(elem)
+  return diff
+}
+
 export function mimesDeExt (n) {
   if (!n) return null
   const i = n.lastIndexOf('.')

@@ -44,32 +44,28 @@ export function majgroupe (state, val) {
 
 /* Purges des avatars et groupes inutiles */
 
-export function purgeAvatars (state, val) { // val : Set des ids des avatars UTILES
+export function purgeAvatars (state, val) { // val : Set des ids des avatars INUTILES
+  if (!val || !val.size) return 0
   const x = state.avatars
-  const s = new Set()
-  for (const sid in x) {
-    const id = crypt.sidToId(sid)
-    if (!val.has(id)) s.add(sid)
+  let n = 0
+  for (const id of val) {
+    const sid = crypt.idToSid(id)
+    if (x[sid]) { n++; delete x[sid] }
   }
-  if (s.size) {
-    for (const sid of s) delete x[sid]
-    state.avatars = { ...x }
-  }
-  return s.size
+  if (n) state.avatars = { ...x }
+  return n
 }
 
-export function purgeGroupes (state, val) { // val : Set des ids des groupes UTILES
+export function purgeGroupes (state, val) { // val : Set des ids des groupes INUTILES
+  if (!val || !val.size) return 0
   const x = state.groupes
-  const s = new Set()
-  for (const sid in x) {
-    const id = crypt.sidToId(sid)
-    if (!val.has(id)) s.add(sid)
+  let n = 0
+  for (const id of val) {
+    const sid = crypt.idToSid(id)
+    if (x[sid]) { n++; delete x[sid] }
   }
-  if (s.size) {
-    for (const sid of s) delete x[sid]
-    state.groupes = { ...x }
-  }
-  return s.size
+  if (n) state.groupes = { ...x }
+  return n
 }
 
 /* Mises à jour brutes des objets dans le store */

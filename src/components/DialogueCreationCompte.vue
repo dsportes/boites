@@ -79,7 +79,7 @@ export default ({
       step: 1,
       ps: null,
       mdp: null,
-      quotas: null,
+      quotas: new Quotas(this.quotasDef),
       nom: ''
     }
   },
@@ -127,6 +127,7 @@ export default ({
       set: (val) => $store.commit('ui/majdialoguecreationcompte', val)
     })
     return {
+      quotasDef: new Quotas({ q1: 1, q2: 1, qm1: 5, qm2: 5 }),
       org,
       dialoguecreationcompte
     }

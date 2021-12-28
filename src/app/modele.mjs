@@ -17,47 +17,16 @@ export function commitMapObjets (objets, mapObj) { // SAUF mapObj.compte
   function push (n) { mapObj[n].forEach((x) => { objets.push(x) }) }
 
   if (mapObj.avatar) {
-    /* Quand un nouvel avatar apprait en synchro, il a été créé dans une autre session
+    /* Quand un nouvel avatar apparait en synchro, il a été créé dans une autre session
     après le chargement initial synchronisé : les autres rows mis à jour / créés depuis
     vont donc parvenir en messages de synchro */
     data.setAvatars(mapObj.avatar)
     push('avatar')
   }
 
-  if (mapObj.contact) {
-    /* Pour chaque contact, gestion de sa CV dans le répertoire :
-    - soit création (fake)
-    - soit suppression
-    - soit mise à jour de la liste des contacts dans la CV
-    */
-    mapObj.idbContact.forEach((x) => {
-      if (x.suppr) {
-        const avant = data.getContact(x.sid, x.sid2)
-        if (avant && !avant.suppr) {
-          data.repertoire.getCv(avant.nactc).moinsCtc(x.id)
-        }
-      } else {
-        data.repertoire.getCv(x.nactc).plusCtc(x.id)
-      }
-    })
-    data.setContacts(mapObj.contact)
-    push('contact')
-  }
-
-  if (mapObj.invitct) {
-    // Comme contact
-    mapObj.invitct.forEach((x) => {
-      if (x.suppr) {
-        const avant = data.getInvitct(x.sid, x.sid2)
-        if (avant && !avant.suppr) {
-          data.repertoire.getCv(avant.nactc).moinsCtc(x.id)
-        }
-      } else {
-        data.repertoire.getCv(x.nactc).plusCtc(x.id)
-      }
-    })
-    data.setInvitCts(mapObj.invitct)
-    push('invitct')
+  if (mapObj.groupe) {
+    data.setGroupes(mapObj.groupe)
+    push('groupe')
   }
 
   if (mapObj.invitgr) {
@@ -66,6 +35,44 @@ export function commitMapObjets (objets, mapObj) { // SAUF mapObj.compte
     */
     data.setInvitGrs(mapObj.invitgr)
     push('invitgr')
+  }
+
+  if (mapObj.contact) {
+    /* Pour chaque contact, gestion de sa CV dans le répertoire :
+    - soit création (fake)
+    - soit suppression
+    - soit mise à jour de la liste des contacts dans la CV
+    */
+    mapObj.contact.forEach((x) => {
+      if (x.suppr) {
+        const avant = data.getContact(x.id, x.ic)
+        if (avant && !avant.suppr) {
+          data.repertoire.getCv(avant.na.sid).moinsCtc(x.id)
+        }
+      } else {
+        data.repertoire.getCv(x.na.sid).plusCtc(x.id)
+      }
+    })
+    data.setContacts(mapObj.contact)
+    push('contact')
+  }
+
+  if (mapObj.invitct) {
+    /* CV de invitct : CV de l'invitant nab
+    Pas évident : on met la CV de B comme "contact" de A,
+    alors que A n'a encore pas accepté */
+    mapObj.invitct.forEach((x) => {
+      if (x.suppr) {
+        const avant = data.getInvitct(x.id, x.ni)
+        if (avant && !avant.suppr) {
+          data.repertoire.getCv(avant.nab.sid).moinsCtc(x.id)
+        }
+      } else {
+        data.repertoire.getCv(x.nab.sid).plusCtc(x.id)
+      }
+    })
+    data.setInvitCts(mapObj.invitct)
+    push('invitct')
   }
 
   if (mapObj.parrain) {
@@ -78,27 +85,16 @@ export function commitMapObjets (objets, mapObj) { // SAUF mapObj.compte
     push('rencontre')
   }
 
-  if (mapObj.groupe) {
-    data.setGroupes(mapObj.groupe)
-    push('groupe')
-  }
-
   if (mapObj.membre) {
     // Gérer la CV comme pour un contact
     mapObj.membre.forEach((x) => {
       if (x.suppr) {
-        const avant = data.getMembre(x.sid, x.sid2)
+        const avant = data.getMembre(x.id, x.im)
         if (avant && !avant.suppr) {
-          data.repertoire.getCv(avant.namb).moinsMbr(x.id)
+          data.repertoire.getCv(avant.namb.sid).moinsMbr(x.id)
         }
       } else {
-        data.repertoire.getCv(x.namb).plusMbr(x.id)
-      }
-      if (x.st < 0) {
-        const avant = this.membre(x.id, x.im)
-        if (avant) this.cvMoinsMbr(avant.data.na.sid, x.id)
-      } else {
-        this.cvPlusMbr(x.data.na, x.id)
+        data.repertoire.getCv(x.namb.sid).plusMbr(x.id)
       }
     })
     data.setMembres(mapObj.membre)
@@ -113,10 +109,10 @@ export function commitMapObjets (objets, mapObj) { // SAUF mapObj.compte
   if (mapObj.cv) {
     mapObj.cv.forEach((x) => {
       if (!x.suppr) {
-        const cv = data.repertoire.getCvParSid(x.sid)
+        const cv = data.repertoire.getCv(x.sid)
         if (cv) {
           const xok = cv.fusionCV(x)
-          if (!xok) data.repertoire.setCv(cv)
+          if (!xok) data.repertoire.setCv(cv) // cv est la nouvelle à intégrer
         } else {
           data.repertoire.setCv(x.sid)
         }
@@ -152,22 +148,11 @@ class Repertoire {
     this.modif = true
   }
 
-  getCv (na) {
-    const sid = na.sid
+  getCv (id) {
+    const sid = typeof id === 'string' ? id : crypt.idToSid(id)
     let cv = this.rep[sid]
     if (!cv) {
-      cv = new Cv(na)
-      this.rep[sid] = cv
-      this.modif = true
-    }
-    return cv
-  }
-
-  getCvParSid (na) {
-    const sid = na.sid
-    let cv = this.rep[sid]
-    if (!cv) {
-      cv = new Cv(na)
+      cv = new Cv(true)
       this.rep[sid] = cv
       this.modif = true
     }
@@ -378,14 +363,6 @@ class Session {
 
     this.verAv = new Map() // versions des tables relatives à chaque Avatar (par sid)
     this.verGr = new Map() // versions des tables relatives à chaque Groupe (par sid)
-
-    // dans chargementIdb seulement
-    this.refsAv = null // id des avatars référencés détectées lors du chargement IDB
-    this.refsGr = null // id des groupes référencés détectées lors du chargement IDB
-
-    this.idbSetAvatars = null // Set des ids des avatars chargés par IDB
-    this.idbSetGroupes = null // Set des ids des avatars chargés par IDB
-    this.idbsetCvsUtiles = null // Set des ids des avatars chargés par IDB
   }
 
   /* Enregistre le nom d'avatar pour :
@@ -435,15 +412,6 @@ class Session {
   }
 
   /* Getters / Setters ****************************************/
-  get setDesAvatars () { return this.getCompte().allAvId() }
-
-  get setDesGroupes () {
-    const s = new Set()
-    const avs = this.getAvatar()
-    for (const ids in avs) avs[ids].allGrId(s)
-    return s
-  }
-
   get setIdsAvatarsUtiles () { return this.getCompte().allAvId() }
 
   get setIdsGroupesUtiles () {
@@ -511,9 +479,9 @@ class Session {
 
   getCv (id) { return this.repertoire[id] }
 
-  getContact (sid, sid2) { return store().getters['db/contact'](sid, sid2) }
+  getContact (id, ic) { return store().getters['db/contact'](id, ic) }
 
-  getContactParId (sid, sidc) { return store().getters['db/contactParId'](sid, sidc) }
+  getContactParId (id, idc) { return store().getters['db/contactParId'](id, idc) }
 
   setContacts (lobj, hls) {
     if (lobj.length) {
@@ -522,7 +490,7 @@ class Session {
     }
   }
 
-  getInvitct (sid, sid2) { return store().getters['db/invitct'](sid, sid2) }
+  getInvitct (id, ni) { return store().getters['db/invitct'](id, ni) }
 
   setInvitcts (lobj, hls) {
     if (lobj.length) {
@@ -531,7 +499,7 @@ class Session {
     }
   }
 
-  getInvitgr (sid, sid2) { return store().getters['db/invitgr'](sid, sid2) }
+  getInvitgr (id, ni) { return store().getters['db/invitgr'](id, ni) }
 
   setInvitgrs (lobj, hls) {
     if (lobj.length) {
@@ -560,9 +528,9 @@ class Session {
     }
   }
 
-  purgeAvatars (lav) { if (lav.size) store().commit('db/purgeAvatars', lav) }
+  purgeAvatars (lav) { if (lav.size) return store().commit('db/purgeAvatars', lav) }
 
-  purgeGroupes (lgr) { if (lgr.size) store().commit('db/purgeGroupes', lgr) }
+  purgeGroupes (lgr) { if (lgr.size) return store().commit('db/purgeGroupes', lgr) }
 }
 export const data = new Session()
 

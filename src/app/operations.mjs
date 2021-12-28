@@ -401,19 +401,37 @@ export class OperationUI extends Operation {
   Les items de dlv dépassée sont lus, non stockés et mis à supprimer de IDB
   */
   async chargementIdb () {
-    data.refsAv = new Set()
-    data.refsGr = new Set()
-    const hls = []
+    const hls = [] // objets hors limite, pour purge de IDB à la fin du chargement
 
     this.razidblec()
     this.BRK()
-    {
-      const { objs, vol } = await getAvatars()
+    const avUtiles = data.setIdsAvatarsUtiles
+    { /* On ne charge de IDB QUE les avatars référencés dans le compte
+      les inutiles sont directement purgés de IDB */
+      const { objs, vol, apurger } = await getAvatars(avUtiles)
       data.setAvatars(objs)
       this.majidblec({ table: 'avatar', st: true, vol: vol, nbl: objs.length })
+      if (apurger.size) {
+        purgeAvatars(apurger) // en IDB pour les contacts, invitct ... secrets
+      }
+      this.majidblec({ table: 'purgeav', st: true, vol: 0, nbl: apurger.size })
     }
 
-    // chargement des CVs. Au début pour avoir le moins de fake possible dans le répertoire
+    this.BRK()
+    const grUtiles = data.setIdsGroupesUtiles
+    { /* On ne charge de IDB QUE les groupes référencés dans les avatars du compte
+      les inutiles sont directement purgés de IDB */
+      const { objs, vol, apurger } = await getGroupes(grUtiles)
+      if (objs.length) data.setGroupes(objs)
+      this.majidblec({ table: 'groupe', st: true, vol: vol, nbl: objs.length })
+      if (apurger.size) {
+        purgeGroupes(apurger) // en IDB pour les membres et secrets
+      }
+      this.majidblec({ table: 'purgegr', st: true, vol: 0, nbl: apurger.size })
+    }
+
+    /* chargement des CVs. Au début pour avoir le moins de fake
+    possible dans le répertoire */
     this.BRK()
     {
       const { objs, vol } = await getCvs()
@@ -437,7 +455,7 @@ export class OperationUI extends Operation {
       const { objs, vol } = await getContacts()
       if (objs && objs.length) {
         objs.forEach((c) => {
-          data.repertoire(c.nactc).plusCtc(c.id)
+          data.repertoire(c.na).plusCtc(c.id)
         })
       }
       data.setContacts(objs)
@@ -449,7 +467,7 @@ export class OperationUI extends Operation {
       const { objs, vol } = await getInvitcts()
       if (objs && objs.length) {
         objs.forEach((i) => {
-          data.repertoire(i.nact).plusCtc(i.id)
+          data.repertoire(i.nab).plusCtc(i.id)
         })
       }
       data.setInvitcts(objs, hls)
@@ -472,20 +490,13 @@ export class OperationUI extends Operation {
 
     this.BRK()
     {
-      const { objs, vol } = await getGroupes()
-      data.setGroupes(objs)
-      this.majidblec({ table: 'groupe', st: true, vol: vol, nbl: objs.length })
-    }
-
-    this.BRK()
-    {
       const { objs, vol } = await getMembres()
       if (objs && objs.length) {
         objs.forEach((m) => {
           data.repertoire(m.namb).plusMbr(m.id)
         })
       }
-      data.setMembres(objs)
+      data.setMembres(objs, hls)
       this.majidblec({ table: 'membre', st: true, vol: vol, nbl: objs.length })
     }
 
@@ -494,28 +505,6 @@ export class OperationUI extends Operation {
       const { objs, vol } = await getSecrets()
       data.setSecrets(objs, hls)
       this.majidblec({ table: 'secret', st: true, vol: vol, nbl: objs.length })
-    }
-
-    // purge des avatars inutiles
-    this.BRK()
-    {
-      const avInutiles = new Set()
-      const avUtiles = new Set(data.setDesAvatars)
-      for (const id of data.refsAv) if (!avUtiles.has(id)) avInutiles.add(id)
-      const nbp = await purgeAvatars(avInutiles)
-      data.purgeAvatars(avUtiles)
-      this.majidblec({ table: 'purgeav', st: true, vol: 0, nbl: nbp })
-    }
-
-    // purge des groupes inutiles
-    this.BRK()
-    {
-      const grInutiles = new Set()
-      const grUtiles = new Set(data.setDesGroupes)
-      for (const id of data.refsGr) if (!grUtiles.has(id)) grInutiles.add(id)
-      const nbp = await purgeGroupes(grInutiles)
-      data.purgeGroupes(grUtiles)
-      this.majidblec({ table: 'purgegr', st: true, vol: 0, nbl: nbp })
     }
 
     // purge des CVs inutiles
@@ -533,9 +522,6 @@ export class OperationUI extends Operation {
       hls.forEach(obj => { obj.st = -1 })
       commitRows(hls)
     }
-
-    data.refsAv = null
-    data.refsGr = null
 
     if (cfg().debug) await sleep(1)
 
@@ -629,11 +615,11 @@ export class CreationCompte extends OperationUI {
 
       this.BRK()
       const kp = await crypt.genKeyPair()
-      const nomAvatar = new NomAvatar(nom, true) // nouveau
+      const nomAvatar = new NomAvatar(nom) // nouveau
       const compte = new Compte().nouveau(nomAvatar, kp.privateKey)
       const rowCompte = await compte.toRow()
       data.setCompte(compte)
-      const avatar = new Avatar().nouveau(nomAvatar)
+      const avatar = new Avatar().nouveau(nomAvatar.id)
       const rowAvatar = await avatar.toRow()
 
       const args = { sessionId: data.sessionId, mdp64: mdp.mdp64, q1: quotas.q1, q2: quotas.q2, qm1: quotas.qm1, qm2: quotas.qm2, clePub: kp.publicKey, rowCompte, rowAvatar }
