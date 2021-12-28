@@ -61,7 +61,7 @@
           <div v-if="page==='Avatar'" class="row">
             <div class="col-8 col-sm-4 row justify-start tbpage">
               <span class="q-px-sm text-italic">Avatar :</span>
-              <span class="q-px-sm">{{avatar.label}}</span>
+              <span class="q-px-sm">{{avatar.na.nom}}</span>
               <img class="photo q-ml-sm" :src="avatar.photo ? avatar.photo : personne"/>
             </div>
             <div class="col-6 col-sm-4 row justify-start tbpage2">

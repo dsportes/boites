@@ -1,6 +1,6 @@
 <template>
 <div v-if="groupe != null">
-  <h6>Page Groupe {{groupe.label}}</h6>
+  <h6>Page Groupe {{groupe.na.nom}}</h6>
 </div>
 </template>
 

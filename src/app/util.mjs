@@ -641,11 +641,9 @@ export class NomAvatar {
     this.id = crypt.hashBin(this.rnd)
   }
 
-  get nomc () { return this.nom + '@' + this.sfx }
+  get nomc () { return this.nom + '@' + this.sid }
 
   get sid () { return crypt.idToSid(this.id) }
 
   get cle () { return this.rnd }
-
-  get sfx () { const s = this.sid; return s.substring(0, 2) + s.substring(s.length - 2) }
 }

@@ -1,51 +1,53 @@
 import { crypt } from '../../app/crypto.mjs'
 
+function Sid (id) { return typeof id === 'string' ? id : crypt.idToSid(id) }
+
 export const avatar = (state) => (id) => {
-  return id ? state.avatars[crypt.idToSid(id)] : state.avatars
+  return id ? state.avatars[Sid(id)] : state.avatars
 }
 
 export const groupe = (state) => (id) => {
-  return id ? state.groupes[crypt.idToSid(id)] : state.groupes
+  return id ? state.groupes[Sid(id)] : state.groupes
 }
 
-export const rencontre = (state) => (id, prh) => {
-  return prh ? state.rencontres[crypt.idToSid(prh)] : state.rencontres
+export const rencontre = (state) => (prh) => {
+  return prh ? state.rencontres[Sid(prh)] : state.rencontres
 }
 
 export const parrain = (state) => (pph) => {
-  return pph ? state.parrains[crypt.idToSid(pph)] : state.parrains
+  return pph ? state.parrains[Sid(pph)] : state.parrains
 }
 
-export const contact = (state) => (sid, sid2) => {
-  const lc = state['contacts@' + sid]
-  return !sid2 ? lc || { } : (lc ? lc[sid2] : null)
+export const contact = (state) => (id, ic) => {
+  const lc = state['contacts@' + Sid(id)]
+  return !ic ? lc || { } : (lc ? lc[ic] : null)
 }
 
-export const invitct = (state) => (sid, sid2) => {
-  const lc = state['invitcts@' + sid]
-  return !sid2 ? lc || { } : (lc ? lc[sid2] : null)
+export const invitct = (state) => (id, ni) => {
+  const lc = state['invitcts@' + Sid(id)]
+  return !ni ? lc || { } : (lc ? lc[Sid(ni)] : null)
 }
 
-export const invitgr = (state) => (sid, sid2) => {
-  const lc = state['invitgrs@' + sid]
-  return !sid2 ? lc || { } : (lc ? lc[sid2] : null)
+export const invitgr = (state) => (id, ni) => {
+  const lc = state['invitgrs@' + Sid(id)]
+  return !ni ? lc || { } : (lc ? lc[Sid(ni)] : null)
 }
 
-export const membre = (state) => (sid, sid2) => {
-  const lc = state['membres@' + sid]
-  return !sid2 ? lc || { } : (lc ? lc[sid2] : null)
+export const membre = (state) => (id, im) => {
+  const lc = state['membres@' + Sid(id)]
+  return !im ? lc || { } : (lc ? lc[im] : null)
 }
 
-export const secret = (state) => (sid, sid2) => {
-  const lc = state['secrets@' + sid]
-  return !sid2 ? lc || {} : lc ? lc[sid2] : null
+export const secret = (state) => (id, ns) => {
+  const lc = state['secrets@' + Sid(id)]
+  return !ns ? lc || {} : lc ? lc[Sid(ns)] : null
 }
 
-export const membreParId = (state) => (sidg, sidm) => {
-  const lc = state['membres@' + sidg]
-  for (const sim in lc) {
-    const m = lc[sim]
-    if (m.namb.sid === sidm) return m
+export const membreParId = (state) => (idg, idm) => {
+  const lc = state['membres@' + Sid(idg)]
+  for (const im in lc) {
+    const m = lc[im]
+    if (m.namb.sid === Sid(idm)) return m
   }
   return null
 }
