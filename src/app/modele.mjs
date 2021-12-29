@@ -17,9 +17,6 @@ export function commitMapObjets (objets, mapObj) { // SAUF mapObj.compte
   function push (n) { mapObj[n].forEach((x) => { objets.push(x) }) }
 
   if (mapObj.avatar) {
-    /* Quand un nouvel avatar apparait en synchro, il a été créé dans une autre session
-    après le chargement initial synchronisé : les autres rows mis à jour / créés depuis
-    vont donc parvenir en messages de synchro */
     data.setAvatars(mapObj.avatar)
     push('avatar')
   }
@@ -30,9 +27,6 @@ export function commitMapObjets (objets, mapObj) { // SAUF mapObj.compte
   }
 
   if (mapObj.invitgr) {
-    /* Les groupes n'ont pas de CV.
-    La liste des groupes peut changer par invitgr
-    */
     data.setInvitGrs(mapObj.invitgr)
     push('invitgr')
   }
@@ -58,19 +52,6 @@ export function commitMapObjets (objets, mapObj) { // SAUF mapObj.compte
   }
 
   if (mapObj.invitct) {
-    /* CV de invitct : CV de l'invitant nab
-    Pas évident : on met la CV de B comme "contact" de A,
-    alors que A n'a encore pas accepté */
-    mapObj.invitct.forEach((x) => {
-      if (x.suppr) {
-        const avant = data.getInvitct(x.id, x.ni)
-        if (avant && !avant.suppr) {
-          data.repertoire.getCv(avant.nab.sid).moinsCtc(x.id)
-        }
-      } else {
-        data.repertoire.getCv(x.nab.sid).plusCtc(x.id)
-      }
-    })
     data.setInvitCts(mapObj.invitct)
     push('invitct')
   }
@@ -705,7 +686,7 @@ export class Compte {
 
 schemas.forSchema({
   name: 'idbAvatar',
-  cols: ['id', 'v', 'st', 'vcv', 'dds', 'photo', 'info', 'lct', 'lmg', 'vsh']
+  cols: ['id', 'v', 'st', 'vcv', 'dds', 'photo', 'info', 'lct', 'lgr', 'vsh']
 })
 
 export class Avatar {
@@ -760,15 +741,21 @@ export class Avatar {
     }
   }
 
-  async decompileLists (brut) {
+  async decompileLists () {
     const lct = []
     const lgr = {}
     this.m1ct.forEach((v, k) => { lct.push([k, v]) })
-    for (const ni in lgr) {
-      const x = this.m1gr.get(ni)
-      const y = serial([x.na.nom, x.na.rnd, x.im])
-      lgr[ni] = brut ? y : await crypt.crypter(data.clek, y)
+    for (const [ni, x] of this.m1gr) {
+      lgr[ni] = await crypt.crypter(data.clek, serial([x.na.nom, x.na.rnd, x.im]))
     }
+    return [lct, lgr]
+  }
+
+  decompileListsBrut () {
+    const lct = []
+    const lgr = {}
+    this.m1ct.forEach((v, k) => { lct.push([k, v]) })
+    for (const [ni, x] of this.m1gr) lgr[ni] = serial([x.na.nom, x.na.rnd, x.im])
     return [lct, lgr]
   }
 
@@ -802,7 +789,7 @@ export class Avatar {
 
   get toIdb () {
     const r = { ...this }
-    const [lct, lgr] = this.decompileLists(true)
+    const [lct, lgr] = this.decompileListsBrut()
     r.lct = lct
     r.lgr = lgr
     return { id: this.id, data: schemas.serialize('idbAvatar', r) }

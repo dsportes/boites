@@ -1,12 +1,12 @@
-import { NomAvatar, store, post, affichermessage, cfg, sleep, affichererreur, appexc, serial } from './util.mjs'
+import { NomAvatar, store, post, affichermessage, cfg, sleep, affichererreur, appexc, serial, difference } from './util.mjs'
 import { remplacePage } from './page.mjs'
 import {
   deleteIDB, idbSidCompte, commitRows, getCompte, getAvatars, getContacts, getCvs,
   getGroupes, getInvitcts, getInvitgrs, getMembres, getParrains, getRencontres, getSecrets,
   purgeAvatars, purgeCvs, purgeGroupes, openIDB, enregLScompte, setEtat, getEtat
 } from './db.mjs'
-import { Compte, Avatar, Invitgr, newObjet, commitMapObjets, data, SIZEAV, SIZEGR } from './modele.mjs'
-import { AppExc, EXBRK, EXPS, F_BRO, X_SRV, INDEXT } from './api.mjs'
+import { Compte, Avatar, newObjet, commitMapObjets, data, SIZEAV, SIZEGR } from './modele.mjs'
+import { AppExc, EXBRK, EXPS, F_BRO, INDEXT, X_SRV } from './api.mjs'
 
 import { crypt } from './crypto.mjs'
 import { schemas } from './schemas.mjs'
@@ -171,77 +171,71 @@ export class Operation {
     return res
   }
 
-  async abonnements (compte) {
+  async abonnements (avUtiles, grUtiles) {
     // Abonner / signer la session au compte, avatars et groupes
     // si compte est absent, PAS de signature
-    const lav = data.setDesAvatars
-    const lgr = data.setDesGroupes
+    const compte = data.getCompte()
     const args = {
       sessionId: data.sessionId,
-      idc: compte ? compte.id : '',
-      lav: Array.from(lav),
-      lgr: Array.from(lgr)
+      idc: compte.id,
+      lav: Array.from(avUtiles),
+      lgr: Array.from(grUtiles)
     }
     const ret = await post(this, 'm1', 'syncAbo', args)
     if (data.dh < ret.dh) data.dh = ret.dh
     this.BRK()
-    return [lav, lgr]
   }
 
-  /*
-  Recharge depuis le serveur les avatars (et les tables associées)
-  et les groupes (et membres) des listes lav et lgr
-  */
-  async chargerAvGr (lav, lgr) {
-    const estws = this instanceof OperationWS
-    // synchroniser les avatars
-    if (lav && lav.size) {
-      const ar = Array.from(lav)
-      for (let i = 0; i < ar.length; i++) {
-        const id = ar[i]
-        const sid = crypt.idToSid(id)
-        const lv = !estws && data.verAv.get(sid) ? data.verAv.get(sid) : new Array(SIZEAV).fill(0)
-        const ret = await post(this, 'm1', 'syncAv', { sessionId: data.sessionId, avgr: id, lv })
-        if (data.dh < ret.dh) data.dh = ret.dh
-        const objets = []
-        commitMapObjets(objets, await this.rowItemsToMapObjets(ret.rowItems)) // stockés en modele
-        if (!estws) {
-          const av = data.getAvatar(id)
-          this.majsynclec({ st: 1, sid: sid, nom: 'Avatar ' + av.na.nomc, nbl: objets.length })
-        }
-        if (data.db) {
-          await commitRows(objets)
-          this.BRK()
-        }
-      }
+  /* Recharge depuis le serveur les avatars du compte */
+  async chargerAvatars (avUtiles, tous) {
+    // idsVers : map de clé:id de l'avatar, valeur: version détenue en session
+    const idsVers = { }
+    for (const id of avUtiles) {
+      idsVers[id] = tous ? 0 : data.verAv.get(crypt.idToSid(id))[INDEXT.AVATAR]
     }
+    const ret = await post(this, 'm1', 'chargerAv', { sessionId: data.sessionId, idsVers })
+    if (data.dh < ret.dh) data.dh = ret.dh
+    const objets = []
+    for (const id of avUtiles) {
+      data.verAv.get(crypt.idToSid(id))[INDEXT.AVATAR] = -1
+    }
+    commitMapObjets(objets, await this.rowItemsToMapObjets(ret.rowItems)) // stockés en modele
+    if (data.db) {
+      await commitRows(objets)
+      this.BRK()
+    }
+  }
 
-    // synchroniser les groupes
-    if (lgr && lgr.size) {
-      const ar = Array.from(lgr)
-      for (let i = 0; i < ar.length; i++) {
-        const id = ar[i]
-        const sid = crypt.idToSid(id)
-        const lv = data.verGr.get(sid) ? data.verGr.get(sid) : new Array(SIZEGR).fill(0)
-        const ret = await post(this, 'm1', 'syncGr', { sessionId: data.sessionId, avgr: id, lv })
-        if (data.dh < ret.dh) data.dh = ret.dh
-        const objets = []
-        commitMapObjets(objets, await this.rowItemsToMapObjets(ret.rowItems)) // stockés en modele
-        if (!estws) {
-          const gr = data.getGroupe(id)
-          this.majsynclec({ st: 1, sid: sid, nom: 'Groupe ' + gr.info, nbl: objets.length })
-        }
-        if (data.db) {
-          await commitRows(objets)
-          this.BRK()
-        }
-      }
+  /* Recharge depuis le serveur un avatar et ses rows associées (contact ... secret) */
+  async chargerAv (id, tous) { // lav : set des avatars utiles
+    const sid = crypt.idToSid(id)
+    const lv = tous ? new Array(SIZEAV).fill(0) : data.verAv.get(sid)
+    const ret = await post(this, 'm1', 'syncAv', { sessionId: data.sessionId, avgr: id, lv })
+    if (data.dh < ret.dh) data.dh = ret.dh
+    const objets = []
+    commitMapObjets(objets, await this.rowItemsToMapObjets(ret.rowItems)) // stockés en modele
+    if (data.db) {
+      await commitRows(objets)
+      this.BRK()
+    }
+  }
+
+  /* Recharge depuis le serveur les groupes et les tables associées (membres, secrets) */
+  async chargerGr (id, tous) { // lgr : set des groupes utiles
+    const sid = crypt.idToSid(id)
+    const lv = tous ? new Array(SIZEGR).fill(0) : data.verGr.get(sid)
+    const ret = await post(this, 'm1', 'syncGr', { sessionId: data.sessionId, avgr: id, lv })
+    if (data.dh < ret.dh) data.dh = ret.dh
+    const objets = []
+    commitMapObjets(objets, await this.rowItemsToMapObjets(ret.rowItems)) // stockés en modele
+    if (data.db) {
+      await commitRows(objets)
+      this.BRK()
     }
   }
 
   /* Synchronisation et abonnements des CVs */
   async syncCVs (nvvcv) {
-    const estws = this instanceof OperationWS
     data.repertoire.purge()
     data.repertoire.commit()
     const lcvmaj = Array.from(data.repertoire.setCvsUtiles)
@@ -252,19 +246,16 @@ export class Operation {
     const objets = []
     const vcv = commitMapObjets(objets, await this.rowItemsToMapObjets(ret.rowItems)) // stockés en modele
     if (vcv > nvvcv) nvvcv = vcv
-    if (!estws) {
-      this.majsynclec({ st: 1, sid: '$CV', nom: 'Cartes de visite', nbl: objets.length })
-    }
     if (data.db) {
       await commitRows(objets)
       this.BRK()
     }
-    return nvvcv
+    return [nvvcv, objets.length]
   }
 
   async traiteQueue (q) {
-    const lavAvant = data.setDesAvatars
-    const lgrAvant = data.setDesGroupes
+    const lavAvant = data.setIdsAvatarsUtiles
+    const lgrAvant = data.setIdsGroupesUtiles
 
     const items = [] // tous les items à traiter reçus en synchro
     let dhc = 0 // date-heure courante : plus haute date-heure reçue sur les liste d'items à synchroniser
@@ -300,45 +291,38 @@ export class Operation {
     }
 
     /*
-    Il y a :
+    MAIS il y a :
     - des avatars du compte devenus inutiles (supprimés)
-    - des groupes devenus inutiles (disparus / accès résilés)
+    - des groupes devenus inutiles (disparus / accès résiliés)
     - de nouveaux avatars du compte (utiles)
     - de nouveaux groupes utiles ET DONT IL FAUT CHARGER LES MEMBRES et leurs CV
     */
 
-    const lavApres = data.setDesAvatars
-    const lgrApres = data.setDesGroupes
+    const lavApres = data.setIdsAvatarsUtiles
+    const lgrApres = data.setIdsGroupesUtiles
 
     // Purge des avatars / groupes inutiles et détection des manquants
-    const lavAPurger = new Set()
-    const lavManquants = new Set()
-    const lgrAPurger = new Set()
-    const lgrManquants = new Set()
-    lavAvant.forEach((sid) => { if (!lavApres.has(sid)) lavManquants.add(sid) })
-    lavApres.forEach((sid) => { if (!lavAvant.has(sid)) lavAPurger.add(sid) })
-    lgrAvant.forEach((sid) => { if (!lgrApres.has(sid)) lgrManquants.add(sid) })
-    lgrApres.forEach((sid) => { if (!lgrAvant.has(sid)) lgrAPurger.add(sid) })
-    if (lavAPurger.size) data.purgeAvatars(lavApres)
-    if (lgrAPurger.size) data.purgeGroupes(lgrApres)
+    const lavAPurger = difference(lavAvant, lavApres)
+    const lavManquants = difference(lavApres, lavAvant)
+    const lgrAPurger = difference(lgrAvant, lgrApres)
+    const lgrManquants = difference(lgrApres, lgrAvant)
+    if (lavAPurger.size) data.purgeAvatars(lavAPurger)
+    if (lgrAPurger.size) data.purgeGroupes(lgrAPurger)
     if (data.db) {
-      if (lavAPurger.size) {
-        await data.db.purgeAvatars(lavAPurger)
-      }
-      if (lgrAPurger.size) {
-        await data.db.purgeGroupes(lgrAPurger)
-      }
+      if (lavAPurger.size) await data.db.purgeAvatars(lavAPurger)
+      if (lgrAPurger.size) await data.db.purgeGroupes(lgrAPurger)
       this.BRK()
     }
 
     const chg = lavAPurger.size || lgrAPurger.size || lavManquants.size || lgrManquants.size
-    if (chg) await this.abonnements()
+    if (chg) await this.abonnements(lavApres, lgrApres)
 
     // Traitements des avatars / groupes manquants
-    await this.chargerAvGr(lavManquants, lgrManquants)
+    await this.chargerAv(lavManquants, true)
+    await this.chargerGr(lgrManquants, true)
 
     // Synchroniser les CVs (et s'abonner)
-    const nvvcv = await this.syncCVs(vcv)
+    const [nvvcv] = await this.syncCVs(vcv)
     if (data.vcv < nvvcv) data.vcv = nvvcv
 
     return [dhc, nvvcv]
@@ -430,8 +414,7 @@ export class OperationUI extends Operation {
       this.majidblec({ table: 'purgegr', st: true, vol: 0, nbl: apurger.size })
     }
 
-    /* chargement des CVs. Au début pour avoir le moins de fake
-    possible dans le répertoire */
+    /* chargement des CVs. Au début pour avoir le moins de fake possible dans le répertoire */
     this.BRK()
     {
       const { objs, vol } = await getCvs()
@@ -633,8 +616,8 @@ export class CreationCompte extends OperationUI {
       const mapObj = await this.rowItemsToMapObjets(ret.rowItems)
       const compte2 = mapObj.compte // le DERNIER objet compte quand on en a reçu plusieurs (pas la liste)
       data.setCompte(compte2)
-      const [rows] = commitMapObjets(mapObj)
-      rows.push(compte2)
+      const objets = [compte2]
+      commitMapObjets(objets, mapObj)
 
       // création de la base IDB et chargement des rows compte et avatar
       if (data.mode === 1) { // synchronisé : IL FAUT OUVRIR IDB (et écrire dedans)
@@ -647,7 +630,7 @@ export class CreationCompte extends OperationUI {
           await deleteIDB(true)
           throw e
         }
-        await commitRows(rows)
+        await commitRows(objets)
       }
 
       data.statut = 2
@@ -752,11 +735,8 @@ export class ConnexionCompte extends OperationUI {
         await this.chargementIdb()
       }
 
-      data.idbSetAvatars = data.setDesAvatars
-      data.idbSetGroupes = data.setDesGroupes
-      data.idbsetCvsUtiles = data.repertoire.setCvsUtiles
-
-      if (data.db) {
+      let avUtiles = data.setIdsAvatarsUtiles
+      if (data.db) { // mode sync
         /* Relecture du compte qui pourrait avoir changé durant le chargement IDB qui peut être long
         Si version postérieure :
         - ré-enregistrement du compte en modèle et IDB
@@ -766,33 +746,36 @@ export class ConnexionCompte extends OperationUI {
         if (compte2.v > compte.v) {
           compte = compte2
           data.setCompte(compte2)
-          const avInutiles = new Set()
-          const avUtiles = data.setDesAvatars
-          for (const id of data.idbSetAvatars) if (!avUtiles.has(id)) avInutiles.add(id)
+          avUtiles = data.setIdsAvatarsUtiles
+          const avInutiles = difference(data.setIdsAvatarsStore, avUtiles)
           if (avInutiles.size) {
-            data.purgeAvatars(avUtiles)
-            for (const id of avInutiles) {
-              const sid = crypt.idToSid(id)
-              delete data.verAv[sid]
-            }
-            await data.db.purgeAvatars(avInutiles)
+            data.purgeAvatars(avInutiles) // en store
+            await data.db.purgeAvatars(avInutiles)// en IDB
+            for (const id of avInutiles) delete data.verAv[crypt.idToSid(id)]
           }
           this.BRK()
           await commitRows([compte])
-          this.BRK()
-          if (avInutiles.size) await data.db.purgeAvatars(avInutiles)
-          this.BRK()
-          data.idbSetAvatars = avUtiles
         }
-      } else {
-        // créer la liste des versions chargées pour les tables des avatars, cad 0 pour toutes
-        // cette liste a été créée par chargementIDB dans le mode synchro, mais pas en mode incognito
-        data.idbSetAvatars.forEach((id) => {
-          data.setVerAv(crypt.idToSid(id), INDEXT.AVATAR, 0)
-        })
       }
 
-      // état chargé correspondant à l'état local (vide le cas échéant - incognito ou première synchro) - compte OK
+      await this.chargerAvatars(avUtiles, !data.db)
+
+      // On a maintenant la liste des groupes utiles (lisibles dans les avatars chargés)
+      const grUtiles = data.setIdsGroupesUtiles
+      const grAPurger = difference(data.setIdsGroupesStore, grUtiles)
+      if (grAPurger.size) {
+        data.purgeGroupes(grAPurger)
+        if (data.db) await data.db.purgeGroupes(grAPurger)
+      }
+
+      // Abonnements et signature du compte, ses avatars et ses groupes
+      await this.abonnements(avUtiles, grUtiles)
+
+      /* État chargé correspondant à l'état local :
+      - presque vide le cas échéant - incognito ou première synchro
+      - a minima compte et avatars présents
+      - signature et abonnements enregistrés
+      - compte OK */
       data.statut = 1
       data.dhsync = data.dh
       if (data.db) {
@@ -801,72 +784,23 @@ export class ConnexionCompte extends OperationUI {
         setEtat()
       }
 
-      {
-        const grAPurger = new Set()
-        // chargement des invitgrs ayant changé depuis l'état local (tous le cas échéant)
-        // pour obtenir la liste des groupes accédés
-        const lvav = {}
-        data.verAv.forEach((lv, sid) => { lvav[sid] = lv[INDEXT.AVATAR] })
-        const ret = await post(this, 'm1', 'syncInvitgr', { sessionId: data.sessionId, lvav })
-        if (data.dh < ret.dh) data.dh = ret.dh
-        // traitement des invitgr reçus
-        const maj = []
-        for (let i = 0; i < ret.rowItems; i++) {
-          const item = ret.rowItems[i]
-          if (item.table === 'invitgr') {
-            const rowInvitgr = schemas.deserialize('rowinvitgr', item.serial)
-            const invitgr = new Invitgr()
-            await invitgr.fromRow(rowInvitgr)
-            maj.push(invitgr)
-            if (invitgr.st < 0) {
-              // Inscrire le groupe en inutile et le supprimer de la liste des groupes à synchroniser
-              grAPurger.add(invitgr.idg)
-              if (data.verGr.has(invitgr.sidg)) {
-                data.verGr.delete(invitgr.sidg)
-              }
-            } else {
-              // Inscrire le groupe dans la liste de ceux à synchroniser s'il n'y était pas
-              if (!data.verGr.has(invitgr.sidg)) {
-                data.setVerGr(invitgr.sidg, INDEXT.GROUPE, 0)
-              }
-            }
-          }
-        }
-
-        if (grAPurger.size) {
-          data.purgeGroupes(grAPurger)
-          if (data.db) {
-            await data.db.purgeGroupes(grAPurger)
-          }
-        }
-        if (maj.length) {
-          data.setInvitgrs(maj) // maj du modèle
-          if (data.db) {
-            await commitRows(maj) // et de IDB
-            this.BRK()
-          }
-        }
+      // Chargement depuis le serveur des avatars non obtenus de IDB (sync), tous (incognito)
+      for (const idav of avUtiles) {
+        await this.chargerAv(idav, !data.db) // tous en incognito
+        const av = data.getAvatar(idav)
+        this.majsynclec({ st: 0, sid: av.sid, nom: 'Avatar ' + av.na.nom, nbl: 0 })
       }
 
-      for (const sid in compte.mac) {
-        const mac = compte.mac[sid]
-        this.majsynclec({ st: 0, sid: sid, nom: 'Avatar ' + mac.na.nomc, nbl: 0 })
+      // Chargement depuis le serveur des groupes non obtenus de IDB (sync), tous (incognito)
+      for (const idgr of grUtiles) {
+        await this.chargerGr(idgr, !data.db) // tous en incognito)
+        const gr = data.getGroupe(idgr)
+        this.majsynclec({ st: 0, sid: gr.sid, nom: 'Groupe ' + gr.na.nom, nbl: 0 })
       }
-      const mgr = store().state.db.invitgrs
-      for (const x in mgr) {
-        const av = mgr[x]
-        const sidg = crypt.idToSid(av.data.idg)
-        this.majsynclec({ st: 0, sid: sidg, nom: 'Groupe ' + sidg, nbl: 0 })
-      }
-      this.majsynclec({ st: 0, sid: '$CV', nom: 'Cartes de visite', nbl: 0 })
-
-      const [lav, lgr] = await this.abonnements(compte)
-
-      // Synchroniser avatars et groupes
-      await this.chargerAvGr(lav, lgr)
 
       // Synchroniser les CVs (et s'abonner)
-      const nvvcv = await this.syncCVs(data.vcv)
+      const [nvvcv, nbcv] = await this.syncCVs(data.vcv)
+      this.majsynclec({ st: 1, sid: '$CV', nom: 'Cartes de visite', nbl: nbcv })
       if (data.vcv < nvvcv) data.vcv = nvvcv
 
       // Traiter les notifications éventuellement arrivées

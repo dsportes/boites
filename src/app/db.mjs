@@ -123,7 +123,7 @@ export async function getAvatars (avu) { // avu : set des ids des avatars utiles
   go()
   try {
     let vol = 0
-    const inutiles = new Set()
+    const apurger = new Set()
     const r = []
     await data.db.avatar.each(async (idb) => {
       if (avu.has(idb.id)) {
@@ -132,10 +132,10 @@ export async function getAvatars (avu) { // avu : set des ids des avatars utiles
         r.push(x)
         data.setVerAv(x.sid, INDEXT.AVATAR, x.v)
       } else {
-        inutiles.add(idb.id)
+        apurger.add(idb.id)
       }
     })
-    return { objs: r, vol: vol, inutiles }
+    return { objs: r, vol: vol, apurger }
   } catch (e) {
     throw data.setErDB(EX2(e))
   }
@@ -145,7 +145,7 @@ export async function getGroupes (gru) { // gru : set des Ids des groupes utiles
   go()
   try {
     let vol = 0
-    const inutiles = new Set()
+    const apurger = new Set()
     const r = []
     await data.db.groupe.each(async (idb) => {
       if (gru.has(idb.id)) {
@@ -154,10 +154,10 @@ export async function getGroupes (gru) { // gru : set des Ids des groupes utiles
         data.setVerGr(x.sid, INDEXT.GROUPE, x.v)
         r.push(x)
       } else {
-        inutiles.add(idb.id)
+        apurger.add(idb.id)
       }
     })
-    return { objs: r, vol: vol, inutiles: inutiles }
+    return { objs: r, vol: vol, apurger }
   } catch (e) {
     throw data.setErDB(EX2(e))
   }

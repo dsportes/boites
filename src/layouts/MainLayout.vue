@@ -56,7 +56,7 @@
           <div v-if="page==='Org'" class="tbpage">Choix de l'organisation</div>
           <div v-if="page==='Login'" class="tbpage">Connexion à un compte</div>
           <div v-if="page==='Synchro'" class="tbpage">Synchronisation des données</div>
-          <div v-if="page==='Compte'" class="tbpage">Compte : {{ compte.titre }}</div>
+          <div v-if="page==='Compte' && compte != null" class="tbpage">Compte : {{ compte.titre }}</div>
 
           <div v-if="page==='Avatar'" class="row">
             <div class="col-8 col-sm-4 row justify-start tbpage">

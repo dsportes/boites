@@ -42,30 +42,68 @@ export function majgroupe (state, val) {
   state.groupe = val
 }
 
-/* Purges des avatars et groupes inutiles */
-
+/* Purges des avatars inutiles et tables associées */
 export function purgeAvatars (state, val) { // val : Set des ids des avatars INUTILES
   if (!val || !val.size) return 0
-  const x = state.avatars
-  let n = 0
+  const xa = state.avatars
+  let na = 0
+  const xc = state.contacts
+  let nc = 0
+  const xi = state.invitcts
+  let ni = 0
+  const xj = state.invitgrs
+  let nj = 0
+  const xs = state.secrets
+  let ns = 0
+  const xp = state.parrains
+  let np = 0
+  const xr = state.rencontres
+  let nr = 0
   for (const id of val) {
     const sid = crypt.idToSid(id)
-    if (x[sid]) { n++; delete x[sid] }
+    if (xa[sid]) { na++; delete xa[sid] }
+    if (xc[sid]) { nc++; delete xc[sid] }
+    if (xi[sid]) { ni++; delete xi[sid] }
+    if (xj[sid]) { nj++; delete xj[sid] }
+    if (xs[sid]) { ns++; delete xs[sid] }
+    for (const sidp of xp) {
+      const p = xp[sidp]
+      if (p.sidav === sid) { np++; delete xp[sidp] }
+    }
+    for (const sidr of xr) {
+      const r = xr[sidr]
+      if (r.sidav === sid) { nr++; delete xr[sidr] }
+    }
   }
-  if (n) state.avatars = { ...x }
-  return n
+  if (na) state.avatars = { ...xa }
+  if (nc) state.contacts = { ...xc }
+  if (ni) state.invitcts = { ...xi }
+  if (nj) state.invitgrs = { ...xj }
+  if (ns) state.secrets = { ...xs }
+  if (np) state.parrains = { ...xp }
+  if (nr) state.rencontres = { ...xr }
+  return na + nc + ni + nj + ns + np + nr
 }
 
+/* purge des groupes inutiles et membres, secrets associés */
 export function purgeGroupes (state, val) { // val : Set des ids des groupes INUTILES
   if (!val || !val.size) return 0
-  const x = state.groupes
-  let n = 0
+  const xg = state.groupes
+  let ng = 0
+  const xm = state.membres
+  let nm = 0
+  const xs = state.secrets
+  let ns = 0
   for (const id of val) {
     const sid = crypt.idToSid(id)
-    if (x[sid]) { n++; delete x[sid] }
+    if (xg[sid]) { ng++; delete xg[sid] }
+    if (xm[sid]) { nm++; delete xm[sid] }
+    if (xs[sid]) { ns++; delete xs[sid] }
   }
-  if (n) state.groupes = { ...x }
-  return n
+  if (ng) state.groupes = { ...xg }
+  if (nm) state.membres = { ...xm }
+  if (ns) state.secrets = { ...xs }
+  return ng + nm + ns
 }
 
 /* Mises à jour brutes des objets dans le store */
