@@ -171,15 +171,15 @@ export class Operation {
     return res
   }
 
-  async abonnements (avUtiles, grUtiles) {
-    // Abonner / signer la session au compte, avatars et groupes
-    // si compte est absent, PAS de signature
+  async abonnements (avUtiles, grUtiles, nosign) {
+    // Abonner / (signer sauf si nosign) la session au compte, avatars et groupes
     const compte = data.getCompte()
     const args = {
       sessionId: data.sessionId,
       idc: compte.id,
       lav: Array.from(avUtiles),
-      lgr: Array.from(grUtiles)
+      lgr: Array.from(grUtiles),
+      sign: !nosign
     }
     const ret = await post(this, 'm1', 'syncAbo', args)
     if (data.dh < ret.dh) data.dh = ret.dh
@@ -315,11 +315,21 @@ export class Operation {
     }
 
     const chg = lavAPurger.size || lgrAPurger.size || lavManquants.size || lgrManquants.size
-    if (chg) await this.abonnements(lavApres, lgrApres)
+    if (chg) await this.abonnements(lavApres, lgrApres, true)
 
-    // Traitements des avatars / groupes manquants
-    await this.chargerAv(lavManquants, true)
-    await this.chargerGr(lgrManquants, true)
+    // Chargement depuis le serveur des avatars manquants
+    if (lavManquants.size) {
+      for (const idav of lavManquants) {
+        await this.chargerAv(idav, true) // tous, puisque manquants
+      }
+    }
+
+    // Chargement depuis le serveur des groupes manquants
+    if (lgrManquants.size) {
+      for (const idgr of lgrManquants) {
+        await this.chargerGr(idgr, true) // tous en incognito)
+      }
+    }
 
     // Synchroniser les CVs (et s'abonner)
     const [nvvcv] = await this.syncCVs(vcv)
