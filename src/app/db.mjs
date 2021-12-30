@@ -130,7 +130,7 @@ export async function getAvatars (avu) { // avu : set des ids des avatars utiles
         vol += idb.data.length
         const x = new Avatar().fromIdb(await crypt.decrypter(data.clek, idb.data))
         r.push(x)
-        data.setVerAv(x.sid, INDEXT.AVATAR, x.v)
+        data.vag.setVerAv(x.sid, INDEXT.AVATAR, x.v)
       } else {
         apurger.add(idb.id)
       }
@@ -151,7 +151,7 @@ export async function getGroupes (gru) { // gru : set des Ids des groupes utiles
       if (gru.has(idb.id)) {
         vol += idb.data.length
         const x = new Groupe().fromIdb(await crypt.decrypter(data.clek, idb.data))
-        data.setVerGr(x.sid, INDEXT.GROUPE, x.v)
+        data.vag.setVerGr(x.sid, INDEXT.GROUPE, x.v)
         r.push(x)
       } else {
         apurger.add(idb.id)
@@ -173,7 +173,7 @@ export async function getInvitgrs () {
       const y = await crypt.decrypter(data.clek, idb.data)
       const x = new Invitgr().fromIdb(y, idb.vs)
       r.push(x)
-      data.setVerAv(x.sidav, INDEXT.INVITGR, x.v)
+      data.vag.setVerAv(x.sidav, INDEXT.INVITGR, x.v)
     })
     return { objs: r, vol: vol }
   } catch (e) {
@@ -190,7 +190,7 @@ export async function getInvitcts () {
       vol += idb.data.length
       const x = new Invitct().fromIdb(await crypt.decrypter(data.clek, idb.data), idb.vs)
       r.push(x)
-      data.setVerAv(x.sidav, INDEXT.INVITCT, x.v)
+      data.vag.setVerAv(x.sidav, INDEXT.INVITCT, x.v)
     })
     return { objs: r, vol: vol }
   } catch (e) {
@@ -207,7 +207,7 @@ export async function getContacts () {
       vol += idb.data.length
       const x = new Contact().fromIdb(await crypt.decrypter(data.clek, idb.data), idb.vs)
       r.push(x)
-      data.setVerAv(x.sidav, INDEXT.CONTACT, x.v)
+      data.vag.setVerAv(x.sidav, INDEXT.CONTACT, x.v)
     })
     return { objs: r, vol: vol }
   } catch (e) {
@@ -224,7 +224,7 @@ export async function getParrains () {
       vol += idb.data.length
       const x = new Parrain().fromIdb(await crypt.decrypter(data.clek, idb.data), idb.vs)
       r.push(x)
-      data.setVerAv(x.sidav, INDEXT.PARRAIN, x.v)
+      data.vag.setVerAv(x.sidav, INDEXT.PARRAIN, x.v)
     })
     return { objs: r, vol: vol }
   } catch (e) {
@@ -241,7 +241,7 @@ export async function getRencontres () {
       vol += idb.data.length
       const x = new Rencontre().fromIdb(await crypt.decrypter(data.clek, idb.data))
       r.push(x)
-      data.setVerAv(x.sidav, INDEXT.RENCONTRE, x.v)
+      data.vag.setVerAv(x.sidav, INDEXT.RENCONTRE, x.v)
     })
     return { objs: r, vol: vol }
   } catch (e) {
@@ -258,7 +258,7 @@ export async function getMembres () {
       vol += idb.data.length
       const x = new Membre().fromIdb(await crypt.decrypter(data.clek, idb.data), idb.vs)
       r.push(x)
-      data.setVerGr(x.sidgr, INDEXT.MEMBRE, x.v)
+      data.vag.setVerGr(x.sidgr, INDEXT.MEMBRE, x.v)
     })
     return { objs: r, vol: vol }
   } catch (e) {
@@ -276,9 +276,9 @@ export async function getSecrets () {
       const x = new Secret().fromIdb(await crypt.decrypter(data.clek, idb.data), idb.vs)
       r.push(x)
       if (x.estAv) {
-        data.setVerAv(x.sidavgr, INDEXT.SECRET, x.v)
+        data.vag.setVerAv(x.sidavgr, INDEXT.SECRET, x.v)
       } else {
-        data.setVerGr(x.sidavgr, INDEXT.SECRET, x.v)
+        data.vag.setVerGr(x.sidavgr, INDEXT.SECRET, x.v)
       }
     })
     return { objs: r, vol: vol }

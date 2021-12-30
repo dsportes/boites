@@ -183,6 +183,54 @@ class Repertoire {
   }
 }
 
+/* Versions AvGr **************************************************************/
+class VAG {
+  constructor () {
+    this.verAv = new Map()
+    this.verGr = new Map()
+  }
+
+  setVerAv (id, idt, v) { // idt : Index de la table
+    const sid = typeof id === 'string' ? id : crypt.idToSid(id)
+    let t
+    if (!this.verAv.has(sid)) {
+      t = new Array(SIZEAV).fill(0)
+      this.verAv.set(sid, t)
+    } else t = this.verAv.get(sid)
+    if (v > t[idt]) t[idt] = v
+  }
+
+  delVerAv (id) {
+    const sid = typeof id === 'string' ? id : crypt.idToSid(id)
+    if (this.verAv.has(sid)) this.verAv.set(sid, new Array(SIZEAV).fill(0))
+  }
+
+  getVerAv (id) {
+    const sid = typeof id === 'string' ? id : crypt.idToSid(id)
+    return this.verAv.has(sid) ? this.verAv.get(sid) : new Array(SIZEAV).fill(0)
+  }
+
+  setVerGr (id, idt, v) { // idt : Index de la table
+    const sid = typeof id === 'string' ? id : crypt.idToSid(id)
+    let t
+    if (!this.verGr.has(sid)) {
+      t = new Array(SIZEGR).fill(0)
+      this.verGr.set(sid, t)
+    } else t = this.verGr.get(sid)
+    if (v > t[idt]) t[idt] = v
+  }
+
+  getVerGr (id) {
+    const sid = typeof id === 'string' ? id : crypt.idToSid(id)
+    return this.verGr.has(sid) ? this.verGr.get(sid) : new Array(SIZEGR).fill(0)
+  }
+
+  delVerGr (id) {
+    const sid = typeof id === 'string' ? id : crypt.idToSid(id)
+    if (this.verGr.has(sid)) this.verGr(sid, new Array(SIZEGR).fill(0))
+  }
+}
+
 /* état de session ************************************************************/
 class Session {
   constructor () {
@@ -342,8 +390,7 @@ class Session {
 
     this.syncqueue = [] // notifications reçues sur WS et en attente de traitement
 
-    this.verAv = new Map() // versions des tables relatives à chaque Avatar (par sid)
-    this.verGr = new Map() // versions des tables relatives à chaque Groupe (par sid)
+    this.vag = new VAG()
   }
 
   /* Enregistre le nom d'avatar pour :
@@ -374,31 +421,15 @@ class Session {
     return this.clec[crypt.idToSid(typeof id === 'string' ? id : crypt.idToSid(id)) + '/' + ic]
   }
 
-  setVerAv (sid, idt, v) { // idt : Index de la table
-    let t
-    if (!this.verAv.has(sid)) {
-      t = new Array(SIZEAV).fill(0)
-      this.verAv.set(sid, t)
-    } else t = this.verAv.get(sid)
-    if (v > t[idt]) t[idt] = v
-  }
-
-  setVerGr (sid, idt, v) { // idt : Index de la table
-    let t
-    if (!this.verGr.has(sid)) {
-      t = new Array(SIZEGR).fill(0)
-      this.verGr.set(sid, t)
-    } else t = this.verGr.get(sid)
-    if (v > t[idt]) t[idt] = v
-  }
-
   /* Getters / Setters ****************************************/
   get setIdsAvatarsUtiles () { return this.getCompte().allAvId() }
 
   get setIdsGroupesUtiles () {
     const s = new Set()
     const avs = this.setIdsAvatarsUtiles
-    avs.forEach(id => { this.getAvatar(id).allGrId(s) })
+    // un compte peut avoir un avatar référencé dans mac mais qui n'a jamais encore été chargé en IDB
+    // à ce stade ses groupes sont donc inconnus
+    avs.forEach(id => { const a = this.getAvatar(id); if (a) a.allGrId(s) })
     return s
   }
 
@@ -732,12 +763,14 @@ export class Avatar {
     this.m1ct.clear()
     this.m2ct.clear()
     this.m1gr.clear()
-    lct.forEach(x => { this.m1ct.set(x[0], x[1]); this.m2ct.set(x[1], x[0]) })
-    for (const ni in lgr) {
-      const y = lgr[ni]
-      const x = deserial(brut ? y : await crypt.decrypter(data.clek, y))
-      const na = data.setNa(x[0], x[1])
-      this.m1gr.set(ni, { na: na, im: x[2] })
+    if (lct) lct.forEach(x => { this.m1ct.set(x[0], x[1]); this.m2ct.set(x[1], x[0]) })
+    if (lgr) {
+      for (const ni in lgr) {
+        const y = lgr[ni]
+        const x = deserial(brut ? y : await crypt.decrypter(data.clek, y))
+        const na = data.setNa(x[0], x[1])
+        this.m1gr.set(ni, { na: na, im: x[2] })
+      }
     }
   }
 
@@ -770,7 +803,7 @@ export class Avatar {
     this.photo = x ? x[0] : ''
     this.info = x ? x[1] : ''
     const lct = deserial(await crypt.decrypter(data.clek, row.lctk))
-    await this.compileLists(lct, deserial(row.lgrk))
+    await this.compileLists(lct, row.lgrk ? deserial(row.lgrk) : null)
     return this
   }
 
@@ -1676,7 +1709,11 @@ export class Secret {
       const cles = this.cles
       this.txt = deserial(await crypt.decrypter(cles, row.txts))
       this.txt.t = ungzip(this.txt.t)
-      this.mc = this.ts ? (this.ts !== 2 ? row.mc : deserial(row.mc)) : null
+      if (row.mc) {
+        this.mc = this.ts === 0 || this.ts === 1 ? row.mc : deserial(row.mc)
+      } else {
+        this.mc = this.ts === 0 || this.ts === 1 ? new Uint8Array([]) : {}
+      }
       this.mpj = {}
       this.nbpj = 0
       if (this.v2) {

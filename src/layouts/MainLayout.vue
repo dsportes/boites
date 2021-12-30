@@ -1,6 +1,6 @@
 <template>
-  <q-layout view="hHh lpr fFf">
-    <q-header reveal elevated>
+  <q-layout view="hHh lPr ffr">
+    <q-header elevated>
       <q-toolbar>
         <q-toolbar-title>
           <span :class="sessionId == null ? 'cursor-pointer' : 'no-pointer-events'" @click="toorg">
@@ -9,7 +9,7 @@
               <q-tooltip>Changer d'organisation</q-tooltip>
             </span>
           </span>
-          <span v-if="compte != null" :class="page!=='Avatar' ? 'disabled' : 'cursor-pointer'" @click="tocompte">
+          <span v-if="compte != null && !compte.ko" :class="page!=='Avatar' ? 'disabled' : 'cursor-pointer'" @click="tocompte">
             <q-icon size="sm" name="home" aria-label="Accueil du compte"/>
             <span class="labeltitre q-px-sm">{{ compte.titre }}</span>
           </span>
@@ -47,7 +47,7 @@
           </q-avatar>
         </div>
 
-        <q-btn class="q-pr-sm" flat dense round size="sm" icon="settings" aria-label="Menu" @click="$store.commit('ui/majmenuouvert', true)"/>
+        <q-btn class="q-pr-sm" flat dense round size="sm" icon="settings" aria-label="Menu" @click="$store.commit('ui/togglemenuouvert')"/>
 
       </q-toolbar>
 
@@ -56,13 +56,13 @@
           <div v-if="page==='Org'" class="tbpage">Choix de l'organisation</div>
           <div v-if="page==='Login'" class="tbpage">Connexion à un compte</div>
           <div v-if="page==='Synchro'" class="tbpage">Synchronisation des données</div>
-          <div v-if="page==='Compte' && compte != null" class="tbpage">Compte : {{ compte.titre }}</div>
+          <div v-if="page==='Compte' && compte != null && !compte.ko" class="tbpage">Compte : {{ compte.titre }}</div>
 
           <div v-if="page==='Avatar'" class="row">
             <div class="col-8 col-sm-4 row justify-start tbpage">
               <span class="q-px-sm text-italic">Avatar :</span>
-              <span class="q-px-sm">{{avatar.na.nom}}</span>
-              <img class="photo q-ml-sm" :src="avatar.photo ? avatar.photo : personne"/>
+              <span class="q-px-sm">{{avatar && avatar.na ? avatar.na.nom : ''}}</span>
+              <img class="photo q-ml-sm" :src="avatar && avatar.photo ? avatar.photo : personne"/>
             </div>
             <div class="col-6 col-sm-4 row justify-start tbpage2">
               <span class="q-px-sm text-italic">Contact :</span>
@@ -78,7 +78,7 @@
         </q-toolbar-title>
       </q-toolbar>
 
-      <q-toolbar v-if="page === 'Compte'">
+      <q-toolbar inset v-if="page === 'Compte'">
         <div class="window-width">
         <q-tabs v-model="tabcompte" inline-label no-caps dense>
           <q-tab name="avatars" label="Avatars" />
@@ -87,7 +87,7 @@
         </div>
       </q-toolbar>
 
-      <q-toolbar v-if="page === 'Avatar'">
+      <q-toolbar inset v-if="page === 'Avatar'">
         <div class="row window-width justify-center">
           <q-tabs class="" v-model="tabavatar" inline-label no-caps dense>
             <q-btn-dropdown v-if="tabavatar==='secrets'" size="md" dense dropdown-icon="change_history" color="secondary" v-model="menugauche1">
@@ -115,9 +115,9 @@
       </q-toolbar>
     </q-header>
 
-    <q-drawer v-model="menuouvert" side="right" overlay elevated class="bg-grey-1" >
-      <panel-menu></panel-menu>
-    </q-drawer>
+    <q-drawer v-model="menuouvert"  :breakpoint="200" overlay elevated side="right" style="padding:0.5rem"><panel-menu></panel-menu></q-drawer>
+
+    <q-drawer elevated side="left"></q-drawer>
 
     <q-page-container>
       <router-view v-slot="{ Component }">
@@ -198,6 +198,7 @@
     <dialogue-info-idb></dialogue-info-idb>
     <dialogue-creation-compte></dialogue-creation-compte>
 
+    <q-footer></q-footer>
   </q-layout>
 </template>
 

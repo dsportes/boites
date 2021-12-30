@@ -1,6 +1,6 @@
 <template>
   <q-list>
-    <q-btn class="fermer" round size="md" color="warning" icon="close" @click="menuouvert = false"/>
+    <q-btn class="fermer" round size="sm" color="warning" icon="close" @click="menuouvert = false"/>
     <q-item-section>
       <q-item>
         <span class="text-primary text-italic q-pl-md q-ma-none">Build : {{ $cfg.build }}</span>
@@ -76,8 +76,8 @@ export default ({
 @import '../css/app.sass'
 .fermer
   position: absolute
-  top: 0.5rem
-  left: -1.5rem
+  top: 0
+  left: -1rem
   z-index: 2
 .q-item
   padding: 0 !important

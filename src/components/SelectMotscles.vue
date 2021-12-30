@@ -80,7 +80,7 @@ export default ({
       if (this.selecte(idx)) {
         this.srclocal = deselect(this.srclocal, idx)
       } else {
-        this.this.srclocal = select(this.srclocal, idx)
+        this.srclocal = select(this.srclocal, idx)
       }
     }
   },

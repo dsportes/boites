@@ -24,7 +24,7 @@
   </q-card>
 
   <q-dialog v-model="nouvsec">
-    <vue-secret :secret="nouveausecret(0, 0)" :motscles="motscles" :avobsid="avatar.id" :idx="0" :close="fclose"></vue-secret>
+    <vue-secret :secret="nouveausecret(0)" :motscles="motscles" :avobsid="avatar.id" :idx="0" :close="fclose"></vue-secret>
   </q-dialog>
 </q-page>
 </template>
@@ -51,7 +51,7 @@ function filtrer (secrets, filtre) {
   if (secrets) {
     for (const k in secrets) {
       const s = secrets[k]
-      if (amc(s, filtre.n1)) lst.push(secrets[k])
+      if (!filtre.n1 || amc(s, filtre.n1)) lst.push(secrets[k])
     }
   }
   return lst
@@ -99,7 +99,9 @@ export default ({
       return !id2 ? s.nouveauP(avatar.value.id) : s.nouveauC(avatar.value.id, id2)
     }
 
-    const secrets = computed(() => { return data.getSecret(avatar.value.sid) })
+    const secrets = computed(() => {
+      return avatar.value.ko ? [] : data.getSecret(avatar.value.sid)
+    })
 
     const state = reactive({ lst: [], filtre: { n1: 2 } })
 
@@ -140,8 +142,8 @@ export default ({
     function onEvtAvatar (opt) {
       if (opt === 'plus') {
         plus(1)
-      } else if (opt === 'plus') {
-        plus(-1)
+      } else if (opt === 'moins') {
+        raz()
       } else if (opt === 'nouveau') {
         nouvsec.value = true
       }
@@ -151,6 +153,12 @@ export default ({
     function plus (n) { // Il faut réassigner un nouvel objet
       const x = { ...state.filtre }
       x.n1 += n
+      state.filtre = { ...x }
+    }
+
+    function raz () { // Il faut réassigner un nouvel objet
+      const x = { ...state.filtre }
+      x.n1 = 0
       state.filtre = { ...x }
     }
 

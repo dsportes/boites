@@ -84,7 +84,7 @@ export function deselect (u8, idx) {
 export function select (u8, idx) {
   if (!u8) return new Uint8Array([idx])
   const l = []
-  this.srclocal.forEach(x => { if (x !== idx) l.push(x) })
+  u8.forEach(x => { if (x !== idx) l.push(x) })
   l.push(idx)
   return new Uint8Array(l.sort())
 }
@@ -416,6 +416,7 @@ export class Motscles {
   }
 
   edit (u8, court) {
+    if (!u8) return ''
     const l = []
     for (let i = 0; i < u8.length; i++) {
       const x = this.mapAll.get(u8[i])
@@ -484,7 +485,8 @@ export class Motscles {
     this.mc.lcategs.length = 0
     this.fusion(cfg().motscles)
     if (this.mode === 1 || (this.mode === 3 && !this.idg)) {
-      this.mapc = data.getCompte().mmc
+      const cpt = data.getCompte()
+      this.mapc = cpt ? cpt.mmc : {}
       this.fusion(this.mapc)
       if (this.mode === 1) this.src = this.mapc
     }

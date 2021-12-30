@@ -152,6 +152,10 @@ export function majmenuouvert (state, val) {
   state.menuouvert = val
 }
 
+export function togglemenuouvert (state) {
+  state.menuouvert = !state.menuouvert
+}
+
 export function majevtavatar (state, val) {
   state.evtavatar = { evt: val }
 }

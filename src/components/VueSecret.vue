@@ -19,7 +19,7 @@
         </div>
         <div v-if="enedition" class="titre-4 text-italic">Cliquer ci-dessous pour changer les mots clés</div>
         <apercu-motscles v-if="enedition" class="mced" :motscles="motscles" :src="mclocal" :argsClick="{}" @click="ouvrirmc"></apercu-motscles>
-        <apercu-motscles v-if="!enedition" :motscles="motscles" :src="locsecret.mc"></apercu-motscles>
+        <apercu-motscles v-if="!enedition" :motscles="motscles" :src="locsecret.mc || u8vide"></apercu-motscles>
         <div v-if="locsecret.v===0" class="mced">
           <span>Par défaut ce secret s'auto détruira au bout de {{limjours}} jours. </span>
           <q-checkbox left-label size="sm" color="primary" v-model="permlocal" label="Le créer 'PERMANENT'" />
@@ -126,7 +126,7 @@ export default ({
         mcg = equ8(this.mcglocal, s.mc[0]) ? new Uint8Array([0]) : (!this.mcglocal || !this.mcglocal.length ? null : this.mcglocal)
       }
       const v1 = this.v && this.textelocal === s.txt.t ? s.v1 : this.textelocal.length
-      const arg = { id: s.id, ns: s.ns, ref: s.ref, mc: mc, txts: txts, v1: v1 }
+      const arg = { ts: s.ts, id: s.id, ns: s.ns, mc: mc, txts: txts, v1: v1 }
       if (s.ts === 2) {
         arg.mcg = mcg
         arg.im = this.im
@@ -140,9 +140,11 @@ export default ({
         await new Maj1Secret().run(arg)
       } else {
         // création
-        arg.ora = this.oralocal
-        arg.perm = this.permlocal
+        arg.ic = 0
+        arg.st = this.permlocal ? 99999 : (this.jourJ + cfg().limitesjour[0])
+        arg.ora = this.oralocal || 0
         if (s.ts === 1) {
+          arg.ic2 = s.ic2
           arg.dups = await crypt.crypter(s.cles, serial([arg.id2, arg.ns2]))
           arg.dups2 = await crypt.crypter(s.cles, serial([arg.id, arg.ns]))
         }
@@ -192,6 +194,7 @@ export default ({
     })
 
     return {
+      u8vide: new Uint8Array([]),
       locsecret,
       limjours,
       jourJ,

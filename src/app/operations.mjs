@@ -190,15 +190,11 @@ export class Operation {
   async chargerAvatars (avUtiles, tous) {
     // idsVers : map de clé:id de l'avatar, valeur: version détenue en session
     const idsVers = { }
-    for (const id of avUtiles) {
-      idsVers[id] = tous ? 0 : data.verAv.get(crypt.idToSid(id))[INDEXT.AVATAR]
-    }
+    for (const id of avUtiles) idsVers[id] = tous ? 0 : data.vag.getVerAv(id)[INDEXT.AVATAR]
     const ret = await post(this, 'm1', 'chargerAv', { sessionId: data.sessionId, idsVers })
     if (data.dh < ret.dh) data.dh = ret.dh
     const objets = []
-    for (const id of avUtiles) {
-      data.verAv.get(crypt.idToSid(id))[INDEXT.AVATAR] = -1
-    }
+    for (const id of avUtiles) data.vag.setVerAv(id, INDEXT.AVATAR, -1)
     commitMapObjets(objets, await this.rowItemsToMapObjets(ret.rowItems)) // stockés en modele
     if (data.db) {
       await commitRows(objets)
@@ -208,8 +204,7 @@ export class Operation {
 
   /* Recharge depuis le serveur un avatar et ses rows associées (contact ... secret) */
   async chargerAv (id, tous) { // lav : set des avatars utiles
-    const sid = crypt.idToSid(id)
-    const lv = tous ? new Array(SIZEAV).fill(0) : data.verAv.get(sid)
+    const lv = tous ? new Array(SIZEAV).fill(0) : data.vag.getVerAv(id)
     const ret = await post(this, 'm1', 'syncAv', { sessionId: data.sessionId, avgr: id, lv })
     if (data.dh < ret.dh) data.dh = ret.dh
     const objets = []
@@ -223,7 +218,7 @@ export class Operation {
   /* Recharge depuis le serveur les groupes et les tables associées (membres, secrets) */
   async chargerGr (id, tous) { // lgr : set des groupes utiles
     const sid = crypt.idToSid(id)
-    const lv = tous ? new Array(SIZEGR).fill(0) : data.verGr.get(sid)
+    const lv = tous ? new Array(SIZEGR).fill(0) : data.getVerGr(sid)
     const ret = await post(this, 'm1', 'syncGr', { sessionId: data.sessionId, avgr: id, lv })
     if (data.dh < ret.dh) data.dh = ret.dh
     const objets = []
@@ -761,7 +756,7 @@ export class ConnexionCompte extends OperationUI {
           if (avInutiles.size) {
             data.purgeAvatars(avInutiles) // en store
             await data.db.purgeAvatars(avInutiles)// en IDB
-            for (const id of avInutiles) delete data.verAv[crypt.idToSid(id)]
+            for (const id of avInutiles) data.vag.delVerAv(id)
           }
           this.BRK()
           await commitRows([compte])
@@ -925,10 +920,11 @@ export class NouveauSecret extends OperationUI {
 
   // excActions(), défaut de Operation
 
-  async run (rowSecret) {
+  // arg = { ts, id, ns, ic, st, ora, v1, mcg, mc, im, txts, dups, refs, id2, ns2, ic2, dups2 }
+  async run (arg) {
     try {
-      const args = { sessionId: data.sessionId, rowSecret }
-      const ret = await post(this, 'm1', 'nouveauSecretP', args)
+      const args = { sessionId: data.sessionId, ...arg }
+      const ret = await post(this, 'm1', 'nouveauSecret', args)
       if (data.dh < ret.dh) data.dh = ret.dh
       this.finOK()
     } catch (e) {
