@@ -9,7 +9,7 @@
               <q-tooltip>Changer d'organisation</q-tooltip>
             </span>
           </span>
-          <span v-if="compte != null && !compte.ko" :class="page!=='Avatar' ? 'disabled' : 'cursor-pointer'" @click="tocompte">
+          <span v-if="compte != null" :class="page!=='Avatar' ? 'disabled' : 'cursor-pointer'" @click="tocompte">
             <q-icon size="sm" name="home" aria-label="Accueil du compte"/>
             <span class="labeltitre q-px-sm">{{ compte.titre }}</span>
           </span>
@@ -61,7 +61,7 @@
           <div v-if="page==='Avatar'" class="row">
             <div class="col-8 col-sm-4 row justify-start tbpage">
               <span class="q-px-sm text-italic">Avatar :</span>
-              <span class="q-px-sm">{{avatar && avatar.na ? avatar.na.nom : ''}}</span>
+              <span class="q-px-sm">{{avatar && avatar.na ? (avatar.na.nom + (avatar.info ? ' [' + avatar.info + ']' : '')): ''}}</span>
               <img class="photo q-ml-sm" :src="avatar && avatar.photo ? avatar.photo : personne"/>
             </div>
             <div class="col-6 col-sm-4 row justify-start tbpage2">
@@ -204,7 +204,7 @@
 
 <script>
 import { useQuasar } from 'quasar'
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 import { useStore } from 'vuex'
 import DialogueCreationCompte from 'components/DialogueCreationCompte.vue'
 import DialogueInfoMode from 'components/DialogueInfoMode.vue'
@@ -375,6 +375,13 @@ export default {
       return 'Suite à un incident réseau ou d\'accès à la base locale, le mode a été dégradé de "' +
       MODES[data.modeInitial] + '" à "' + MODES[data.mode] + '".'
     }
+
+    watch(
+      () => avatar.value,
+      (ap, av) => {
+        console.log(ap.info)
+      }
+    )
 
     return {
       personne,

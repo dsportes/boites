@@ -33,7 +33,7 @@
 import { computed, onMounted, reactive, watch, ref, isRef } from 'vue'
 import { useStore } from 'vuex'
 import { onBoot } from '../app/page.mjs'
-import { Motscles } from '../app/util.mjs'
+import { Motscles, difference } from '../app/util.mjs'
 // import BoutonHelp from '../components/BoutonHelp.vue'
 import MotsCles from '../components/MotsCles.vue'
 import CarteVisite from '../components/CarteVisite.vue'
@@ -108,21 +108,15 @@ export default ({
 
     const state = reactive({ lst: [], filtre: { n1: 2 }, refSecrets: getRefSecrets() })
 
-    /*
-    const secrets = computed(() => {
-      return !avatar.value ? [] : data.getSecret(avatar.value.sid)
-    })
-    */
-
-    /* OK en ajout de secrets, maj de secrets, changement de filtre
-    Mais avec une liste fixe au départ de groupes de l'avatar
-    Comment gérer (si nécessaire ?) l'apparition de nouveaux groupes sur un watch de l'avatar ?
-    */
-
     watch(
       () => avatar.value,
       (ap, av) => {
-        state.refSecrets = getRefSecrets()
+        // Avatar modifié : la liste des groupes a pu changer, recharger SI nécessaire
+        const sav = av.allGrId()
+        const sap = ap.allGrId()
+        if (difference(sav, sap).size || difference(sap, sav).size) {
+          state.refSecrets = getRefSecrets()
+        }
       }
     )
 
@@ -139,8 +133,6 @@ export default ({
       })
       return refSecrets
     }
-
-    // const refSecrets = getRefSecrets()
 
     function getAllSecrets (ap) {
       const lst = []
@@ -164,13 +156,6 @@ export default ({
       const lst = getAllSecrets(state.refSecrets)
       state.lst = filtrer(lst, state.filtre)
     })
-
-    /*
-    watch(
-      () => secrets.value,
-      (ap, av) => { state.lst = filtrer(ap, state.filtre) }
-    )
-    */
 
     watch(
       () => state.filtre, // NON pas .value

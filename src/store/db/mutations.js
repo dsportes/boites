@@ -148,6 +148,12 @@ export function setObjets (state, [table, lobj]) { // lobj : array d'objets
         if (av) delete st[obj.sid]
       } else if (!av || av.v < obj.v) {
         st[obj.sid] = obj
+        if (table === 'avatar') {
+          majavatar(state, obj)
+        }
+        if (table === 'groupe') {
+          majgroupe(state, obj)
+        }
       }
     })
     state[table + 's'] = { ...st }
