@@ -162,7 +162,7 @@ export default ({
     const textelocal = ref('')
     const mclocal = ref(null)
     const mcglocal = ref(null)
-    const oralocal = ref(0)
+    const oralocal = ref(null)
 
     toRef(props, 'motscles')
     toRef(props, 'close')

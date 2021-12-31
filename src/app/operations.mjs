@@ -948,7 +948,7 @@ export class Maj1Secret extends OperationUI {
   async run (arg) { // { id: s.id, ns: s.ns, v1, txts: txts, mcs: mcs }
     try {
       const args = { sessionId: data.sessionId, ...arg }
-      const ret = await post(this, 'm1', 'maj1SecretP', args)
+      const ret = await post(this, 'm1', 'maj1Secret', args)
       if (data.dh < ret.dh) data.dh = ret.dh
       this.finOK()
     } catch (e) {
