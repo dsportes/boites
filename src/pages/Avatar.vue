@@ -30,7 +30,7 @@
 </template>
 
 <script>
-import { computed, onMounted, reactive, watch, ref } from 'vue'
+import { computed, onMounted, reactive, watch, ref, isRef } from 'vue'
 import { useStore } from 'vuex'
 import { onBoot } from '../app/page.mjs'
 import { Motscles } from '../app/util.mjs'
@@ -74,8 +74,8 @@ export default ({
     async validercv (resultat) {
       if (resultat) {
         // console.log('CV changée : ' + resultat.info + '\n' + resultat.ph.substring(0, 30))
-        const cvinfo = await this.a.av.cvToRow(resultat.ph, resultat.info)
-        await new CvAvatar().run(this.a.av.id, cvinfo)
+        const cvinfo = await this.avatar.cvToRow(resultat.ph, resultat.info)
+        await new CvAvatar().run(this.avatar.id, cvinfo)
       }
     }
   },
@@ -106,24 +106,78 @@ export default ({
       return !id2 ? s.nouveauP(avatar.value.id) : s.nouveauC(avatar.value.id, id2)
     }
 
+    const state = reactive({ lst: [], filtre: { n1: 2 }, refSecrets: getRefSecrets() })
+
+    /*
     const secrets = computed(() => {
       return !avatar.value ? [] : data.getSecret(avatar.value.sid)
     })
+    */
 
-    const state = reactive({ lst: [], filtre: { n1: 2 } })
+    /* OK en ajout de secrets, maj de secrets, changement de filtre
+    Mais avec une liste fixe au départ de groupes de l'avatar
+    Comment gérer (si nécessaire ?) l'apparition de nouveaux groupes sur un watch de l'avatar ?
+    */
 
-    onMounted(() => {
-      state.lst = filtrer(secrets.value, state.filtre)
+    watch(
+      () => avatar.value,
+      (ap, av) => {
+        state.refSecrets = getRefSecrets()
+      }
+    )
+
+    function getRefSecrets () {
+      const setGr = new Set()
+      const refSecrets = []
+      if (avatar.value) {
+        setGr.add(avatar.value.id)
+        avatar.value.allGrId(setGr)
+      }
+      setGr.forEach(id => {
+        const ref = computed(() => { return data.getSecret(id) })
+        refSecrets.push(ref)
+      })
+      return refSecrets
+    }
+
+    // const refSecrets = getRefSecrets()
+
+    function getAllSecrets (ap) {
+      const lst = []
+      ap.forEach(val => {
+        // selon le cas on reçoit le ref ou la value
+        const a = isRef(val) ? val.value : val
+        for (const sid in a) {
+          lst.push(a[sid])
+        }
+      })
+      return lst
+    }
+
+    watch(state.refSecrets, (ap, av) => {
+      /* ap est un array des secrets PAS de leur ref */
+      const lst = getAllSecrets(ap)
+      state.lst = filtrer(lst, state.filtre)
     })
 
+    onMounted(() => {
+      const lst = getAllSecrets(state.refSecrets)
+      state.lst = filtrer(lst, state.filtre)
+    })
+
+    /*
     watch(
       () => secrets.value,
       (ap, av) => { state.lst = filtrer(ap, state.filtre) }
     )
+    */
 
     watch(
       () => state.filtre, // NON pas .value
-      (ap, av) => { state.lst = filtrer(secrets.value, ap) }
+      (ap, av) => {
+        const lst = getAllSecrets(state.refSecrets)
+        state.lst = filtrer(lst, ap)
+      }
     )
 
     // Pour tester la réactivité au filtre (et ouvrir le dialogue de création de secret)

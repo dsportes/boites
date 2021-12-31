@@ -744,7 +744,9 @@ export class Avatar {
   }
 
   allGrId (s) {
+    if (!s) s = new Set()
     this.m1gr.forEach(val => { s.add(val.na.id) })
+    return s
   }
 
   nouveau (id) {
