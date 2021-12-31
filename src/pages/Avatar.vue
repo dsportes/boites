@@ -14,7 +14,7 @@
 
   <q-card v-if="tabavatar === 'etc'" class="column align-start items-start q-pa-xs">
     <q-expansion-item group="etc" label="Carte de visite" default-opened header-class="titre-2 bg-primary text-white">
-      <div style="width:100%">
+      <div v-if="avatar" style="width:100%">
         <carte-visite :nomc="avatar.nomc" :info-init="avatar.info" :photo-init="avatar.photo" @ok="validercv"/>
       </div>
     </q-expansion-item>
@@ -84,15 +84,22 @@ export default ({
     onBoot()
     const $store = useStore()
     const nouvsec = ref(false)
-    const compte = computed(() => { const c = $store.state.db.compte; return c || { ko: true } })
-    const avatar = computed(() => { const a = $store.state.db.avatar; return a || { ko: true } })
+    const compte = computed(() => { return $store.state.db.compte })
+    const avatar = computed(() => { return $store.state.db.avatar })
     const mode = computed(() => $store.state.ui.mode)
+
     const evtavatar = computed(() => $store.state.ui.evtavatar)
+    watch(() => evtavatar.value, (ap) => { onEvtAvatar(ap.evt) })
+
     const tabavatar = computed(() => $store.state.ui.tabavatar)
 
     const mc = reactive({ categs: new Map(), lcategs: [], st: { enedition: false, modifie: false } })
     const motscles = new Motscles(mc, 1)
     motscles.recharger()
+    watch(
+      () => compte.value, // OUI .value !!!
+      (ap, av) => { if (ap && ap.v > av.v) motscles.recharger() }
+    )
 
     function nouveausecret (id2) { // pour un couple seulement, id2 du contact de l'avatar du compte
       const s = new Secret()
@@ -100,7 +107,7 @@ export default ({
     }
 
     const secrets = computed(() => {
-      return avatar.value.ko ? [] : data.getSecret(avatar.value.sid)
+      return !avatar.value ? [] : data.getSecret(avatar.value.sid)
     })
 
     const state = reactive({ lst: [], filtre: { n1: 2 } })
@@ -110,56 +117,28 @@ export default ({
     })
 
     watch(
-      () => evtavatar.value,
-      (ap) => {
-        onEvtAvatar(ap.evt)
-      }
-    )
-
-    watch(
-      () => compte.value, // OUI .value !!!
-      (ap, av) => {
-        if (ap && ap.v > av.v) {
-          motscles.recharger()
-        }
-      }
-    )
-
-    watch(
       () => secrets.value,
-      (ap, av) => {
-        state.lst = filtrer(ap, state.filtre)
-      }
+      (ap, av) => { state.lst = filtrer(ap, state.filtre) }
     )
 
     watch(
       () => state.filtre, // NON pas .value
-      (ap, av) => {
-        state.lst = filtrer(secrets.value, ap)
-      }
+      (ap, av) => { state.lst = filtrer(secrets.value, ap) }
     )
 
+    // Pour tester la réactivité au filtre (et ouvrir le dialogue de création de secret)
     function onEvtAvatar (opt) {
       if (opt === 'plus') {
-        plus(1)
+        const x = { ...state.filtre }
+        x.n1++
+        state.filtre = { ...x }
       } else if (opt === 'moins') {
-        raz()
+        const x = { ...state.filtre }
+        x.n1 = 0
+        state.filtre = { ...x }
       } else if (opt === 'nouveau') {
         nouvsec.value = true
       }
-      console.log('Evt reçu : ' + opt)
-    }
-
-    function plus (n) { // Il faut réassigner un nouvel objet
-      const x = { ...state.filtre }
-      x.n1 += n
-      state.filtre = { ...x }
-    }
-
-    function raz () { // Il faut réassigner un nouvel objet
-      const x = { ...state.filtre }
-      x.n1 = 0
-      state.filtre = { ...x }
     }
 
     return {

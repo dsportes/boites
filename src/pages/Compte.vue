@@ -1,12 +1,12 @@
 <template>
 <q-page>
-  <q-card v-if="tabcompte === 'avatars'" class="column align-start items-start">
+  <q-card v-if="tabcompte === 'avatars' && compte" class="column align-start items-start">
     <div v-for="e in compte.mac" :key="e.na.id" class="full-width">
       <apercu-avatar page editer :avatar-id="e.na.id"/>
     </div>
   </q-card>
 
-  <q-card v-if="tabcompte === 'etc'" class="column align-start items-start q-pa-xs">
+  <q-card v-if="tabcompte === 'etc' && compte" class="column align-start items-start q-pa-xs">
     <q-list bordered class="full-width">
       <q-expansion-item group="etc" label="Identité" default-opened header-class="titre-2 bg-secondary text-white">
         <div class="titre q-my-md"><span>Code du compte : {{compte.sid}}</span><bouton-help page="page1"/></div>
@@ -59,26 +59,6 @@ export default ({
     selection (u8) {
       this.u8mc = u8
     }
-    /*
-    async getcv (sid) {
-      const r = await get('m1', 'getcv', { sid: sid })
-      if (r) {
-        const objcv = schemas.deserialize('rowcv', new Uint8Array(r))
-        console.log(JSON.stringify(objcv))
-      }
-    },
-    async getclepub (sid) {
-      const r = await get('m1', 'getclepub', { sid: sid })
-      if (r) {
-        const c = u8ToString(new Uint8Array(r))
-        console.log(c)
-      }
-    },
-    toAvatar (id) {
-      this.avatar = data.getAvatar(id)
-      remplacePage('Avatar')
-    },
-    */
   },
 
   setup () {
@@ -87,21 +67,9 @@ export default ({
     const $store = useStore()
     const org = computed(() => $store.state.ui.org)
     // En déconnexion, compte passe à null et provoque un problème dans la page. Un getter ne marche pas ?!
-    const compte = computed({
-      get: () => { const c = $store.state.db.compte; return c || { ko: true } }
-    })
-    const avatar = computed({
-      get: () => { const a = $store.state.db.avatar; return a || { ko: true } },
-      set: (val) => $store.commit('db/majavatar', val)
-    })
-    const groupe = computed({
-      get: () => { const a = $store.state.db.avatar; return a || { ko: true } },
-      set: (val) => $store.commit('db/majgroupe', val)
-    })
+    const compte = computed(() => $store.state.db.compte)
     const tabcompte = computed(() => $store.state.ui.tabcompte)
     const cvs = computed(() => $store.state.db.cvs)
-    const avatars = computed(() => $store.state.db.avatars)
-    const groupes = computed(() => $store.state.db.groupes)
     const mode = computed(() => $store.state.ui.mode)
 
     const mc = reactive({ categs: new Map(), lcategs: [], st: { enedition: false, modifie: false } })
@@ -125,12 +93,8 @@ export default ({
       memoed,
       org,
       compte,
-      avatar,
-      groupe,
       mode,
       cvs,
-      avatars,
-      groupes,
       tabcompte
     }
   }

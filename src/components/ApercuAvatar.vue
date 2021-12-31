@@ -61,7 +61,7 @@ export default ({
 
   methods: {
     toAvatar () {
-      this.avatar = this.a.av
+      this.$store.commit('db/majavatar', this.a.av)
       remplacePage('Avatar')
     },
     closedialog () { this.cvloc = false },
@@ -85,11 +85,6 @@ export default ({
       get: () => { return $store.state.db.avatars }
     })
 
-    const avatar = computed({
-      get: () => { const a = $store.state.db.avatar; return a || { ko: true } },
-      set: (val) => $store.commit('db/majavatar', val)
-    })
-
     onMounted(() => {
       if (avatarId.value) a.av = data.getAvatar(avatarId.value)
     })
@@ -107,7 +102,6 @@ export default ({
 
     return {
       a,
-      avatar,
       personne
     }
   }
