@@ -42,6 +42,11 @@ export function majgroupe (state, val) {
   state.groupe = val
 }
 
+/* Déclaration du contact courant */
+export function majcontact (state, val) {
+  state.contact = val
+}
+
 /* Purges des avatars inutiles et tables associées */
 export function purgeAvatars (state, val) { // val : Set des ids des avatars INUTILES
   if (!val || !val.size) return 0
@@ -120,11 +125,15 @@ export function setObjets (state, [table, lobj]) { // lobj : array d'objets
   if (l3[table]) {
     // gérés par sous-groupe
     const m = {}
+    const cc = state.contact
     lobj.forEach(obj => {
       if (!m[obj.sid]) {
         m[obj.sid] = [obj]
       } else {
         m[obj.sid].push(obj)
+      }
+      if (cc && table === 'contact' && cc.id === obj.id && cc.ic === obj.ic) {
+        majcontact(state, obj)
       }
     })
     for (const sid in m) {
@@ -142,16 +151,18 @@ export function setObjets (state, [table, lobj]) { // lobj : array d'objets
   } else if (l4[table]) {
     // gérés une seule entrée
     const st = state[table + 's']
+    const ac = state.avatar
+    const gc = state.groupe
     lobj.forEach(obj => {
       const av = st[obj.sid]
       if (obj.suppr || obj.horsLimite) {
         if (av) delete st[obj.sid]
       } else if (!av || av.v < obj.v) {
         st[obj.sid] = obj
-        if (table === 'avatar') {
+        if (ac && table === 'avatar' && ac.id === obj.id) {
           majavatar(state, obj)
         }
-        if (table === 'groupe') {
+        if (gc && table === 'groupe' && gc.id === obj.id) {
           majgroupe(state, obj)
         }
       }

@@ -5,6 +5,7 @@ import { u8ToB64, crypt } from './crypto.mjs'
 import { encode, decode } from '@msgpack/msgpack'
 
 const headers = { 'x-api-version': version }
+const u8vide = new Uint8Array([])
 
 const decoder = new TextDecoder('utf-8')
 const encoder = new TextEncoder('utf-8')
@@ -654,4 +655,87 @@ export class NomAvatar {
   get sid () { return crypt.idToSid(this.id) }
 
   get cle () { return this.rnd }
+}
+
+/** Filtre *************************************/
+export class Filtre {
+  constructor (avId) {
+    this.avId = avId
+    this.perso = true
+    this.contactId = 0 // 0: pas de secrets de contacts, -1:tous les secrets de contacts, n:secrets du contact d'id N seulement (id2 du secret)
+    this.groupeId = 0 // 0:pas de secrets de groupe, -1: secrets partagés avec tous les groupes, n: secrets partagés seulement avec le groupe N (id du secret)
+    this.m1 = 0
+    this.m2 = 0
+    this.nm1 = 0
+    this.nm2 = 0
+    this.perm = true // sélectionner les permanents
+    this.temp = 99998 // 0: ne pas sélectionner les temporaires N: ne sélectionner que les temporaires venant à échéance avant N
+    this.texte = '' // secrets dont le titre contient ce texte
+    this.corps = false // true: rechercher le texte dans le corps aussi
+    /*
+    0: pas de filtre sur la date de modification
+    >0: modifiés après date D
+    <0: modifiés avant date D
+    */
+    this.modif = 0
+    /*
+    0 : pas de tri
+    1 : par date de dernière modification
+    2 : par date de disparition automatique
+    3 : par ordre alphabétique du titre
+    */
+    this.tri = 3
+    this.asc = true // ascendant, descendant
+  }
+
+  debutFiltre () {
+    this.m2gr = data.getAvatar(this.avId).m2gr
+    if (this.modif) this.auj = Math.floor(new Date().getTime() / 86400000)
+  }
+
+  filtre (s) {
+    if (s.ts === 0 && !this.perso) return false
+    if (s.ts === 1 && (this.contactId === 0 || (this.contactId !== -1 && this.contactId !== s.id2))) return false
+    if (s.ts === 2 && (this.groupeId === 0 || (this.groupeId !== -1 && this.groupeId !== s.id))) return false
+    const im = s.ts !== 2 ? 0 : this.m2gr[this.avid]
+    let mcs = im === 0 ? s.mc : s.mc[im]
+    if (!mcs && s.ts === 2) mcs = s.mc[0]
+    if (!mcs) mcs = u8vide
+    if (this.m1 && mcs.indexOf(this.m1) === -1) return false
+    if (this.m2 && mcs.indexOf(this.m2) === -1) return false
+    if (this.nm1 && mcs.indexOf(this.nm1) !== -1) return false
+    if (this.nm2 && mcs.indexOf(this.nm2) !== -1) return false
+    if (!this.perm && s.st === 99999) return false
+    if (!this.temp && s.st !== 99999) return false
+    if (this.temp && s.st !== 99999 && this.st > this.temp) return false
+    if (this.modif) {
+      const j = Math.floor(s.txt.d / 86400000)
+      if (this.modif > 0 && j < this.auj) return false
+      if (this.modif < 0 && j > this.auj) return false
+    }
+    if (this.texte) {
+      if (this.corps && s.txt.t.indexOf(this.texte) === -1) return false
+      if (!this.corps && s.titre.indexOf(this.texte) === -1) return false
+    }
+  }
+
+  tri1 (a, b) { return this.asc ? (a.txt.d < b.txt.d ? -1 : (a.txt.d > b.txt.d ? 1 : 0)) : (a.txt.d < b.txt.d ? 1 : (a.txt.d > b.txt.d ? 11 : 0)) }
+
+  tri2 (a, b) { return this.asc ? (a.st < b.st ? -1 : (a.st > b.st ? 1 : 0)) : (a.st < b.st ? 1 : (a.st > b.st ? 11 : 0)) }
+
+  tri3 (a, b) { return this.asc ? (a.txt.t < b.txt.t ? -1 : (a.txt.t > b.txt.t ? 1 : 0)) : (a.txt.t < b.txt.t ? 1 : (a.txt.t > b.txt.t ? 11 : 0)) }
+
+  tri (a, b) {
+    return this.tr1 === 1 ? this.tri1(a, b) : (this.tri === 2 ? this.tri2(a, b) : this.tri3(a, b))
+  }
+
+  changement (f) {
+    // niveau de changement avec le filtre précemment employé.
+    // 0: aucun, 1:tri seulement, 2:filtre seulement, 3: base changée
+    if (this.perso !== f.perso || this.contactId !== f.contactId || this.groupeId !== f.groupeId) return 3
+    if (this.m1 !== f.m2 || this.m2 !== f.m2 || this.nm1 !== f.nm1 || this.nm2 !== f.nm2 || this.perm !== f.perm ||
+      this.temp !== f.temp || this.modi !== f.modif || this.texte !== f.texte || this.corps !== f.corps) return 2
+    if (this.tri !== f.tri || this.asc !== f.asc) return 1
+    return 0
+  }
 }

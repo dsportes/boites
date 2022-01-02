@@ -741,6 +741,7 @@ export class Avatar {
     this.m1ct = new Map() // clé:idc val:ic
     this.m2ct = new Map() // clé:ic val:idc
     this.m1gr = new Map() // clé:ni val: na, im
+    this.m2gr = new Map() // clé:idg, val:im
   }
 
   allGrId (s) {
@@ -772,6 +773,7 @@ export class Avatar {
         const x = deserial(brut ? y : await crypt.decrypter(data.clek, y))
         const na = data.setNa(x[0], x[1])
         this.m1gr.set(ni, { na: na, im: x[2] })
+        this.m2gr.set(na.id, x[2])
       }
     }
   }
@@ -1017,6 +1019,13 @@ export class Contact {
 
   get na () { return data.getNa(this.id, this.ic) }
 
+  get cv () { return data.repertoire.getCv(this.na.id) }
+
+  get nom () {
+    const cv = this.cv
+    return this.data.nom + (!cv ? '' : '/' + cv.info)
+  }
+
   majCc () {
     if (this.data.cc) data.setClec(this.id, this.ic, this.data.cc)
     data.setNa(this.data.nom, this.data.rnd, this.id, this.ic)
@@ -1101,6 +1110,14 @@ export class Groupe {
   get cleg () { return this.na.cle }
 
   get na () { return data.getNa(this.id) }
+
+  get nom () {
+    if (this.cv.info) {
+      const s = this.cv.info
+      const i = s.indexOf('\n')
+      return (i === -1 ? s : s.substring(0, i)).substring(0, 16)
+    } else return this.na.nom
+  }
 
   /*
   Map ayant pour clé les sid des avatars du compte
@@ -1627,6 +1644,11 @@ export class Secret {
     return this.ts ? (this.ts === 1 ? data.getNa(this.id, this.ic) : data.getNa(this.id).cle) : data.clek
   }
 
+  get contact () {
+    if (this.ts !== 1) return null
+    return data.getContact(this.id, this.ic)
+  }
+
   nouveauP (id, ref) {
     this.id = id
     this.ns = (Math.floor(crypt.rnd4() / 3) * 3)
@@ -1667,35 +1689,6 @@ export class Secret {
     }
     return await crypt.crypter(this.cles, serial(x))
   }
-
-  /*
-  async nouveauToRow (arg) {
-    // const arg = { ts, temp, v1, dup, id: s.id, ns: s.ns, mc: mc, mcg: mcg, im: im, ora: this.oralocal, txts: txts }
-    this.id = arg.id
-    this.ns = (Math.floor(crypt.rnd4() / 3) * 3) + arg.ts
-    this.nr = arg.nr
-    this.ic = arg.ts === 1 ? arg.im : 0
-    this.v = 0
-    this.st = !arg.temp ? 99999 : (getJourJ() + cfg().limitesjour[0])
-    this.ora = arg.ora
-    this.v1 = arg.v1
-    this.v2 = 0
-    if (this.ts) {
-      this.mcs = arg.mc
-    } else { // groupe
-      const mc = {}
-      if (arg.mc) mc[arg.im] = arg.mc
-      if (arg.mcg) mc[0] = arg.mcg
-      this.mcs = serial(this.mc)
-    }
-    this.txts = arg.txts
-    this.vsh = 0
-    if (this.ts === 1) {
-      this.dups = await crypt.crypter(this.cles, serial(this.dup))
-    } else this.dups = null
-    return schemas.serialize('rowsecret', this)
-  }
-  */
 
   async fromRow (row) {
     this.vsh = row.vsh || 0
