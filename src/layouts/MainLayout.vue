@@ -60,9 +60,10 @@
 
           <div v-if="page==='Avatar'" class="row">
             <div class="col-8 col-sm-4 row justify-start tbpage">
-              <span class="q-px-sm text-italic">Avatar :</span>
-              <span class="q-px-sm">{{avatar && avatar.na ? (avatar.na.nom + (avatar.info ? ' [' + avatar.info + ']' : '')): ''}}</span>
-              <img class="photo q-ml-sm" :src="avatar && avatar.photo ? avatar.photo : personne"/>
+              <div class="row justify-center">
+                <span class="q-px-sm">{{avatar && avatar.na ? (avatar.na.nom + (avatar.info ? ' [' + avatar.info + ']' : '')): ''}}</span>
+                <img class="photo q-ml-sm" :src="avatar && avatar.photo ? avatar.photo : personne"/>
+              </div>
             </div>
             <div class="col-6 col-sm-4 row justify-start tbpage2">
               <span class="q-px-sm text-italic">Contact :</span>
@@ -90,24 +91,9 @@
       <q-toolbar inset v-if="page === 'Avatar'">
         <div class="row window-width justify-center">
           <q-tabs class="" v-model="tabavatar" inline-label no-caps dense>
-            <q-btn-dropdown v-if="tabavatar==='secrets'" size="md" dense dropdown-icon="change_history" color="secondary" v-model="menugauche1">
-              <div class="clair1 column items-start q-pa-sm">
-                <q-btn class="q-pa-sm" flat dense icon="search" no-caps label="Recherche" @click="menugauche1=false;optAvatar('recherche')"/>
-                <q-btn class="q-pa-sm" flat dense icon="search" no-caps label="Plus" @click="menugauche1=false;optAvatar('plus')"/>
-                <q-btn class="q-pa-sm" flat dense icon="search" no-caps label="Moins" @click="menugauche1=false;optAvatar('moins')"/>
-                <q-btn class="q-pa-sm" flat dense icon="add_circle_outline" no-caps label="Nouveau secret" @click="menugauche1=false;optAvatar('nouveau')"/>
-              </div>
-            </q-btn-dropdown>
+            <q-btn v-if="tabavatar==='secrets'" size="md" dense icon="search" color="secondary" @click="optAvatar('recherche')"/>
             <q-tab name="secrets" label="Secrets" />
             <q-tab name="contacts" label="Contacts" />
-            <q-btn-dropdown class="q-ml-sm" v-if="(tabavatar=='groupes' ? 'disabled' : '')" size="md" dense dropdown-icon="change_history" color="secondary" v-model="menugauche4">
-              <div class="clair1 column items-start q-pa-sm">
-                <q-btn class="q-pa-sm" flat dense icon="search" no-caps label="Recherche" @click="menugauche4=false;optAvatar('recherche')"/>
-                <q-btn class="q-pa-sm" flat dense icon="search" no-caps label="Plus" @click="menugauche4=false;optAvatar('plus')"/>
-                <q-btn class="q-pa-sm" flat dense icon="search" no-caps label="Moins" @click="menugauche4=false;optAvatar('moins')"/>
-                <q-btn class="q-pa-sm" flat dense icon="add_circle_outline" no-caps label="Nouveau secret" @click="menugauche4=false;optAvatar('nouveau')"/>
-              </div>
-            </q-btn-dropdown>
             <q-tab name="groupes" label="Groupes" />
             <q-tab name="etc" label="Etc." />
           </q-tabs>
@@ -499,6 +485,9 @@ export default {
   height: 1.8rem
   border-radius: 0.9rem
   border: 1px solid grey
+
+.photo2
+  position: relative
 
 .tbpage
   font-family: Comfortaa

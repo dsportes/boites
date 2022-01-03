@@ -5,7 +5,7 @@ import { u8ToB64, crypt } from './crypto.mjs'
 import { encode, decode } from '@msgpack/msgpack'
 
 const headers = { 'x-api-version': version }
-const u8vide = new Uint8Array([])
+// const u8vide = new Uint8Array([])
 
 const decoder = new TextDecoder('utf-8')
 const encoder = new TextEncoder('utf-8')
@@ -111,6 +111,12 @@ export function difference (setA, setB) { // element de A pas dans B
   const diff = new Set(setA)
   for (const elem of setB) diff.delete(elem)
   return diff
+}
+
+export function intersection (setA, setB) { // element de A aussi dans B
+  const inter = new Set(setA)
+  for (const elem of setB) if (setA.has(elem)) inter.add(elem)
+  return inter
 }
 
 export function mimesDeExt (n) {
@@ -422,13 +428,9 @@ export class Motscles {
     for (let i = 0; i < u8.length; i++) {
       const x = this.mapAll.get(u8[i])
       if (x && x.n && x.n.length) {
-        if (court) {
-          if (x.n.charCodeAt(0) > 1000) {
-            // commence par un emoji
-            l.push(String.fromCodePoint(x.n.codePointAt(0)))
-          } else {
-            l.push(String.fromCodePoint(x.n.codePointAt(0), x.n.codePointAt(1)))
-          }
+        if (court && x.n.charCodeAt(0) > 1000) {
+          // commence par un emoji
+          l.push(String.fromCodePoint(x.n.codePointAt(0)))
         } else {
           l.push(x.n)
         }
@@ -664,10 +666,8 @@ export class Filtre {
     this.perso = true
     this.contactId = 0 // 0: pas de secrets de contacts, -1:tous les secrets de contacts, n:secrets du contact d'id N seulement (id2 du secret)
     this.groupeId = 0 // 0:pas de secrets de groupe, -1: secrets partagés avec tous les groupes, n: secrets partagés seulement avec le groupe N (id du secret)
-    this.m1 = 0
-    this.m2 = 0
-    this.nm1 = 0
-    this.nm2 = 0
+    this.m1 = new Uint8Array([])
+    this.m2 = new Uint8Array([])
     this.perm = true // sélectionner les permanents
     this.temp = 99998 // 0: ne pas sélectionner les temporaires N: ne sélectionner que les temporaires venant à échéance avant N
     this.texte = '' // secrets dont le titre contient ce texte
@@ -691,6 +691,8 @@ export class Filtre {
   debutFiltre () {
     this.m2gr = data.getAvatar(this.avId).m2gr
     if (this.modif) this.auj = Math.floor(new Date().getTime() / 86400000)
+    this.f1 = new Set(this.m1)
+    this.f2 = new Set(this.m2)
   }
 
   filtre (s) {
@@ -700,11 +702,12 @@ export class Filtre {
     const im = s.ts !== 2 ? 0 : this.m2gr[this.avid]
     let mcs = im === 0 ? s.mc : s.mc[im]
     if (!mcs && s.ts === 2) mcs = s.mc[0]
-    if (!mcs) mcs = u8vide
-    if (this.m1 && mcs.indexOf(this.m1) === -1) return false
-    if (this.m2 && mcs.indexOf(this.m2) === -1) return false
-    if (this.nm1 && mcs.indexOf(this.nm1) !== -1) return false
-    if (this.nm2 && mcs.indexOf(this.nm2) !== -1) return false
+    if (!mcs) {
+      if (this.f1.size) return false
+    } else {
+      const sx = new Set(mcs)
+      if (difference(this.f1, sx).size || !intersection(this.f2, sx)) return false
+    }
     if (!this.perm && s.st === 99999) return false
     if (!this.temp && s.st !== 99999) return false
     if (this.temp && s.st !== 99999 && this.st > this.temp) return false

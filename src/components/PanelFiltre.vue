@@ -1,44 +1,161 @@
 <template>
-  <q-card>
-    <q-card-section class="column justify-start">
-      <q-btn flat color="primary" icon="add" label="Nouveau secret personnel" @click="action(1)"/>
-      <q-btn v-if="contact || false" flat color="primary" icon="add" :label="'Nouveau secret partagé avec ' +  contact.nom" @click="action(2)"/>
-      <q-btn v-if="groupe || false" flat color="primary" icon="add" :label="'Nouveau secret du groupe ' +  groupe.nom" @click="action(3)"/>
+  <q-card bordered class="shadow-4">
+    <q-card-actions vertical>
+      <q-btn flat dense color="primary" icon="add" label="Nouveau secret personnel" @click="action(1)"/>
+      <q-btn v-if="contact" flat dense color="primary" icon="add" :label="'Nouveau secret partagé avec ' +  contact.nom" @click="action(2)"/>
+      <q-btn v-if="groupe" flat dense color="primary" icon="add" :label="'Nouveau secret du groupe ' +  groupe.nom" @click="action(3)"/>
+    </q-card-actions>
+    <q-separator/>
+    <q-card-actions>
+      <q-btn :disable="!modifie" flat dense color="primary" label="Annuler" @click="annuler" />
+      <q-btn :disable="!modifie" flat dense color="warning" icon="search" label="Rechercher" @click="ok" />
+    </q-card-actions>
+    <q-separator/>
+    <q-card-section>
+      <div class="column justify-start">
+        <q-checkbox v-model="state.a.perso" dense size="md" label="Secrets personnels" />
+        <q-option-group :options="contact ? optionsct2 : optionsct1" dense v-model="state.a.ct"/>
+        <q-option-group :options="groupe ? optionsgr2 : optionsgr1" dense v-model="state.a.gr"/>
+      </div>
     </q-card-section>
-    <q-card-section class="column justify-start">
-      <q-checkbox v-model="perso" size="md" label="Secrets personnels" />
-      <q-option-group :options="contact ? optionsct2 : optionct1" type="checkbox" v-model="groupct"/>
-      <q-option-group :options="groupe ? optionsgr2 : optiongr1" type="checkbox" v-model="groupgr"/>
+    <q-separator/>
+    <q-card-section>
+      <div class="column justify-start">
+        <div class="titre-4 text-primary">Ayant TOUS les mots clés suivants :</div>
+        <apercu-motscles :motscles="motscles" :src="state.a.mc1" :args-click="{n:2}" @click-mc="mcedit1 = true"></apercu-motscles>
+        <div class="titre-4 text-primary">MAIS n'ayant AUCUN des mots clés suivants :</div>
+        <apercu-motscles :motscles="motscles" :src="state.a.mc2" :args-click="{n:2}" @click-mc="mcedit2 = true" ></apercu-motscles>
+        <q-dialog v-model="mcedit1">
+          <select-motscles :motscles="motscles" :src="state.a.mc1" @ok="changermc1" :close="mcedit1cl"></select-motscles>
+        </q-dialog>
+        <q-dialog v-model="mcedit2">
+          <select-motscles :motscles="motscles" :src="state.a.mc2" @ok="changermc2" :close="mcedit2cl"></select-motscles>
+        </q-dialog>
+      </div>
     </q-card-section>
-    <q-card-section class="column justify-start">
+    <q-separator/>
+    <q-card-section>
+      <div class="colmun justify-start">
+        <q-checkbox v-model="state.a.perm" size="md" label="Secrets permanents" />
+        <div class="row justify-start">
+          <q-btn-dropdown size="md" dense color="primary" label="Secrets temporaires" v-model="menudd1">
+            <div class="clair1 column">
+              <q-btn flat dense no-caps :label="labelt['p0']" @click="menudd1=false;state.a.temp=0"/>
+              <q-btn flat dense no-caps :label="labelt['p7']" @click="menudd1=false;state.a.temp=7"/>
+              <q-btn flat dense no-caps :label="labelt['p30']" @click="menudd1=false;state.a.temp=30"/>
+              <q-btn flat dense no-caps :label="labelt['p99998']" @click="menudd1=false;state.a.temp=99998"/>
+            </div>
+          </q-btn-dropdown>
+          <div class="q-pl-lg">{{labelt['p' + state.a.temp]}}</div>
+        </div>
+      </div>
+    </q-card-section>
+    <q-separator/>
+    <q-card-section>
+      <div class="row justify-start">
+        <q-btn-dropdown size="md" dense color="primary" label="Secrets modifiés depuis ..." v-model="menudd2">
+          <div class="clair1 column">
+            <q-btn flat dense no-caps :label="labelm['p0']" @click="menudd2=false;state.a.modif=0"/>
+            <q-btn flat dense no-caps :label="labelm['p1']" @click="menudd2=false;state.a.modif=1"/>
+            <q-btn flat dense no-caps :label="labelm['m1']" @click="menudd2=false;state.a.modif=-1"/>
+            <q-btn flat dense no-caps :label="labelm['p7']" @click="menudd2=false;state.a.modif=7"/>
+            <q-btn flat dense no-caps :label="labelm['m7']" @click="menudd2=false;state.a.modif=-7"/>
+            <q-btn flat dense no-caps :label="labelm['p30']" @click="menudd2=false;state.a.modif=30"/>
+            <q-btn flat dense no-caps :label="labelm['m30']" @click="menudd2=false;state.a.modif=-30"/>
+            <q-btn flat dense no-caps :label="labelm['p90']" @click="menudd2=false;state.a.modif=90"/>
+            <q-btn flat dense no-caps :label="labelm['m90']" @click="menudd2=false;state.a.modif=-90"/>
+            <q-btn flat dense no-caps :label="labelm['p360']" @click="menudd2=false;state.a.modif=360"/>
+            <q-btn flat dense no-caps :label="labelm['m360']" @click="menudd2=false;state.a.modif=-360"/>
+          </div>
+        </q-btn-dropdown>
+        <div class="q-pl-lg">{{labelm[state.a.modif >= 0 ? 'p' + state.a.modif : 'm' + (-state.a.modif)]}}</div>
+        </div>
+    </q-card-section>
+    <q-separator/>
+    <q-card-section>
+      <div class="column justify-start">
+        <q-input v-model="state.a.texte" dense label="Dont le titre contient :" style="width:10rem"></q-input>
+        <q-checkbox v-model="state.a.corps" size="md" label="Chercher aussi dans le texte du secret"/>
+      </div>
+    </q-card-section>
+    <q-card-section>
+      <div class="row justify-start">
+        <q-btn-dropdown size="md" dense color="primary" label="Secrets Triés par ..." v-model="menudd3">
+          <div class="clair1 column">
+          <q-btn flat dense no-caps :label="labeltri['p0']" @click="menudd3=false;state.a.tri=0"/>
+          <q-btn flat dense no-caps :label="labeltri['p1']" @click="menudd3=false;state.a.tri=1"/>
+          <q-btn flat dense no-caps :label="labeltri['m1']" @click="menudd3=false;state.a.tri=-1"/>
+          <q-btn flat dense no-caps :label="labeltri['p2']" @click="menudd3=false;state.a.tri=2"/>
+          <q-btn flat dense no-caps :label="labeltri['m2']" @click="menudd3=false;state.a.tri=-2"/>
+          <q-btn flat dense no-caps :label="labeltri['p3']" @click="menudd3=false;state.a.tri=3"/>
+          <q-btn flat dense no-caps :label="labeltri['m3']" @click="menudd3=false;state.a.tri=-3"/>
+          </div>
+        </q-btn-dropdown>
+        <div class="q-pl-lg">{{labeltri[state.a.tri >= 0 ? 'p' + state.a.tri : 'm' + (-state.a.tri)]}}</div>
+      </div>
     </q-card-section>
   </q-card>
 </template>
 
 <script>
 import { useStore } from 'vuex'
-import { computed, ref, watch } from 'vue'
-import { Filtre } from '../app/util.mjs'
+import { computed, toRef, watch, onMounted } from 'vue'
+import { Filtre, serial, deserial } from '../app/util.mjs'
+import ApercuMotscles from './ApercuMotscles.vue'
+import SelectMotscles from './SelectMotscles.vue'
+
+const vars = ['perso', 'ct', 'gr', 'mc1', 'mc2', 'perm', 'temp', 'modif', 'texte', 'corps', 'tri']
 
 export default ({
   name: 'PanelFiltre',
 
-  props: { fermer: Function },
+  props: { fermer: Function, etatInterne: Object, motscles: Object },
+
+  components: { ApercuMotscles, SelectMotscles },
+
+  computed: {
+    modifie () {
+      let m = false
+      vars.forEach(v => { if (this.state.a[v] !== this.state.p[v]) m = true })
+      return m
+    }
+  },
 
   data () {
     return {
-      pingret: null
+      mcedit1: false,
+      mcedit2: false,
+      menudd1: false,
+      menudd2: false,
+      menudd3: false
     }
   },
 
   methods: {
+    mcedit1cl () { this.mcedit1 = false },
+    mcedit2cl () { this.mcedit2 = false },
+    changermc1 (mc) { this.state.a.mc1 = mc },
+    changermc2 (mc) { this.state.a.mc2 = mc },
     ok () {
       const f = new Filtre(this.avatar.id)
-
+      f.perso = this.state.a.perso
+      f.contactId = this.state.a.ct
+      f.groupeId = this.state.a.gr
+      f.m1 = this.state.a.mc1
+      f.m2 = this.state.a.mc2
+      f.perm = this.state.a.perm
+      f.temp = this.state.a.temp
+      f.texte = this.state.a.texte
+      f.corps = this.state.a.corps
+      f.modif = this.state.a.modif
+      f.asc = this.state.a.tri >= 0
+      f.tri = this.state.a.tri >= 0 ? this.state.a.tri : -this.state.a.tri
+      this.state.p = deserial(serial(this.state.a))
       this.$emit('ok', f)
       if (this.fermer) this.fermer()
     },
     annuler () {
+      this.state.a = deserial(serial(this.state.p))
       if (this.fermer) this.fermer()
     },
     action (n) {
@@ -47,61 +164,80 @@ export default ({
     }
   },
 
-  setup () {
+  setup (props) {
     const $store = useStore()
+    // const compte = computed(() => { return $store.state.db.compte })
     const avatar = computed(() => { return $store.state.db.avatar })
     const mode = computed(() => $store.state.ui.mode)
-    const contact = computed(() => { return $store.state.db.avatar })
-    const groupe = computed(() => { return $store.state.db.avatar })
+    const contact = computed(() => { return $store.state.db.contact })
+    const groupe = computed(() => { return $store.state.db.groupe })
+    const state = toRef(props, 'etatInterne')
+    toRef(props, 'motscles')
 
-    const perso = ref(true)
-
-    const groupct = ref(0)
+    const labelm = {
+      p0: 'N\'importe quand', p1: 'Plus d\'un jour', p7: 'Plus d\'une semaine', p30: 'Plus d\'un mois', p90: 'Plus d\'un trimestre', p360: 'Plus d\'un an', m1: 'Moins d\'un jour', m7: 'Moins d\'une semaine', m30: 'Moins d\'un mois', m90: 'Plus d\'un trimestre', m360: 'Moins d\'un an'
+    }
+    const labelt = {
+      p0: 'Aucun secrets temporaires',
+      p7: 'Ceux qui vont s\'autodétruire dans moins d\'une semaine',
+      p30: 'Ceux qui vont s\'autodétruire dans moins d\'un mois',
+      p99998: 'Ceux qui vont s\'autodétruire dans plus d\'un mois'
+    }
+    const labeltri = {
+      p0: 'Ne pas trier les secrets',
+      p1: 'dates de modification croissantes',
+      m1: 'dates de modification décroissantes',
+      p2: 'dates d\'auto-destruction croissantes',
+      m2: 'dates d\'auto-destruction décroissantes',
+      p3: 'ordre alphabétique du titre',
+      m3: 'ordre alphabétique inverse du titre'
+    }
     const optionsct1 = [
       { label: 'pas de secrets partagés avec des contacts', value: 0 },
       { label: 'secrets partagés avec n\'importe quel contact', value: -1 }
     ]
     const optionsct2 = [
       { label: 'pas de secrets partagés avec des contacts', value: 0 },
-      { label: 'secrets partagés avec n\'importe quel contact', value: -1 },
-      { label: 'secrets partagés avec ' + contact.value.nom, value: contact.value.id }
+      { label: 'secrets partagés avec n\'importe quel contact', value: -1 }
     ]
-
-    watch(
-      () => contact.value,
-      (ap, av) => {
-        optionsct2.splice(2, 1, { label: 'secrets partagés avec ' + contact.value.nom, value: contact.value.id })
-      })
-
-    const groupgr = ref(0)
     const optionsgr1 = [
       { label: 'pas de secrets partagés avec des groupes', value: 0 },
       { label: 'secrets partagés avec n\'importe quel groupe', value: -1 }
     ]
     const optionsgr2 = [
       { label: 'pas de secrets partagés avec des groupes', value: 0 },
-      { label: 'secrets partagés avec n\'importe quel groupe', value: -1 },
-      { label: 'secrets partagés avec le groupe ' + groupe.value.nom, value: groupe.value.id }
+      { label: 'secrets partagés avec n\'importe quel groupe', value: -1 }
     ]
 
-    watch(
-      () => groupe.value,
-      (ap, av) => {
+    watch(() => groupe.value, (ap, av) => {
+      optionsgr2.splice(2, 1, { label: 'secrets partagés avec le groupe ' + groupe.value.nom, value: groupe.value.id })
+    })
+    watch(() => contact.value, (ap, av) => {
+      optionsct2.splice(2, 1, { label: 'secrets partagés avec ' + contact.value.nom, value: contact.value.id })
+    })
+
+    onMounted(() => {
+      if (contact.value) {
+        optionsct2.splice(2, 1, { label: 'secrets partagés avec ' + contact.value.nom, value: contact.value.id })
+      }
+      if (groupe.value) {
         optionsgr2.splice(2, 1, { label: 'secrets partagés avec le groupe ' + groupe.value.nom, value: groupe.value.id })
-      })
+      }
+    })
 
     return {
       avatar,
       mode,
       contact,
-      perso,
       groupe,
-      groupct,
+      labelm,
+      labelt,
+      labeltri,
       optionsct1,
       optionsct2,
-      groupgr,
       optionsgr1,
-      optionsgr2
+      optionsgr2,
+      state
     }
   }
 

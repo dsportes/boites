@@ -26,6 +26,12 @@
   <q-dialog v-model="nouvsec">
     <vue-secret :secret="nouveausecret(0)" :motscles="motscles" :avobsid="avatar.id" :idx="0" :close="fclose"></vue-secret>
   </q-dialog>
+
+  <q-dialog v-model="panelfiltre" position="left">
+    <div class="largeurfiltre full-height">
+      <panel-filtre @ok="rechercher" @action="action" :motscles="motscles" :etat-interne="recherche" :fermer="fermerfiltre"></panel-filtre>
+    </div>
+  </q-dialog>
 </q-page>
 </template>
 
@@ -38,6 +44,7 @@ import { Motscles, difference } from '../app/util.mjs'
 import MotsCles from '../components/MotsCles.vue'
 import CarteVisite from '../components/CarteVisite.vue'
 import VueSecret from '../components/VueSecret.vue'
+import PanelFiltre from '../components/PanelFiltre.vue'
 import { CvAvatar } from '../app/operations.mjs'
 import { Secret, data } from '../app/modele.mjs'
 
@@ -60,7 +67,7 @@ function filtrer (secrets, filtre) {
 export default ({
   name: 'Avatar',
 
-  components: { /* BoutonHelp, */ CarteVisite, MotsCles, VueSecret },
+  components: { /* BoutonHelp, */ CarteVisite, MotsCles, VueSecret, PanelFiltre },
 
   data () {
     return {
@@ -68,6 +75,17 @@ export default ({
   },
 
   methods: {
+    action (n) {
+      if (n === 1) {
+        this.nouvsec = true
+      }
+    },
+    fermerfiltre () {
+      this.panelfiltre = false
+    },
+    rechercher (f) {
+      console.log(JSON.stringify(f))
+    },
     fclose () {
       this.nouvsec = false
     },
@@ -86,20 +104,32 @@ export default ({
     const nouvsec = ref(false)
     const compte = computed(() => { return $store.state.db.compte })
     const avatar = computed(() => { return $store.state.db.avatar })
+    // const contact = computed(() => { return $store.state.db.contact })
+    const groupe = computed(() => { return $store.state.db.groupe })
     const mode = computed(() => $store.state.ui.mode)
 
-    const evtavatar = computed(() => $store.state.ui.evtavatar)
-    watch(() => evtavatar.value, (ap) => { onEvtAvatar(ap.evt) })
-
-    const tabavatar = computed(() => $store.state.ui.tabavatar)
+    const panelfiltre = ref(false)
 
     const mc = reactive({ categs: new Map(), lcategs: [], st: { enedition: false, modifie: false } })
-    const motscles = new Motscles(mc, 1)
+    const motscles = new Motscles(mc, 1, groupe.value ? groupe.value.id : null)
     motscles.recharger()
-    watch(
-      () => compte.value, // OUI .value !!!
-      (ap, av) => { if (ap && ap.v > av.v) motscles.recharger() }
-    )
+
+    const z = new Uint8Array([])
+    const recherche = reactive({
+      a: { perso: true, ct: 0, gr: 0, mc1: z, mc2: z, perm: true, modif: 0, texte: '', corps: false, tri: 0 },
+      p: { perso: true, ct: 0, gr: 0, mc1: z, mc2: z, perm: true, modif: 0, texte: '', corps: false, tri: 0 }
+    })
+
+    watch(() => groupe.value, (ap, av) => { motscles.recharger() })
+    watch(() => compte.value, (ap, av) => { motscles.recharger() })
+    // watch(() => contact.value, (ap, av) => { console.log(ap.id) })
+
+    const evtavatar = computed(() => $store.state.ui.evtavatar)
+    watch(() => evtavatar.value, (ap) => {
+      if (ap.evt === 'recherche') panelfiltre.value = true
+    })
+
+    const tabavatar = computed(() => $store.state.ui.tabavatar)
 
     function nouveausecret (id2) { // pour un couple seulement, id2 du contact de l'avatar du compte
       const s = new Secret()
@@ -165,21 +195,6 @@ export default ({
       }
     )
 
-    // Pour tester la réactivité au filtre (et ouvrir le dialogue de création de secret)
-    function onEvtAvatar (opt) {
-      if (opt === 'plus') {
-        const x = { ...state.filtre }
-        x.n1++
-        state.filtre = { ...x }
-      } else if (opt === 'moins') {
-        const x = { ...state.filtre }
-        x.n1 = 0
-        state.filtre = { ...x }
-      } else if (opt === 'nouveau') {
-        nouvsec.value = true
-      }
-    }
-
     return {
       compte,
       avatar,
@@ -188,14 +203,18 @@ export default ({
       state,
       nouveausecret,
       nouvsec,
-      mode
+      mode,
+      panelfiltre,
+      recherche
     }
   }
 
 })
 </script>
 
-<style lang="sass">
+<style lang="sass" scoped>
 @import '../css/app.sass'
-
+.largeurfiltre
+  width: 25rem
+  max-width: 95vw
 </style>
