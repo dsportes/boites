@@ -107,7 +107,9 @@ export default ({
   },
 
   setup () {
-    const isDev = cfg().isDev
+    const isDev = true
+    // eslint-disable-next-line no-unused-vars
+    const isDev2 = cfg().isDev
     return {
       isDev: isDev
     }

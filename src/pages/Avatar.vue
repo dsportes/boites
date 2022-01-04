@@ -1,7 +1,14 @@
 <template>
 <q-page>
-  <div v-if="tabavatar === 'secrets'" class="q-pa-xs column justify-start" style="width:100%">
-    <vue-secret v-for="(secret, idx) in state.lst" :key="secret.sid + secret.v" :idx="idx" :secret="secret" :motscles="motscles" :avobsid="avatar.id"></vue-secret>
+  <div v-if="tabavatar === 'secrets'" :class="$q.screen.gt.sm ? 'ml20' : 'q-pa-xs full-width'">
+    <!--
+    <div v-if="$q.screen.gt.sm" class="q-mr-md shadow-4 col-auto largeurfiltre">
+    </div>
+    <div class="col-auto" style="width:2px;height:100vh;background-color:grey"></div>
+    -->
+    <div class="col">
+      <vue-secret v-for="(secret, idx) in state.lst" :key="secret.sid + secret.v" :idx="idx" :secret="secret" :motscles="motscles" :avobsid="avatar.id"></vue-secret>
+    </div>
   </div>
 
   <q-card v-if="tabavatar === 'contacts'" class="column align-start items-start">
@@ -27,11 +34,15 @@
     <vue-secret :secret="nouveausecret(0)" :motscles="motscles" :avobsid="avatar.id" :idx="0" :close="fclose"></vue-secret>
   </q-dialog>
 
-  <q-dialog v-model="panelfiltre" position="left">
-    <div class="largeurfiltre full-height">
+  <q-dialog v-if="$q.screen.lt.md" v-model="panelfiltre" position="left">
+    <div class="largeurfiltre">
       <panel-filtre @ok="rechercher" @action="action" :motscles="motscles" :etat-interne="recherche" :fermer="fermerfiltre"></panel-filtre>
     </div>
   </q-dialog>
+
+  <q-page-sticky v-if="tabavatar === 'secrets' && $q.screen.gt.sm" position="top-left" expand :offset="[5,5]">
+    <panel-filtre @ok="rechercher" @action="action" :motscles="motscles" :etat-interne="recherche" :fermer="fermerfiltre"></panel-filtre>
+  </q-page-sticky>
 </q-page>
 </template>
 
@@ -215,6 +226,9 @@ export default ({
 <style lang="sass" scoped>
 @import '../css/app.sass'
 .largeurfiltre
-  width: 25rem
-  max-width: 95vw
+  width: 20rem
+
+.ml20
+  width: 100%
+  padding: 0.2rem 0.2rem 0.2rem 21rem
 </style>

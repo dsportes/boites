@@ -36,7 +36,9 @@ export async function openWS () {
   return new Promise((resolve, reject) => {
     try {
       const u = cfg().urlserveur
-      url = 'wss' + u.substring(u.indexOf('://'))
+      const i = u.indexOf('://')
+      const http = u.substring(0, i)
+      url = (http === 'https' ? 'wss' : 'ws') + u.substring(i) + '/ws/' + store().state.ui.org
       const ws = new WebSocket(url)
       if (data.to) clearTimeout(data.to)
       ws.onerror = (e) => {

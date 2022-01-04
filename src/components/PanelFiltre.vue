@@ -1,14 +1,16 @@
 <template>
-  <q-card bordered class="shadow-4">
+  <q-scroll-area style="height:80vh;width:20rem">
+  <q-card>
     <q-card-actions vertical>
-      <q-btn flat dense color="primary" icon="add" label="Nouveau secret personnel" @click="action(1)"/>
-      <q-btn v-if="contact" flat dense color="primary" icon="add" :label="'Nouveau secret partagé avec ' +  contact.nom" @click="action(2)"/>
-      <q-btn v-if="groupe" flat dense color="primary" icon="add" :label="'Nouveau secret du groupe ' +  groupe.nom" @click="action(3)"/>
+      <q-btn flat dense color="primary" size="md" icon="add" label="Nouveau secret personnel" @click="action(1)"/>
+      <q-btn v-if="contact" flat dense size="md" color="primary" icon="add" :label="'Nouveau secret partagé avec ' +  contact.nom" @click="action(2)"/>
+      <q-btn v-if="groupe" flat dense size="md" color="primary" icon="add" :label="'Nouveau secret du groupe ' +  groupe.nom" @click="action(3)"/>
     </q-card-actions>
     <q-separator/>
-    <q-card-actions>
-      <q-btn :disable="!modifie" flat dense color="primary" label="Annuler" @click="annuler" />
-      <q-btn :disable="!modifie" flat dense color="warning" icon="search" label="Rechercher" @click="ok" />
+    <q-card-actions align="between">
+      <q-btn v-if="$q.screen.lt.md" size="md" flat dense color="red" icon="close" @click="fermeture" />
+      <q-btn :disable="!modifie" size="md" flat dense color="primary" icon="undo" label="Annuler" @click="annuler" />
+      <q-btn :disable="!modifie" size="md" flat dense color="warning" icon="search" label="Rechercher" @click="ok" />
     </q-card-actions>
     <q-separator/>
     <q-card-section>
@@ -95,6 +97,7 @@
       </div>
     </q-card-section>
   </q-card>
+</q-scroll-area>
 </template>
 
 <script>
@@ -156,6 +159,9 @@ export default ({
     },
     annuler () {
       this.state.a = deserial(serial(this.state.p))
+      if (this.fermer) this.fermer()
+    },
+    fermeture () {
       if (this.fermer) this.fermer()
     },
     action (n) {
@@ -245,12 +251,8 @@ export default ({
 </script>
 <style lang="sass" scpoed>
 @import '../css/app.sass'
-.fermer
-  position: absolute
-  top: 0
-  left: -1rem
-  z-index: 2
-.q-item
-  padding: 0 !important
-  min-height:0 !important
+.qf
+  width: 20rem
+  max-height: 80vh
+  overflow-y: auto
 </style>

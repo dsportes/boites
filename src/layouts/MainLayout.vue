@@ -91,7 +91,7 @@
       <q-toolbar inset v-if="page === 'Avatar'">
         <div class="row window-width justify-center">
           <q-tabs class="" v-model="tabavatar" inline-label no-caps dense>
-            <q-btn v-if="tabavatar==='secrets'" size="md" dense icon="search" color="secondary" @click="optAvatar('recherche')"/>
+            <q-btn v-if="tabavatar==='secrets' && $q.screen.lt.md" size="md" dense icon="search" color="secondary" @click="optAvatar('recherche')"/>
             <q-tab name="secrets" label="Secrets" />
             <q-tab name="contacts" label="Contacts" />
             <q-tab name="groupes" label="Groupes" />
@@ -365,7 +365,7 @@ export default {
     watch(
       () => avatar.value,
       (ap, av) => {
-        console.log(ap.info)
+        if (ap) console.log(ap.info)
       }
     )
 
