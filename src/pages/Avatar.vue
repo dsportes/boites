@@ -98,20 +98,18 @@ export default ({
   setup () {
     onBoot()
 
-    const watchedRefs = new Map() // clé: sid, val: fonction de stop
-
+    let watchStop = null
     function getRefSecrets () {
       /* Collecte les références vers les array de secrets
       - l'array de ceux de l'avatar
       - les array de tous les groupes concernés
       Déclare un watch dessus
       */
-      for (const sid in refSecrets) {
-        const stop = watchedRefs.get(sid)
-        if (stop) stop()
-        delete refSecrets[sid]
+      for (const sid in refSecrets) delete refSecrets[sid]
+      if (watchStop) {
+        watchStop()
+        watchStop = null
       }
-      watchedRefs.clear()
 
       const f = state.filtre
       const setIds = new Set()
@@ -130,14 +128,10 @@ export default ({
       }
       setIds.forEach(id => {
         const sid = crypt.idToSid(id)
-        const ref = computed(() => data.getSecret(sid))
-        refSecrets[sid] = ref
-        if (!watchedRefs.has(sid)) {
-          const stop = watch(() => refSecrets[sid], (ap, av) => {
-            getSecrets()
-          })
-          watchedRefs.set(sid, stop)
-        }
+        refSecrets[sid] = computed(() => data.getSecret(sid))
+      })
+      watchStop = watch(() => { return { ...refSecrets } }, () => {
+        getSecrets()
       })
     }
 
