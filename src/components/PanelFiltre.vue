@@ -184,10 +184,10 @@ export default ({
       p0: 'N\'importe quand', p1: 'Plus d\'un jour', p7: 'Plus d\'une semaine', p30: 'Plus d\'un mois', p90: 'Plus d\'un trimestre', p360: 'Plus d\'un an', m1: 'Moins d\'un jour', m7: 'Moins d\'une semaine', m30: 'Moins d\'un mois', m90: 'Plus d\'un trimestre', m360: 'Moins d\'un an'
     }
     const labelt = {
-      p0: 'Aucun secrets temporaires',
+      p0: 'Aucun secret temporaire',
       p7: 'Ceux qui vont s\'autodétruire dans moins d\'une semaine',
       p30: 'Ceux qui vont s\'autodétruire dans moins d\'un mois',
-      p99998: 'Ceux qui vont s\'autodétruire dans plus d\'un mois'
+      p99998: 'Ceux qui vont s\'autodétruire dans PLUS d\'un mois'
     }
     const labeltri = {
       p0: 'Ne pas trier les secrets',

@@ -6,8 +6,8 @@
     </div>
     <div class="col-auto" style="width:2px;height:100vh;background-color:grey"></div>
     -->
-    <div class="col">
-      <vue-secret v-for="(secret, idx) in state.lst" :key="secret.sid + secret.v" :idx="idx" :secret="secret" :motscles="motscles" :avobsid="avatar.id"></vue-secret>
+    <div v-if="state.lst && state.lst.length" class="col">
+      <vue-secret v-for="(secret, idx) in state.lst" :key="secret.vk" :idx="idx" :secret="secret" :motscles="motscles" :avobsid="avatar.id"></vue-secret>
     </div>
   </div>
 
@@ -47,10 +47,10 @@
 </template>
 
 <script>
-import { computed, onMounted, reactive, watch, ref, isRef } from 'vue'
+import { computed, /* onMounted, */ reactive, watch, ref, isRef } from 'vue'
 import { useStore } from 'vuex'
 import { onBoot } from '../app/page.mjs'
-import { Motscles, difference } from '../app/util.mjs'
+import { Motscles, difference, Filtre } from '../app/util.mjs'
 // import BoutonHelp from '../components/BoutonHelp.vue'
 import MotsCles from '../components/MotsCles.vue'
 import CarteVisite from '../components/CarteVisite.vue'
@@ -58,22 +58,7 @@ import VueSecret from '../components/VueSecret.vue'
 import PanelFiltre from '../components/PanelFiltre.vue'
 import { CvAvatar } from '../app/operations.mjs'
 import { Secret, data } from '../app/modele.mjs'
-
-function amc (secret, n) {
-  if (!secret || !secret.mc) return false
-  return !n || secret.mc.indexOf(n) !== -1
-}
-
-function filtrer (secrets, filtre) {
-  const lst = []
-  if (secrets) {
-    for (const k in secrets) {
-      const s = secrets[k]
-      if (!filtre.n1 || amc(s, filtre.n1)) lst.push(secrets[k])
-    }
-  }
-  return lst
-}
+import { crypt } from '../app/crypto.mjs'
 
 export default ({
   name: 'Avatar',
@@ -95,6 +80,7 @@ export default ({
       this.panelfiltre = false
     },
     rechercher (f) {
+      this.state.filtre = f
       console.log(JSON.stringify(f))
     },
     fclose () {
@@ -111,11 +97,84 @@ export default ({
 
   setup () {
     onBoot()
+
+    const watchedRefs = new Map() // clé: sid, val: fonction de stop
+
+    function getRefSecrets () {
+      /* Collecte les références vers les array de secrets
+      - l'array de ceux de l'avatar
+      - les array de tous les groupes concernés
+      Déclare un watch dessus
+      */
+      for (const sid in refSecrets) {
+        const stop = watchedRefs.get(sid)
+        if (stop) stop()
+        delete refSecrets[sid]
+      }
+      watchedRefs.clear()
+
+      const f = state.filtre
+      const setIds = new Set()
+      if (avatar.value) {
+        // seulement si les secrets perso et des contacts sont requis
+        if (f.perso || f.contactId) setIds.add(avatar.value.id)
+        if (f.groupeId) {
+          if (f.groupeId === -1) {
+            // les secrets de TOUS les groupes sont requis
+            avatar.value.allGrId(setIds)
+          } else {
+            // les secrets d'UN SEUL groupe sont requis
+            setIds.add(f.groupeId)
+          }
+        }
+      }
+      setIds.forEach(id => {
+        const sid = crypt.idToSid(id)
+        const ref = computed(() => data.getSecret(sid))
+        refSecrets[sid] = ref
+        if (!watchedRefs.has(sid)) {
+          const stop = watch(() => refSecrets[sid], (ap, av) => {
+            getSecrets()
+          })
+          watchedRefs.set(sid, stop)
+        }
+      })
+    }
+
+    function getSecrets () {
+      // Récupère les secrets référencés et les filtre au passage
+      const f = state.filtre
+      const lst = []
+      f.debutFiltre()
+      for (const sid in refSecrets) {
+        const val = refSecrets[sid]
+        // selon le cas on reçoit le ref ou la value
+        const map = isRef(val) ? val.value : val // map: map de secrets (clé: sid, val: secret)
+        for (const sid in map) {
+          const secret = map[sid]
+          if (f.filtre(secret)) lst.push(secret)
+        }
+      }
+      state.lst = lst
+    }
+
+    function trier () {
+      const l = []; state.lst.forEach(x => l.push(x))
+      l.sort((a, b) => state.filtre.fntri(a, b))
+      state.lst = l
+    }
+
+    function latotale () {
+      getRefSecrets()
+      getSecrets()
+      trier()
+    }
+
     const $store = useStore()
     const nouvsec = ref(false)
     const compte = computed(() => { return $store.state.db.compte })
     const avatar = computed(() => { return $store.state.db.avatar })
-    // const contact = computed(() => { return $store.state.db.contact })
+    const contact = computed(() => { return $store.state.db.contact })
     const groupe = computed(() => { return $store.state.db.groupe })
     const mode = computed(() => $store.state.ui.mode)
 
@@ -126,14 +185,13 @@ export default ({
     motscles.recharger()
 
     const z = new Uint8Array([])
-    const recherche = reactive({
-      a: { perso: true, ct: 0, gr: 0, mc1: z, mc2: z, perm: true, modif: 0, texte: '', corps: false, tri: 0 },
-      p: { perso: true, ct: 0, gr: 0, mc1: z, mc2: z, perm: true, modif: 0, texte: '', corps: false, tri: 0 }
+    const recherche = reactive({ // doit correspondre au Filtre par défaut
+      a: { perso: true, ct: 0, gr: 0, mc1: z, mc2: z, perm: true, temp: 99998, modif: 0, texte: '', corps: false, tri: 0 },
+      p: { perso: true, ct: 0, gr: 0, mc1: z, mc2: z, perm: true, temp: 99998, modif: 0, texte: '', corps: false, tri: 0 }
     })
 
     watch(() => groupe.value, (ap, av) => { motscles.recharger() })
     watch(() => compte.value, (ap, av) => { motscles.recharger() })
-    // watch(() => contact.value, (ap, av) => { console.log(ap.id) })
 
     const evtavatar = computed(() => $store.state.ui.evtavatar)
     watch(() => evtavatar.value, (ap) => {
@@ -147,64 +205,56 @@ export default ({
       return !id2 ? s.nouveauP(avatar.value.id) : s.nouveauC(avatar.value.id, id2)
     }
 
-    const state = reactive({ lst: [], filtre: { n1: 2 }, refSecrets: getRefSecrets() })
+    /* Une entrée par groupe de secrets (map) attachés à une sid de l'avatar ou d'un groupe
+    La valeur est une référence active */
+    const refSecrets = reactive({ })
 
-    watch(
-      () => avatar.value,
-      (ap, av) => {
-        // Avatar modifié : la liste des groupes a pu changer, recharger SI nécessaire
+    const state = reactive({
+      lst: [], // array des SECRETS des références ci-dessous répondant au filtre
+      filtre: new Filtre(avatar.value ? avatar.value.id : 0) // Filtre par défaut
+    })
+
+    watch(() => state.filtre, (filtre, filtreavant) => {
+      if (!filtre || !filtreavant || filtre.equal(filtreavant)) return
+      const chg = filtre.changement(filtreavant)
+      if (chg >= 3) {
+        latotale()
+        return
+      }
+      if (chg >= 2) {
+        getSecrets()
+      }
+      if (chg >= 1) {
+        trier()
+      }
+    })
+
+    latotale()
+
+    watch(() => avatar.value, (ap, av) => {
+      // Avatar modifié : la liste des groupes a pu changer, recharger SI nécessaire
+      if (state.filtre.groupeId === -1) {
         const sav = av.allGrId()
         const sap = ap.allGrId()
         if (difference(sav, sap).size || difference(sap, sav).size) {
-          state.refSecrets = getRefSecrets()
+          latotale()
         }
       }
-    )
-
-    function getRefSecrets () {
-      const setGr = new Set()
-      const refSecrets = []
-      if (avatar.value) {
-        setGr.add(avatar.value.id)
-        avatar.value.allGrId(setGr)
-      }
-      setGr.forEach(id => {
-        const ref = computed(() => { return data.getSecret(id) })
-        refSecrets.push(ref)
-      })
-      return refSecrets
-    }
-
-    function getAllSecrets (ap) {
-      const lst = []
-      ap.forEach(val => {
-        // selon le cas on reçoit le ref ou la value
-        const a = isRef(val) ? val.value : val
-        for (const sid in a) {
-          lst.push(a[sid])
-        }
-      })
-      return lst
-    }
-
-    watch(state.refSecrets, (ap, av) => {
-      /* ap est un array des secrets PAS de leur ref */
-      const lst = getAllSecrets(ap)
-      state.lst = filtrer(lst, state.filtre)
     })
 
-    onMounted(() => {
-      const lst = getAllSecrets(state.refSecrets)
-      state.lst = filtrer(lst, state.filtre)
+    watch(() => contact.value, (ap, av) => {
+      // contact modifié : recharger SI nécessaire
+      if (state.filtre.contactId) {
+        latotale()
+      }
     })
 
-    watch(
-      () => state.filtre, // NON pas .value
-      (ap, av) => {
-        const lst = getAllSecrets(state.refSecrets)
-        state.lst = filtrer(lst, ap)
+    watch(() => groupe.value, (ap, av) => {
+      // groupe modifié : recharger SI nécessaire
+      if (state.filtre.groupeId === -1 || state.filtre.groupeId === (ap ? ap.id : 0)) {
+        latotale()
       }
-    )
+    })
 
     return {
       compte,

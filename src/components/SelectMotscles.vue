@@ -59,6 +59,7 @@ export default ({
 
   methods: {
     selecte (idx) {
+      if (!this.srclocal) return false
       return this.srclocal.find((e) => e === idx)
     },
     aMC (idx) {

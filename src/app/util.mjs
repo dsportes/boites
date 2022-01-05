@@ -114,8 +114,8 @@ export function difference (setA, setB) { // element de A pas dans B
 }
 
 export function intersection (setA, setB) { // element de A aussi dans B
-  const inter = new Set(setA)
-  for (const elem of setB) if (setA.has(elem)) inter.add(elem)
+  const inter = new Set()
+  for (const elem of setA) if (setB.has(elem)) inter.add(elem)
   return inter
 }
 
@@ -688,29 +688,35 @@ export class Filtre {
     this.asc = true // ascendant, descendant
   }
 
+  equal (f) {
+    return this.avId === f.avId && this.changement(f) === 0
+  }
+
   debutFiltre () {
-    this.m2gr = data.getAvatar(this.avId).m2gr
+    const av = this.avId ? data.getAvatar(this.avId) : null
+    this.m2gr = av ? av.mg2r : null
     if (this.modif) this.auj = Math.floor(new Date().getTime() / 86400000)
     this.f1 = new Set(this.m1)
     this.f2 = new Set(this.m2)
+    this.jourj = getJourJ()
   }
 
   filtre (s) {
     if (s.ts === 0 && !this.perso) return false
     if (s.ts === 1 && (this.contactId === 0 || (this.contactId !== -1 && this.contactId !== s.id2))) return false
     if (s.ts === 2 && (this.groupeId === 0 || (this.groupeId !== -1 && this.groupeId !== s.id))) return false
-    const im = s.ts !== 2 ? 0 : this.m2gr[this.avid]
+    const im = s.ts !== 2 || !this.m2gr ? 0 : this.m2gr.get(s.id)
     let mcs = im === 0 ? s.mc : s.mc[im]
     if (!mcs && s.ts === 2) mcs = s.mc[0]
-    if (!mcs) {
-      if (this.f1.size) return false
-    } else {
+    if (!mcs && this.f1.size) return false
+    if (mcs) {
       const sx = new Set(mcs)
-      if (difference(this.f1, sx).size || !intersection(this.f2, sx)) return false
+      if (difference(this.f1, sx).size) return false
+      if (intersection(this.f2, sx).size) return false
     }
     if (!this.perm && s.st === 99999) return false
     if (!this.temp && s.st !== 99999) return false
-    if (this.temp && s.st !== 99999 && this.st > this.temp) return false
+    if (this.temp && s.st !== 99999 && s.st > this.temp + this.jourj) return false
     if (this.modif) {
       const j = Math.floor(s.txt.d / 86400000)
       if (this.modif > 0 && j < this.auj) return false
@@ -720,24 +726,32 @@ export class Filtre {
       if (this.corps && s.txt.t.indexOf(this.texte) === -1) return false
       if (!this.corps && s.titre.indexOf(this.texte) === -1) return false
     }
+    return true
   }
 
-  tri1 (a, b) { return this.asc ? (a.txt.d < b.txt.d ? -1 : (a.txt.d > b.txt.d ? 1 : 0)) : (a.txt.d < b.txt.d ? 1 : (a.txt.d > b.txt.d ? 11 : 0)) }
+  tri1 (a, b) {
+    if (this.asc) {
+      return a.txt.d < b.txt.d ? -1 : (a.txt.d > b.txt.d ? 1 : 0)
+    } else {
+      return a.txt.d < b.txt.d ? 1 : (a.txt.d > b.txt.d ? -1 : 0)
+    }
+  }
 
-  tri2 (a, b) { return this.asc ? (a.st < b.st ? -1 : (a.st > b.st ? 1 : 0)) : (a.st < b.st ? 1 : (a.st > b.st ? 11 : 0)) }
+  tri2 (a, b) { return this.asc ? (a.st < b.st ? -1 : (a.st > b.st ? 1 : 0)) : (a.st < b.st ? 1 : (a.st > b.st ? -1 : 0)) }
 
-  tri3 (a, b) { return this.asc ? (a.txt.t < b.txt.t ? -1 : (a.txt.t > b.txt.t ? 1 : 0)) : (a.txt.t < b.txt.t ? 1 : (a.txt.t > b.txt.t ? 11 : 0)) }
+  tri3 (a, b) { return this.asc ? (a.txt.t < b.txt.t ? -1 : (a.txt.t > b.txt.t ? 1 : 0)) : (a.txt.t < b.txt.t ? 1 : (a.txt.t > b.txt.t ? -1 : 0)) }
 
-  tri (a, b) {
-    return this.tr1 === 1 ? this.tri1(a, b) : (this.tri === 2 ? this.tri2(a, b) : this.tri3(a, b))
+  fntri (a, b) {
+    return this.tri === 1 ? this.tri1(a, b) : (this.tri === 2 ? this.tri2(a, b) : this.tri3(a, b))
   }
 
   changement (f) {
     // niveau de changement avec le filtre précemment employé.
     // 0: aucun, 1:tri seulement, 2:filtre seulement, 3: base changée
+    if (!f) return 3
     if (this.perso !== f.perso || this.contactId !== f.contactId || this.groupeId !== f.groupeId) return 3
-    if (this.m1 !== f.m2 || this.m2 !== f.m2 || this.nm1 !== f.nm1 || this.nm2 !== f.nm2 || this.perm !== f.perm ||
-      this.temp !== f.temp || this.modi !== f.modif || this.texte !== f.texte || this.corps !== f.corps) return 2
+    if (!equ8(this.m1, f.m1) || !equ8(this.m2, f.m2) || this.perm !== f.perm ||
+      this.temp !== f.temp || this.modif !== f.modif || this.texte !== f.texte || this.corps !== f.corps) return 2
     if (this.tri !== f.tri || this.asc !== f.asc) return 1
     return 0
   }

@@ -1625,6 +1625,8 @@ export class Secret {
 
   get pk () { return [this.id, this.ns] }
 
+  get vk () { return this.sid + '@' + this.sid2 + '@' + this.v }
+
   get suppr () { return this.st < 0 }
 
   get horsLimite () { return this.st < 0 || this.st >= 99999 ? false : dlvDepassee(this.st) }
@@ -1702,8 +1704,13 @@ export class Secret {
       this.v1 = row.v1
       this.v2 = row.v2
       const cles = this.cles
-      this.txt = deserial(await crypt.decrypter(cles, row.txts))
-      this.txt.t = ungzip(this.txt.t)
+      try {
+        this.txt = deserial(await crypt.decrypter(cles, row.txts))
+        this.txt.t = ungzip(this.txt.t)
+      } catch (e) {
+        console.log(e.toString())
+        this.txt = { t: '!!! texte illisible, corrompu !!!', d: Math.floor(new Date().getTime() / 1000) }
+      }
       if (row.mc) {
         this.mc = this.ts === 0 || this.ts === 1 ? row.mc : deserial(row.mc)
       } else {
