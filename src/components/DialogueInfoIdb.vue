@@ -1,8 +1,8 @@
 <template>
     <q-dialog v-model="infoidb">
-      <q-card class="q-ma-xs moyennelargeur">
+      <q-card class="q-ma-xs petitelargeur fs-md">
         <q-card-section>
-          <div class="titre-2">Accès à la base locale</div>
+          <div class="titre-lg text-center">Accès à la base locale</div>
         </q-card-section>
         <q-card-section>
           <q-avatar size="md">
@@ -85,5 +85,5 @@ export default ({
 <style lang="sass" scoped>
 @import '../css/app.sass'
 .bord
-  border: 2px solid warning
+  border: 2px solid $negative
 </style>

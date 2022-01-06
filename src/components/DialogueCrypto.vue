@@ -1,10 +1,10 @@
 <template>
     <q-dialog v-model="dialoguecrypto">
-      <q-card class="q-ma-xs moyennelargeur">
+      <q-card class="q-ma-xs moyennelargeur fs-md">
         <q-card-section>
-          <div class="titre-2">Crytographie</div>
+          <div class="titre-lg text-center">Crytographie</div>
           <q-btn flat label="Test de crypto" color="primary" @click="testcrypto" />
-          <q-btn flat label="Test écho" color="primary" @click="testEcho"/>
+          <q-btn flat label="Test msg" color="primary" @click="testm"/>
           <q-btn flat label="CV" color="primary" @click="cvloc=true"/>
           <q-btn flat label="TS" color="primary" @click="testsecrets=true"/>
           <bouton-help page="page1"/>
@@ -147,13 +147,11 @@ export default ({
 })
 </script>
 
-<style lang="sass">
+<style lang="sass" scoped>
 @import '../css/app.sass'
 .t1
-  font-size: 1.1rem
-  font-weight: bold
   font-style: italic
+  color: $primary
 .t2
-  font-size: 1rem
   font-family: 'Roboto Mono'
 </style>

@@ -1,7 +1,7 @@
 <template>
-  <q-card-section class="q-pt-none shadow-box shadow-8">
-    <div class="titre-3">{{msg[phase]}}</div>
-    <div class="t1">Ce nom NE POURRA PLUS être changé</div>
+  <q-card-section class="q-pt-none shadow-8 fs-md">
+    <div class="titre-lg">{{msg[phase]}}</div>
+    <div class="text-warning">Ce nom NE POURRA PLUS être changé</div>
     <q-input dense counter v-model="nom" label="Nom de l'avatar"
       :rules="[val => (val.length >= 4 && val.length <= 24) || 'Entre 4 et 24 caractères' ]"/>
     <div class="row justify-between items-center no-wrap">
@@ -63,15 +63,4 @@ export default ({
 
 <style lang="sass" scoped>
 @import '../css/input.sass'
-.shadow-box
-  border: 1px solid $grey-5 !important
-  border-radius:  5px !important
-.t1
-  font-size: 0.9rem
-  font-style: italic
-  color: $warning
-.q-card__section
-  padding: 5px
-.q-card > div
-  box-shadow: inherit !important
 </style>

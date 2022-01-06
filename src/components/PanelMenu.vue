@@ -81,5 +81,5 @@ export default ({
   z-index: 2
 .q-item
   padding: 0 !important
-  min-height:0 !important
+  min-height: 0 !important
 </style>

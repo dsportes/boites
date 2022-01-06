@@ -1,5 +1,5 @@
 <template>
-    <q-card-section class="q-pt-none shadow-box shadow-8">
+    <q-card-section class="q-pt-none shadow-8">
         <q-input dense v-model="mdp" :type="isPwd ? 'password' : 'text'"
           @keydown.enter.prevent="ok"
           label="Mot de passe du grand argentier"
@@ -54,9 +54,4 @@ export default ({
 
 <style lang="sass" scoped>
 @import '../css/input.sass'
-.shadow-box
-  border: 1px solid $grey-5
-  border-radius:  5px !important
-.q-card__section
-  padding: 5px
 </style>

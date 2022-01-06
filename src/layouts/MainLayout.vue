@@ -11,7 +11,7 @@
           </span>
           <span v-if="compte != null" :class="page!=='Avatar' ? 'disabled' : 'cursor-pointer'" @click="tocompte">
             <q-icon size="sm" name="home" aria-label="Accueil du compte"/>
-            <span class="labeltitre q-px-sm">{{ compte.titre }}</span>
+            <span class="fs-md q-px-sm">{{ compte.titre }}</span>
           </span>
         </q-toolbar-title>
 
@@ -21,7 +21,7 @@
 
         <div class="cursor-pointer q-px-xs" @click="infoidb = true">
           <q-avatar v-if="mode === 0 || mode === 2 || sessionId == null" size="sm">
-              <img src="~assets/database_gris.svg">
+            <img src="~assets/database_gris.svg">
           </q-avatar>
           <div v-else>
             <q-avatar v-if="(mode == 1 || mode == 3) && statutidb != 0 && sessionId != null" size="sm">
@@ -52,28 +52,27 @@
       </q-toolbar>
 
       <q-toolbar inset :class="tbclass">
-        <q-toolbar-title class="text-center">
+        <q-toolbar-title class="text-center fs-md">
           <div v-if="page==='Org'" class="tbpage">Choix de l'organisation</div>
           <div v-if="page==='Login'" class="tbpage">Connexion à un compte</div>
           <div v-if="page==='Synchro'" class="tbpage">Synchronisation des données</div>
           <div v-if="page==='Compte' && compte != null && !compte.ko" class="tbpage">Compte : {{ compte.titre }}</div>
 
           <div v-if="page==='Avatar'" class="row">
-            <div class="col-8 col-sm-4 row justify-start tbpage">
-              <div class="row justify-center">
+            <div class="col-xs-12 col-sm-6 col-md-6 tbpage">
+              <div class="row justify-center no-wrap">
+                <img class="photo" :src="avatar && avatar.photo ? avatar.photo : personne"/>
                 <span class="q-px-sm">{{avatar && avatar.na ? (avatar.na.nom + (avatar.info ? ' [' + avatar.info + ']' : '')): ''}}</span>
-                <img class="photo q-ml-sm" :src="avatar && avatar.photo ? avatar.photo : personne"/>
               </div>
             </div>
-            <div class="col-6 col-sm-4 row justify-start tbpage2">
-              <span class="q-px-sm text-italic">Contact :</span>
+            <div class="col-xs-6 col-sm-3 col-md-3 fs-sm tbpage">
+              <q-icon size="sm" name="person"/>
               <span class="q-px-sm">Victor Hugo</span>
             </div>
-            <div class="col-6 col-sm-4 row justify-start tbpage2">
-              <span class="q-px-sm text-italic">Groupe :</span>
+            <div class="col-xs-6 col-sm-3 col-md-3 fs-sm tbpage">
+              <q-icon size="sm" name="people"/>
               <span class="q-px-sm">Duke Orchestra</span>
             </div>
-
           </div>
 
         </q-toolbar-title>
@@ -116,8 +115,8 @@
     <q-dialog v-model="confirmerdrc">
       <q-card  class="q-ma-xs moyennelargeur">
         <q-card-section>
-            <div class="titre-2">Déconnexion / <span v-if="sessionId != null && mode !== 0 && mode !== modeInitial">Reconnexion /</span>Continuation</div>
-            <div v-if="sessionId != null && mode !== 0 && mode !== modeInitial" class="titre-5 bg-warning">{{msgdegrade()}}</div>
+            <div class="titre fs-lg">Déconnexion / <span v-if="sessionId != null && mode !== 0 && mode !== modeInitial">Reconnexion /</span>Continuation</div>
+            <div v-if="sessionId != null && mode !== 0 && mode !== modeInitial" class="titre fs-md bg-warning">{{msgdegrade()}}</div>
         </q-card-section>
         <q-card-actions  v-if="sessionId != null" align="center">
           <q-btn class="q-ma-xs" dense size="md" color="warning"
@@ -131,7 +130,7 @@
     </q-dialog>
 
     <q-dialog v-model="messagevisible" seamless position="bottom">
-      <div :class="'q-pa-sm ' + ($store.state.ui.message.important ? 'msgimp' : 'msgstd')"  @click="$store.commit('ui/razmessage')">
+      <div :class="'q-pa-sm cursor-pointer ' + ($store.state.ui.message.important ? 'msgimp' : 'text-white bg-grey-9')"  @click="$store.commit('ui/razmessage')">
         {{ $store.state.ui.message.texte }}
       </div>
     </q-dialog>
@@ -141,17 +140,17 @@
         <div class="text-weight-bold">Interrompre l'opération</div>
         <div v-if="opencours != null" class="text-weight-bold">{{opencours.nom}}</div>
         <q-spinner color="primary" size="2rem" :thickness="3" />
-        <q-btn flat round icon="stop" class="text-red" @click="confirmstopop = true"/>
+        <q-btn flat round icon="stop" class="text-negative" @click="confirmstopop = true"/>
       </q-card>
     </q-dialog>
 
     <q-dialog v-model="confirmstopop">
       <q-card>
-        <q-card-section v-if="opencours != null && opencours.sync" class="q-pa-md diag">
+        <q-card-section v-if="opencours != null && opencours.sync" class="q-pa-md fs-md text-center">
           Interrompre l'opération de connexion qui charge les données de la base locale et/ou du serveur, affichera des données
           incomplètes et passera la session en mode dégradé.
         </q-card-section>
-        <q-card-section v-else class="q-pa-md diag">
+        <q-card-section v-else class="q-pa-md fs-md text-center">
           Interrompre une opération n'est jamais souhaitable. Ne le faire que quand il y a suspicion
           qu'elle ne se terminera pas normalement d'elle-même.
         </q-card-section>
@@ -164,9 +163,9 @@
 
     <q-dialog v-model="diagnosticvisible">
       <q-card>
-        <q-card-section class="q-pa-md diag"><div v-html="$store.state.ui.diagnostic"></div></q-card-section>
+        <q-card-section class="q-pa-md diag"><div v-html="diagnostic"></div></q-card-section>
         <q-card-actions align="right">
-          <q-btn flat label="J'ai lu" color="primary" v-close-popup @click="$store.commit('ui/razdiagnostic')"/>
+          <q-btn flat label="J'ai lu" color="primary" v-close-popup @click="razdiagnostic"/>
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -190,7 +189,7 @@
 
 <script>
 import { useQuasar } from 'quasar'
-import { computed, watch } from 'vue'
+import { computed } from 'vue'
 import { useStore } from 'vuex'
 import DialogueCreationCompte from 'components/DialogueCreationCompte.vue'
 import DialogueInfoMode from 'components/DialogueInfoMode.vue'
@@ -343,7 +342,7 @@ export default {
     const page = computed(() => $store.state.ui.page)
     const orgicon = computed(() => $store.getters['ui/orgicon'])
     const orglabel = computed(() => $store.getters['ui/orglabel'])
-    const orglabelclass = computed(() => 'font-antonio-l ' + ($store.state.ui.org == null ? 'labelorg2' : 'labelorg1'))
+    const orglabelclass = computed(() => 'font-antonio-l fs-md ' + ($store.state.ui.org == null ? 'text-negative' : 'q-pr-xs text-white'))
     const compte = computed(() => $store.state.db.compte)
     const avatar = computed(() => $store.state.db.avatar)
     const groupe = computed(() => $store.state.db.groupe)
@@ -351,6 +350,7 @@ export default {
     const modeInitial = computed(() => $store.state.ui.modeinitial)
     const messagevisible = computed(() => $store.getters['ui/messagevisible'])
     const diagnosticvisible = computed(() => $store.getters['ui/diagnosticvisible'])
+    const diagnostic = computed(() => $store.state.ui.diagnostic)
     const opencours = computed(() => $store.state.ui.opencours)
     const statutnet = computed(() => $store.state.ui.statutnet)
     const statut = computed(() => $store.state.ui.statutsession)
@@ -362,12 +362,13 @@ export default {
       MODES[data.modeInitial] + '" à "' + MODES[data.mode] + '".'
     }
 
-    watch(
-      () => avatar.value,
-      (ap, av) => {
-        if (ap) console.log(ap.info)
-      }
-    )
+    function razdiagnostic () { $store.commit('ui/razdiagnostic') }
+
+    /*
+    watch(() => avatar.value, (ap, av) => {
+      if (ap) console.log(ap.info)
+    })
+    */
 
     return {
       personne,
@@ -392,6 +393,8 @@ export default {
       modeInitial,
       messagevisible,
       diagnosticvisible,
+      diagnostic,
+      razdiagnostic,
       opencours,
       auneop,
       statutnet,
@@ -421,32 +424,16 @@ export default {
   padding: 2px !important
   min-height: 0 !important
 
-.btntab2
-  padding: 0 2px !important
-
-.cag
-  text-align: center
-  padding: 2px 0
-  max-height: 2rem
-  font-family: Calibri-Light
-  font-size: 1.2rem
+.tbpage
+  height: 1.7rem
   overflow: hidden
-  text-overflow: ellipsis
-  cursor: pointer
+  font-family: Comfortaa
 
-.labeltitre
-  padding: 0 2px
-  color: white
-  font-size: 1rem
-
-.labelorg1
-  padding: 0 2px
-  color: white
-  font-size: 1rem
-
-.labelorg2
+.msgimp
+  background-color: $grey-2
   color: $negative
-  font-size: 1rem
+  font-weight: bold
+  border: 2px solid $negative
 
 .opencours
   width: 15rem
@@ -454,51 +441,12 @@ export default {
   color: black
   overflow: hidden
 
-.msgstd
-  background-color: $grey-9
-  color: white
-  cursor: pointer
-
-.msgimp
-  background-color: $grey-2
-  color: $warning
-  font-weight: bold
-  cursor: pointer
-  border: 2px solid $warning
-
-.diag
-  font-size: 1rem
-  text-align: center
-
-.vert
-  color: $green
-.rouge
-  color: $red
-.gris
-  color: $grey-6
-
 .bord
-  border: 2px solid warning
+  border: 2px solid $negative
 
 .photo
   width: 1.8rem
   height: 1.8rem
   border-radius: 0.9rem
-  border: 1px solid grey
-
-.photo2
-  position: relative
-
-.tbpage
-  font-family: Comfortaa
-  font-size: 1.1rem
-
-.tbpage2
-  font-family: Comfortaa
-  font-size: 0.9rem
-
-.btntab
-  position: relative
-  left: 30px
-  z-index: 2
+  border: 1px solid $grey-5
 </style>

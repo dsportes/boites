@@ -1,6 +1,6 @@
 <template>
-  <q-card-section class="q-pt-none shadow-box shadow-8">
-    <div class="titre-3">{{msg[phase]}}</div>
+  <q-card-section class="shadow-8 fs-md">
+    <div class="titre-lg">{{msg[phase]}}</div>
     <q-input dense counter hint="Au moins 16 caractères" v-model="ligne1" :type="isPwd ? 'password' : 'text'" label="Première ligne de la phrase secrète">
     <template v-slot:append>
         <q-icon :name="isPwd ? 'visibility_off' : 'visibility'" class="cursor-pointer" @click="isPwd = !isPwd"/>
@@ -19,7 +19,7 @@
       </div>
       <div v-else class="row justify-between items-center no-wrap">
           <div v-if="isDev">
-            <span class="text-weight-bold text-primary cursor-pointer q-px-xs" v-for="(p, idx) in phrases" :key="idx" @click="selph(p)">{{idx}}</span>
+            <span class="text-primary cursor-pointer q-px-xs" v-for="(p, idx) in phrases" :key="idx" @click="selph(p)">{{idx}}</span>
           </div>
           <div>
             <q-btn color="primary" flat label="Renoncer" size="md" @click="ko" />
@@ -35,12 +35,7 @@ import { cfg, Phrase } from '../app/util.mjs'
 const msg = ['Saisir la phrase secrète', 'Phrase non confirmée, la re-saisir', 'Confirmer la phrase secréte']
 export default ({
   name: 'PhraseSecrete',
-  props: {
-    iconValider: String,
-    verif: Boolean,
-    labelValider: String,
-    initVal: Object
-  },
+  props: { iconValider: String, verif: Boolean, labelValider: String, initVal: Object },
   data () {
     return {
       phase: 0,
@@ -119,16 +114,11 @@ export default ({
 
 <style lang="sass" scoped>
 @import '../css/input.sass'
-.shadow-box
-  border: 1px solid $grey-5 !important
-  border-radius:  5px !important
 .t1
   font-size: 1.1rem
   font-weight: bold
   font-style: italic
   color: $primary
 .q-card__section
-  padding: 5px
-.q-card > div
-  box-shadow: inherit !important
+  padding: 0.5rem
 </style>

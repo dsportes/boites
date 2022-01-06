@@ -1,9 +1,9 @@
 <template>
 <q-dialog v-model="dialoguehelp" full-width>
-  <q-card>
+  <q-card class="fs-md">
     <q-card-section>
       <q-bar>
-        <div>{{page(pagec()).titre}}</div>
+        <div class="font-cf fs-lg">{{page(pagec()).titre}}</div>
         <q-space />
         <q-btn dense size="md" icon="arrow_back" :disable="stackvide" @click="back">
             <q-tooltip class="bg-white text-primary">Page d'aide précédente</q-tooltip>
@@ -17,20 +17,15 @@
     <q-separator />
 
     <q-card-section style="height: 70vh" class="scroll">
-      <div v-if="!$q.dark.isActive">
-        <sd-light class="markdown-body" :texte="texte"/>
-      </div>
-      <div v-if="$q.dark.isActive">
-        <sd-dark class="markdown-body" :texte="texte"/>
-      </div>
+      <show-html :texte="texte"/>
     </q-card-section>
 
     <q-separator />
 
     <q-card-section class="col items-align-end">
-      <div class="titre-3 text-italic">Voir aussi ...</div>
+      <div class="titre-md text-italic">Voir aussi ...</div>
       <div v-for="(p, idx) in page(pagec()).voir" :key="idx">
-        <div @click="push(p)" class="titre-6 cursor-pointer q-ml-md">{{page(p).titre}}</div>
+        <div @click="push(p)" class="titre-sm cursor-pointer q-ml-md">{{page(p).titre}}</div>
       </div>
     </q-card-section>
   </q-card>
@@ -40,14 +35,13 @@
 <script>
 import { useStore } from 'vuex'
 import { computed } from 'vue'
-import SdLight from './SdLight.vue'
-import SdDark from './SdDark.vue'
 import { cfg } from '../app/util.mjs'
+import ShowHtml from './ShowHtml.vue'
 
 export default ({
   name: 'DialogueHelp',
 
-  components: { SdLight, SdDark },
+  components: { ShowHtml },
 
   data () {
     return {

@@ -1,8 +1,8 @@
 <template>
     <q-dialog v-model="inforeseau">
-      <q-card class="q-ma-xs moyennelargeur">
+      <q-card class="q-ma-xs petitelargeur fs-md">
         <q-card-section>
-          <div class="titre-2">Etat d'accès au réseau (mode synchronisé et incognito)</div>
+          <div class="titre-lg text-center">Etat d'accès au réseau (mode synchronisé et incognito)</div>
         </q-card-section>
         <q-card-section>
           <q-icon size="md" name="sync_alt" color="grey-4" />
@@ -17,7 +17,7 @@
           </span>
         </q-card-section>
         <q-card-section>
-          <q-icon name="sync_alt" size="md" color="warning"/>
+          <q-icon name="sync_alt" size="md" color="negative"/>
           <span :class="statutnet === 2 ? 'text-bold text-primary' : ''">
             Les échanges / synchronisations avec le serveur ont été interrompus :
             les opérations de mise à jour sont interdites jusqu'à ce que la session ait été resynchronisée.

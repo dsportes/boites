@@ -1,21 +1,21 @@
 <template>
   <q-dialog v-model="dialoguecreationcompte">
-  <q-card class="q-ma-xs petitelargeur">
-    <q-card-section>
-      <div class="titre-2 text-italic">Création d'un compte SANS parrain</div>
+  <q-card class="q-ma-xs petitelargeur fs-md">
+    <q-card-section class="column items-center">
+      <div class="titre-lg text-center">Création d'un compte SANS parrain</div>
       <q-btn flat @click="close" color="primary" label="Renoncer" class="q-ml-sm" />
     </q-card-section>
 
     <q-card-section>
       <q-stepper v-model="step" vertical color="primary" animated>
         <q-step :name="1" title="Saisie du mot de passe" icon="settings" :done="step > 1">
-          Donner le mot de passe du "grand argentier" qui permet de s'octroyer
-          des quotas sans limite sans avoir besoin d'être parrainé par un compte existant.
+          <span class="fs-sm q-py-sm">Donner le mot de passe du "grand argentier" qui permet de s'octroyer
+          des quotas sans limite sans avoir besoin d'être parrainé par un compte existant.</span>
           <mdp-admin :init-val="mdp" class="q-ma-xs" v-on:ok-mdp="okmdp"></mdp-admin>
         </q-step>
 
         <q-step :name="2" title="Phrase secrète du compte" icon="settings" :done="step > 2">
-          Saisir et confirmer la phrase secrète du compte qui permettra de s'authentifier pour y accéder.
+          <span class="fs-sm q-py-sm">Saisir et confirmer la phrase secrète du compte qui permettra de s'authentifier pour y accéder.</span>
           <phrase-secrete :init-val="ps" class="q-ma-xs" v-on:ok-ps="okps" verif icon-valider="check" label-valider="Suivant"></phrase-secrete>
           <q-stepper-navigation>
             <q-btn flat @click="step = 1" color="primary" label="Précédent" class="q-ml-sm" />
@@ -30,7 +30,6 @@
         </q-step>
 
         <q-step :name="4" title="Quotas demandés" icon="settings" :done="step > 4" >
-          Saisir les quotas de volume demandés
           <quotas-volume :init-val="quotas" class="q-ma-xs" v-on:ok-quotas="okq"></quotas-volume>
           <q-stepper-navigation>
             <q-btn flat @click="step = 3" color="primary" label="Précédent" class="q-ml-sm" />
@@ -140,21 +139,22 @@ export default ({
 .sp1
   margin-left: 1rem
   font-size: 0.9rem
-  font-weight: bold
   font-style: normal
   font-family: 'Roboto Mono'
+.t1
+  font-size: 0.9rem
+.q-dialog__inner
+  padding: 0 !important
 </style>
 <style lang="sass">
-.q-card__section
-  padding: 5px
 .q-stepper--vertical
   padding: 4px !important
+.q-stepper--bordered
+  border: none
 .q-stepper__tab
   padding: 2px 0 !important
 .q-stepper__step-inner
   padding: 0px 2px 2px 18px !important
 .q-stepper__nav
-  padding: 0 !important
-.q-dialog__inner
   padding: 0 !important
 </style>

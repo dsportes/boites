@@ -1,10 +1,9 @@
 <template>
   <q-page class="column align-start items-center">
-    <div class="titre-1">Choix de l'organisation</div>
     <div v-for="o in listeorgs" :key="o.id">
-      <div class="row justify-center items-center cursor-pointer q-my-sm" @click="ok(o)">
+      <div class="row justify-center items-center cursor-pointer q-ma-lg" @click="ok(o)">
         <img class="logo" :src="o.icon"/>
-        <span class="orgcode">{{o.id}}</span>
+        <span class="fs-xxl font-cf">{{o.id}}</span>
       </div>
     </div>
   </q-page>
@@ -54,8 +53,5 @@ export default ({
 <style lang="sass">
 @import '../css/app.sass'
 .logo
-  width: 64px
-.orgcode
-  font-size: 1.5rem
-  margin-left: 1rem
+  width: 6rem
 </style>

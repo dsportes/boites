@@ -1,15 +1,15 @@
 <template>
-  <q-card class="q-pa-xs"> <!-- na pas mettre de marges haute / basse dans un q-page -->
+  <q-card class="q-pa-xs fs-md moyennelargeur"> <!-- na pas mettre de marges haute / basse dans un q-page -->
     <q-card-actions v-if="jailu" align="right">
       <q-btn flat label="J'ai lu" color="primary" @click="$store.commit('ui/majdialoguesynchro', false)"/>
     </q-card-actions>
     <q-card-section>
-      <div class="titre-2">Chargement et synchronisation</div>
+      <div class="titre-lg text-center">Chargement et synchronisation</div>
     </q-card-section>
     <q-separator />
     <q-card-section style="max-height:70vh;overflow:auto">
       <div v-if="!$store.getters['ui/modeincognito']">
-        <div class="titre-2">Chargement des données stockées en local</div>
+        <div class="titre-lg">Chargement des données stockées en local</div>
         <div v-for="(label, key) in labels" :key="key" class="row no-wrap items-start">
           <q-icon class="col-1" size="sm" :name="idb[t[key]].st ? 'done' : 'arrow_right'"/>
           <div class="col-8">{{label}}</div>
@@ -18,8 +18,8 @@
         </div>
       </div>
       <div v-if="!$store.getters['ui/modeavion']">
-        <div v-if="$store.getters['ui/modeincognito']" class="titre-2">Chargement des données depuis le serveur</div>
-        <div v-else class="titre-2">Synchronisation depuis les données du serveur</div>
+        <div v-if="$store.getters['ui/modeincognito']" class="titre-lg">Chargement des données depuis le serveur</div>
+        <div v-else class="titre-lg">Synchronisation depuis les données du serveur</div>
       </div>
         <div v-for="(rec, sid) in sync" :key="sid" class="row no-wrap items-start">
           <q-icon class="col-1" size="sm" :name="rec.st ? 'done' : 'arrow_right'"/>
@@ -87,13 +87,6 @@ export default ({
 })
 </script>
 
-<style lang="sass">
+<style lang="sass" scoped>
 @import '../css/app.sass'
-.t1
-  font-size: 1.1rem
-  font-weight: bold
-  font-style: italic
-.t2
-  font-size: 1rem
-  font-family: 'Roboto Mono'
 </style>
