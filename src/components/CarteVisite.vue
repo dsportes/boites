@@ -1,18 +1,15 @@
 <template>
-  <q-card class="q-ma-xs moyennelargeur">
+  <q-card class="q-ma-xs moyennelargeur fs-md">
     <q-card-section class="column justify-start">
       <div class="row justify-between">
-        <div>
-          <span class='titre-2'>{{n.na.nom}}</span>
-          <span class='q-pl-md titre-5'>@{{n.na.sfx}}</span>
-        </div>
+        <div class='titre-lg'>{{n.na.nom}}</div>
         <bouton-help page="p1"/>
       </div>
       <div>Code: <span class='font-mono'>{{n.na.sid}}</span></div>
     </q-card-section>
     <q-separator />
     <q-card-section class="row justify-start">
-      <div><img :src="photolocal" :width="taillephoto.width" :height="taillephoto.height" class="ph"/></div>
+      <div><img :src="photolocal" :width="taillephoto.width" :height="taillephoto.height" class="classeph"/></div>
       <div class="col column jusitify-center">
         <q-btn icon="mode_edit" label="Changer la photo" @click="enedition=true" />
         <q-btn :disable="!modifph" icon="undo" label="Garder la photo initiale" @click="undoph" />
@@ -20,7 +17,7 @@
     </q-card-section>
     <q-separator />
     <q-card-section v-if="enedition">
-      <div class="column justify-center">
+      <div class="q-mb-sm column justify-center">
         <q-file v-model="fileList" label="Choisir un fichier photo" accept=".jpg, .jpeg, .png" max-file-size="4000000" max-file="1"/>
         <div class="row justify-center">
           <q-btn flat :disable="camOn" color="primary" label="Start caméra" @click="startCam" />
@@ -50,10 +47,11 @@
     </q-card-section>
     <q-separator />
     <q-card-section>
-      <editeur-md ref="md" :texte="infolocal" v-model="resultat.info" taille-m editable></editeur-md>
+      <editeur-md ref="md" :texte="infolocal" v-model="resultat.info" editable style="height:10rem"></editeur-md>
     </q-card-section>
     <q-separator />
     <q-card-actions align="right">
+      <q-btn size="md" flat dense color="negative" icon="close" @click="undogen" />
       <q-btn :disable="!modif" flat icon="undo" label="Annuler" @click="undogen" />
       <q-btn :disable="!modif" flat icon="check" label="Valider" color="warning" @click="valider" />
     </q-card-actions>
@@ -229,7 +227,7 @@ export default ({
 <style lang="sass">
 @import '../css/app.sass'
 
-.ph
+.classeph
   border-radius: $tphradius
   border: 1px solid grey
 .d-none

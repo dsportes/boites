@@ -1,5 +1,5 @@
 <template>
-  <vue-showdown class="markdown-body" :markdown="texte" :key="texte" flavor="github" :options="{ emoji: true }" />
+  <vue-showdown class="markdown-body mdclair" :markdown="texte" :key="texte" flavor="github" :options="{ emoji: true }" />
 </template>
 <script>
 import { VueShowdown } from 'vue-showdown'
@@ -23,6 +23,8 @@ export default ({
 </style>
 
 <style lang="sass">
+.mdclair pre
+  background-color: #DDDDDD !important
 .markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4, .markdown-body h5
   font-family: Comfortaa
 </style>

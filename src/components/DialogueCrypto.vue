@@ -8,7 +8,7 @@
           <q-btn flat label="CV" color="primary" @click="cvloc=true"/>
           <q-btn flat label="TS" color="primary" @click="testsecrets=true"/>
           <bouton-help page="page1"/>
-          <editeur-md ref="edmd" :texte="memo" v-model="texteedite" editable label-ok="Valider" v-on:ok="memook"></editeur-md>
+          <editeur-md ref="edmd" style="height:10rem" :texte="memo" v-model="texteedite" editable label-ok="Valider" v-on:ok="memook"></editeur-md>
         </q-card-section>
         <q-card-section class="q-ma-xs">
           <phrase-secrete v-on:ok-ps="okps" icon-valider="check" verif label-ok="OK"></phrase-secrete>

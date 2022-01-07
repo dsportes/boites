@@ -8,7 +8,7 @@
     </q-card-actions>
     <q-separator/>
     <q-card-actions align="between">
-      <q-btn v-if="$q.screen.lt.md" size="md" flat dense color="red" icon="close" @click="fermeture" />
+      <q-btn v-if="$q.screen.lt.md" size="md" flat dense color="negative" icon="close" @click="fermeture" />
       <q-btn :disable="!modifie" size="md" flat dense color="primary" icon="undo" label="Annuler" @click="annuler" />
       <q-btn :disable="!modifie" size="md" flat dense color="warning" icon="search" label="Rechercher" @click="ok" />
     </q-card-actions>

@@ -1,31 +1,29 @@
 <template>
 <div>
-  <div ref="root1" v-if="!max" :class="'column justify start flow' + taille + dlclass">
-    <q-toolbar>
-      <q-btn :disable="taille===(tailleM?1:0)" class="icon" icon="zoom_out" size="md" dense flat push @click="taille=taille-1;max=false"></q-btn>
-      <q-btn :disable="taille===2" class="icon" icon="zoom_in" size="md" push flat dense @click="taille=taille+1;max=taille===2"></q-btn>
-      <q-btn :disable="!md" class="icon" size="md" label="TXT" :color="md ? 'warning' : 'purple'" push flat dense @click="md=false"></q-btn>
-      <q-btn :disable="md" class="icon" size="md" label="HTML" dense flat push @click="md=true"></q-btn>
-      <q-btn v-if="editable" :disable="md" class="icon" icon="face" size="md" dense flat push @click="emoji=true"></q-btn>
-      <q-btn v-if="modifie" class="icon" icon="undo" size="md" dense flat push @click="undo"></q-btn>
-      <q-btn v-if="modifie && labelOk" class="icon" icon="check" :label="labelOk" size="md" dense flat push color="warning" @click="ok"></q-btn>
+  <q-card ref="root1" v-if="!max" :class="'column fs-md full-height overflow-hidden ' + dlclass">
+    <q-toolbar class="col-auto full-width">
+      <q-btn icon="zoom_out_map" size="md" push flat dense @click="max=true"></q-btn>
+      <q-btn :disable="!md" class="q-mr-xs" size="md" label="TXT" :color="md ? 'warning' : 'purple'" push flat dense @click="md=false"></q-btn>
+      <q-btn :disable="md" class="q-mr-xs" size="md" label="HTML" dense flat push @click="md=true"></q-btn>
+      <q-btn v-if="editable" :disable="md" class="q-mr-xs" icon="face" size="md" dense flat push @click="emoji=true"></q-btn>
+      <q-btn v-if="modifie" class="q-mr-xs" icon="undo" size="md" dense flat push @click="undo"></q-btn>
+      <q-btn v-if="modifie && labelOk" class="q-mr-xs" icon="check" :label="labelOk" size="md" dense flat push color="warning" @click="ok"></q-btn>
     </q-toolbar>
-    <textarea v-if="!md" :class="taclass + ' font-mono'" v-model="textelocal" :readonly="!editable"/>
-    <div v-else :class="taclass"><show-html :idx="idx" :texte="textelocal"/></div>
-  </div>
-  <q-dialog v-model="max" maximized transition-show="slide-up" transition-hide="slide-down">
-    <div ref="root2" :class="'column justify start flow' + taille + dlclass">
-      <q-toolbar>
-        <q-btn :disable="taille===(tailleM?1:0)" class="icon" icon="zoom_out" size="md" dense flat push @click="taille=taille-1;max=false"></q-btn>
-        <q-btn :disable="taille===2" class="icon" icon="zoom_in" size="md" push flat dense @click="taille=taille+1;max=taille===2"></q-btn>
-        <q-btn :disable="!md" class="icon" size="md" label="TXT" :color="md ? 'warning' : 'purple'" push flat dense @click="md=false"></q-btn>
-        <q-btn :disable="md" class="icon" size="md" label="HTML" dense flat push @click="md=true"></q-btn>
-        <q-btn v-if="editable" :disable="md" class="icon" icon="face" size="md" dense flat push @click="emoji=true"></q-btn>
-        <q-btn v-if="modifie" class="icon" icon="undo" size="md" dense flat push @click="undo"></q-btn>
-        <q-btn v-if="modifie && labelOk" class="icon" icon="check" :label="labelOk" size="md" dense flat push color="warning" @click="ok"></q-btn>
+    <textarea v-if="!md" :class="'q-pa-xs col full-width font-mono ta ' + dlclass" v-model="textelocal" :readonly="!editable"/>
+    <div v-else class="q-pa-xs col full-width ta"><show-html :idx="idx" :texte="textelocal"/></div>
+  </q-card>
+  <q-dialog v-model="max" full-height transition-show="slide-up" transition-hide="slide-down">
+    <div ref="root2" :class="'column fs-md full-height grandelargeur overflow-hidden ' + dlclass">
+      <q-toolbar class="col-auto">
+      <q-btn icon="zoom_in_map" size="md" dense flat push @click="max=false"></q-btn>
+      <q-btn :disable="!md" class="q-mr-xs" size="md" label="TXT" :color="md ? 'warning' : 'purple'" push flat dense @click="md=false"></q-btn>
+      <q-btn :disable="md" class="q-mr-xs" size="md" label="HTML" dense flat push @click="md=true"></q-btn>
+      <q-btn v-if="editable" :disable="md" class="q-mr-xs" icon="face" size="md" dense flat push @click="emoji=true"></q-btn>
+      <q-btn v-if="modifie" class="q-mr-xs" icon="undo" size="md" dense flat push @click="undo"></q-btn>
+      <q-btn v-if="modifie && labelOk" class="q-mr-xs" icon="check" :label="labelOk" size="md" dense flat push color="warning" @click="ok"></q-btn>
       </q-toolbar>
-      <textarea v-if="!md" :class="taclass + ' font-mono'" v-model="textelocal" :readonly="!editable"/>
-      <div v-else :class="taclass"><show-html :idx="idx" :texte="textelocal"/></div>
+      <textarea v-if="!md" :class="'q-pa-xs col font-mono ta ' + dlclass" v-model="textelocal" :readonly="!editable"/>
+      <div v-else :class="'q-pa-xs col ta ' + dlclass"><show-html :idx="idx" :texte="textelocal"/></div>
     </div>
   </q-dialog>
   <q-dialog v-model="emoji">
@@ -46,15 +44,12 @@ export default ({
 
   emits: ['update:modelValue', 'ok'],
 
-  props: { modelValue: String, texte: String, labelOk: String, editable: Boolean, tailleM: Boolean, idx: Number, modetxt: Boolean },
+  props: { modelValue: String, texte: String, labelOk: String, editable: Boolean, idx: Number, modetxt: Boolean },
 
   computed: {
     dlclass () {
       if (this.$q.dark.isActive) return this.idx ? ' sombre' + (this.idx % 2) : ' sombre0'
       return this.idx ? ' clair' + (this.idx % 2) : ' clair0'
-    },
-    taclass () {
-      return 'col ta' + this.taille + this.dlclass + (this.modifie ? ' borderw' : ' borderp') + ' font-mono'
     },
     modifie () {
       return this.textelocal !== this.texteinp
@@ -151,35 +146,13 @@ export default ({
 
 <style lang="sass" scoped>
 @import '../css/input.sass'
-$ht0: 100px
-$ht1: 200px
 .q-toolbar
   padding: 2px 0 !important
   height: 25px !important
-.icon
-  margin-right: 2px
-.flow0
-  height: $ht0 !important
-  padding: 2px
-  overflow: hidden
-.flow1
-  height: $ht1 !important
-  padding: 2px
-  overflow: hidden
-.flow2
-  height: 100vh
-  width: 100vw
-  padding: 5px
-.borderw
-  border: 1px solid $warning
-.borderp
-  border: 1px solid $primary
-.ta0, .ta1, .ta2
+.ta
   width: 100%
   margin: 0
-  padding: 2px
-.ta0
-  overflow-y: hidden
-.ta1, ta2
-  overflow-y: scroll
+  border-top: 1px solid $grey-5
+  border-bottom: 1px solid $grey-5
+  overflow-y: auto
 </style>
