@@ -1,43 +1,32 @@
 <template>
-<q-page>
+<q-page class="fs-md">
   <div v-if="tabavatar === 'secrets'" :class="$q.screen.gt.sm ? 'ml20' : 'q-pa-xs full-width'">
-    <!--
-    <div v-if="$q.screen.gt.sm" class="q-mr-md shadow-4 col-auto largeurfiltre">
-    </div>
-    <div class="col-auto" style="width:2px;height:100vh;background-color:grey"></div>
-    -->
     <div v-if="state.lst && state.lst.length" class="col">
       <vue-secret v-for="(secret, idx) in state.lst" :key="secret.vk" :idx="idx" :secret="secret" :motscles="motscles" :avobsid="avatar.id"></vue-secret>
     </div>
   </div>
 
-  <q-card v-if="tabavatar === 'contacts'" class="column align-start items-start">
-    <div class="titre-3">Contacts de l'avatar</div>
-  </q-card>
+  <div v-if="tabavatar === 'contacts'" class="full-width">
+    <div class="titre-lg">Contacts de l'avatar</div>
+  </div>
 
-  <q-card v-if="tabavatar === 'groupes'" class="column align-start items-start">
-    <div class="titre-3">Groupes auxquels l'avatar participe</div>
-  </q-card>
+  <div v-if="tabavatar === 'groupes'" class="full-width">
+    <div class="titre-lg">Groupes auxquels l'avatar participe</div>
+  </div>
 
-  <q-card v-if="tabavatar === 'etc'" class="column align-start items-start q-pa-xs">
-    <q-expansion-item group="etc" label="Carte de visite" default-opened header-class="titre-2 bg-primary text-white">
-      <div v-if="avatar" style="width:100%">
-        <carte-visite :nomc="avatar.nomc" :info-init="avatar.info" :photo-init="avatar.photo" @ok="validercv"/>
-      </div>
+  <div v-if="tabavatar === 'etc' && avatar">
+    <q-expansion-item class="full-width" group="etc" label="Carte de visite" default-opened
+      header-class="expansion-header-class-1 titre-lg bg-secondary text-white">
+      <div class="fake"><apercu-avatar class="maauto" page editer :avatar-id="avatar.id"/></div>
     </q-expansion-item>
-    <q-expansion-item group="etc" label="Mots clés du compte" header-class="titre-2 bg-secondary text-white">
-      <mots-cles :motscles="motscles"></mots-cles>
+    <q-expansion-item class="full-width q-mt-xs" group="etc" label="Mots clés du compte"
+      header-class="expansion-header-class-1 titre-lg bg-secondary text-white">
+      <div class="fake"><mots-cles :motscles="motscles"></mots-cles></div>
     </q-expansion-item>
-  </q-card>
+  </div>
 
   <q-dialog v-model="nouvsec">
     <vue-secret :secret="nouveausecret(0)" :motscles="motscles" :avobsid="avatar.id" :idx="0" :close="fclose"></vue-secret>
-  </q-dialog>
-
-  <q-dialog v-if="$q.screen.lt.md" v-model="panelfiltre" position="left">
-    <div class="largeurfiltre">
-      <panel-filtre @ok="rechercher" @action="action" :motscles="motscles" :etat-interne="recherche" :fermer="fermerfiltre"></panel-filtre>
-    </div>
   </q-dialog>
 
   <q-page-sticky v-if="tabavatar === 'secrets' && $q.screen.gt.sm" position="top-left" expand :offset="[5,5]">
@@ -53,7 +42,7 @@ import { onBoot } from '../app/page.mjs'
 import { Motscles, difference, Filtre } from '../app/util.mjs'
 // import BoutonHelp from '../components/BoutonHelp.vue'
 import MotsCles from '../components/MotsCles.vue'
-import CarteVisite from '../components/CarteVisite.vue'
+import ApercuAvatar from '../components/ApercuAvatar.vue'
 import VueSecret from '../components/VueSecret.vue'
 import PanelFiltre from '../components/PanelFiltre.vue'
 import { CvAvatar } from '../app/operations.mjs'
@@ -63,7 +52,7 @@ import { crypt } from '../app/crypto.mjs'
 export default ({
   name: 'Avatar',
 
-  components: { /* BoutonHelp, */ CarteVisite, MotsCles, VueSecret, PanelFiltre },
+  components: { /* BoutonHelp, */ ApercuAvatar, MotsCles, VueSecret, PanelFiltre },
 
   data () {
     return {
@@ -269,10 +258,11 @@ export default ({
 
 <style lang="sass" scoped>
 @import '../css/app.sass'
-.largeurfiltre
-  width: 20rem
-
 .ml20
   width: 100%
-  padding: 0.2rem 0.2rem 0.2rem 21rem
+  padding: 0.2rem 0.2rem 0.2rem 23rem
+.q-expansion-item__content > .q-card
+  box-shadow: inherit !important
+</style>
+<style lang="sass">
 </style>

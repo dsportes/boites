@@ -79,16 +79,16 @@
       </q-toolbar>
 
       <q-toolbar inset v-if="page === 'Compte'">
-        <div class="window-width">
-        <q-tabs v-model="tabcompte" inline-label no-caps dense>
-          <q-tab name="avatars" label="Avatars" />
-          <q-tab name="etc" label="Etc." />
-        </q-tabs>
+        <div class="window-width font-cf">
+          <q-tabs v-model="tabcompte" inline-label no-caps dense>
+            <q-tab name="avatars" label="Avatars" />
+            <q-tab name="etc" label="Etc." />
+          </q-tabs>
         </div>
       </q-toolbar>
 
       <q-toolbar inset v-if="page === 'Avatar'">
-        <div class="row window-width justify-center">
+        <div class="window-width font-cf">
           <q-tabs class="" v-model="tabavatar" inline-label no-caps dense>
             <q-btn v-if="tabavatar==='secrets' && $q.screen.lt.md" size="md" dense icon="search" color="secondary" @click="optAvatar('recherche')"/>
             <q-tab name="secrets" label="Secrets" />

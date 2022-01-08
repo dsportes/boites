@@ -1,6 +1,6 @@
 <template>
-  <q-scroll-area style="height:80vh;width:20rem">
-  <q-card>
+  <q-scroll-area style="height:80vh;width:22rem">
+  <q-card class="shadow-8">
     <q-card-actions vertical>
       <q-btn flat dense color="primary" size="md" icon="add" label="Nouveau secret personnel" @click="action(1)"/>
       <q-btn v-if="contact" flat dense size="md" color="primary" icon="add" :label="'Nouveau secret partagé avec ' +  contact.nom" @click="action(2)"/>
@@ -13,89 +13,78 @@
       <q-btn :disable="!modifie" size="md" flat dense color="warning" icon="search" label="Rechercher" @click="ok" />
     </q-card-actions>
     <q-separator/>
-    <q-card-section>
-      <div class="column justify-start">
+    <div class="q-pa-sm column justify-start ful-width">
         <q-checkbox v-model="state.a.perso" dense size="md" label="Secrets personnels" />
         <q-option-group :options="contact ? optionsct2 : optionsct1" dense v-model="state.a.ct"/>
         <q-option-group :options="groupe ? optionsgr2 : optionsgr1" dense v-model="state.a.gr"/>
-      </div>
-    </q-card-section>
+    </div>
     <q-separator/>
-    <q-card-section>
-      <div class="column justify-start">
-        <div class="titre-4 text-primary">Ayant TOUS les mots clés suivants :</div>
-        <apercu-motscles :motscles="motscles" :src="state.a.mc1" :args-click="{n:2}" @click-mc="mcedit1 = true"></apercu-motscles>
-        <div class="titre-4 text-primary">MAIS n'ayant AUCUN des mots clés suivants :</div>
-        <apercu-motscles :motscles="motscles" :src="state.a.mc2" :args-click="{n:2}" @click-mc="mcedit2 = true" ></apercu-motscles>
-        <q-dialog v-model="mcedit1">
-          <select-motscles :motscles="motscles" :src="state.a.mc1" @ok="changermc1" :close="mcedit1cl"></select-motscles>
-        </q-dialog>
-        <q-dialog v-model="mcedit2">
-          <select-motscles :motscles="motscles" :src="state.a.mc2" @ok="changermc2" :close="mcedit2cl"></select-motscles>
-        </q-dialog>
-      </div>
-    </q-card-section>
+    <div class="q-pa-sm column justify-start">
+      <div class="titre-4 text-primary">Ayant TOUS les mots clés suivants :</div>
+      <apercu-motscles :motscles="motscles" :src="state.a.mc1" :args-click="{n:2}" @click-mc="mcedit1 = true"></apercu-motscles>
+      <div class="titre-4 text-primary">MAIS n'ayant AUCUN des mots clés suivants :</div>
+      <apercu-motscles :motscles="motscles" :src="state.a.mc2" :args-click="{n:2}" @click-mc="mcedit2 = true" ></apercu-motscles>
+      <q-dialog v-model="mcedit1">
+        <select-motscles :motscles="motscles" :src="state.a.mc1" @ok="changermc1" :close="mcedit1cl"></select-motscles>
+      </q-dialog>
+      <q-dialog v-model="mcedit2">
+        <select-motscles :motscles="motscles" :src="state.a.mc2" @ok="changermc2" :close="mcedit2cl"></select-motscles>
+      </q-dialog>
+    </div>
     <q-separator/>
-    <q-card-section>
-      <div class="colmun justify-start">
-        <q-checkbox v-model="state.a.perm" size="md" label="Secrets permanents" />
-        <div class="row justify-start">
-          <q-btn-dropdown size="md" dense color="primary" label="Secrets temporaires" v-model="menudd1">
-            <div class="clair1 column">
-              <q-btn flat dense no-caps :label="labelt['p0']" @click="menudd1=false;state.a.temp=0"/>
-              <q-btn flat dense no-caps :label="labelt['p7']" @click="menudd1=false;state.a.temp=7"/>
-              <q-btn flat dense no-caps :label="labelt['p30']" @click="menudd1=false;state.a.temp=30"/>
-              <q-btn flat dense no-caps :label="labelt['p99998']" @click="menudd1=false;state.a.temp=99998"/>
-            </div>
-          </q-btn-dropdown>
-          <div class="q-pl-lg">{{labelt['p' + state.a.temp]}}</div>
-        </div>
-      </div>
-    </q-card-section>
-    <q-separator/>
-    <q-card-section>
-      <div class="row justify-start">
-        <q-btn-dropdown size="md" dense color="primary" label="Secrets modifiés depuis ..." v-model="menudd2">
+    <div class="q-pa-sm colmun justify-start">
+      <q-checkbox v-model="state.a.perm" size="md" dense label="Secrets permanents" />
+      <div class="row">
+        <q-btn-dropdown size="md" dense color="primary" label="Temporaires" v-model="menudd1">
           <div class="clair1 column">
-            <q-btn flat dense no-caps :label="labelm['p0']" @click="menudd2=false;state.a.modif=0"/>
-            <q-btn flat dense no-caps :label="labelm['p1']" @click="menudd2=false;state.a.modif=1"/>
-            <q-btn flat dense no-caps :label="labelm['m1']" @click="menudd2=false;state.a.modif=-1"/>
-            <q-btn flat dense no-caps :label="labelm['p7']" @click="menudd2=false;state.a.modif=7"/>
-            <q-btn flat dense no-caps :label="labelm['m7']" @click="menudd2=false;state.a.modif=-7"/>
-            <q-btn flat dense no-caps :label="labelm['p30']" @click="menudd2=false;state.a.modif=30"/>
-            <q-btn flat dense no-caps :label="labelm['m30']" @click="menudd2=false;state.a.modif=-30"/>
-            <q-btn flat dense no-caps :label="labelm['p90']" @click="menudd2=false;state.a.modif=90"/>
-            <q-btn flat dense no-caps :label="labelm['m90']" @click="menudd2=false;state.a.modif=-90"/>
-            <q-btn flat dense no-caps :label="labelm['p360']" @click="menudd2=false;state.a.modif=360"/>
-            <q-btn flat dense no-caps :label="labelm['m360']" @click="menudd2=false;state.a.modif=-360"/>
+            <q-btn flat dense no-caps :label="labelt['p0']" @click="menudd1=false;state.a.temp=0"/>
+            <q-btn flat dense no-caps :label="labelt['p99998']" @click="menudd1=false;state.a.temp=99998"/>
+            <q-btn flat dense no-caps :label="labelt['p7']" @click="menudd1=false;state.a.temp=7"/>
+            <q-btn flat dense no-caps :label="labelt['p30']" @click="menudd1=false;state.a.temp=30"/>
           </div>
         </q-btn-dropdown>
-        <div class="q-pl-lg">{{labelm[state.a.modif >= 0 ? 'p' + state.a.modif : 'm' + (-state.a.modif)]}}</div>
-        </div>
-    </q-card-section>
+        <div class="q-pl-md">{{labelt['p' + state.a.temp]}}</div>
+      </div>
+    </div>
     <q-separator/>
-    <q-card-section>
-      <div class="column justify-start">
-        <q-input v-model="state.a.texte" dense label="Dont le titre contient :" style="width:10rem"></q-input>
-        <q-checkbox v-model="state.a.corps" size="md" label="Chercher aussi dans le texte du secret"/>
-      </div>
-    </q-card-section>
-    <q-card-section>
-      <div class="row justify-start">
-        <q-btn-dropdown size="md" dense color="primary" label="Secrets Triés par ..." v-model="menudd3">
-          <div class="clair1 column">
-          <q-btn flat dense no-caps :label="labeltri['p0']" @click="menudd3=false;state.a.tri=0"/>
-          <q-btn flat dense no-caps :label="labeltri['p1']" @click="menudd3=false;state.a.tri=1"/>
-          <q-btn flat dense no-caps :label="labeltri['m1']" @click="menudd3=false;state.a.tri=-1"/>
-          <q-btn flat dense no-caps :label="labeltri['p2']" @click="menudd3=false;state.a.tri=2"/>
-          <q-btn flat dense no-caps :label="labeltri['m2']" @click="menudd3=false;state.a.tri=-2"/>
-          <q-btn flat dense no-caps :label="labeltri['p3']" @click="menudd3=false;state.a.tri=3"/>
-          <q-btn flat dense no-caps :label="labeltri['m3']" @click="menudd3=false;state.a.tri=-3"/>
-          </div>
-        </q-btn-dropdown>
-        <div class="q-pl-lg">{{labeltri[state.a.tri >= 0 ? 'p' + state.a.tri : 'm' + (-state.a.tri)]}}</div>
-      </div>
-    </q-card-section>
+    <div class="q-pa-sm row">
+      <q-btn-dropdown size="md" dense color="primary" label="Modifiés depuis" v-model="menudd2">
+        <div class="clair1 column">
+          <q-btn flat dense no-caps :label="labelm['p0']" @click="menudd2=false;state.a.modif=0"/>
+          <q-btn flat dense no-caps :label="labelm['p1']" @click="menudd2=false;state.a.modif=1"/>
+          <q-btn flat dense no-caps :label="labelm['m1']" @click="menudd2=false;state.a.modif=-1"/>
+          <q-btn flat dense no-caps :label="labelm['p7']" @click="menudd2=false;state.a.modif=7"/>
+          <q-btn flat dense no-caps :label="labelm['m7']" @click="menudd2=false;state.a.modif=-7"/>
+          <q-btn flat dense no-caps :label="labelm['p30']" @click="menudd2=false;state.a.modif=30"/>
+          <q-btn flat dense no-caps :label="labelm['m30']" @click="menudd2=false;state.a.modif=-30"/>
+          <q-btn flat dense no-caps :label="labelm['p90']" @click="menudd2=false;state.a.modif=90"/>
+          <q-btn flat dense no-caps :label="labelm['m90']" @click="menudd2=false;state.a.modif=-90"/>
+          <q-btn flat dense no-caps :label="labelm['p360']" @click="menudd2=false;state.a.modif=360"/>
+          <q-btn flat dense no-caps :label="labelm['m360']" @click="menudd2=false;state.a.modif=-360"/>
+        </div>
+      </q-btn-dropdown>
+      <div class="q-pl-md">{{labelm[state.a.modif >= 0 ? 'p' + state.a.modif : 'm' + (-state.a.modif)]}}</div>
+    </div>
+    <q-separator/>
+    <div class="q-pa-sm column justify-start">
+      <q-input v-model="state.a.texte" dense label="Dont le titre contient :" style="width:10rem"></q-input>
+      <q-checkbox v-model="state.a.corps" dense size="md" label="Chercher aussi dans le texte du secret"/>
+    </div>
+   <q-separator/>
+    <div class="q-pa-sm row">
+      <q-btn-dropdown size="md" dense color="primary" label="Triés par" v-model="menudd3">
+        <div class="clair1 column">
+        <q-btn flat dense no-caps :label="labeltri['p0']" @click="menudd3=false;state.a.tri=0"/>
+        <q-btn flat dense no-caps :label="labeltri['p1']" @click="menudd3=false;state.a.tri=1"/>
+        <q-btn flat dense no-caps :label="labeltri['m1']" @click="menudd3=false;state.a.tri=-1"/>
+        <q-btn flat dense no-caps :label="labeltri['p2']" @click="menudd3=false;state.a.tri=2"/>
+        <q-btn flat dense no-caps :label="labeltri['m2']" @click="menudd3=false;state.a.tri=-2"/>
+        <q-btn flat dense no-caps :label="labeltri['p3']" @click="menudd3=false;state.a.tri=3"/>
+        <q-btn flat dense no-caps :label="labeltri['m3']" @click="menudd3=false;state.a.tri=-3"/>
+        </div>
+      </q-btn-dropdown>
+      <div class="q-pl-md">{{labeltri[state.a.tri >= 0 ? 'p' + state.a.tri : 'm' + (-state.a.tri)]}}</div>
+    </div>
   </q-card>
 </q-scroll-area>
 </template>
@@ -184,50 +173,50 @@ export default ({
       p0: 'N\'importe quand', p1: 'Plus d\'un jour', p7: 'Plus d\'une semaine', p30: 'Plus d\'un mois', p90: 'Plus d\'un trimestre', p360: 'Plus d\'un an', m1: 'Moins d\'un jour', m7: 'Moins d\'une semaine', m30: 'Moins d\'un mois', m90: 'Plus d\'un trimestre', m360: 'Moins d\'un an'
     }
     const labelt = {
-      p0: 'Aucun secret temporaire',
-      p7: 'Ceux qui vont s\'autodétruire dans moins d\'une semaine',
-      p30: 'Ceux qui vont s\'autodétruire dans moins d\'un mois',
-      p99998: 'Ceux qui vont s\'autodétruire dans PLUS d\'un mois'
+      p0: 'Aucun',
+      p99998: 'Tous',
+      p7: 'Autodétruits dans la semaine',
+      p30: 'Autodétruits dans le mois'
     }
     const labeltri = {
       p0: 'Ne pas trier les secrets',
-      p1: 'dates de modification croissantes',
-      m1: 'dates de modification décroissantes',
-      p2: 'dates d\'auto-destruction croissantes',
-      m2: 'dates d\'auto-destruction décroissantes',
-      p3: 'ordre alphabétique du titre',
-      m3: 'ordre alphabétique inverse du titre'
+      p1: 'Dates de modification croissantes',
+      m1: 'Dates de modification décroissantes',
+      p2: 'Dates de destruction croissantes',
+      m2: 'Dates de destruction décroissantes',
+      p3: 'Ordre alphabétique du titre',
+      m3: 'Ordre alphabétique inverse du titre'
     }
     const optionsct1 = [
-      { label: 'pas de secrets partagés avec des contacts', value: 0 },
-      { label: 'secrets partagés avec n\'importe quel contact', value: -1 }
+      { label: 'Aucun secret partagé avec un contact', value: 0 },
+      { label: 'Secrets partagés avec n\'importe quel contact', value: -1 }
     ]
     const optionsct2 = [
-      { label: 'pas de secrets partagés avec des contacts', value: 0 },
-      { label: 'secrets partagés avec n\'importe quel contact', value: -1 }
+      { label: 'Aucun secret partagé avec un contact', value: 0 },
+      { label: 'Secrets partagés avec n\'importe quel contact', value: -1 }
     ]
     const optionsgr1 = [
-      { label: 'pas de secrets partagés avec des groupes', value: 0 },
-      { label: 'secrets partagés avec n\'importe quel groupe', value: -1 }
+      { label: 'Aucun secret partagé avec un groupe', value: 0 },
+      { label: 'Secrets partagés avec n\'importe quel groupe', value: -1 }
     ]
     const optionsgr2 = [
-      { label: 'pas de secrets partagés avec des groupes', value: 0 },
-      { label: 'secrets partagés avec n\'importe quel groupe', value: -1 }
+      { label: 'Aucun partagé avec un groupe', value: 0 },
+      { label: 'Secrets partagés avec n\'importe quel groupe', value: -1 }
     ]
 
     watch(() => groupe.value, (ap, av) => {
-      optionsgr2.splice(2, 1, { label: 'secrets partagés avec le groupe ' + groupe.value.nom, value: groupe.value.id })
+      optionsgr2.splice(2, 1, { label: 'Secrets partagés avec le groupe ' + groupe.value.nom, value: groupe.value.id })
     })
     watch(() => contact.value, (ap, av) => {
-      optionsct2.splice(2, 1, { label: 'secrets partagés avec ' + contact.value.nom, value: contact.value.id })
+      optionsct2.splice(2, 1, { label: 'Secrets partagés avec ' + contact.value.nom, value: contact.value.id })
     })
 
     onMounted(() => {
       if (contact.value) {
-        optionsct2.splice(2, 1, { label: 'secrets partagés avec ' + contact.value.nom, value: contact.value.id })
+        optionsct2.splice(2, 1, { label: 'Secrets partagés avec ' + contact.value.nom, value: contact.value.id })
       }
       if (groupe.value) {
-        optionsgr2.splice(2, 1, { label: 'secrets partagés avec le groupe ' + groupe.value.nom, value: groupe.value.id })
+        optionsgr2.splice(2, 1, { label: 'Secrets partagés avec le groupe ' + groupe.value.nom, value: groupe.value.id })
       }
     })
 
@@ -249,10 +238,8 @@ export default ({
 
 })
 </script>
-<style lang="sass" scpoed>
+<style lang="sass" scoped>
 @import '../css/app.sass'
-.qf
-  width: 20rem
-  max-height: 80vh
-  overflow-y: auto
+.q-btn--dense
+  padding: 1px !important
 </style>

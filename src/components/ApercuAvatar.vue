@@ -1,28 +1,26 @@
 <template>
-<div class="column q-pa-sm q-my-md top">
-  <q-btn v-if="page" class="q-pa-md" style="padding:0!important;margin:0.5rem 1rem!important;" dense size="md" color="secondary" icon="navigate_next" label="Sélectionner cet avatar" @click="toAvatar"/>
-  <div class="row">
-    <div><img class="ph" :src="photo"/></div>
-    <div class="col column items-center q-pl-md">
-      <div><span class='titre-3'>{{ids[1]}}</span><span class='titre-5'>@{{ids[2]}}</span><bouton-help page="p1"/></div>
-      <div>Identifiant:
-        <span class='font-mono'>{{ids[0]}}</span>
-        <q-btn v-if="editer" class="q-px-md" flat dense size="md" color="primary" icon="edit" label="Editer" @click="cvloc=true"/>
-      </div>
+<q-card class="q-pa-sm petitelargeur fs-md shadow-8">
+  <div class="row justify-between full-width q-pa-xs">
+    <bouton-help page="p1"/>
+    <q-btn v-if="selectionner" dense size="md" color="secondary" icon="navigate_next" label="Sélectionner" @click="toAvatar"/>
+    <q-btn v-if="editer" flat dense size="md" color="primary" icon="edit" label="Editer" @click="cvloc=true"/>
+  </div>
+  <div class="row justify-between items-center full-width q-my-sm">
+    <img class="col-auto photomax" :src="photo"/>
+    <div class="col text-center">
+      <span class='titre-lg text-bold'>{{ids[1]}}</span><span class='titre-sm q-pl-sm'>@{{ids[0]}}</span>
     </div>
   </div>
-  <div class="showhtml">
-    <show-html :texte="info"/>
-  </div>
+  <div class="full-width overflow-y-auto height-8 shadow-8"><show-html :texte="info"/></div>
   <q-dialog v-model="cvloc">
     <carte-visite :nomc="nomc" :close="closedialog" :photo-init="photo" :info-init="info" @ok="validercv"/>
   </q-dialog>
-</div>
+</q-card>
 </template>
 
 <script>
 import { useStore } from 'vuex'
-import { onMounted, watch, toRef, reactive, computed } from 'vue'
+import { watch, toRef, reactive, computed } from 'vue'
 import BoutonHelp from './BoutonHelp.vue'
 import ShowHtml from './ShowHtml.vue'
 import CarteVisite from './CarteVisite.vue'
@@ -37,7 +35,7 @@ export default ({
   props: {
     avatarId: Number,
     editer: Boolean,
-    page: Boolean
+    selectionner: Boolean
   },
 
   components: {
@@ -46,7 +44,7 @@ export default ({
 
   computed: {
     photo () { return this.a.av && this.a.av.photo ? this.a.av.photo : this.personne },
-    ids () { return this.a.av ? [this.a.av.sid, this.a.av.na.nom, this.a.av.na.sfx] : ['', '', ''] },
+    ids () { return this.a.av ? [this.a.av.sid, this.a.av.na.nom] : ['', ''] },
     nomc () { return this.a.av ? this.a.av.na.nomc : '' },
     info () { return this.a.av ? this.a.av.info : '' }
   },
@@ -81,24 +79,18 @@ export default ({
     const a = reactive({ av: null })
     const avatarId = toRef(props, 'avatarId')
 
-    const avatars = computed({ // Pour tracker les retours mettant à jour l'avatar
-      get: () => { return $store.state.db.avatars }
-    })
+    // Pour tracker les retours mettant à jour l'avatar
+    const avatars = computed(() => { return $store.state.db.avatars })
 
-    onMounted(() => {
-      if (avatarId.value) a.av = data.getAvatar(avatarId.value)
-    })
+    if (avatarId.value) a.av = data.getAvatar(avatarId.value)
 
     watch(avatarId, (ap, av) => {
       a.av = data.getAvatar(ap)
     })
 
-    watch(
-      () => avatars.value,
-      (ap, av) => {
-        a.av = data.getAvatar(avatarId.value)
-      }
-    )
+    watch(() => avatars.value, (ap, av) => {
+      a.av = data.getAvatar(avatarId.value)
+    })
 
     return {
       a,
@@ -111,19 +103,8 @@ export default ({
 @import '../css/cropper.css'
 </style>
 
-<style lang="sass">
+<style lang="sass" scoped>
 @import '../css/app.sass'
-.top
-  width: 100%
-  border-radius: 5px
-  border: 1px solid grey
-.ph
-  border-radius: $tphradius
-  border: 1px solid grey
-  width: $tph
-  height: $tph
-.showhtml
-  width: 100%
-  height: 3rem
-  overflow: hidden
+.q-card > div
+  box-shadow: inherit !important
 </style>

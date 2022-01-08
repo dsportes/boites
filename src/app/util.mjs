@@ -715,8 +715,10 @@ export class Filtre {
       if (intersection(this.f2, sx).size) return false
     }
     if (!this.perm && s.st === 99999) return false
-    if (!this.temp && s.st !== 99999) return false
-    if (this.temp && s.st !== 99999 && s.st > this.temp + this.jourj) return false
+    if (s.st !== 99999) {
+      if (!this.temp) return false // ne retenir aucun temporaire
+      if (this.temp !== 99998 && s.st > this.temp + this.jourj) return false
+    }
     if (this.modif) {
       const j = Math.floor(s.txt.d / 86400000)
       if (this.modif > 0 && j < this.auj) return false

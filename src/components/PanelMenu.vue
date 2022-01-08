@@ -72,7 +72,7 @@ export default ({
 
 })
 </script>
-<style lang="sass" scpoed>
+<style lang="sass" scoped>
 @import '../css/app.sass'
 .fermer
   position: absolute

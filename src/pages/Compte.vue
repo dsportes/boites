@@ -1,24 +1,26 @@
 <template>
-<q-page>
-  <q-card v-if="tabcompte === 'avatars' && compte" class="column align-start items-start">
-    <div v-for="e in compte.mac" :key="e.na.id" class="full-width">
-      <apercu-avatar page editer :avatar-id="e.na.id"/>
+<q-page class="fs-md q-pa-xs">
+  <div v-if="tabcompte === 'avatars' && compte" class="row justify-evenly">
+    <div v-for="e in compte.mac" :key="e.na.id" style="width:25rem">
+      <apercu-avatar page editer selectionner :avatar-id="e.na.id"/>
     </div>
-  </q-card>
+  </div>
 
-  <q-card v-if="tabcompte === 'etc' && compte" class="column align-start items-start q-pa-xs">
-    <q-list bordered class="full-width">
-      <q-expansion-item group="etc" label="Identité" default-opened header-class="titre-2 bg-secondary text-white">
-        <div class="titre q-my-md"><span>Code du compte : {{compte.sid}}</span><bouton-help page="page1"/></div>
-        <div style="width:100%">
-          <editeur-md ref="memoed" :texte="compte.memo" :sid="compte.sid" taille-m editable label-ok="OK" v-on:ok="memook"></editeur-md>
+  <div v-if="tabcompte === 'etc' && compte">
+    <q-list class="full-width">
+      <q-expansion-item group="etc" label="Identité, mémo du compte" default-opened
+        header-class="expansion-header-class-1 titre-lg bg-secondary text-white">
+        <div class="q-pa-sm column justify-center petitelargeur maauto">
+          <div class="row justify-between items-center q-my-md"><span class="titre-md ">Code du compte : {{compte.sid}}</span><bouton-help page="page1"/></div>
+          <editeur-md ref="memoed" style="height:10rem" :texte="compte.memo" :sid="compte.sid" editable label-ok="OK" v-on:ok="memook"></editeur-md>
         </div>
       </q-expansion-item>
-      <q-expansion-item group="etc" label="Mots clés" header-class="titre-2 bg-secondary text-white">
-        <mots-cles :motscles="motscles"></mots-cles>
+      <q-expansion-item class="full-width q-mt-xs" group="etc" label="Mots clés"
+        header-class="expansion-header-class-1 titre-lg bg-secondary text-white">
+        <div class="fake"><mots-cles class="petitelargeur maauto" :motscles="motscles"></mots-cles></div>
       </q-expansion-item>
     </q-list>
-  </q-card>
+  </div>
 </q-page>
 </template>
 
@@ -102,6 +104,6 @@ export default ({
 })
 </script>
 
-<style lang="sass">
+<style lang="sass" scoped>
 @import '../css/app.sass'
 </style>

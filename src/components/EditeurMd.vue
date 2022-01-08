@@ -1,6 +1,6 @@
 <template>
 <div>
-  <q-card ref="root1" v-if="!max" :class="'column fs-md full-height overflow-hidden ' + dlclass">
+  <q-card ref="root1" v-if="!max" :class="'column fs-md full-height overflow-hidden shadow-8 ' + dlclass">
     <q-toolbar class="col-auto full-width">
       <q-btn icon="zoom_out_map" size="md" push flat dense @click="max=true"></q-btn>
       <q-btn :disable="!md" class="q-mr-xs" size="md" label="TXT" :color="md ? 'warning' : 'purple'" push flat dense @click="md=false"></q-btn>

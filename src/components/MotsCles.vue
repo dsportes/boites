@@ -1,6 +1,7 @@
 <template>
-<div ref="root" class='colomn' style="width:100%">
+<q-card ref="root" class="colomn shadow-8">
   <div class="q-pa-md">
+    <bouton-help page="page1"/>
     <q-btn v-if="!motscles.mc.st.enedition" flat dense size="md" color="warning" label="Editer" @click="startEdit"/>
     <q-btn v-if="motscles.mc.st.enedition" dense size="md" color="primary" label="Ajouter un mot clé" @click="ajoutermc"/>
     <q-btn v-if="motscles.mc.st.enedition" flat dense size="md" color="primary" label="Annuler" @click="cancelEdit"/>
@@ -44,7 +45,7 @@
   <q-dialog v-model="emoji">
     <VuemojiPicker @emojiClick="emojiclick" data-source="emoji.json"/>
   </q-dialog>
-</div>
+</q-card>
 </template>
 <script>
 import { MmcCompte } from '../app/operations'
@@ -52,13 +53,14 @@ import { useStore } from 'vuex'
 import { computed, ref, toRef, onMounted, watch } from 'vue'
 import { afficherdiagnostic } from '../app/util.mjs'
 import { VuemojiPicker } from 'vuemoji-picker'
+import BoutonHelp from './BoutonHelp.vue'
 
 export default ({
   name: 'MotsCles',
 
   props: { motscles: Object },
 
-  components: { VuemojiPicker },
+  components: { VuemojiPicker, BoutonHelp },
 
   data () {
     return {
