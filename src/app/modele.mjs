@@ -2,7 +2,7 @@ import { schemas } from './schemas.mjs'
 import { crypt } from './crypto.mjs'
 import { openIDB, closeIDB } from './db.mjs'
 import { openWS, closeWS } from './ws.mjs'
-import { store, appexc, serial, deserial, dlvDepassee, NomAvatar, gzip, ungzip, dhstring } from './util.mjs'
+import { store, appexc, serial, deserial, dlvDepassee, NomAvatar, gzip, ungzip, dhstring, getJourJ } from './util.mjs'
 import { remplacePage } from './page.mjs'
 
 /* mapObj : clé par table, valeur : array des objets
@@ -1639,6 +1639,8 @@ export class Secret {
     const i = this.txt.t.indexOf('\n')
     return i === -1 ? this.txt.t.substring(0, 100) : this.txt.t.substring(0, (i < 100 ? i : 100))
   }
+
+  get nbj () { return this.st <= 0 || this.st === 99999 ? 0 : (this.st - getJourJ()) }
 
   get dh () { return dhstring(new Date(this.txt.d * 1000)) }
 

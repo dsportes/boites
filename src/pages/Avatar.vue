@@ -2,7 +2,25 @@
 <q-page class="fs-md">
   <div v-if="tabavatar === 'secrets'" :class="$q.screen.gt.sm ? 'ml20' : 'q-pa-xs full-width'">
     <div v-if="state.lst && state.lst.length" class="col">
+      <div v-for="(secret, idx) in state.lst" :key="secret.vk" :class="dkli(idx) + ' full-width row items-start q-py-xs'">
+        <q-btn class="col-auto q-mr-sm" dense push size="sm" :icon="'expand_'+(!row[secret.vk]?'less':'more')"
+          color="primary" @click="togglerow(secret.vk)"/>
+        <div class="secretcourant col cursor-pointer" @click="ouvrirsecret(secret)">
+          <show-html v-if="row[secret.vk]" class="height-8 full-width overlay-y-auto bottomborder" :texte="secret.txt.t" :idx="idx"/>
+          <div v-else class="full-width text-bold">{{secret.titre}}</div>
+          <div class="full-width row items-center">
+            <apercu-motscles class="col" :motscles="motscles" :src="secret.mc"></apercu-motscles>
+            <div class="col-auto q-ml-md">
+              <span class="fs-sm font-mono">{{secret.dh}}</span>
+              <q-btn v-if="secret.nbpj" size="md" color="warning" flat dense icon="attach_file" :label="secret.nbpj"/>
+              <q-btn v-if="secret.st!=99999" size="md" color="warning" flat dense icon="auto_delete" :label="secret.nbj"/>
+            </div>
+          </div>
+        </div>
+      <!--
       <vue-secret v-for="(secret, idx) in state.lst" :key="secret.vk" :idx="idx" :secret="secret" :motscles="motscles" :avobsid="avatar.id"></vue-secret>
+      -->
+      </div>
     </div>
   </div>
 
@@ -15,18 +33,24 @@
   </div>
 
   <div v-if="tabavatar === 'etc' && avatar">
-    <q-expansion-item class="full-width" group="etc" label="Carte de visite" default-opened
-      header-class="expansion-header-class-1 titre-lg bg-secondary text-white">
-      <div class="fake"><apercu-avatar class="maauto" page editer :avatar-id="avatar.id"/></div>
-    </q-expansion-item>
-    <q-expansion-item class="full-width q-mt-xs" group="etc" label="Mots clés du compte"
-      header-class="expansion-header-class-1 titre-lg bg-secondary text-white">
-      <div class="fake"><mots-cles :motscles="motscles"></mots-cles></div>
-    </q-expansion-item>
+    <q-list class="full-width">
+      <q-expansion-item label="Carte de visite" default-opened
+        header-class="expansion-header-class-1 titre-lg bg-secondary text-white">
+        <div class="fake"><apercu-avatar class="maauto" page editer :avatar-id="avatar.id"/></div>
+      </q-expansion-item>
+      <q-expansion-item class="q-mt-xs" label="Mots clés du compte"
+        header-class="expansion-header-class-1 titre-lg bg-secondary text-white">
+        <div class="fake"><mots-cles class="maauto" :motscles="motscles"></mots-cles></div>
+      </q-expansion-item>
+    </q-list>
   </div>
 
   <q-dialog v-model="nouvsec">
     <vue-secret :secret="nouveausecret(0)" :motscles="motscles" :avobsid="avatar.id" :idx="0" :close="fclose"></vue-secret>
+  </q-dialog>
+
+  <q-dialog v-model="editsec" class="moyennelargeur height-12">
+    <vue-secret :secret="secretcourant" :motscles="motscles" :avobsid="avatar.id" :idx="0" :close="fclose"></vue-secret>
   </q-dialog>
 
   <q-page-sticky v-if="tabavatar === 'secrets' && $q.screen.gt.sm" position="top-left" expand :offset="[5,5]">
@@ -41,10 +65,12 @@ import { useStore } from 'vuex'
 import { onBoot } from '../app/page.mjs'
 import { Motscles, difference, Filtre } from '../app/util.mjs'
 // import BoutonHelp from '../components/BoutonHelp.vue'
+import ApercuMotscles from '../components/ApercuMotscles.vue'
 import MotsCles from '../components/MotsCles.vue'
 import ApercuAvatar from '../components/ApercuAvatar.vue'
 import VueSecret from '../components/VueSecret.vue'
 import PanelFiltre from '../components/PanelFiltre.vue'
+import ShowHtml from '../components/ShowHtml.vue'
 import { CvAvatar } from '../app/operations.mjs'
 import { Secret, data } from '../app/modele.mjs'
 import { crypt } from '../app/crypto.mjs'
@@ -52,14 +78,32 @@ import { crypt } from '../app/crypto.mjs'
 export default ({
   name: 'Avatar',
 
-  components: { /* BoutonHelp, */ ApercuAvatar, MotsCles, VueSecret, PanelFiltre },
+  components: { /* BoutonHelp, */ ApercuAvatar, ApercuMotscles, MotsCles, VueSecret, PanelFiltre, ShowHtml },
 
   data () {
     return {
+      row: { },
+      editsec: false,
+      secretcourant: null
     }
   },
 
   methods: {
+    ouvrirsecret (s) {
+      this.secretcourant = s
+      this.editsec = true
+    },
+    fermersecret () {
+      this.editsec = false
+    },
+    togglerow (vk) {
+      if (this.row[vk] === true) {
+        this.row[vk] = false
+      } else {
+        this.row[vk] = true
+      }
+    },
+    dkli (idx) { return this.$q.dark.isActive ? (idx ? 'sombre' + (idx % 2) : 'sombre0') : (idx ? 'clair' + (idx % 2) : 'clair0') },
     action (n) {
       if (n === 1) {
         this.nouvsec = true
@@ -261,8 +305,13 @@ export default ({
 .ml20
   width: 100%
   padding: 0.2rem 0.2rem 0.2rem 23rem
-.q-expansion-item__content > .q-card
-  box-shadow: inherit !important
+.bottomborder
+  border-bottom: 1px solid $grey-5
+.secretcourant:hover
+  border: 1px solid $green-4
+  padding: 1px
+.secretcourant
+  padding: 2px
 </style>
 <style lang="sass">
 </style>

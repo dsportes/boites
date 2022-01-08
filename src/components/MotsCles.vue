@@ -1,5 +1,5 @@
 <template>
-<q-card ref="root" class="colomn shadow-8">
+<q-card ref="root" class="colomn shadow-8 petitelargeur">
   <div class="q-pa-md">
     <bouton-help page="page1"/>
     <q-btn v-if="!motscles.mc.st.enedition" flat dense size="md" color="warning" label="Editer" @click="startEdit"/>

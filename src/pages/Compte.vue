@@ -8,14 +8,14 @@
 
   <div v-if="tabcompte === 'etc' && compte">
     <q-list class="full-width">
-      <q-expansion-item group="etc" label="Identité, mémo du compte" default-opened
+      <q-expansion-item label="Identité, mémo du compte" default-opened
         header-class="expansion-header-class-1 titre-lg bg-secondary text-white">
         <div class="q-pa-sm column justify-center petitelargeur maauto">
           <div class="row justify-between items-center q-my-md"><span class="titre-md ">Code du compte : {{compte.sid}}</span><bouton-help page="page1"/></div>
           <editeur-md ref="memoed" style="height:10rem" :texte="compte.memo" :sid="compte.sid" editable label-ok="OK" v-on:ok="memook"></editeur-md>
         </div>
       </q-expansion-item>
-      <q-expansion-item class="full-width q-mt-xs" group="etc" label="Mots clés"
+      <q-expansion-item class="q-mt-xs" label="Mots clés"
         header-class="expansion-header-class-1 titre-lg bg-secondary text-white">
         <div class="fake"><mots-cles class="petitelargeur maauto" :motscles="motscles"></mots-cles></div>
       </q-expansion-item>
