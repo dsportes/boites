@@ -8,11 +8,11 @@ import { toRef } from 'vue'
 export default ({
   name: 'ApercuMotscles',
 
-  props: { motscles: Object, src: Object, court: Boolean, argsClick: Object },
+  props: { motscles: Object, src: Object, court: Boolean, argsClick: Object, groupeId: Number },
 
   computed: {
-    ed () { return this.motscles.edit(this.src, this.court) || '(aucun mot clé)' },
-    edl () { return this.motscles.edit(this.src, false) }
+    ed () { return this.motscles.edit(this.src, this.court, this.groupeId) || '(aucun mot clé)' },
+    edl () { return this.motscles.edit(this.src, false, this.groupeId) }
   },
 
   methods: {
@@ -29,6 +29,7 @@ export default ({
 </script>
 
 <style lang="sass" scoped>
+@import '../css/app.sass'
 .mc
   font-family: 'Roboto Mono'
   font-size: 0.9rem

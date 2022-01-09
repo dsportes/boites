@@ -2,7 +2,7 @@
 <div>
   <q-card ref="root1" v-if="!max" :class="'column fs-md full-height overflow-hidden shadow-8 ' + dlclass">
     <q-toolbar class="col-auto full-width">
-      <q-btn icon="zoom_out_map" size="md" push flat dense @click="max=true"></q-btn>
+      <q-btn v-if="!nozoom" icon="zoom_out_map" size="md" push flat dense @click="max=true"></q-btn>
       <q-btn :disable="!md" class="q-mr-xs" size="md" label="TXT" :color="md ? 'warning' : 'purple'" push flat dense @click="md=false"></q-btn>
       <q-btn :disable="md" class="q-mr-xs" size="md" label="HTML" dense flat push @click="md=true"></q-btn>
       <q-btn v-if="editable" :disable="md" class="q-mr-xs" icon="face" size="md" dense flat push @click="emoji=true"></q-btn>
@@ -44,7 +44,7 @@ export default ({
 
   emits: ['update:modelValue', 'ok'],
 
-  props: { modelValue: String, texte: String, labelOk: String, editable: Boolean, idx: Number, modetxt: Boolean },
+  props: { modelValue: String, texte: String, labelOk: String, editable: Boolean, idx: Number, modetxt: Boolean, nozoom: Boolean },
 
   computed: {
     dlclass () {

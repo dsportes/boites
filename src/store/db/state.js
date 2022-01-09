@@ -4,6 +4,7 @@ export default function () {
     avatar: null, // avatar courant
     groupe: null, // groupe courant
     contact: null, // contact courant
+    secret: null, // secret courant
     avatars: {}, // Tous les avatars (liste sur le compte)
     groupes: {}, // Tous les groupes
     cvs: {}, // Toutes les cartes de visite : accès par data.repertoire

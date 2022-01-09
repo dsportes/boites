@@ -2,24 +2,21 @@
 <q-page class="fs-md">
   <div v-if="tabavatar === 'secrets'" :class="$q.screen.gt.sm ? 'ml20' : 'q-pa-xs full-width'">
     <div v-if="state.lst && state.lst.length" class="col">
-      <div v-for="(secret, idx) in state.lst" :key="secret.vk" :class="dkli(idx) + ' full-width row items-start q-py-xs'">
-        <q-btn class="col-auto q-mr-sm" dense push size="sm" :icon="'expand_'+(!row[secret.vk]?'less':'more')"
-          color="primary" @click="togglerow(secret.vk)"/>
-        <div class="secretcourant col cursor-pointer" @click="ouvrirsecret(secret)">
-          <show-html v-if="row[secret.vk]" class="height-8 full-width overlay-y-auto bottomborder" :texte="secret.txt.t" :idx="idx"/>
-          <div v-else class="full-width text-bold">{{secret.titre}}</div>
+      <div v-for="(s, idx) in state.lst" :key="s.vk" :class="dkli(idx) + ' full-width row items-start q-py-xs'">
+        <q-btn class="col-auto q-mr-sm" dense push size="sm" :icon="'expand_'+(!row[s.vk]?'less':'more')"
+          color="primary" @click="togglerow(s.vk)"/>
+        <div class="secretcourant col cursor-pointer" @click="ouvrirsecret(s)">
+          <show-html v-if="row[s.vk]" class="height-8 full-width overlay-y-auto bottomborder" :texte="s.txt.t" :idx="idx"/>
+          <div v-else class="full-width text-bold">{{s.titre}}</div>
           <div class="full-width row items-center">
-            <apercu-motscles class="col" :motscles="motscles" :src="secret.mc"></apercu-motscles>
+            <apercu-motscles class="col" :motscles="motscles" :src="s.mc" :groupe-id="s.ts===2?s.id:0"/>
             <div class="col-auto q-ml-md">
-              <span class="fs-sm font-mono">{{secret.dh}}</span>
-              <q-btn v-if="secret.nbpj" size="md" color="warning" flat dense icon="attach_file" :label="secret.nbpj"/>
-              <q-btn v-if="secret.st!=99999" size="md" color="warning" flat dense icon="auto_delete" :label="secret.nbj"/>
+              <span class="fs-sm font-mono">{{s.dh}}</span>
+              <q-btn v-if="s.nbpj" size="md" color="warning" flat dense icon="attach_file" :label="s.nbpj"/>
+              <q-btn v-if="s.st!=99999" size="md" color="warning" flat dense icon="auto_delete" :label="s.nbj"/>
             </div>
           </div>
         </div>
-      <!--
-      <vue-secret v-for="(secret, idx) in state.lst" :key="secret.vk" :idx="idx" :secret="secret" :motscles="motscles" :avobsid="avatar.id"></vue-secret>
-      -->
       </div>
     </div>
   </div>
@@ -45,12 +42,17 @@
     </q-list>
   </div>
 
+<!--
   <q-dialog v-model="nouvsec">
     <vue-secret :secret="nouveausecret(0)" :motscles="motscles" :avobsid="avatar.id" :idx="0" :close="fclose"></vue-secret>
   </q-dialog>
 
   <q-dialog v-model="editsec" class="moyennelargeur height-12">
     <vue-secret :secret="secretcourant" :motscles="motscles" :avobsid="avatar.id" :idx="0" :close="fclose"></vue-secret>
+  </q-dialog>
+-->
+  <q-dialog v-model="editsec" class="moyennelargeur height-12">
+    <panel-secret :secret="secret" :close="fermersecret"/>
   </q-dialog>
 
   <q-page-sticky v-if="tabavatar === 'secrets' && $q.screen.gt.sm" position="top-left" expand :offset="[5,5]">
@@ -68,7 +70,7 @@ import { Motscles, difference, Filtre } from '../app/util.mjs'
 import ApercuMotscles from '../components/ApercuMotscles.vue'
 import MotsCles from '../components/MotsCles.vue'
 import ApercuAvatar from '../components/ApercuAvatar.vue'
-import VueSecret from '../components/VueSecret.vue'
+import PanelSecret from '../components/PanelSecret.vue'
 import PanelFiltre from '../components/PanelFiltre.vue'
 import ShowHtml from '../components/ShowHtml.vue'
 import { CvAvatar } from '../app/operations.mjs'
@@ -78,19 +80,18 @@ import { crypt } from '../app/crypto.mjs'
 export default ({
   name: 'Avatar',
 
-  components: { /* BoutonHelp, */ ApercuAvatar, ApercuMotscles, MotsCles, VueSecret, PanelFiltre, ShowHtml },
+  components: { /* BoutonHelp, */ ApercuAvatar, ApercuMotscles, MotsCles, PanelSecret, PanelFiltre, ShowHtml },
 
   data () {
     return {
       row: { },
-      editsec: false,
-      secretcourant: null
+      editsec: false
     }
   },
 
   methods: {
     ouvrirsecret (s) {
-      this.secretcourant = s
+      this.secret = s
       this.editsec = true
     },
     fermersecret () {
@@ -204,11 +205,15 @@ export default ({
     const contact = computed(() => { return $store.state.db.contact })
     const groupe = computed(() => { return $store.state.db.groupe })
     const mode = computed(() => $store.state.ui.mode)
+    const secret = computed({ // secret courant
+      get: () => $store.state.db.secret,
+      set: (val) => $store.commit('db/majsecret', val)
+    })
 
     const panelfiltre = ref(false)
 
     const mc = reactive({ categs: new Map(), lcategs: [], st: { enedition: false, modifie: false } })
-    const motscles = new Motscles(mc, 1, groupe.value ? groupe.value.id : null)
+    const motscles = new Motscles(mc, 1, null)
     motscles.recharger()
 
     const z = new Uint8Array([])
@@ -217,7 +222,7 @@ export default ({
       p: { perso: true, ct: 0, gr: 0, mc1: z, mc2: z, perm: true, temp: 99998, modif: 0, texte: '', corps: false, tri: 0 }
     })
 
-    watch(() => groupe.value, (ap, av) => { motscles.recharger() })
+    // watch(() => groupe.value, (ap, av) => { motscles.recharger() })
     watch(() => compte.value, (ap, av) => { motscles.recharger() })
 
     const evtavatar = computed(() => $store.state.ui.evtavatar)
@@ -286,6 +291,7 @@ export default ({
     return {
       compte,
       avatar,
+      secret,
       tabavatar,
       motscles,
       state,
@@ -308,10 +314,7 @@ export default ({
 .bottomborder
   border-bottom: 1px solid $grey-5
 .secretcourant:hover
-  border: 1px solid $green-4
-  padding: 1px
-.secretcourant
-  padding: 2px
+  background-color: rgba(130, 130, 130, 0.5)
 </style>
 <style lang="sass">
 </style>

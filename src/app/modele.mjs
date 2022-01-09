@@ -1119,6 +1119,18 @@ export class Groupe {
     } else return this.na.nom
   }
 
+  imDeId (id) {
+    const i = this.lmb.indexOf(id)
+    return i !== -1 ? i : 0
+  }
+
+  motcle (n) {
+    const s = this.mc[n]
+    if (!s) return ''
+    const i = s.indexOf('/')
+    return i === -1 ? s : s.substring(i + 1)
+  }
+
   /*
   Map ayant pour clé les sid des avatars du compte
   et pour valeur le couple [invitgr, membre] de l'avatar correspondant dans le groupe
@@ -1164,7 +1176,7 @@ export class Groupe {
       const cv = row.cvg ? deserial(await crypt.decrypter(this.cleg, row.cvg)) : ['', '']
       this.photo = cv[0]
       this.info = cv[1]
-      this.mc = row.mcg ? deserial(await crypt.decrypter(this.cleg, row.mcg)) : []
+      this.mc = row.mcg ? deserial(await crypt.decrypter(this.cleg, row.mcg)) : {}
       this.lmb = deserial(await crypt.decrypter(this.cleg, row.lmbg))
     }
     return this
@@ -1622,6 +1634,8 @@ export class Secret {
   get sid () { return crypt.idToSid(this.id) }
 
   get sid2 () { return crypt.idToSid(this.ns) }
+
+  get sidc () { return this.sid + '@' + this.sid2 }
 
   get pk () { return [this.id, this.ns] }
 

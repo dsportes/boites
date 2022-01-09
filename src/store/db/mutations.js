@@ -47,6 +47,11 @@ export function majcontact (state, val) {
   state.contact = val
 }
 
+/* Déclaration du secret courant */
+export function majsecret (state, val) {
+  state.secret = val
+}
+
 /* Purges des avatars inutiles et tables associées */
 export function purgeAvatars (state, val) { // val : Set des ids des avatars INUTILES
   if (!val || !val.size) return 0

@@ -409,7 +409,7 @@ export default {
 }
 </script>
 
-<style lang="sass" scpoed>
+<style lang="sass" scoped>
 @import '../css/app.sass'
 .fade-enter-active, .fade-leave-active
   transition: all 0.2s ease-in-out

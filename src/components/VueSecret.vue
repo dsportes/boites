@@ -212,10 +212,12 @@ export default ({
 </script>
 
 <style lang="sass" scoped>
+@import '../css/app.sass'
+.q-toolbar
+  padding: 2px !important
+  min-height: 0 !important
 .q-card
-  padding: 10px 0
-.q-card__section
-  padding: 1px !important
+  padding: 2px
 .q-btn
   height: 2rem !important
 .dh

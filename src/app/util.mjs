@@ -422,11 +422,13 @@ export class Motscles {
     return this.mapAll.get(idx)
   }
 
-  edit (u8, court) {
+  edit (u8, court, groupeId) {
     if (!u8) return ''
+    const gr = groupeId ? data.getGroupe(groupeId) : null
     const l = []
     for (let i = 0; i < u8.length; i++) {
-      const x = this.mapAll.get(u8[i])
+      const n = u8[i]
+      const x = n >= 100 && n < 200 && gr ? gr.motcle(n) : this.mapAll.get(n)
       if (x && x.n && x.n.length) {
         if (court && x.n.charCodeAt(0) > 1000) {
           // commence par un emoji
