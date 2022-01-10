@@ -1111,6 +1111,10 @@ export class Groupe {
 
   get na () { return data.getNa(this.id) }
 
+  get stx () { return this.st < 0 ? -1 : Math.floor(this.st / 10) }
+
+  get sty () { return this.st < 0 ? -1 : this.st % 10 }
+
   get nom () {
     if (this.cv.info) {
       const s = this.cv.info
@@ -1393,7 +1397,7 @@ export class Membre {
 
   get stx () { return this.st < 0 ? -1 : Math.floor(this.st / 10) }
 
-  get sty () { return this.st < 0 ? -1 : this.st % 10 }
+  get stp () { return this.st < 0 ? -1 : this.st % 10 }
 
   get namb () { return data.getNa(this.id, this.im) }
 
@@ -1676,23 +1680,22 @@ export class Secret {
     return this
   }
 
-  nouveauC (id, idctc, ref) {
-    const c = data.contactParId(id, idctc)
+  nouveauC (id, contact, ref) {
     this.id = id
     this.ns = (Math.floor(crypt.rnd4() / 3) * 3) + 1
-    this.ic = c.ic
-    this.id2 = idctc
+    this.ic = contact.ic
+    this.id2 = contact.na.id
     this.ns2 = (Math.floor(crypt.rnd4() / 3) * 3) + 1
-    this.ic2 = c.icb
+    this.ic2 = contact.icb
     this.txt = { t: '', l: [] }
     this.ref = ref || null
     return this
   }
 
-  nouveauG (idg, ref) {
-    this.id = idg
+  nouveauG (id, groupe, ref) {
+    this.id = groupe.id
     this.ns = (Math.floor(crypt.rnd4() / 3) * 3) + 2
-    this.ic = 0
+    this.ic = groupe.imDeId(id)
     this.txt = { t: '', l: [] }
     this.ref = ref || null
     return this

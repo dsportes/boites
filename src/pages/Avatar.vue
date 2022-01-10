@@ -42,15 +42,6 @@
     </q-list>
   </div>
 
-<!--
-  <q-dialog v-model="nouvsec">
-    <vue-secret :secret="nouveausecret(0)" :motscles="motscles" :avobsid="avatar.id" :idx="0" :close="fclose"></vue-secret>
-  </q-dialog>
-
-  <q-dialog v-model="editsec" class="moyennelargeur height-12">
-    <vue-secret :secret="secretcourant" :motscles="motscles" :avobsid="avatar.id" :idx="0" :close="fclose"></vue-secret>
-  </q-dialog>
--->
   <q-dialog v-model="editsec" class="moyennelargeur height-12">
     <panel-secret :secret="secret" :close="fermersecret"/>
   </q-dialog>
@@ -106,8 +97,13 @@ export default ({
     },
     dkli (idx) { return this.$q.dark.isActive ? (idx ? 'sombre' + (idx % 2) : 'sombre0') : (idx ? 'clair' + (idx % 2) : 'clair0') },
     action (n) {
-      if (n === 1) {
-        this.nouvsec = true
+      if (this.secret) return
+      if (n === 1) { // secret personnel
+        this.ouvrirsecret(new Secret().nouveauP(this.avatar.id))
+      } else if (n === 2 && this.contact) {
+        this.ouvrirsecret(new Secret().nouveauC(this.avatar.id, this.contact))
+      } else if (n === 3 && this.groupe) {
+        this.ouvrirsecret(new Secret().nouveauG(this.avatar.id, this.groupe))
       }
     },
     fermerfiltre () {
@@ -115,10 +111,7 @@ export default ({
     },
     rechercher (f) {
       this.state.filtre = f
-      console.log(JSON.stringify(f))
-    },
-    fclose () {
-      this.nouvsec = false
+      // console.log(JSON.stringify(f))
     },
     async validercv (resultat) {
       if (resultat) {
