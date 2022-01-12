@@ -56,7 +56,7 @@ export const contactParId = (state) => (sid, sidc) => {
   const lc = state['contacts@' + sid]
   for (const simc in lc) {
     const c = lc[simc]
-    if (c.nactc.sid === sidc) return c
+    if (c.nactc.sid === Sid(sidc)) return c
   }
   return null
 }

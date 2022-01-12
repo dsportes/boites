@@ -120,6 +120,17 @@ schemas.forSchema({
 */
 
 schemas.forSchema({
+  name: 'rowprefs',
+  cols: ['id', 'v', 'mapk', 'vsh']
+})
+/*
+    "id"  INTEGER,
+    "v"   INTEGER,
+    "mapk"  BLOB,
+    "vsh" INTEGER,
+*/
+
+schemas.forSchema({
   name: 'rowcontact',
   cols: ['id', 'ic', 'v', 'st', 'q1', 'q2', 'qm1', 'qm2', 'ardc', 'icbc', 'datak', 'mc', 'infok', 'vsh']
 })

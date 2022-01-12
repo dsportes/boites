@@ -1,11 +1,11 @@
-import { NomAvatar, store, post, affichermessage, cfg, sleep, affichererreur, appexc, serial, difference } from './util.mjs'
+import { NomAvatar, store, post, affichermessage, cfg, sleep, affichererreur, appexc, difference } from './util.mjs'
 import { remplacePage } from './page.mjs'
 import {
-  deleteIDB, idbSidCompte, commitRows, getCompte, getAvatars, getContacts, getCvs,
+  deleteIDB, idbSidCompte, commitRows, getCompte, getPrefs, getAvatars, getContacts, getCvs,
   getGroupes, getInvitcts, getInvitgrs, getMembres, getParrains, getRencontres, getSecrets,
   purgeAvatars, purgeCvs, purgeGroupes, openIDB, enregLScompte, setEtat, getEtat
 } from './db.mjs'
-import { Compte, Avatar, newObjet, commitMapObjets, data, SIZEAV, SIZEGR } from './modele.mjs'
+import { Compte, Avatar, newObjet, commitMapObjets, data, SIZEAV, SIZEGR, Prefs } from './modele.mjs'
 import { AppExc, EXBRK, EXPS, F_BRO, INDEXT, X_SRV } from './api.mjs'
 
 import { crypt } from './crypto.mjs'
@@ -161,6 +161,10 @@ export class Operation {
         if (row.pcbh !== data.ps.pcbh) throw EXPS // phrase secrète changée => déconnexion
         const obj = new Compte()
         res.compte = await obj.fromRow(row)
+      } else if (item.table === 'prefs') {
+        // le dernier quand on en a reçu plusieurs et non la liste
+        const obj = new Prefs()
+        res.prefs = await obj.fromRow(row)
       } else {
         if (!res[item.table]) res[item.table] = []
         const obj = newObjet(item.table)
@@ -270,11 +274,16 @@ export class Operation {
     const mapObj = await this.rowItemsToMapObjets(items)
     const objets = [] // Tous les objets à enregistrer dans IDB
 
-    /* Traitement spécial du compte */
+    /* Traitement spécial de compte et prefs */
     if (mapObj.compte) {
       // Une mise à jour de compte est notifiée
       data.setCompte(mapObj.compte)
       objets.push(mapObj.compte)
+    }
+    if (mapObj.prefs) {
+      // Une mise à jour de prefs est notifiée
+      data.setPrefs(mapObj.prefs)
+      objets.push(mapObj.prefs)
     }
 
     /* Mise en store de tous les autres objets */
@@ -389,10 +398,17 @@ export class OperationUI extends Operation {
   - puis récupère les CVs et supprime celles non référencées
   Les items de dlv dépassée sont lus, non stockés et mis à supprimer de IDB
   */
-  async chargementIdb () {
+  async chargementIdb (id) {
     const hls = [] // objets hors limite, pour purge de IDB à la fin du chargement
 
     this.razidblec()
+
+    {
+      let prefs = await getPrefs()
+      if (!prefs) prefs = new Prefs().nouveau(id)
+      data.setPrefs(prefs)
+    }
+
     this.BRK()
     const avUtiles = data.setIdsAvatarsUtiles
     { /* On ne charge de IDB QUE les avatars référencés dans le compte
@@ -551,7 +567,7 @@ export class ProcessQueue extends OperationWS {
 
 /* ********************************************************* */
 /* On poste :
-- le row Compte, v et dds à 0
+- les rows Compte et prefs, v et dds à 0
 - la clé publique de l'avatar pour la table avrsa
 - les quotas pour la table avgrvq
 - le row Avatar, v et dds à 0
@@ -607,10 +623,13 @@ export class CreationCompte extends OperationUI {
       const compte = new Compte().nouveau(nomAvatar, kp.privateKey)
       const rowCompte = await compte.toRow()
       data.setCompte(compte)
-      const avatar = new Avatar().nouveau(nomAvatar.id)
+      const prefs = new Prefs().nouveau(compte.id)
+      data.setPrefs(prefs)
+      const rowPrefs = await prefs.toRow()
+      const avatar = await new Avatar().nouveau(nomAvatar.id)
       const rowAvatar = await avatar.toRow()
 
-      const args = { sessionId: data.sessionId, mdp64: mdp.mdp64, q1: quotas.q1, q2: quotas.q2, qm1: quotas.qm1, qm2: quotas.qm2, clePub: kp.publicKey, rowCompte, rowAvatar }
+      const args = { sessionId: data.sessionId, mdp64: mdp.mdp64, q1: quotas.q1, q2: quotas.q2, qm1: quotas.qm1, qm2: quotas.qm2, clePub: kp.publicKey, rowCompte, rowAvatar, rowPrefs }
       const ret = await post(this, 'm1', 'creationCompte', args)
       // maj du modèle en mémoire
       if (data.dh < ret.dh) data.dh = ret.dh
@@ -622,6 +641,9 @@ export class CreationCompte extends OperationUI {
       const compte2 = mapObj.compte // le DERNIER objet compte quand on en a reçu plusieurs (pas la liste)
       data.setCompte(compte2)
       const objets = [compte2]
+      const prefs2 = mapObj.prefs // le DERNIER objet compte quand on en a reçu plusieurs (pas la liste)
+      data.setCompte(prefs2)
+      objets.push(prefs2)
       commitMapObjets(objets, mapObj)
 
       // création de la base IDB et chargement des rows compte et avatar
@@ -684,7 +706,7 @@ export class ConnexionCompteAvion extends OperationUI {
       }
       data.setCompte(compte)
 
-      await this.chargementIdb()
+      await this.chargementIdb(compte.id)
 
       this.finOK()
       remplacePage('Compte')
@@ -717,7 +739,11 @@ export class ConnexionCompte extends OperationUI {
     const rowCompte = schemas.deserialize('rowcompte', ret.rowItems[0].serial)
     if (data.ps.pcbh !== rowCompte.pcbh) throw EXPS // changt de phrase secrète
     const c = new Compte()
-    return await c.fromRow(rowCompte)
+    await c.fromRow(rowCompte)
+    const rowPrefs = schemas.deserialize('rowprefs', ret.rowItems[1].serial)
+    const p = new Prefs()
+    await p.fromRow(rowPrefs)
+    return [c, p]
   }
 
   async run (ps) {
@@ -730,14 +756,15 @@ export class ConnexionCompte extends OperationUI {
       this.BRK()
 
       // obtention du compte depuis le serveur
-      let compte = await this.lectureCompte()
+      let [compte, prefs] = await this.lectureCompte()
       data.setCompte(compte)
+      data.setPrefs(prefs)
 
       if (data.db) {
         enregLScompte(compte.sid) // La phrase secrète a pu changer : celle du serveur est installée
-        await commitRows([compte])
+        await commitRows([compte, prefs])
         this.BRK()
-        await this.chargementIdb()
+        await this.chargementIdb(compte.id)
       }
 
       let avUtiles = data.setIdsAvatarsUtiles
@@ -747,10 +774,11 @@ export class ConnexionCompte extends OperationUI {
         - ré-enregistrement du compte en modèle et IDB
         - suppression des avatars obsolètes non référencés par la nouvelle version du compte, y compris dans la liste des versions
         */
-        const compte2 = await this.lectureCompte() // PEUT sortir en EXPS si changement de phrase secrète
+        const [compte2, prefs2] = await this.lectureCompte() // PEUT sortir en EXPS si changement de phrase secrète
         if (compte2.v > compte.v) {
           compte = compte2
           data.setCompte(compte2)
+          data.setPrefs(prefs2)
           avUtiles = data.setIdsAvatarsUtiles
           const avInutiles = difference(data.setIdsAvatarsStore, avUtiles)
           if (avInutiles.size) {
@@ -831,51 +859,22 @@ export class ConnexionCompte extends OperationUI {
 }
 
 /******************************************************
-Mise à jour du mémo du compte
+Mise à jour d'une préférence d'un compte
 */
-export class MemoCompte extends OperationUI {
+export class PrefCompte extends OperationUI {
   constructor () {
-    super('Mise à jour du mémo du compte', OUI, SELONMODE)
+    super('Mise à jour d\'une préférence du compte', OUI, SELONMODE)
   }
 
   excAffichages () { return [this.excAffichage1f] }
 
   // excActions(), défaut de Operation
 
-  async run (memo) {
+  async run (code, datak) {
     try {
-      const c = data.getCompte()
-      const memok = await crypt.crypter(data.clek, memo)
       this.BRK()
-      const args = { sessionId: data.sessionId, id: c.id, memok: memok }
-      const ret = await post(this, 'm1', 'memoCompte', args)
-      if (data.dh < ret.dh) data.dh = ret.dh
-      this.finOK()
-    } catch (e) {
-      await this.finKO(e)
-    }
-  }
-}
-
-/******************************************************
-Mise à jour des mots clés du compte
-*/
-export class MmcCompte extends OperationUI {
-  constructor () {
-    super('Mise à jour des mots clés du compte', OUI, SELONMODE)
-  }
-
-  excAffichages () { return [this.excAffichage1f] }
-
-  // excActions(), défaut de Operation
-
-  async run (mmc) {
-    try {
-      const c = data.getCompte()
-      const mmck = await crypt.crypter(data.clek, serial(mmc))
-      this.BRK()
-      const args = { sessionId: data.sessionId, id: c.id, mmck: mmck }
-      const ret = await post(this, 'm1', 'mmcCompte', args)
+      const args = { sessionId: data.sessionId, id: data.getCompte().id, code: code, datak: datak }
+      const ret = await post(this, 'm1', 'prefCompte', args)
       if (data.dh < ret.dh) data.dh = ret.dh
       this.finOK()
     } catch (e) {

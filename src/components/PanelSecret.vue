@@ -279,7 +279,7 @@ export default ({
 
     watch(() => secret.value, (ap, av) => {
       initState()
-      if (ap && (!av || av.sidc !== ap.sidc)) chargerMc()
+      if (ap && (!av || av.pk !== ap.pk)) chargerMc()
     })
 
     const jourJ = getJourJ()

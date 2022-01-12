@@ -161,7 +161,6 @@ export default ({
 
   setup (props) {
     const $store = useStore()
-    // const compte = computed(() => { return $store.state.db.compte })
     const avatar = computed(() => { return $store.state.db.avatar })
     const mode = computed(() => $store.state.ui.mode)
     const contact = computed(() => { return $store.state.db.contact })

@@ -16,9 +16,6 @@
     </q-card>
 
     <q-card flat v-if="mode > 0 && mode < 4" class="q-mt-lg petitelargeur">
-      <q-card-section>
-        <div class="titre-lg q-ma-md text-center">Phrase secrète de connexion</div>
-      </q-card-section>
       <phrase-secrete label-valider="Se connecter" icon-valider="send" v-on:ok-ps="connecter"></phrase-secrete>
     </q-card>
 

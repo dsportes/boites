@@ -12,7 +12,7 @@
         header-class="expansion-header-class-1 titre-lg bg-secondary text-white">
         <div class="q-pa-sm column justify-center petitelargeur maauto">
           <div class="row justify-between items-center q-my-md"><span class="titre-md ">Code du compte : {{compte.sid}}</span><bouton-help page="page1"/></div>
-          <editeur-md ref="memoed" style="height:10rem" :texte="compte.memo" :sid="compte.sid" editable label-ok="OK" v-on:ok="memook"></editeur-md>
+          <editeur-md ref="memoed" style="height:10rem" :texte="prefs.memo" editable label-ok="OK" v-on:ok="memook"></editeur-md>
         </div>
       </q-expansion-item>
       <q-expansion-item class="q-mt-xs" label="Mots clés"
@@ -25,7 +25,7 @@
 </template>
 
 <script>
-import { MemoCompte } from '../app/operations.mjs'
+import { PrefCompte } from '../app/operations.mjs'
 import { computed, ref, reactive, /* onMounted, */ watch } from 'vue'
 import { useStore } from 'vuex'
 import { onBoot } from '../app/page.mjs'
@@ -33,7 +33,9 @@ import EditeurMd from '../components/EditeurMd.vue'
 import BoutonHelp from '../components/BoutonHelp.vue'
 import MotsCles from '../components/MotsCles.vue'
 import ApercuAvatar from '../components/ApercuAvatar.vue'
-import { Motscles } from '../app/util.mjs'
+import { Motscles, serial } from '../app/util.mjs'
+import { crypt } from '../app/crypto.mjs'
+import { data } from '../app/modele.mjs'
 
 export default ({
   name: 'Compte',
@@ -56,7 +58,8 @@ export default ({
     },
     async memook (m) {
       this.memoed.undo()
-      await new MemoCompte().run(m)
+      const datak = await crypt.crypter(data.clek, serial(m))
+      await new PrefCompte().run('mp', datak)
     },
     selection (u8) {
       this.u8mc = u8
@@ -70,6 +73,7 @@ export default ({
     const org = computed(() => $store.state.ui.org)
     // En déconnexion, compte passe à null et provoque un problème dans la page. Un getter ne marche pas ?!
     const compte = computed(() => $store.state.db.compte)
+    const prefs = computed(() => $store.state.db.prefs)
     const tabcompte = computed(() => $store.state.ui.tabcompte)
     const cvs = computed(() => $store.state.db.cvs)
     const mode = computed(() => $store.state.ui.mode)
@@ -78,23 +82,18 @@ export default ({
     const motscles = new Motscles(mc, 1)
     motscles.recharger()
 
-    // onMounted(() => { console.log('onMounted Compte: ' + motscles.mapAll.size) })
-
-    watch(
-      () => compte.value, // OUI .value !!!
-      (ap, av) => {
-        if (ap && ap.v > av.v) {
-          motscles.recharger()
-          console.log('watch compte Compte: ' + motscles.mapAll.size)
-        }
+    watch(() => prefs.value, (ap, av) => {
+      if (ap && ap.v > av.v) {
+        motscles.recharger()
       }
-    )
+    })
 
     return {
       motscles,
       memoed,
       org,
       compte,
+      prefs,
       mode,
       cvs,
       tabcompte

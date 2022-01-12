@@ -33,7 +33,7 @@
 </div>
 </template>
 <script>
-import { toRef, ref, watch, onMounted, reactive } from 'vue'
+import { toRef, ref, watch, reactive } from 'vue'
 import BoutonHelp from './BoutonHelp.vue'
 import { equ8, select, deselect } from '../app/util.mjs'
 
@@ -95,16 +95,13 @@ export default ({
 
     const tab = ref('')
 
-    onMounted(() => {
-      tab.value = motscles.value.mc.lcategs[0]
-      srcinp.value = src.value || new Uint8Array([])
-      srclocal.value = src.value || new Uint8Array([])
-    })
+    tab.value = motscles.value.mc.lcategs[0]
+    srcinp.value = src.value || new Uint8Array([])
+    srclocal.value = src.value || new Uint8Array([])
 
-    watch(
-      () => motscles.value,
-      (ap, av) => { motscles.value.recharger() }
-    )
+    watch(() => motscles.value, (ap, av) => {
+      motscles.value.recharger()
+    })
 
     watch(
       () => src.value,

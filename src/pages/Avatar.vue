@@ -19,6 +19,7 @@
         </div>
       </div>
     </div>
+    <div v-if="!state.lst || !state.lst.length" class="titre-lg text-italic">Aucun secret trouvé répondant à ce filtre</div>
   </div>
 
   <div v-if="tabavatar === 'contacts'" class="full-width">
@@ -42,8 +43,12 @@
     </q-list>
   </div>
 
-  <q-dialog v-model="editsec" class="moyennelargeur height-12">
+  <q-dialog v-model="editsec" class="moyennelargeur">
     <panel-secret :secret="secret" :close="fermersecret"/>
+  </q-dialog>
+
+  <q-dialog v-model="panelfiltre" position="left">
+    <panel-filtre @ok="rechercher" @action="action" :motscles="motscles" :etat-interne="recherche" :fermer="fermerfiltre"></panel-filtre>
   </q-dialog>
 
   <q-page-sticky v-if="tabavatar === 'secrets' && $q.screen.gt.sm" position="top-left" expand :offset="[5,5]">
@@ -194,6 +199,7 @@ export default ({
     const $store = useStore()
     const nouvsec = ref(false)
     const compte = computed(() => { return $store.state.db.compte })
+    const prefs = computed(() => { return $store.state.db.prefs })
     const avatar = computed(() => { return $store.state.db.avatar })
     const contact = computed(() => { return $store.state.db.contact })
     const groupe = computed(() => { return $store.state.db.groupe })
@@ -216,7 +222,7 @@ export default ({
     })
 
     // watch(() => groupe.value, (ap, av) => { motscles.recharger() })
-    watch(() => compte.value, (ap, av) => { motscles.recharger() })
+    watch(() => prefs.value, (ap, av) => { motscles.recharger() })
 
     const evtavatar = computed(() => $store.state.ui.evtavatar)
     watch(() => evtavatar.value, (ap) => {

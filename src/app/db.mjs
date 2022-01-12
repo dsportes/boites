@@ -1,6 +1,6 @@
 /* eslint-disable func-call-spacing */
 import Dexie from 'dexie'
-import { Avatar, Compte, Invitgr, Invitct, Contact, Parrain, Rencontre, Groupe, Membre, Secret, Cv, data } from './modele.mjs'
+import { Avatar, Compte, Prefs, Invitgr, Invitct, Contact, Parrain, Rencontre, Groupe, Membre, Secret, Cv, data } from './modele.mjs'
 import { store } from './util.mjs'
 import { crypt } from './crypto.mjs'
 import { AppExc, E_DB, INDEXT } from './api.mjs'
@@ -8,15 +8,16 @@ import { AppExc, E_DB, INDEXT } from './api.mjs'
 const STORES = {
   etat: 'id',
   compte: 'id',
+  prefs: 'id',
   avatar: 'id',
-  invitgr: '[id+ni]',
-  contact: '[id+ic]',
-  invitct: '[id+ni]',
-  parrain: 'pph',
-  rencontre: 'prh',
+  invitgr: '[id+id2]', // ni
+  contact: '[id+id2]', // ic
+  invitct: '[id+id2]', // ni
+  parrain: 'id', // pph
+  rencontre: 'id', // prh
   groupe: 'id',
-  membre: '[id+im]',
-  secret: '[id+ns]',
+  membre: '[id+id2]', // im
+  secret: '[id+id2]', // ns
   cv: 'id'
 }
 
@@ -103,7 +104,7 @@ export async function setEtat () {
   go()
   try {
     const etat = { dhsync: data.dhsync, statut: data.statut, vcv: data.vcv }
-    await data.db.etat.put({ id: 1, data: JSON.stringify(etat) })
+    await data.db.etat.put({ id: '1', data: JSON.stringify(etat) })
   } catch (e) {
     throw data.setErDB(EX2(e))
   }
@@ -112,8 +113,18 @@ export async function setEtat () {
 export async function getCompte () {
   go()
   try {
-    const idb = await data.db.compte.get(1)
-    return idb ? new Compte().fromIdb(await crypt.decrypter(data.ps.pcb, idb.data), idb.vs) : null
+    const idb = await data.db.compte.get('1')
+    return idb ? new Compte().fromIdb(await crypt.decrypter(data.ps.pcb, idb.data)) : null
+  } catch (e) {
+    throw data.setErDB(EX2(e))
+  }
+}
+
+export async function getPrefs () {
+  go()
+  try {
+    const idb = await data.db.prefs.get('1')
+    return idb ? new Prefs().fromIdb(await crypt.decrypter(data.clek, idb.data)) : null
   } catch (e) {
     throw data.setErDB(EX2(e))
   }
@@ -170,8 +181,7 @@ export async function getInvitgrs () {
     const r = []
     await data.db.invitgr.each(async (idb) => {
       vol += idb.data.length
-      const y = await crypt.decrypter(data.clek, idb.data)
-      const x = new Invitgr().fromIdb(y, idb.vs)
+      const x = new Invitgr().fromIdb(await crypt.decrypter(data.clek, idb.data))
       r.push(x)
       data.vag.setVerAv(x.sidav, INDEXT.INVITGR, x.v)
     })
@@ -188,7 +198,7 @@ export async function getInvitcts () {
     const r = []
     await data.db.invitct.each(async (idb) => {
       vol += idb.data.length
-      const x = new Invitct().fromIdb(await crypt.decrypter(data.clek, idb.data), idb.vs)
+      const x = new Invitct().fromIdb(await crypt.decrypter(data.clek, idb.data))
       r.push(x)
       data.vag.setVerAv(x.sidav, INDEXT.INVITCT, x.v)
     })
@@ -205,7 +215,7 @@ export async function getContacts () {
     const r = []
     await data.db.contact.each(async (idb) => {
       vol += idb.data.length
-      const x = new Contact().fromIdb(await crypt.decrypter(data.clek, idb.data), idb.vs)
+      const x = new Contact().fromIdb(await crypt.decrypter(data.clek, idb.data))
       r.push(x)
       data.vag.setVerAv(x.sidav, INDEXT.CONTACT, x.v)
     })
@@ -222,7 +232,7 @@ export async function getParrains () {
     const r = []
     await data.db.parrain.each(async (idb) => {
       vol += idb.data.length
-      const x = new Parrain().fromIdb(await crypt.decrypter(data.clek, idb.data), idb.vs)
+      const x = new Parrain().fromIdb(await crypt.decrypter(data.clek, idb.data))
       r.push(x)
       data.vag.setVerAv(x.sidav, INDEXT.PARRAIN, x.v)
     })
@@ -256,7 +266,7 @@ export async function getMembres () {
     const r = []
     await data.db.membre.each(async (idb) => {
       vol += idb.data.length
-      const x = new Membre().fromIdb(await crypt.decrypter(data.clek, idb.data), idb.vs)
+      const x = new Membre().fromIdb(await crypt.decrypter(data.clek, idb.data))
       r.push(x)
       data.vag.setVerGr(x.sidgr, INDEXT.MEMBRE, x.v)
     })
@@ -273,7 +283,7 @@ export async function getSecrets () {
     const r = []
     await data.db.secret.each(async (idb) => {
       vol += idb.data.length
-      const x = new Secret().fromIdb(await crypt.decrypter(data.clek, idb.data), idb.vs)
+      const x = new Secret().fromIdb(await crypt.decrypter(data.clek, idb.data))
       r.push(x)
       if (x.estAv) {
         data.vag.setVerAv(x.sidavgr, INDEXT.SECRET, x.v)
@@ -294,7 +304,7 @@ export async function getCvs () {
     const r = []
     await data.db.cv.each(async (idb) => {
       vol += idb.data.length
-      const x = new Cv().fromIdb(await crypt.decrypter(data.clek, idb.data), idb.vs)
+      const x = new Cv().fromIdb(await crypt.decrypter(data.clek, idb.data))
       r.push(x)
     })
     return { objs: r, vol: vol }
@@ -312,9 +322,11 @@ export async function purgeGroupes (lgr) {
   go()
   try {
     if (!lgr || !lgr.size) return 0
+    const idgc = []
+    for (const i of lgr) idgc.push(crypt.u8ToB64(await crypt.crypter(data.clek, crypt.idToSid(i), 1), true))
     await data.db.transaction('rw', TABLES, async () => {
-      for (const i of lgr) {
-        const id = { id: i }
+      for (let i = 0; i < idgc.length; i++) {
+        const id = { id: idgc[i] }
         await data.db.groupe.where(id).delete()
         await data.db.membre.where(id).delete()
         await data.db.secret.where(id).delete()
@@ -330,15 +342,15 @@ export async function purgeAvatars (lav) {
   go()
   try {
     if (!lav || !lav.size) return 0
+    const idac = []
+    for (const i of lav) idac.push(crypt.u8ToB64(await crypt.crypter(data.clek, crypt.idToSid(i), 1), true))
     await data.db.transaction('rw', TABLES, async () => {
-      for (const i of lav) {
-        const id = { id: i }
+      for (let i = 0; i < idac.length; i++) {
+        const id = { id: idac[i] }
         await data.db.avatar.where(id).delete()
         await data.db.invitgr.where(id).delete()
         await data.db.contact.where(id).delete()
         await data.db.invitct.where(id).delete()
-        await data.db.rencontre.where(id).delete()
-        await data.db.parrain.where(id).delete()
         await data.db.secret.where(id).delete()
       }
     })
@@ -375,21 +387,25 @@ export async function commitRows (lobj) {
     const lidb = []
     for (let i = 0; i < lobj.length; i++) {
       const obj = lobj[i]
-      const idb = obj.toIdb
+      const x = { table: obj.table, row: {} }
+      x.row.id = obj.table === 'compte' || obj.table === 'prefs' ? '1' : crypt.u8ToB64(await crypt.crypter(data.clek, obj.sid, 1), true)
+      if (obj.sid2) x.row.id2 = crypt.u8ToB64(await crypt.crypter(data.clek, obj.sid2, 1), true)
       if (!obj.suppr) {
-        idb.data = await crypt.crypter(obj.table === 'compte' ? d.ps.pcb : d.clek, idb.data)
-        lidb.push({ table: obj.table, idb: idb })
+        x.row.data = await crypt.crypter(obj.table === 'compte' ? d.ps.pcb : d.clek, obj.toIdb)
+        lidb.push(x)
       } else {
-        lidb.push({ table: obj.table, suppr: true, pk: obj.pk })
+        x.suppr = true
+        lidb.push(x)
+        if (obj.table === 'compte') lidb.push({ table: 'prefs', suppr: true, row: { id: '1' } })
       }
     }
     await d.db.transaction('rw', TABLES, async () => {
       for (let i = 0; i < lidb.length; i++) {
         const x = lidb[i]
         if (!x.suppr) {
-          await d.db[x.table].put(x.idb)
+          await d.db[x.table].put(x.row)
         } else {
-          await d.db[x.table].delete(x.pk)
+          await d.db[x.table].delete(x.row.id)
         }
         // if (cfg().debug) console.log(x.suppr ? 'del ' : 'put ' + x.table + ' - ' + (x.id || x.pk))
       }

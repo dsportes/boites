@@ -15,7 +15,7 @@ Les objets CV sont conservés dans la map data.repertoire
 Le store/db conserve l'image de data.repertoire à chaque changement
 */
 
-const l1 = { compte: true, avatar: true, groupe: true }
+const l1 = { compte: true, prefs: true, avatar: true, groupe: true, secret: true, contact: true }
 const l2 = { avatars: true, groupes: true, parrains: true, rencontres: true, repertoire: true }
 const l3 = { contact: true, invitct: true, invitgr: true, membre: true, secret: true }
 const l4 = { avatar: true, groupe: true, parrain: true, rencontre: true }
@@ -177,6 +177,7 @@ export function setObjets (state, [table, lobj]) { // lobj : array d'objets
 }
 
 export function setCompte (state, obj) { if (!state.compte || state.compte.v < obj.v) state.compte = obj }
+export function setPrefs (state, obj) { if (!state.prefs || state.prefs.v < obj.v) state.prefs = obj }
 
 /* Enregistrement de toutes les cv d'un coup */
 export function commitRepertoire (state, repertoire) { state.repertoire = { ...repertoire } }

@@ -53,7 +53,7 @@ export function arrayBuffer (u8) {
 export async function crypter (cle, u8, idxIV) {
   if (typeof u8 === 'string') u8 = enc.encode(u8)
   const key = await window.crypto.subtle.importKey('raw', arrayBuffer(cle), 'aes-cbc', false, ['encrypt'])
-  const n = !idxIV ? 0 : (idxIV < 0 ? Number(crypto.randomBytes(1)) : idxIV)
+  const n = !idxIV ? Number(random(1)) : idxIV
   const iv = SALTS[n]
   const x0 = new Uint8Array(1).fill(n)
   const buf = await crypto.subtle.encrypt({ name: 'aes-cbc', iv: iv }, key, arrayBuffer(u8))

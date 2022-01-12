@@ -48,10 +48,12 @@
 </q-card>
 </template>
 <script>
-import { MmcCompte } from '../app/operations'
+import { PrefCompte } from '../app/operations'
 import { useStore } from 'vuex'
-import { computed, ref, toRef, onMounted, watch } from 'vue'
-import { afficherdiagnostic } from '../app/util.mjs'
+import { computed, ref, toRef, watch } from 'vue'
+import { afficherdiagnostic, serial } from '../app/util.mjs'
+import { data } from '../app/modele.mjs'
+import { crypt } from '../app/crypto.mjs'
 import { VuemojiPicker } from 'vuemoji-picker'
 import BoutonHelp from './BoutonHelp.vue'
 
@@ -131,7 +133,8 @@ export default ({
     },
     async okEdit () {
       const mmc = this.motscles.finEdition()
-      await new MmcCompte().run(mmc)
+      const datak = await crypt.crypter(data.clek, serial(mmc))
+      await new PrefCompte().run('mc', datak)
     }
   },
 
@@ -142,14 +145,11 @@ export default ({
     const $store = useStore()
     const compte = computed(() => $store.state.db.compte)
 
-    onMounted(() => {
+    tab.value = motscles.value.mc.lcategs[0]
+
+    watch(() => motscles.value, (ap, av) => {
       tab.value = motscles.value.mc.lcategs[0]
     })
-
-    watch(
-      () => motscles.value,
-      (ap, av) => { tab.value = motscles.value.mc.lcategs[0] }
-    )
 
     return {
       root,

@@ -11,7 +11,7 @@
           </span>
           <span v-if="compte != null" :class="page!=='Avatar' ? 'disabled' : 'cursor-pointer'" @click="tocompte">
             <q-icon size="sm" name="home" aria-label="Accueil du compte"/>
-            <span class="fs-md q-px-sm">{{ compte.titre }}</span>
+            <span class="fs-md q-px-sm">{{ prefs.titre }}</span>
           </span>
         </q-toolbar-title>
 
@@ -344,6 +344,7 @@ export default {
     const orglabel = computed(() => $store.getters['ui/orglabel'])
     const orglabelclass = computed(() => 'font-antonio-l fs-md ' + ($store.state.ui.org == null ? 'text-negative' : 'q-pr-xs text-white'))
     const compte = computed(() => $store.state.db.compte)
+    const prefs = computed(() => $store.state.db.prefs)
     const avatar = computed(() => $store.state.db.avatar)
     const groupe = computed(() => $store.state.db.groupe)
     const mode = computed(() => $store.state.ui.mode)
@@ -387,6 +388,7 @@ export default {
       orglabel,
       orglabelclass,
       compte,
+      prefs,
       avatar,
       groupe,
       mode,

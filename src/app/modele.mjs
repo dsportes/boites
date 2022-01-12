@@ -11,7 +11,7 @@ import { remplacePage } from './page.mjs'
 - objets : array remplie par tous les objets à mettre en IDB
 Retourne vcv : version de la plus CV trouvée
 */
-export function commitMapObjets (objets, mapObj) { // SAUF mapObj.compte
+export function commitMapObjets (objets, mapObj) { // SAUF mapObj.compte et mapObj.prefs
   let vcv = 0
 
   function push (n) { mapObj[n].forEach((x) => { objets.push(x) }) }
@@ -451,6 +451,10 @@ class Session {
 
   setCompte (compte) { store().commit('db/setCompte', compte) }
 
+  getPrefs () { return store().state.db.prefs }
+
+  setPrefs (prefs) { store().commit('db/setPrefs', prefs) }
+
   avc (id) { return this.getCompte().av(id) }
 
   getAvatar (id) { return store().getters['db/avatar'](id) }
@@ -567,7 +571,7 @@ export function newObjet (table) {
 
 schemas.forSchema({
   name: 'idbCompte',
-  cols: ['id', 'v', 'dds', 'dpbh', 'pcbh', 'k', 'mmc', 'mac', 'memo', 'vsh']
+  cols: ['id', 'v', 'dds', 'dpbh', 'pcbh', 'k', 'mac', 'vsh']
 })
 /*
 - `id` : id du compte.
@@ -576,13 +580,9 @@ schemas.forSchema({
 - `dpbh` : hashBin (53 bits) du PBKFD du début de la phrase secrète (32 bytes). Pour la connexion, l'id du compte n'étant pas connu de l'utilisateur.
 - `pcbh` : hashBin (53 bits) du PBKFD de la phrase complète pour quasi-authentifier une connexion avant un éventuel échec de décryptage de `kx`.
 - `kx` : clé K du compte, crypté par la X (phrase secrète courante).
-- `mmck` {} : cryptées par la clé K, map des mots clés déclarés par le compte.
-  - *clé* : id du mot clé de 1 à 99.
-  - *valeur* : libellé du mot clé.
 - `mack` {} : map des avatars du compte cryptée par la clé K. Clé: id, valeur: `[nom, rnd, cpriv]`
   - `nom rnd` : nom complet.
   - `cpriv` : clé privée asymétrique.
-- `memok` : texte court libre (crypté par la clé K) vu par le seul titulaire du compte. Le début de la première ligne s'affiche en haut de l'écran.
 - `vsh`
 */
 
@@ -591,17 +591,13 @@ export class Compte {
 
   get sid () { return crypt.idToSid(this.id) }
 
-  get pk () { return this.id }
+  get sid2 () { return null }
+
+  get pk () { return '1' }
 
   get suppr () { return false }
 
   get horsLimite () { return false }
-
-  get titre () {
-    if (!this.memo) return this.sid
-    const i = this.memo.indexOf('\n')
-    return i === -1 ? this.memo : this.memo.substring(0, i)
-  }
 
   allAvId () {
     const s = new Set()
@@ -620,8 +616,6 @@ export class Compte {
     this.mac = { }
     this.mac[nomAvatar.sid] = { na: nomAvatar, cpriv: cpriv }
     data.setNa(nomAvatar.nom, nomAvatar.rnd)
-    this.mmc = {}
-    this.memo = 'Compte de ' + nomAvatar.nom + '@' + nomAvatar.sid
     this.vsh = 0
     return this
   }
@@ -642,7 +636,6 @@ export class Compte {
     this.k = await crypt.decrypter(data.ps.pcb, row.kx)
     this.pcbh = row.pcbh
     data.clek = this.k
-
     this.mac = {}
     const m = deserial(await crypt.decrypter(this.k, row.mack))
     for (const sid in m) {
@@ -650,37 +643,24 @@ export class Compte {
       this.mac[sid] = { na: new NomAvatar(nom, rnd), cpriv: cpriv }
       data.setNa(nom, rnd)
     }
-
-    this.mmc = deserial(await crypt.decrypter(this.k, row.mmck))
-
-    this.memo = await crypt.decrypterStr(this.k, row.memok)
-
     return this
   }
 
   async toRow () {
     const r = { ...this }
-    r.memok = await crypt.crypter(data.clek, this.memo)
-
-    r.mmck = await crypt.crypter(data.clek, serial(this.mmc))
-
     const m = {}
     for (const sid in this.mac) {
       const x = this.mac[sid]
       m[sid] = [x.na.nom, x.na.rnd, x.cpriv]
     }
     r.mack = await crypt.crypter(data.clek, serial(m))
-
     r.kx = await crypt.crypter(data.ps.pcb, this.k)
-
     return schemas.serialize('rowcompte', r)
   }
 
-  get toIdb () {
-    return { id: 1, data: schemas.serialize('idbCompte', this) }
-  }
+  get toIdb () { return schemas.serialize('idbCompte', this) }
 
-  fromIdb (idb, vs) {
+  fromIdb (idb) {
     schemas.deserialize('idbCompte', idb, this)
     data.clek = this.k
     for (const sid in this.mac) {
@@ -699,6 +679,85 @@ export class Compte {
   }
 }
 
+/** Prefs **********************************/
+
+schemas.forSchema({
+  name: 'idbPrefs',
+  cols: ['id', 'v', 'map', 'vsh']
+})
+
+export class Prefs {
+  get table () { return 'prefs' }
+
+  get sid () { return crypt.idToSid(this.id) }
+
+  get sid2 () { return null }
+
+  get pk () { return this.sid }
+
+  get suppr () { return false }
+
+  get horsLimite () { return false }
+
+  get memo () { return this.map.mp }
+
+  get titre () {
+    const m = this.map.mp
+    if (!m) return this.sid
+    let i = m.indexOf('\n')
+    if (i === -1) i = m.length
+    return this.sid + ' [' + m.substring(0, i) + ']'
+  }
+
+  get mc () { return this.map.mc }
+
+  nouveau (id) {
+    this.id = id
+    this.v = 0
+    this.vsh = 0
+    this.map = { mp: '', mc: {}, fs: {} }
+    return this
+  }
+
+  async fromRow (row) {
+    this.vsh = row.vsh || 0
+    this.id = row.id
+    this.v = row.v
+    const m = deserial(row.mapk)
+    this.map = {}
+    this.map.mp = deserial(await crypt.decrypter(data.clek, m.mp))
+    this.map.mc = deserial(await crypt.decrypter(data.clek, m.mc))
+    this.map.fs = deserial(await crypt.decrypter(data.clek, m.fs))
+    return this
+  }
+
+  async sectionToRow (code) {
+    const x = this.map[code] || null
+    return await crypt.crypter(data.clek, serial(x))
+  }
+
+  async toRow () {
+    const m = { }
+    m.mp = await this.sectionToRow('mp')
+    m.mc = await this.sectionToRow('mc')
+    m.fs = await this.sectionToRow('fs')
+    const r = { id: this.id, v: this.v, vsh: this.vsh, mapk: serial(m) }
+    return schemas.serialize('rowprefs', r)
+  }
+
+  get toIdb () {
+    return schemas.serialize('idbPrefs', this)
+  }
+
+  fromIdb (idb) {
+    schemas.deserialize('idbPrefs', idb, this)
+    return this
+  }
+
+  get clone () {
+    return schemas.clone('idbPrefs', this, new Prefs())
+  }
+}
 /** Avatar **********************************/
 /*
 - `id` : id de l'avatar
@@ -725,9 +784,11 @@ export class Avatar {
 
   get sid () { return crypt.idToSid(this.id) }
 
+  get sid2 () { return null }
+
   get sidav () { return crypt.idToSid(this.id) }
 
-  get pk () { return this.id }
+  get pk () { return this.sid }
 
   get suppr () { return this.st < 0 }
 
@@ -750,7 +811,7 @@ export class Avatar {
     return s
   }
 
-  nouveau (id) {
+  async nouveau (id) {
     this.id = id
     this.v = 0
     this.st = 0
@@ -829,7 +890,7 @@ export class Avatar {
     const [lct, lgr] = this.decompileListsBrut()
     r.lct = lct
     r.lgr = lgr
-    return { id: this.id, data: schemas.serialize('idbAvatar', r) }
+    return schemas.serialize('idbAvatar', r)
   }
 
   fromIdb (idb) {
@@ -868,7 +929,9 @@ export class Cv {
 
   get sid () { return crypt.idToSid(this.id) }
 
-  get pk () { return this.id }
+  get sid2 () { return null }
+
+  get pk () { return this.sid }
 
   get suppr () { return this.st < 0 }
 
@@ -898,6 +961,7 @@ export class Cv {
     return cl
   }
 
+  /*
   nouveau (id, vcv, st, photo, info) {
     this.id = id
     this.vcv = vcv
@@ -915,6 +979,7 @@ export class Cv {
     this.info = av.info
     return this
   }
+  */
 
   async fromRow (row) { // row : rowCv - item retour de sync
     this.id = row.id
@@ -929,7 +994,7 @@ export class Cv {
   }
 
   get toIdb () {
-    return { id: this.id, data: schemas.serialize('idbCv', this) }
+    return schemas.serialize('idbCv', this)
   }
 
   fromIdb (idb) {
@@ -1009,7 +1074,7 @@ export class Contact {
 
   get sid2 () { return '' + this.ic }
 
-  get pk () { return [this.id, this.ic] }
+  get pk () { return this.sid + '/' + this.sid2 }
 
   get suppr () { return this.st < 0 }
 
@@ -1062,7 +1127,7 @@ export class Contact {
   }
 
   get toIdb () { // Un supprimé n'est pas écrit en IDB
-    return { id: this.id, ic: this.ic, data: schemas.serialize('idbContact', this) }
+    return schemas.serialize('idbContact', this)
   }
 
   fromIdb (idb) { // Jamais de supprimé en IDB
@@ -1097,7 +1162,9 @@ export class Groupe {
 
   get sid () { return crypt.idToSid(this.id) }
 
-  get pk () { return this.id }
+  get sid2 () { return null }
+
+  get pk () { return this.sid }
 
   get suppr () { return this.st < 0 }
 
@@ -1195,7 +1262,7 @@ export class Groupe {
   }
 
   get toIdb () {
-    return { id: this.id, data: schemas.serialize('idbGroupe', this) }
+    return schemas.serialize('idbGroupe', this)
   }
 
   fromIdb (idb) {
@@ -1230,7 +1297,7 @@ export class Invitct {
 
   get sid2 () { return crypt.idToSid(this.ni) }
 
-  get pk () { return [this.id, this.ni] }
+  get pk () { return this.sid + '/' + this.sid2 }
 
   get suppr () { return this.st < 0 }
 
@@ -1262,7 +1329,7 @@ export class Invitct {
   }
 
   get toIdb () {
-    return { id: this.id, ni: this.ni, data: schemas.serialize('idbInvitct', this) }
+    return schemas.serialize('idbInvitct', this)
   }
 
   fromIdb (idb) {
@@ -1299,7 +1366,7 @@ export class Invitgr {
 
   get sid2 () { return crypt.idToSid(this.ni) }
 
-  get pk () { return [this.id, this.ni] }
+  get pk () { return this.sid + '/' + this.sid2 }
 
   get suppr () { return this.st < 0 }
 
@@ -1343,7 +1410,7 @@ export class Invitgr {
   }
 
   get toIdb () {
-    return { id: this.id, ni: this.ni, data: schemas.serialize('idbInvitgr', this) }
+    return schemas.serialize('idbInvitgr', this)
   }
 
   fromIdb (idb) {
@@ -1387,7 +1454,7 @@ export class Membre {
 
   get sid2 () { return '' + this.im }
 
-  get pk () { return [this.id, this.im] }
+  get pk () { return this.sid + '/' + this.sid2 }
 
   get suppr () { return this.st < 0 }
 
@@ -1441,10 +1508,10 @@ export class Membre {
   }
 
   get toIdb () {
-    return { id: this.id, im: this.im, data: schemas.serialize('idbMembre', this) }
+    return schemas.serialize('idbMembre', this)
   }
 
-  fromIdb (idb, vs) {
+  fromIdb (idb) {
     schemas.deserialize('idbMembre', idb, this)
     data.setNa(this.data.nom, this.data.rnd, this.id, this.im)
     return this
@@ -1478,7 +1545,9 @@ export class Parrain {
 
   get sid () { return crypt.idToSid(this.pph) }
 
-  get pk () { return this.pph }
+  get sid2 () { return null }
+
+  get pk () { return this.sid }
 
   get suppr () { return this.st < 0 }
 
@@ -1516,7 +1585,7 @@ export class Parrain {
   }
 
   get toIdb () {
-    return { pph: this.pph, data: schemas.serialize('idbParrain', this) }
+    return schemas.serialize('idbParrain', this)
   }
 
   fromIdb (idb) {
@@ -1549,7 +1618,9 @@ export class Rencontre {
 
   get sid () { return crypt.idToSid(this.prh) }
 
-  get pk () { return this.prh }
+  get sid2 () { return null }
+
+  get pk () { return this.sid }
 
   get sidav () { return crypt.idToSid(this.id) }
 
@@ -1580,7 +1651,7 @@ export class Rencontre {
   }
 
   get toIdb () {
-    return { prh: this.prh, data: schemas.serialize('idbRencontre', this) }
+    return schemas.serialize('idbRencontre', this)
   }
 
   fromIdb (idb) {
@@ -1639,11 +1710,9 @@ export class Secret {
 
   get sid2 () { return crypt.idToSid(this.ns) }
 
-  get sidc () { return this.sid + '@' + this.sid2 }
+  get pk () { return this.sid + '/' + this.sid2 }
 
-  get pk () { return [this.id, this.ns] }
-
-  get vk () { return this.sid + '@' + this.sid2 + '@' + this.v }
+  get vk () { return this.pk + '@' + this.v }
 
   get suppr () { return this.st < 0 }
 
@@ -1757,6 +1826,7 @@ export class Secret {
     return this
   }
 
+  /*
   async toRow () { // utilité ?????
     const r = { ...this }
     const cles = this.cles
@@ -1784,11 +1854,12 @@ export class Secret {
     } else this.refs = null
     return schemas.serialize('rowsecret', r)
   }
+  */
 
   get toIdb () {
     const t = this.txt.t
     this.txt.t = gzip(this.txt.t)
-    const idb = { id: this.id, ns: this.ns, data: schemas.serialize('idbSecret', this) }
+    const idb = schemas.serialize('idbSecret', this)
     this.txt.t = t
     return idb
   }

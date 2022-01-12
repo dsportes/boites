@@ -1,8 +1,8 @@
 <template>
-<div>
-  <q-card ref="root1" v-if="!max" :class="'column fs-md full-height overflow-hidden shadow-8 ' + dlclass">
+<div ref="root">
+  <q-card v-if="!max" :class="'column fs-md full-height overflow-hidden shadow-8 ' + dlclass">
     <q-toolbar class="col-auto full-width">
-      <q-btn v-if="!nozoom" icon="zoom_out_map" size="md" push flat dense @click="max=true"></q-btn>
+      <q-btn icon="zoom_out_map" size="md" push flat dense @click="max=true"></q-btn>
       <q-btn :disable="!md" class="q-mr-xs" size="md" label="TXT" :color="md ? 'warning' : 'purple'" push flat dense @click="md=false"></q-btn>
       <q-btn :disable="md" class="q-mr-xs" size="md" label="HTML" dense flat push @click="md=true"></q-btn>
       <q-btn v-if="editable" :disable="md" class="q-mr-xs" icon="face" size="md" dense flat push @click="emoji=true"></q-btn>
@@ -34,7 +34,7 @@
 <script>
 import ShowHtml from './ShowHtml.vue'
 import { VuemojiPicker } from 'vuemoji-picker'
-import { ref, toRef, watch, onMounted } from 'vue'
+import { ref, toRef, watch } from 'vue'
 import { affidbmsg } from '../app/util.mjs'
 
 export default ({
@@ -44,7 +44,7 @@ export default ({
 
   emits: ['update:modelValue', 'ok'],
 
-  props: { modelValue: String, texte: String, labelOk: String, editable: Boolean, idx: Number, modetxt: Boolean, nozoom: Boolean },
+  props: { modelValue: String, texte: String, labelOk: String, editable: Boolean, idx: Number, modetxt: Boolean },
 
   computed: {
     dlclass () {
@@ -83,7 +83,7 @@ export default ({
       // console.log(JSON.stringify(emoji.emoji.shortcodes))
       // const code = ':' + emoji.emoji.shortcodes[0] + ':'
       const code = emoji.emoji.unicode
-      const r = this.max ? this.root2 : this.root1
+      const r = this.max ? this.root2 : this.root
       const ta = r.querySelector('textarea')
       this.textelocal = ta.value.substring(0, ta.selectionStart) + code + ta.value.substring(ta.selectionEnd, ta.value.length)
       this.emoji = false
@@ -91,7 +91,7 @@ export default ({
   },
 
   setup (props) {
-    const root1 = ref(null)
+    const root = ref(null)
     const root2 = ref(null)
     const taille = ref(0)
     const tailleM = toRef(props, 'tailleM')
@@ -101,15 +101,19 @@ export default ({
     const texteinp = ref('') // dernière valeur source passée sur la prop 'texte'
     const md = ref(true)
 
-    onMounted(() => { // initialisation de textelocal par défaut à texte
-      textelocal.value = texte.value
-      texteinp.value = texte.value
-      taille.value = tailleM.value ? 1 : 0
-      if (modetxt.value) md.value = false
+    /*
+    onMounted(() => {
+      if (root.value) console.log('root OK')
+      if (root2.value) console.log('root2 OK')
     })
+    */
+
+    textelocal.value = texte.value
+    texteinp.value = texte.value
+    taille.value = tailleM.value ? 1 : 0
+    if (modetxt.value) md.value = false
 
     watch(texte, (ap, av) => { // quand texte change, textelocal ne change pas si en édition
-      // console.log('Texte : ' + ap + '\n' + av)
       if (textelocal.value === texteinp.value && textelocal.value !== ap) {
         // textelocal n'était PAS modifié, ni égal à la nouvelle valeur : alignement sur la nouvelle valeur
         textelocal.value = ap
@@ -125,7 +129,7 @@ export default ({
 
     return {
       md,
-      root1,
+      root,
       root2,
       taille,
       texteinp,

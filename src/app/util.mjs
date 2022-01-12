@@ -490,8 +490,8 @@ export class Motscles {
     this.mc.lcategs.length = 0
     this.fusion(cfg().motscles)
     if (this.mode === 1 || (this.mode === 3 && !this.idg)) {
-      const cpt = data.getCompte()
-      this.mapc = cpt ? cpt.mmc : {}
+      const cpt = data.getPrefs()
+      this.mapc = cpt ? cpt.mc : {}
       this.fusion(this.mapc)
       if (this.mode === 1) this.src = this.mapc
     }

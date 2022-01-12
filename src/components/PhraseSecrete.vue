@@ -32,7 +32,7 @@
 </template>
 <script>
 import { cfg, Phrase } from '../app/util.mjs'
-const msg = ['Saisir la phrase secrète', 'Phrase non confirmée, la re-saisir', 'Confirmer la phrase secréte']
+const msg = ['Phrase secrète de connexion', 'Phrase non confirmée, la re-saisir', 'Confirmer la phrase secréte']
 export default ({
   name: 'PhraseSecrete',
   props: { iconValider: String, verif: Boolean, labelValider: String, initVal: Object },
