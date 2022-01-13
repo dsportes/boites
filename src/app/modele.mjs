@@ -1082,13 +1082,13 @@ export class Contact {
 
   get sidav () { return this.sid }
 
-  get na () { return data.getNa(this.id, this.ic) }
+  get na () { return data.getNa(this.id, this.ic) } // na DU CONTACT
 
-  get cv () { return data.repertoire.getCv(this.na.id) }
+  get cv () { return data.repertoire.getCv(this.na.id) } // cv DU CONTACT
 
   get nom () {
     const cv = this.cv
-    return this.data.nom + (!cv ? '' : '/' + cv.info)
+    return this.data.nom + (!cv || !cv.info ? '' : ' [' + cv.info + ']')
   }
 
   majCc () {
@@ -1745,7 +1745,9 @@ export class Secret {
     this.ns = (Math.floor(crypt.rnd4() / 3) * 3)
     this.ic = 0
     this.st = getJourJ() + cfg().limitesjour[0]
-    this.txt = { t: '' }
+    this.ora = 999
+    this.mc = new Uint8Array([])
+    this.txt = { t: '', d: Math.floor(new Date().getTime() / 1000) }
     this.ref = ref || null
     return this
   }
@@ -1755,10 +1757,12 @@ export class Secret {
     this.ns = (Math.floor(crypt.rnd4() / 3) * 3) + 1
     this.ic = contact.ic
     this.st = getJourJ() + cfg().limitesjour[0]
+    this.ora = 999
+    this.mc = new Uint8Array([])
     this.id2 = contact.na.id
     this.ns2 = (Math.floor(crypt.rnd4() / 3) * 3) + 1
     this.ic2 = contact.icb
-    this.txt = { t: '', l: [] }
+    this.txt = { t: '', l: new Uint8Array([]), d: Math.floor(new Date().getTime() / 1000) }
     this.ref = ref || null
     return this
   }
@@ -1767,18 +1771,21 @@ export class Secret {
     this.id = groupe.id
     this.ns = (Math.floor(crypt.rnd4() / 3) * 3) + 2
     this.ic = groupe.imDeId(id)
+    this.ora = 999
+    this.mc = { 0: new Uint8Array([]) }
+    this.mc[this.ic] = new Uint8Array([])
     this.st = getJourJ() + cfg().limitesjour[0]
-    this.txt = { t: '', l: [] }
+    this.txt = { t: '', l: new Uint8Array([]), d: Math.floor(new Date().getTime() / 1000) }
     this.ref = ref || null
     return this
   }
 
-  async toRowTxt (txt, ida) {
+  async toRowTxt (txt, im) {
     const x = { d: Math.floor(new Date().getTime() / 1000), t: gzip(txt) }
     if (this.ts) {
-      const nl = [ida]
-      this.txt.l.forEach(t => { if (t !== ida) nl.push(t) })
-      x.l = nl
+      const nl = [im]
+      this.txt.l.forEach(t => { if (t !== im) nl.push(t) })
+      x.l = new Uint8Array(nl)
     }
     return await crypt.crypter(this.cles, serial(x))
   }
@@ -1791,7 +1798,6 @@ export class Secret {
     this.st = row.st
     this.v = row.v
     if (!this.suppr) {
-      this.ora = row.ora
       this.v1 = row.v1
       this.v2 = row.v2
       const cles = this.cles
@@ -1828,36 +1834,6 @@ export class Secret {
     }
     return this
   }
-
-  /*
-  async toRow () { // utilité ?????
-    const r = { ...this }
-    const cles = this.cles
-
-    const t = r.txt.t
-    r.txt.t = gzip(this.txt.t)
-    r.txts = await crypt.crypter(cles, serial(r.txt))
-    r.txt.t = t
-
-    r.mcs = this.ts ? (this.ts !== 2 ? this.mc : serial(this.mc)) : null
-    const map = {}
-    if (this.v2) {
-      for (const cpj in this.mpj) {
-        const x = this.mpj[cpj]
-        const nomcb64 = crypt.u8ToB64(await crypt.crypter(cles, x.n + '/' + x.dh), true)
-        map[cpj] = [nomcb64, x.t]
-      }
-    }
-    r.mpjs = serial(map)
-    if (this.ts === 1) {
-      r.dups = await crypt.crypter(cles, serial(this.dup))
-    } else r.dups = null
-    if (this.ref) {
-      r.refs = await crypt.crypter(cles, serial(this.ref))
-    } else this.refs = null
-    return schemas.serialize('rowsecret', r)
-  }
-  */
 
   get toIdb () {
     const t = this.txt.t

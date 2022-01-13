@@ -108,6 +108,16 @@ export default ({
       } else if (n === 2 && this.contact) {
         this.ouvrirsecret(new Secret().nouveauC(this.avatar.id, this.contact))
       } else if (n === 3 && this.groupe) {
+        if (this.groupe.sty === 0) {
+          this.diagnostic = 'Le groupe est "archivé", création et modification de secrets impossible.'
+          return
+        }
+        const im = this.groupe.imDeId(this.avatar.id)
+        const membre = im ? data.getMembre(this.groupe.id, im) : null
+        if (!membre || !membre.stp) {
+          this.diagnostic = 'Seuls les membres de niveau "auteur" et "animateur" peuvent créer ou modifier des secrets.'
+          return
+        }
         this.ouvrirsecret(new Secret().nouveauG(this.avatar.id, this.groupe))
       }
     },
@@ -197,6 +207,10 @@ export default ({
     }
 
     const $store = useStore()
+    const diagnostic = computed({
+      get: () => $store.state.ui.diagnostic,
+      set: (val) => $store.commit('ui/majdiagnostic', val)
+    })
     const nouvsec = ref(false)
     const compte = computed(() => { return $store.state.db.compte })
     const prefs = computed(() => { return $store.state.db.prefs })
@@ -288,6 +302,7 @@ export default ({
     })
 
     return {
+      diagnostic,
       compte,
       avatar,
       secret,
