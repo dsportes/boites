@@ -131,6 +131,7 @@ export function setObjets (state, [table, lobj]) { // lobj : array d'objets
     // gérés par sous-groupe
     const m = {}
     const cc = state.contact
+    const cs = state.secret
     lobj.forEach(obj => {
       if (!m[obj.sid]) {
         m[obj.sid] = [obj]
@@ -139,6 +140,9 @@ export function setObjets (state, [table, lobj]) { // lobj : array d'objets
       }
       if (cc && table === 'contact' && cc.id === obj.id && cc.ic === obj.ic) {
         majcontact(state, obj)
+      }
+      if (cs && table === 'secret' && cs.id === obj.id && cs.ns === obj.ns) {
+        majsecret(state, obj)
       }
     })
     for (const sid in m) {

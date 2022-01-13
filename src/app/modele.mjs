@@ -2,7 +2,7 @@ import { schemas } from './schemas.mjs'
 import { crypt } from './crypto.mjs'
 import { openIDB, closeIDB } from './db.mjs'
 import { openWS, closeWS } from './ws.mjs'
-import { store, appexc, serial, deserial, dlvDepassee, NomAvatar, gzip, ungzip, dhstring, getJourJ } from './util.mjs'
+import { store, appexc, serial, deserial, dlvDepassee, NomAvatar, gzip, ungzip, dhstring, getJourJ, cfg } from './util.mjs'
 import { remplacePage } from './page.mjs'
 
 /* mapObj : clé par table, valeur : array des objets
@@ -1744,6 +1744,7 @@ export class Secret {
     this.id = id
     this.ns = (Math.floor(crypt.rnd4() / 3) * 3)
     this.ic = 0
+    this.st = getJourJ() + cfg().limitesjour[0]
     this.txt = { t: '' }
     this.ref = ref || null
     return this
@@ -1753,6 +1754,7 @@ export class Secret {
     this.id = id
     this.ns = (Math.floor(crypt.rnd4() / 3) * 3) + 1
     this.ic = contact.ic
+    this.st = getJourJ() + cfg().limitesjour[0]
     this.id2 = contact.na.id
     this.ns2 = (Math.floor(crypt.rnd4() / 3) * 3) + 1
     this.ic2 = contact.icb
@@ -1765,6 +1767,7 @@ export class Secret {
     this.id = groupe.id
     this.ns = (Math.floor(crypt.rnd4() / 3) * 3) + 2
     this.ic = groupe.imDeId(id)
+    this.st = getJourJ() + cfg().limitesjour[0]
     this.txt = { t: '', l: [] }
     this.ref = ref || null
     return this

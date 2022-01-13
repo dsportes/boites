@@ -4,10 +4,13 @@
       <q-btn flat round dense icon="close" size="md" class="q-mr-sm" @click="fermer" />
       <q-toolbar-title><div class="titre-md tit text-center">{{state.titre}}</div></q-toolbar-title>
       <q-btn v-if="!state.lectureseule" :disable="!modif" class="q-ml-sm" flat dense color="white" label="Annuler" icon="undo" @click="undo"/>
-      <q-btn v-if="!state.lectureseule" :disable="!modif" class="q-my-sm" flat dense color="white" :label="state.encreation?'Créer':'Valider'" icon="check" @click="valider"/>
+      <q-btn v-if="!state.lectureseule" :disable="!modif || erreur !== ''" class="q-my-sm" flat dense color="white" :label="state.encreation?'Créer':'Valider'" icon="check" @click="valider"/>
     </q-toolbar>
     <q-toolbar v-if="state.lectureseule" inset :class="'col-auto maToolBar ' + tbclass">
         <q-toolbar-title class="text-center fs-md text-warning">Secret en lecture seule : {{state.lectureseule}}</q-toolbar-title>
+    </q-toolbar>
+    <q-toolbar v-if="erreur" inset :class="'col-auto maToolBar ' + tbclass">
+        <q-toolbar-title class="text-center fs-md text-negative">{{erreur}}</q-toolbar-title>
     </q-toolbar>
     <q-toolbar v-if="state.encreation" inset :class="'col-auto maToolBar ' + tbclass">
         <q-toolbar-title class="text-center fs-md text-warning">Secret en création</q-toolbar-title>
@@ -101,10 +104,35 @@ export default ({
     modiftx () { return this.textelocal !== this.secret.txt.t },
     modiftp () { return this.templocal !== (this.secret.st >= 0 && this.secret.st < 99999) },
     modif () { return this.modifmcl || this.modifmcg || this.modiftx || this.modiftp },
-    nbj () { const st = this.secret.st; return st === 99999 || st === 0 ? 0 : st - this.jourJ },
+    erreur () { return this.state.lectureseule || this.textelocal.length > 9 ? '' : 'Le texte doit contenir au moins 10 signes' },
     msgtemp () {
-      if (this.templocal) return 'Secret auto-détruit ' + (this.nbj === 1 ? 'aujourd\'hui' : 'dans ' + this.nbj + ' jours')
+      if (this.templocal) {
+        const n = this.secret.st === 99999 ? this.limjours : this.secret.st - this.jourJ
+        return 'Secret auto-détruit ' + (n === 0 ? 'aujourd\'hui' : (n === 1 ? 'demain' : ('dans ' + n + ' jours')))
+      }
       return 'Secret permanent'
+    },
+    dernierauteur () {
+      const s = this.secret
+      if (!s) return false
+      const avid = this.avatar ? this.avatar.id : 0
+      if (!avid) return false
+      return s.txt.l && s.txt.l.length && s.txt.l[0] === avid
+    },
+    orapeutchanger () {
+      const s = this.secret.value
+      if (!s) return false // en déconnexion
+      if (s.v === 0) return true // en création, toujours
+      if (s.ts === 0) return true // secret perso, toujours
+      if (s.ts === 1) { // secret de contact : si restreint et dernier auteur oui, si archivé oui
+        return s.ora === 2 || (s.ora === 1 && this.dernierauteur)
+      }
+      // secret de groupe
+      if (!this.state.groupe || !this.state.membre) return false // en déconnexion ?
+      if (this.state.groupe.sty === 0) return false // groupe archivé, jamais
+      if (this.state.membre.stp === 0) return false // lecteurs jamais
+      if (this.state.membre.stp === 2) return false // animateurs toujours
+      return s.ora === 1 && this.dernierauteur // si restreint, le dernier auteur peut
     }
   },
 
@@ -129,8 +157,12 @@ export default ({
 
   methods: {
     fermer () {
-      this.secret = null
-      if (this.close) this.close()
+      if (this.modif) {
+        this.diagnostic = 'Des modifications sont en cours. Avant de fermer ce secret, soit les "Annuler", soit les "Valider"'
+      } else {
+        this.secret = null
+        if (this.close) this.close()
+      }
     },
     ouvrirmcl () { this.mcledit = true },
     fermermcl () { this.mcledit = false },
@@ -149,11 +181,8 @@ export default ({
         mcg = equ8(this.mcglocal, s.mc[0]) ? new Uint8Array([0]) : (!this.mcglocal || !this.mcglocal.length ? null : this.mcglocal)
       }
       const v1 = this.v && this.textelocal === s.txt.t ? s.v1 : this.textelocal.length
-      const tempav = this.secret.st >= 0 && this.secret.st < 99999
-      let temp = 0 // inchangé
-      if (tempav !== this.templocal) {
-        temp = this.templocal ? this.jourJ + this.limjours : 99999
-      }
+      const tempav = this.secret.st > 0 && this.secret.st !== 99999
+      const temp = tempav === this.templocal ? this.secret.st : (this.templocal ? this.jourJ + this.limjours : 99999)
       const arg = { ts: s.ts, id: s.id, ns: s.ns, mc: mc, txts: txts, v1: v1, ora: this.oralocal, temp: temp }
       if (s.ts === 2) {
         arg.mcg = mcg
@@ -184,6 +213,10 @@ export default ({
 
   setup (props) {
     const $store = useStore()
+    const diagnostic = computed({
+      get: () => $store.state.ui.diagnostic,
+      set: (val) => $store.commit('ui/majdiagnostic', val)
+    })
     const compte = computed(() => { return $store.state.db.compte })
     const avatar = computed(() => { return $store.state.db.avatar })
     const mode = computed(() => $store.state.ui.mode)
@@ -233,7 +266,7 @@ export default ({
 
     function initState () {
       const s = secret.value
-      const avid = avatar.value.id
+      const avid = avatar.value ? avatar.value.id : 0 // avatar null après déconnexion
       if (s) { // propriétés immuables pour un secret
         state.ts = s.ts
         state.avatar = s.ts === 0 ? avatar : null
@@ -255,18 +288,9 @@ export default ({
           }
         }
         switch (secret.value.ts) {
-          case 0 : {
-            state.titre = 'Secret personnel'
-            break
-          }
-          case 1 : {
-            state.titre = 'Partagé avec ' + state.contact.nom
-            break
-          }
-          case 2 : {
-            state.titre = 'Partagé avec ' + state.groupe.nom
-            break
-          }
+          case 0 : { state.titre = 'Secret personnel'; break }
+          case 1 : { state.titre = 'Partagé avec ' + state.contact.nom; break }
+          case 2 : { state.titre = 'Partagé avec ' + state.groupe.nom; break }
         }
         undo()
       }
@@ -286,6 +310,7 @@ export default ({
     const limjours = cfg().limitesjour[0]
 
     return {
+      diagnostic,
       secret,
       u8vide: new Uint8Array([]),
       state,

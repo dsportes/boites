@@ -1,5 +1,6 @@
 <template>
-<q-card ref="root" class="colomn shadow-8 petitelargeur">
+<div ref="root">
+<q-card class="colomn shadow-8 petitelargeur">
   <div class="q-pa-md">
     <bouton-help page="page1"/>
     <q-btn v-if="!motscles.mc.st.enedition" flat dense size="md" color="warning" label="Editer" @click="startEdit"/>
@@ -46,6 +47,7 @@
     <VuemojiPicker @emojiClick="emojiclick" data-source="emoji.json"/>
   </q-dialog>
 </q-card>
+</div>
 </template>
 <script>
 import { PrefCompte } from '../app/operations'
