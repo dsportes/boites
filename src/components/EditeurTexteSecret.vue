@@ -5,7 +5,8 @@
       <q-btn :disable="!md" class="q-mr-xs" size="md" label="TEXTE" :color="md ? 'warning' : 'purple'" push flat dense @click="md=false"></q-btn>
       <q-btn :disable="md" class="q-mr-xs" size="md" label="HTML" dense flat push @click="md=true"></q-btn>
       <q-btn v-if="editable" :disable="md" class="q-mr-xs" icon="face" size="md" dense flat push @click="emoji=true"></q-btn>
-      <q-toolbar-title class="text-italic text-center fs-md">{{editable?'Modifiable':'Lecture seule'}}</q-toolbar-title>
+      <q-toolbar-title v-if="erreur" :class="'text-italic text-center fs-md erreur'">{{erreur}}</q-toolbar-title>
+      <q-toolbar-title v-if="apropos && !erreur" :class="'text-italic text-center fs-md'">{{apropos}}</q-toolbar-title>
       <q-btn v-if="editable" :disable="!modifie" class="q-mr-xs" color="primary" icon="undo" size="sm" dense push @click="undo"></q-btn>
     </q-toolbar>
     <textarea v-if="!md" :class="'col q-pa-xs full-width font-mono ta ' + dlclass" v-model="textelocal" :readonly="!editable"/>
@@ -19,7 +20,7 @@
 <script>
 import ShowHtml from './ShowHtml.vue'
 import { VuemojiPicker } from 'vuemoji-picker'
-import { ref, toRef, watch, onMounted } from 'vue'
+import { ref, toRef, watch /*, onMounted */ } from 'vue'
 import { affidbmsg } from '../app/util.mjs'
 
 export default ({
@@ -29,7 +30,7 @@ export default ({
 
   emits: ['update:modelValue', 'ok'],
 
-  props: { modelValue: String, texteRef: String, editable: Boolean },
+  props: { modelValue: String, texteRef: String, editable: Boolean, apropos: String, erreur: String },
 
   computed: {
     modifie () { return this.textelocal !== this.texteRef },
@@ -37,7 +38,9 @@ export default ({
   },
 
   watch: {
-    textelocal (ap) { this.$emit('update:modelValue', ap) }
+    textelocal (ap, av) {
+      this.$emit('update:modelValue', ap)
+    }
   },
 
   data () {
@@ -60,14 +63,18 @@ export default ({
     const textelocal = ref('')
     const texteinp = ref('')
     const texteRef = toRef(props, 'texteRef')
-    const editable = toRef(props, 'editable')
+    const editable = toRef(props, 'apropos')
+    toRef(props, 'apropos')
     const md = ref(true)
 
+    /*
     onMounted(() => { // initialisation de textelocal par défaut à texte
-      textelocal.value = texteRef.value
-      texteinp.value = texteRef.value
-      if (editable.value) md.value = false
     })
+    */
+
+    textelocal.value = texteRef.value
+    texteinp.value = texteRef.value
+    if (editable.value) md.value = false
 
     watch(texteRef, (ap, av) => { // quand texte change, textelocal ne change pas si en édition
       if (textelocal.value === texteinp.value && textelocal.value !== ap) {
@@ -94,6 +101,12 @@ export default ({
   }
 })
 </script>
+<style lang="sass" scoped>
+@import '../css/app.sass'
+.erreur
+  background-color: yellow
+  color: $negative
+</style>
 
 <style lang="css">
 @media screen and (max-width: 320px) {

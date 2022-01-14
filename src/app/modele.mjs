@@ -1470,6 +1470,11 @@ export class Membre {
 
   get cleg () { return data.getNa(this.id).cle }
 
+  get nom () {
+    const cv = data.getCv(this.namb.id)
+    return this.data.nom + (!cv || !cv.info ? '' : ' [' + cv.info + ']')
+  }
+
   /* retourne l'invitgr correspondant
   - si le membre est un avatar du groupe,
   - si cet invitgr existe et est invité ou actif,
@@ -1742,10 +1747,11 @@ export class Secret {
 
   nouveauP (id, ref) {
     this.id = id
+    this.v = 0
     this.ns = (Math.floor(crypt.rnd4() / 3) * 3)
     this.ic = 0
     this.st = getJourJ() + cfg().limitesjour[0]
-    this.ora = 999
+    this.ora = 0
     this.mc = new Uint8Array([])
     this.txt = { t: '', d: Math.floor(new Date().getTime() / 1000) }
     this.ref = ref || null
@@ -1755,9 +1761,10 @@ export class Secret {
   nouveauC (id, contact, ref) {
     this.id = id
     this.ns = (Math.floor(crypt.rnd4() / 3) * 3) + 1
+    this.v = 0
     this.ic = contact.ic
     this.st = getJourJ() + cfg().limitesjour[0]
-    this.ora = 999
+    this.ora = 0
     this.mc = new Uint8Array([])
     this.id2 = contact.na.id
     this.ns2 = (Math.floor(crypt.rnd4() / 3) * 3) + 1
@@ -1771,7 +1778,8 @@ export class Secret {
     this.id = groupe.id
     this.ns = (Math.floor(crypt.rnd4() / 3) * 3) + 2
     this.ic = groupe.imDeId(id)
-    this.ora = 999
+    this.v = 0
+    this.ora = 0
     this.mc = { 0: new Uint8Array([]) }
     this.mc[this.ic] = new Uint8Array([])
     this.st = getJourJ() + cfg().limitesjour[0]
@@ -1796,6 +1804,7 @@ export class Secret {
     this.ns = row.ns
     this.ic = row.ic
     this.st = row.st
+    this.ora = row.ora
     this.v = row.v
     if (!this.suppr) {
       this.v1 = row.v1
