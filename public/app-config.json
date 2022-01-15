@@ -15,5 +15,7 @@
       "hour": "2-digit", "minute": "2-digit", "second": "2-digit" },
     "locale": "fr-FR",
     "limitesjour": [60],
+    "lgnom": 20,
+    "lgtitre": 50,
     "motscles": { "200": "Statut/Nouveau", "201": "Statut/A lire", "202": "Statut/Lu", "203": "Visibilité/Favori", "204": "Important", "205": "Visibilité/Caché" }
 }

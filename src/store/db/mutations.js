@@ -6,13 +6,26 @@ groupes: {}, // Tous les groupes
 parrains: {}, // Tous les parrains (pph) : un getter par id d'avatar
 rencontres: {} // Toutes les rencontres (prh) : un getter par id d'avatar
 
-Groupés par sid d'avatar : contacts_sid invitcts_sid invitgrs_sid
-Groupés par sid de groupe : membres_sid
-Groupés par sid d'avatar ou de groupe : secrets_sid
+Groupés par sid d'avatar : contacts@sid invitcts@sid invitgrs@sid
+Groupés par sid de groupe : membres@sid
+Groupés par sid d'avatar ou de groupe : secrets@sid
 
 repertoire: {} // Toutes les CVs (enrichies des propriétés lctc et lmbr)
 Les objets CV sont conservés dans la map data.repertoire
 Le store/db conserve l'image de data.repertoire à chaque changement
+
+Voisins : un ensemble de voisins est matérialisée par une entrée voisins_sid/sns
+ou sid/sns est la pk du secret de référence de l'ensemnle des voisins
+Chaque entrée est une map :
+- clé : pk du secret, soit du secret voisin, soit du secret de référence (commi s'il était son propre voisin)
+- valeur : le secret correspondant
+Les voisins ne sont pas purgés quand un avatar ou un groupe est purgé.
+Quand un secret voisin est en création il est inscrit, demême que sa référence.
+La liste des voisins :
+- contient donc des fantômes : secrets dont l'avatar ou le groupe a disparu
+- peut ne contenir que le secret de référence quand un secret voisin en création n'a pas été validé
+Normalement quand une entrée existe il n'y a pas que le secret de référence dedans (sauf cas ci-dessus).
+
 */
 
 const l1 = { compte: true, prefs: true, avatar: true, groupe: true, secret: true, contact: true }
@@ -144,6 +157,9 @@ export function setObjets (state, [table, lobj]) { // lobj : array d'objets
       if (cs && table === 'secret' && cs.id === obj.id && cs.ns === obj.ns) {
         majsecret(state, obj)
       }
+      if (table === 'secret') {
+        majvoisin(state, obj)
+      }
     })
     for (const sid in m) {
       const st = setEntree(state, [table, sid])
@@ -185,3 +201,56 @@ export function setPrefs (state, obj) { if (!state.prefs || state.prefs.v < obj.
 
 /* Enregistrement de toutes les cv d'un coup */
 export function commitRepertoire (state, repertoire) { state.repertoire = { ...repertoire } }
+
+/* Force à créer une entrée de voisinage pour un secret de référence
+AVANT insertion (éventuelle) d'un voisin en création et qui POURRAIT être validée */
+export function setRefVoisin (state, secret) {
+  // setEntree (state, [table, sid])
+  const pk = secret.pk
+  const st = setEntree(state, ['voisin', pk])
+  st[pk] = secret
+  state['voisins@' + pk] = { ...st }
+}
+
+/* Supprime une entrée voisin à condition qu'elle soit vide ou ne contienne que lui */
+export function unsetRefVoisin (state, pkref) {
+  // setEntree (state, [table, sid])
+  const st = state['voisins@' + pkref]
+  if (st) {
+    const l = Object.keys(st).length
+    if (l === 0 || (l === 1 && st[pkref])) delete state['voisins@' + pkref]
+  }
+}
+
+/*
+Enregistrement d'un secret comme voisin
+- Si c'est un secret (potentiellement) de référence, uniquement si il a déjà des voisins enregistrés
+(pour éviter de créer des entrées pour des secrets sans voisins)
+- si c'est un secret voisin, sa référence est cherchée et inscrite aussi (si elle existe)
+*/
+function majvoisin (state, secret) {
+  const pk = secret.pk
+  if (!secret.ref) {
+    // c'est, peut-être, un secret de référence
+    const st = state['voisins@' + pk]
+    if (st) {
+      // il a des voisins enregistrés (a priori) : maj de son entrée
+      st[pk] = secret
+      state['voisins@' + pk] = { ...st }
+    } // sinon on ne l'enregistre pas
+  } else {
+    const pkref = secret.pkref
+    // enregistrement du secret voisin
+    const st = setEntree(state, ['voisin', pkref])
+    st[pk] = secret
+    // recherche du secret de référence
+    const st2 = state['secrets@' + crypt.idToSid(secret.ref[0])]
+    if (st2) {
+      const secref = st2[crypt.idToSid(secret.ref[1])]
+      if (secref) {
+        st[secref.pk] = secref
+      }
+    } // sinon le secret de référence est inconnu dans la session
+    state['voisins@' + pkref] = { ...st }
+  }
+}

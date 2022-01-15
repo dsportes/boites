@@ -5,6 +5,31 @@ import { openWS, closeWS } from './ws.mjs'
 import { store, appexc, serial, deserial, dlvDepassee, NomAvatar, gzip, ungzip, dhstring, getJourJ, cfg } from './util.mjs'
 import { remplacePage } from './page.mjs'
 
+let lgnom, lgtitre
+
+function nomEd (nom, info) {
+  if (!lgnom) lgnom = cfg().lgnom || 20
+  if (info) {
+    const i = info.indexOf('\n')
+    const inf = info.substring(0, (i === -1 ? lgnom : (i > lgnom ? lgnom : i)))
+    return nom + ' [' + inf + ']'
+  }
+  return nom
+}
+
+function titreEd (sid, txt) {
+  if (!lgtitre) lgtitre = cfg().lgtitre || 50
+  let t = ''
+  if (txt) {
+    const i = txt.indexOf('\n')
+    t = txt.substring(0, (i === -1 ? lgtitre : (i < lgtitre ? i : lgtitre)))
+  }
+  if (sid && t) return sid + ' [' + t + ']'
+  if (!sid && t) return t
+  if (sid && !t) return sid
+  return '?'
+}
+
 /* mapObj : clé par table, valeur : array des objets
 - ne traite pas 'compte'
 - inscrit en store OU les supprime du store s'il y était
@@ -701,13 +726,7 @@ export class Prefs {
 
   get memo () { return this.map.mp }
 
-  get titre () {
-    const m = this.map.mp
-    if (!m) return this.sid
-    let i = m.indexOf('\n')
-    if (i === -1) i = m.length
-    return this.sid + ' [' + m.substring(0, i) + ']'
-  }
+  get titre () { return titreEd(this.sid, this.map.mp) }
 
   get mc () { return this.map.mc }
 
@@ -797,6 +816,8 @@ export class Avatar {
   get icone () { return this.photo || '' }
 
   get na () { return data.getNa(this.id) }
+
+  get nom () { return nomEd(this.na.nom, this.info) }
 
   constructor () {
     this.m1ct = new Map() // clé:idc val:ic
@@ -1051,7 +1072,7 @@ schemas.forSchema({
 - `ic` : indice de contact de B pour A.
 - `v` :
 - `st` : statut entier de 3 chiffres, `x y z` : **les valeurs < 0 indiquent un row supprimé (les champs après sont null)**.
-  - `x` : 0: contact présumé actif, 2:disparu
+  - `x` : 1: contact présumé actif, 2:disparu
   - `y` : A accepte 1 (ou non 0) les partages de B.
   - `z` : B accepte 1 (ou non 0) les partages de A.
 - `q1 q2 qm1 qm2` : balance des quotas donnés / reçus par l'avatar A à l'avatar B (contact _fort_).
@@ -1086,10 +1107,13 @@ export class Contact {
 
   get cv () { return data.repertoire.getCv(this.na.id) } // cv DU CONTACT
 
-  get nom () {
-    const cv = this.cv
-    return this.data.nom + (!cv || !cv.info ? '' : ' [' + cv.info + ']')
-  }
+  get nom () { return nomEd(this.data.nom, this.cv ? this.cv.info : '') }
+
+  get stx () { return this.st > 0 ? Math.floor(this.st / 1000) : 0 }
+
+  get styz () { return this.st > 0 ? this.st % 100 : 0 }
+
+  get accepteNouveauSecret () { return this.st === 111 }
 
   majCc () {
     if (this.data.cc) data.setClec(this.id, this.ic, this.data.cc)
@@ -1182,13 +1206,7 @@ export class Groupe {
 
   get sty () { return this.st < 0 ? -1 : this.st % 10 }
 
-  get nom () {
-    if (this.cv.info) {
-      const s = this.cv.info
-      const i = s.indexOf('\n')
-      return (i === -1 ? s : s.substring(0, i)).substring(0, 16)
-    } else return this.na.nom
-  }
+  get nom () { return nomEd(this.na.nom, this.cv.info) }
 
   imDeId (id) {
     const i = this.lmb.indexOf(id)
@@ -1472,7 +1490,7 @@ export class Membre {
 
   get nom () {
     const cv = data.getCv(this.namb.id)
-    return this.data.nom + (!cv || !cv.info ? '' : ' [' + cv.info + ']')
+    return nomEd(this.data.nom, cv ? cv.info : '')
   }
 
   /* retourne l'invitgr correspondant
@@ -1717,6 +1735,8 @@ export class Secret {
 
   get pk () { return this.sid + '/' + this.sid2 }
 
+  get pkref () { return !this.ref ? '' : (crypt.idToSid(this.ref[0]) + '/' + crypt.idToSid(this.ref[1])) }
+
   get vk () { return this.pk + '@' + this.v }
 
   get suppr () { return this.st < 0 }
@@ -1727,10 +1747,7 @@ export class Secret {
 
   get ts () { return this.ns % 3 } // 0:personnel 1:couple 2:groupe
 
-  get titre () {
-    const i = this.txt.t.indexOf('\n')
-    return i === -1 ? this.txt.t.substring(0, 100) : this.txt.t.substring(0, (i < 100 ? i : 100))
-  }
+  get titre () { return titreEd(null, this.txt.t) }
 
   get nbj () { return this.st <= 0 || this.st === 99999 ? 0 : (this.st - getJourJ()) }
 
@@ -1743,6 +1760,16 @@ export class Secret {
   get contact () {
     if (this.ts !== 1) return null
     return data.getContact(this.id, this.ic)
+  }
+
+  get groupe () {
+    if (this.ts !== 2) return null
+    return data.getGroupe(this.id)
+  }
+
+  get partage () {
+    if (this.ts === 0) return 'Secret personnel'
+    return 'Partagé avec ' + (this.groupe || this.contact).nom
   }
 
   nouveauP (id, ref) {

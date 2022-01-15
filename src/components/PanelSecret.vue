@@ -92,8 +92,48 @@
     </div>
 
     <div v-if="tabok==='voisins'" class='col'>
-      <div class="titre-lg">Secrets voisins</div>
+      <q-btn flat dense color="primary" size="md" icon="add" label="Nouveau secret voisin personnel" @click="action1()"/>
+      <q-btn v-if="contactcourant" flat dense size="md" color="primary" icon="add" :label="'Nouveau secret voisin partagé avec ' +  contactcourant.nom" @click="action2()"/>
+      <q-btn v-if="groupecourant" flat dense size="md" color="primary" icon="add" :label="'Nouveau secret voisin du groupe ' +  groupecourant.nom" @click="action3()"/>
+      <div v-for="(s, idx) in state.listevoisins" :key="s.vk" :class="dkli(idx) + ' full-width row items-start q-py-xs'" style="position:relative">
+        <div class="col-auto column">
+          <q-btn class="q-mx-sm" dense push size="sm" :icon="'expand_'+(!row[s.vk]?'less':'more')"
+            color="primary" @click="togglerow(s.vk)"/>
+          <q-btn class="q-mx-sm" dense push size="sm" color="warning" icon="add" @click="nouveauvoisin=true;srcvoisin=s"/>
+        </div>
+        <div class="secretcourant col cursor-pointer" @click="ouvrirvoisin(s)">
+          <show-html v-if="row[s.vk]" class="height-8 full-width overlay-y-auto bottomborder" :texte="s.txt.t" :idx="idx"/>
+          <div v-else class="full-width text-bold">{{s.titre}}</div>
+          <div class="full-width row items-center">
+            <apercu-motscles class="col-6" :motscles="state.motscles" :src="s.mc" :groupe-id="s.ts===2?s.id:0"/>
+            <div class="col-6 row justify-end items-center">
+              <span class="fs-sm q-px-sm">{{s.partage}}</span>
+              <span class="fs-sm font-mono">{{s.dh}}</span>
+              <q-btn v-if="s.nbpj" size="sm" color="warning" flat dense icon="attach_file" :label="s.nbpj"/>
+              <q-btn v-if="s.st!=99999" size="sm" color="warning" flat dense icon="auto_delete" :label="s.nbj"/>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
+
+    <q-dialog v-model="nouveauvoisin">
+      <q-card class="petitelargeur fs-md">
+        <q-card-section>
+          <div class="titre-lg maauto">
+            <span>Création d'un nouveau secret voisin </span>
+            <span v-if="srcvoisin.ts === 0">personnel</span>
+            <div v-else>{{srcvoisin.partage}}</div>
+          </div>
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn v-if="srcvoisin.ts === 0" flat dense label="Créer le secret" color="primary" @click="nouveauvoisin=false;action1()"/>
+          <q-btn v-if="srcvoisin.ts === 1" flat dense label="Créer le secret" color="primary" @click="nouveauvoisin=false;action2(srcvoisin.contact)"/>
+          <q-btn v-if="srcvoisin.ts === 2" flat dense label="Créer le secret" color="primary" @click="nouveauvoisin=false;action3(srcvoisin.groupe)"/>
+          <q-btn flat dense label="Annuler" color="warning" @click="nouveauvoisin=false"/>
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
 
   </q-card>
 </template>
@@ -104,15 +144,16 @@ import { useStore } from 'vuex'
 import ApercuMotscles from './ApercuMotscles.vue'
 import SelectMotscles from './SelectMotscles.vue'
 import EditeurTexteSecret from './EditeurTexteSecret.vue'
+import ShowHtml from './ShowHtml.vue'
 import { equ8, getJourJ, cfg, serial, Motscles, dhtToString } from '../app/util.mjs'
 import { NouveauSecret, Maj1Secret } from '../app/operations.mjs'
-import { data } from '../app/modele.mjs'
+import { data, Secret } from '../app/modele.mjs'
 import { crypt } from '../app/crypto.mjs'
 
 export default ({
   name: 'PanelSecret',
 
-  components: { ApercuMotscles, SelectMotscles, EditeurTexteSecret },
+  components: { ApercuMotscles, SelectMotscles, EditeurTexteSecret, ShowHtml },
 
   props: { close: Function },
 
@@ -141,6 +182,7 @@ export default ({
 
   data () {
     return {
+      row: {},
       tabsecret: 'texte',
       tabok: 'texte',
       plus: false,
@@ -148,6 +190,8 @@ export default ({
       mcgedit: false,
       temporaire: false,
       alertesaisie: false,
+      nouveauvoisin: false,
+      srcvoisin: null,
       options1: [
         { label: 'modifiable', value: 0 },
         { label: 'non modifiable (archivé)', value: 2 }
@@ -189,6 +233,62 @@ export default ({
   },
 
   methods: {
+    dkli (idx) { return this.$q.dark.isActive ? (idx ? 'sombre' + (idx % 2) : 'sombre0') : (idx ? 'clair' + (idx % 2) : 'clair0') },
+    togglerow (vk) {
+      if (this.row[vk] === true) {
+        this.row[vk] = false
+      } else {
+        this.row[vk] = true
+      }
+    },
+    ouvrirvoisin (s) {
+      this.secret = s
+      this.tabsecret = 'texte'
+      this.tabok = 'secret'
+    },
+    listevoisins () {
+      const lst = []
+      for (const pk in this.voisins) lst.push(this.voisins[pk])
+      lst.sort((a, b) => {
+        return !a.ref ? 1 : (a.titre > b.titre ? 1 : (a.titre < b.titre ? -1 : 0))
+      })
+      return lst
+    },
+    action1 () {
+      const s = this.secret
+      const ref = s.ref ? s.ref : [s.id, s.ns]
+      this.ouvrirvoisin(new Secret().nouveauP(s.id, ref))
+    },
+    action2 (cx) {
+      const s = this.secret
+      const ref = s.ref ? s.ref : [s.id, s.ns]
+      const c = cx || this.contactcourant
+      if (c && c.accepteNouveauSecret) {
+        this.ouvrirvoisin(new Secret().nouveauC(s.id, c, ref))
+      } else {
+        this.diagnostic = 'Le contact ' + (c ? c.nom : '?') + ' n\'est pas en état d\'accepter le partage de nouveaux secrets.'
+      }
+    },
+    action3 (gx) {
+      const s = this.secret
+      const ref = s.ref ? s.ref : [s.id, s.ns]
+      const g = gx || this.groupecourant
+      if (!g) {
+        this.diagnostic = 'Le groupe ? n\'est pas en état d\'accepter le partage de nouveaux secrets.'
+        return
+      }
+      if (g.sty === 0) {
+        this.diagnostic = 'Le groupe ' + g.nom + ' est "archivé", création et modification de secrets impossible.'
+        return
+      }
+      const im = g.imDeId(this.avatar.id)
+      const membre = im ? data.getMembre(g.id, im) : null
+      if (!membre || !membre.stp) {
+        this.diagnostic = 'Seuls les membres de niveau "auteur" et "animateur" du groupe ' + g.nom + ' peuvent créer ou modifier des secrets.'
+        return
+      }
+      this.ouvrirvoisin(new Secret().nouveauG(s.id, g, ref))
+    },
     plusinfo () { // liste des auteurs, mots clés des membres du groupe, etc. dans un dialogue
       this.plus = true
     },
@@ -196,6 +296,7 @@ export default ({
       if (this.modif) {
         this.diagnostic = 'Des modifications ont été faites. Avant de fermer ce secret, soit les "Annuler", soit les "Valider"'
       } else {
+        this.avantFermeture()
         this.secret = null
         if (this.close) this.close()
       }
@@ -344,10 +445,26 @@ export default ({
     })
     const prefs = computed(() => { return data.getPrefs() })
     const avatar = computed(() => { return $store.state.db.avatar })
+    const contactcourant = computed(() => { return $store.state.db.contact })
+    const groupecourant = computed(() => { return $store.state.db.groupe })
     const mode = computed(() => $store.state.ui.mode)
     const secret = computed({
       get: () => $store.state.db.secret,
       set: (val) => $store.commit('db/majsecret', val)
+    })
+
+    /* Le set des voisins ne changera pas MEME si le secret change, donc pas de watch
+    En effet on ne peut au cours de la vie de ce composant ne changer de secret
+    QUE pour un autre secret voisin, donc ayant le même "voisins"
+    SI c'est un secret SANS ref, il peut devenir de référence au cours de la vie
+    du composant, il n'est pas enregistré dans les voisins, il faut donc le forcer.
+    */
+    if (secret.value && !secret.value.ref) $store.commit('db/setRefVoisin', secret.value)
+    const voisins = computed(() => {
+      const s = secret.value
+      if (!s) return {}
+      const pk = s.ref ? s.pkref : s.pk
+      return $store.state.db['voisins@' + pk]
     })
 
     toRef(props, 'close')
@@ -368,13 +485,23 @@ export default ({
       mcglocal: null,
       oralocal: null,
       templocal: null,
-      dhlocal: 0
+      dhlocal: 0,
+      listevoisins: []
     })
     const mc = reactive({ categs: new Map(), lcategs: [], st: { enedition: false, modifie: false } })
 
     function chargerMc () {
       state.motscles = new Motscles(mc, 1, secret.value && secret.value.ts === 2 ? secret.value.id : 0)
       state.motscles.recharger()
+    }
+
+    function lstvoisins (mapv) {
+      const lst = []
+      for (const pk in mapv) lst.push(mapv[pk])
+      lst.sort((a, b) => {
+        return !a.ref ? 1 : (a.titre > b.titre ? 1 : (a.titre < b.titre ? -1 : 0))
+      })
+      return lst
     }
 
     function undomcl () { const s = secret.value; state.mclocal = s.ts === 2 ? s.mc[state.im] : s.mc }
@@ -397,10 +524,12 @@ export default ({
         state.avatar = s.ts === 0 ? avatar : null
         state.groupe = s.ts === 2 ? data.getGroupe(s.id) : null
         state.contact = s.ts === 1 ? data.getContact(s.id, s.ic) : null
+        state.voisins = voisins
         state.im = s.ts === 2 ? state.groupe.imDeId(avid) : (s.ts === 1 ? (state.contact.na.id > avid ? 1 : 2) : 0)
         state.membre = s.ts === 2 && state.im ? data.getMembre(state.groupe.id, state.im) : null
         state.encreation = s.v === 0
         state.ro = 0
+        state.listevoisins = lstvoisins(voisins.value)
         if (s.ts === 2) {
           if (!s.mc[state.im]) s.mc[state.im] = new Uint8Array([])
           if (!s.mc[0]) s.mc[0] = new Uint8Array([])
@@ -441,11 +570,25 @@ export default ({
       if (ap && (!av || av.pk !== ap.pk)) chargerMc() // le nouveau peut avoir un autre groupe
     })
 
+    watch(() => voisins.value, (ap, av) => {
+      state.listevoisins = lstvoisins(ap)
+    })
+
+    function avantFermeture () {
+      if (secret.value) {
+        const pkref = secret.value.ref ? secret.value.pkref : secret.value.pk
+        $store.commit('db/unsetRefVoisin', pkref)
+      }
+    }
+
     // watch(() => state.textelocal, (ap, av) => { console.log(av, '\n', ap) })
 
     return {
       diagnostic,
+      contactcourant,
+      groupecourant,
       secret,
+      voisins,
       u8vide: new Uint8Array([]),
       state,
       mode,
@@ -456,7 +599,8 @@ export default ({
       undomcg,
       undotp,
       undotx,
-      undoora
+      undoora,
+      avantFermeture
     }
   }
 })
@@ -474,4 +618,12 @@ export default ({
   padding: 3px
   border-radius: 5px
   border: 1px solid grey
+.bottomborder
+  border-bottom: 1px solid $grey-5
+.secretcourant:hover
+  background-color: rgba(130, 130, 130, 0.5)
+.addnv
+  position: absolute
+  top: 5px
+  right: 5px
 </style>

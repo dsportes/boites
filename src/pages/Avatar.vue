@@ -9,11 +9,12 @@
           <show-html v-if="row[s.vk]" class="height-8 full-width overlay-y-auto bottomborder" :texte="s.txt.t" :idx="idx"/>
           <div v-else class="full-width text-bold">{{s.titre}}</div>
           <div class="full-width row items-center">
-            <apercu-motscles class="col" :motscles="motscles" :src="s.mc" :groupe-id="s.ts===2?s.id:0"/>
-            <div class="col-auto q-ml-md">
+            <apercu-motscles class="col-6" :motscles="motscles" :src="s.mc" :groupe-id="s.ts===2?s.id:0"/>
+            <div class="col-6 row justify-end items-center">
+              <span class="fs-sm q-px-sm">{{s.partage}}</span>
               <span class="fs-sm font-mono">{{s.dh}}</span>
-              <q-btn v-if="s.nbpj" size="md" color="warning" flat dense icon="attach_file" :label="s.nbpj"/>
-              <q-btn v-if="s.st!=99999" size="md" color="warning" flat dense icon="auto_delete" :label="s.nbj"/>
+              <q-btn v-if="s.nbpj" size="sm" color="warning" flat dense icon="attach_file" :label="s.nbpj"/>
+              <q-btn v-if="s.st!=99999" size="sm" color="warning" flat dense icon="auto_delete" :label="s.nbj"/>
             </div>
           </div>
         </div>
@@ -105,20 +106,30 @@ export default ({
       if (this.secret) return
       if (n === 1) { // secret personnel
         this.ouvrirsecret(new Secret().nouveauP(this.avatar.id))
-      } else if (n === 2 && this.contact) {
-        this.ouvrirsecret(new Secret().nouveauC(this.avatar.id, this.contact))
-      } else if (n === 3 && this.groupe) {
-        if (this.groupe.sty === 0) {
-          this.diagnostic = 'Le groupe est "archivé", création et modification de secrets impossible.'
+      } else if (n === 2) {
+        const c = this.contact
+        if (c && c.accepteNouveauSecret) {
+          this.ouvrirsecret(new Secret().nouveauC(this.avatar.id, c))
+        } else {
+          this.diagnostic = 'Le contact ' + (c ? c.nom : '?') + ' n\'est pas en état d\'accepter le partage de nouveaux secrets.'
+        }
+      } else if (n === 3) {
+        const g = this.groupe
+        if (!g) {
+          this.diagnostic = 'Le groupe ? n\'est pas en état d\'accepter le partage de nouveaux secrets.'
           return
         }
-        const im = this.groupe.imDeId(this.avatar.id)
-        const membre = im ? data.getMembre(this.groupe.id, im) : null
+        if (g.sty === 0) {
+          this.diagnostic = 'Le groupe ' + g.nom + ' est "archivé", création et modification de secrets impossible.'
+          return
+        }
+        const im = g.imDeId(this.avatar.id)
+        const membre = im ? data.getMembre(g.id, im) : null
         if (!membre || !membre.stp) {
-          this.diagnostic = 'Seuls les membres de niveau "auteur" et "animateur" peuvent créer ou modifier des secrets.'
+          this.diagnostic = 'Seuls les membres de niveau "auteur" et "animateur" du groupe ' + g.nom + ' peuvent créer ou modifier des secrets.'
           return
         }
-        this.ouvrirsecret(new Secret().nouveauG(this.avatar.id, this.groupe))
+        this.ouvrirsecret(new Secret().nouveauG(this.avatar.id, g))
       }
     },
     fermerfiltre () {
