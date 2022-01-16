@@ -912,7 +912,7 @@ Création d'un nouveau secret P
 */
 export class NouveauSecret extends OperationUI {
   constructor () {
-    super('Création d\'un nouveau secret personnel', OUI, SELONMODE)
+    super('Création d\'un nouveau secret', OUI, SELONMODE)
   }
 
   excAffichages () { return [this.excAffichage1f] }
@@ -937,17 +937,47 @@ Maj 1 d'un secret P : txt, mc, perm
 */
 export class Maj1Secret extends OperationUI {
   constructor () {
-    super('Mise à jour d\'un secret personnel', OUI, SELONMODE)
+    super('Mise à jour d\'un secret', OUI, SELONMODE)
   }
 
   excAffichages () { return [this.excAffichage1f] }
 
   // excActions(), défaut de Operation
 
-  async run (arg) { // { id: s.id, ns: s.ns, v1, txts: txts, mcs: mcs }
+  async run (arg) { // arg = ts, id, ns, v1, mc, im, mcg, txts, ora, temp, id2, ns2
     try {
       const args = { sessionId: data.sessionId, ...arg }
       const ret = await post(this, 'm1', 'maj1Secret', args)
+      if (data.dh < ret.dh) data.dh = ret.dh
+      this.finOK()
+    } catch (e) {
+      await this.finKO(e)
+    }
+  }
+}
+
+/******************************************************
+Pièce jointe d'un secret P : txt, mc, perm
+*/
+export class PjSecret extends OperationUI {
+  constructor () {
+    super('Mise à jour d\'une pièce jointe d\'un secret', OUI, SELONMODE)
+  }
+
+  excAffichages () { return [this.excAffichage1f] }
+
+  // excActions(), défaut de Operation
+
+  async run (arg) {
+    /* { ts, id: s.id, ns: s.ns, cle, idc, buf, lg, id2, ns2}
+    - `cle` : hash court en base64 URL de nom.ext
+    - `idc` : id complète de la pièce jointe (nom/type/dh), cryptée par la clé du secret et en base64 URL.
+    - buf : contenu binaire crypté
+    - lg : taille de la pièce jointe d'origine (non gzippée, non cryptée)
+    */
+    try {
+      const args = { sessionId: data.sessionId, ...arg }
+      const ret = await post(this, 'm1', 'pjSecret', args)
       if (data.dh < ret.dh) data.dh = ret.dh
       this.finOK()
     } catch (e) {

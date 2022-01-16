@@ -169,16 +169,24 @@ export function getJourJ () {
 /* `dlv` : date limite de validité, en nombre de jours depuis le 1/1/2021. */
 export function dlvDepassee (dlv) { return dlv < jourJ }
 
-export async function readFile (file) {
+export async function readFile (file, bin) {
   return new Promise((resolve, reject) => {
     const image = { size: file.size, name: file.name, type: file.type }
     const reader = new FileReader()
     reader.addEventListener('load', (event) => {
-      image.b64 = event.target.result
+      if (!bin) {
+        image.b64 = event.target.result
+      } else {
+        image.u8 = new Uint8Array(event.target.result)
+      }
       resolve(image)
     })
     reader.onerror = (error) => reject(error)
-    reader.readAsDataURL(file)
+    if (!bin) {
+      reader.readAsDataURL(file)
+    } else {
+      reader.readAsArrayBuffer(file)
+    }
   })
 }
 
@@ -345,6 +353,22 @@ export async function get (module, fonction, args) {
       method: 'get',
       url: u,
       params: args,
+      headers: headers,
+      responseType: 'arraybuffer',
+      timeout: $cfg.debug ? 50000000 : 5000
+    })
+    return r.status === 200 ? r.data : null
+  } catch (e) {
+    return null
+  }
+}
+
+export async function getpj (secid, pjid) {
+  try {
+    const u = $cfg.urlserveur + '/www/' + $store.state.ui.org + '/' + secid + '/' + pjid
+    const r = await axios({
+      method: 'get',
+      url: u,
       headers: headers,
       responseType: 'arraybuffer',
       timeout: $cfg.debug ? 50000000 : 5000

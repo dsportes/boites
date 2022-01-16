@@ -88,7 +88,22 @@
     </div>
 
     <div v-if="tabok==='pj'" class='col'>
-      <div class="titre-lg">Pièces jointes</div>
+      <q-btn flat dense color="primary" size="md" icon="add" label="Ajouter une pièce jointe" @click="nompj='';saisiefichier=true"/>
+      <div v-if="secret && secret.mpj" class="row justify-around items-start">
+        <q-card v-for="pj in secret.mpj" :key="pj.nom" class="cardpj q-pa-sm">
+          <q-card-section>
+            <div>Nom : {{pj.nom}}</div>
+            <div>Type : {{pj.type}}</div>
+            <div>Taille : {{pj.size}}</div>
+            <div>Date : {{dhstring(pj.dh)}}</div>
+          </q-card-section>
+          <q-card-actions vertical align="center">
+            <q-btn flat dense color="primary" icon="visibility" label="Afficher dans le navigateur" @click="affpj(pj)"/>
+            <q-btn flat dense color="primary" icon="refresh" label="Mettre à jour" @click="majpj(pj)"/>
+            <q-btn flat dense color="warning" icon="delete" label="Supprimer" @click="supprpj(pj)"/>
+          </q-card-actions>
+        </q-card>
+      </div>
     </div>
 
     <div v-if="tabok==='voisins'" class='col'>
@@ -117,6 +132,10 @@
       </div>
     </div>
 
+    <q-dialog v-model="saisiefichier">
+      <piece-jointe :nom="nompj" :close="fermerpj" @ok="okpj"/>
+    </q-dialog>
+
     <q-dialog v-model="nouveauvoisin">
       <q-card class="petitelargeur fs-md">
         <q-card-section>
@@ -142,23 +161,23 @@
 import { toRef, reactive, watch, computed } from 'vue'
 import { useStore } from 'vuex'
 import ApercuMotscles from './ApercuMotscles.vue'
+import PieceJointe from './PieceJointe.vue'
 import SelectMotscles from './SelectMotscles.vue'
 import EditeurTexteSecret from './EditeurTexteSecret.vue'
 import ShowHtml from './ShowHtml.vue'
-import { equ8, getJourJ, cfg, serial, Motscles, dhtToString } from '../app/util.mjs'
-import { NouveauSecret, Maj1Secret } from '../app/operations.mjs'
+import { equ8, getJourJ, cfg, serial, Motscles, dhstring, getpj } from '../app/util.mjs'
+import { NouveauSecret, Maj1Secret, PjSecret } from '../app/operations.mjs'
 import { data, Secret } from '../app/modele.mjs'
 import { crypt } from '../app/crypto.mjs'
 
 export default ({
   name: 'PanelSecret',
 
-  components: { ApercuMotscles, SelectMotscles, EditeurTexteSecret, ShowHtml },
+  components: { ApercuMotscles, SelectMotscles, EditeurTexteSecret, ShowHtml, PieceJointe },
 
   props: { close: Function },
 
   computed: {
-    dhstr () { return dhtToString(this.state.dhlocal) },
     tbclass () { return this.$q.dark.isActive ? ' sombre' : ' clair' },
     modifmcl () { return !equ8(this.state.mclocal, this.secret.ts === 2 ? this.secret.mc[this.state.im] : this.secret.mc) },
     modifmcg () { return this.secret.ts === 2 && !equ8(this.state.mcglocal, this.secret.mc[0]) },
@@ -191,6 +210,8 @@ export default ({
       temporaire: false,
       alertesaisie: false,
       nouveauvoisin: false,
+      saisiefichier: false,
+      nompj: '',
       srcvoisin: null,
       options1: [
         { label: 'modifiable', value: 0 },
@@ -233,6 +254,8 @@ export default ({
   },
 
   methods: {
+    dhstring (t) { return dhstring(new Date(t)) },
+
     dkli (idx) { return this.$q.dark.isActive ? (idx ? 'sombre' + (idx % 2) : 'sombre0') : (idx ? 'clair' + (idx % 2) : 'clair0') },
     togglerow (vk) {
       if (this.row[vk] === true) {
@@ -300,6 +323,60 @@ export default ({
         this.secret = null
         if (this.close) this.close()
       }
+    },
+
+    fermerpj () { this.saisiefichier = false },
+    async pjdata (pj) {
+      const cle = crypt.hash(pj.nom, false, true)
+      const x = pj.nom + '|' + pj.type + '|' + pj.dh
+      const idc = crypt.u8ToB64(await crypt.crypter(data.clek, x, 1), true)
+      const secid = this.secret.sid + '@' + this.secret.sid2
+      const buf = await getpj(secid, cle + '@' + idc)
+      return buf ? crypt.decrypter(data.clek, new Uint8Array(buf)) : null
+    },
+
+    async affpj (pj) {
+      const bufpj = await this.pjdata(pj)
+      if (bufpj) {
+        const blob = new Blob([bufpj], { type: pj.type })
+        // const url = URL.createObjectURL(new Blob(['Hello world']))
+        const url = URL.createObjectURL(blob)
+        console.log(url)
+        setTimeout(() => { this.wop(url) }, 500)
+      } else {
+        this.diagnostic = 'Contenu de la pièce jointe non disponible (corrompu ? effacé ?)'
+      }
+    },
+
+    wop (url) { // ne semble pas marcher dans une fonction async. Etrange !
+      // const url = URL.createObjectURL(new Blob(['Hello world']))
+      // console.log(url)
+      window.open(url, '_blank')
+    },
+
+    majpj (pj) {
+      this.nompj = pj.nom
+      this.saisiefichier = true
+    },
+
+    supprpj (pj) {
+
+    },
+
+    async okpj (pj) {
+      const cle = crypt.hash(pj.nompj, false, true)
+      const x = pj.nompj + '|' + pj.type + '|' + new Date().getTime()
+      const idc = crypt.u8ToB64(await crypt.crypter(data.clek, x, 1), true)
+      // console.log(pj.nompj, pj.size, pj.type)
+      const s = this.secret
+      const buf = await crypt.crypter(data.clek, pj.u8)
+      const arg = { ts: s.ts, id: s.id, ns: s.ns, cle, idc, lg: pj.size, buf }
+      if (s.ts === 1) {
+        arg.ns2 = s.ns2
+        arg.id2 = s.id2
+      }
+      await new PjSecret().run(arg)
+      this.saisiefichier = false
     },
 
     ouvrirmcl () { this.mcledit = true },
@@ -403,11 +480,11 @@ export default ({
         const temp = tempav === this.state.templocal ? null : (this.state.templocal ? this.jourJ + this.limjours : 99999)
         const ora = this.state.oralocal === s.ora ? null : this.state.oralocal
         const arg = { ts: s.ts, id: s.id, ns: s.ns, mc, txts, v1, ora, temp }
-        if (s.ts === 2) {
+        if (s.ts === 2) { // im requis pour mettre à jour les motsclés de l'avatar
           arg.mcg = mcg
           arg.im = this.state.im
         }
-        if (s.ts === 1) {
+        if (s.ts === 1) { // pour éviter une relecture inutile au serveur (qui aurait pu les trouver lui-même)
           arg.id2 = s.id2
           arg.ns2 = s.ns2
         }
@@ -504,15 +581,15 @@ export default ({
       return lst
     }
 
-    function undomcl () { const s = secret.value; state.mclocal = s.ts === 2 ? s.mc[state.im] : s.mc }
+    function undomcl () { const s = secret.value; if (s) { state.mclocal = s.ts === 2 ? s.mc[state.im] : s.mc } }
 
-    function undomcg () { const s = secret.value; state.mcglocal = s.ts === 2 ? s.mc[0] : null }
+    function undomcg () { const s = secret.value; if (s) { state.mcglocal = s.ts === 2 ? s.mc[0] : null } }
 
-    function undotp () { const st = secret.value.st; state.templocal = st > 0 && st < 99999 }
+    function undotp () { const s = secret.value; if (s) { const st = s.st; state.templocal = st > 0 && st < 99999 } }
 
-    function undotx () { state.textelocal = secret.value.txt.t; state.dhlocal = secret.value.txt.d }
+    function undotx () { const s = secret.value; if (s) { state.textelocal = s.txt.t; state.dhlocal = s.txt.d } }
 
-    function undoora () { state.oralocal = secret.value.ora }
+    function undoora () { const s = secret.value; if (s) { state.oralocal = s.ora } }
 
     function undo () { undomcl(); undomcg(); undotp(); undotx(); undoora() }
 
@@ -626,4 +703,6 @@ export default ({
   position: absolute
   top: 5px
   right: 5px
+.cardpj
+  width: 18rem
 </style>

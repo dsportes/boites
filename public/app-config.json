@@ -1,9 +1,9 @@
 {
     "build" : 2,
     "debug" : 1,
-    "urlserveur1": "https://test.sportes.fr:443",
-    "urlserveur": "https://192.168.1.10:8443",
-    "urlserveur2": "https://localhost:8443",
+    "urlserveur": "https://test.sportes.fr:8443",
+    "urlserveur2": "https://192.168.1.10:8443",
+    "urlserveur1": "https://localhost:8443",
     "phrases" : [
       ["leszsanglotszLONGSz", "garezauzGORILLEz"],
       ["auzvillagezSANSz", "jaizmauvaisezREPUTATIONz"]
