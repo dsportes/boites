@@ -87,20 +87,22 @@
 
     </div>
 
-    <div v-if="tabok==='pj'" class='col'>
-      <q-btn flat dense color="primary" size="md" icon="add" label="Ajouter une pièce jointe" @click="nompj='';saisiefichier=true"/>
-      <div v-if="secret && secret.mpj" class="row justify-around items-start">
+    <div v-if="tabok==='pj'" class='col column items-center'>
+      <q-btn :disable="state.ro !== 0" flat dense color="primary" class="q-mt-sm" size="md" icon="add" label="Ajouter une pièce jointe" @click="nompj='';saisiefichier=true"/>
+      <div v-if="state.ro !== 0" class="bg-yellow text-bold text-negative text-center">Le secret est en lecture seule, les pièces jointes peuvent visualisées mais ni créées, ni modifiées.</div>
+      <div v-if="secret && secret.mpj" class="q-mt-sm row justify-around items-start">
         <q-card v-for="pj in secret.mpj" :key="pj.nom" class="cardpj q-pa-sm">
-          <q-card-section>
+          <q-card-section class="ma-qcard-section">
             <div>Nom : {{pj.nom}}</div>
             <div>Type : {{pj.type}}</div>
             <div>Taille : {{pj.size}}</div>
             <div>Date : {{dhstring(pj.dh)}}</div>
           </q-card-section>
-          <q-card-actions vertical align="center">
-            <q-btn flat dense color="primary" icon="visibility" label="Afficher dans le navigateur" @click="affpj(pj)"/>
-            <q-btn flat dense color="primary" icon="refresh" label="Mettre à jour" @click="majpj(pj)"/>
-            <q-btn flat dense color="warning" icon="delete" label="Supprimer" @click="supprpj(pj)"/>
+          <q-card-actions class="ma-qcard-section" align="left">
+            <q-btn :disable="state.ro !== 0" flat dense color="primary" icon="visibility" label="Afficher" @click="affpj(pj)"/>
+            <q-btn :disable="state.ro !== 0" flat dense color="primary" icon="save" label="Enregistrer" @click="enregpj(pj)"/>
+            <q-btn :disable="state.ro !== 0" flat dense color="primary" icon="refresh" label="Remplacer" @click="majpj(pj)"/>
+            <q-btn :disable="state.ro !== 0" flat dense color="warning" icon="delete" label="Supprimer" @click="supprpj(pj)"/>
           </q-card-actions>
         </q-card>
       </div>
@@ -165,10 +167,11 @@ import PieceJointe from './PieceJointe.vue'
 import SelectMotscles from './SelectMotscles.vue'
 import EditeurTexteSecret from './EditeurTexteSecret.vue'
 import ShowHtml from './ShowHtml.vue'
-import { equ8, getJourJ, cfg, serial, Motscles, dhstring, getpj } from '../app/util.mjs'
+import { equ8, getJourJ, cfg, serial, Motscles, dhstring, getpj, gzipT, ungzipT } from '../app/util.mjs'
 import { NouveauSecret, Maj1Secret, PjSecret } from '../app/operations.mjs'
 import { data, Secret } from '../app/modele.mjs'
 import { crypt } from '../app/crypto.mjs'
+import { saveAs } from 'file-saver'
 
 export default ({
   name: 'PanelSecret',
@@ -184,7 +187,7 @@ export default ({
     modifora () { return this.state.oralocal !== this.secret.ora },
     modiftx () { return this.state.textelocal !== this.secret.txt.t },
     modiftp () { return this.state.templocal !== (this.secret.st >= 0 && this.secret.st < 99999) },
-    modif () { return this.modifmcl || this.modifmcg || this.modiftx || this.modiftp || this.modifora },
+    modif () { return this.secret && (this.modifmcl || this.modifmcg || this.modiftx || this.modiftp || this.modifora) },
     erreur () { return this.state.ro || this.state.textelocal.length > 9 ? '' : 'Le texte doit contenir au moins 10 signes' },
     msgtemp () {
       if (this.state.templocal) {
@@ -326,30 +329,40 @@ export default ({
     },
 
     fermerpj () { this.saisiefichier = false },
-    async pjdata (pj) {
+
+    async urlDe (pj, b) {
       const cle = crypt.hash(pj.nom, false, true)
-      const x = pj.nom + '|' + pj.type + '|' + pj.dh
+      const x = pj.nom + '|' + pj.type + '|' + pj.dh + (pj.gz ? '$' : '')
       const idc = crypt.u8ToB64(await crypt.crypter(data.clek, x, 1), true)
       const secid = this.secret.sid + '@' + this.secret.sid2
       const buf = await getpj(secid, cle + '@' + idc)
-      return buf ? crypt.decrypter(data.clek, new Uint8Array(buf)) : null
+      if (!buf) return null
+      const u8 = new Uint8Array(buf)
+      const buf2 = await crypt.decrypter(data.clek, u8)
+      const buf3 = pj.gz ? ungzipT(buf2) : buf2
+      const blob = new Blob([buf3], { type: pj.type })
+      return b ? blob : URL.createObjectURL(blob)
     },
 
     async affpj (pj) {
-      const bufpj = await this.pjdata(pj)
-      if (bufpj) {
-        const blob = new Blob([bufpj], { type: pj.type })
-        // const url = URL.createObjectURL(new Blob(['Hello world']))
-        const url = URL.createObjectURL(blob)
-        console.log(url)
-        setTimeout(() => { this.wop(url) }, 500)
+      const urlpj = await this.urlDe(pj)
+      if (urlpj) {
+        setTimeout(() => { this.wop(urlpj) }, 500)
       } else {
         this.diagnostic = 'Contenu de la pièce jointe non disponible (corrompu ? effacé ?)'
       }
     },
 
-    wop (url) { // ne semble pas marcher dans une fonction async. Etrange !
-      // const url = URL.createObjectURL(new Blob(['Hello world']))
+    async enregpj (pj) {
+      const blob = await this.urlDe(pj)
+      if (blob) {
+        saveAs(blob, pj.nom)
+      } else {
+        this.diagnostic = 'Contenu de la pièce jointe non disponible (corrompu ? effacé ?)'
+      }
+    },
+
+    wop (url) { // L'appel direct de wndow.open ne semble pas marcher dans une fonction async. Etrange !
       // console.log(url)
       window.open(url, '_blank')
     },
@@ -365,11 +378,13 @@ export default ({
 
     async okpj (pj) {
       const cle = crypt.hash(pj.nompj, false, true)
-      const x = pj.nompj + '|' + pj.type + '|' + new Date().getTime()
+      pj.gz = pj.type.startsWith('text/')
+      const x = pj.nompj + '|' + pj.type + '|' + new Date().getTime() + (pj.gz ? '$' : '')
       const idc = crypt.u8ToB64(await crypt.crypter(data.clek, x, 1), true)
       // console.log(pj.nompj, pj.size, pj.type)
       const s = this.secret
-      const buf = await crypt.crypter(data.clek, pj.u8)
+      const b = pj.gz ? gzipT(pj.u8) : pj.u8
+      const buf = await crypt.crypter(data.clek, b)
       const arg = { ts: s.ts, id: s.id, ns: s.ns, cle, idc, lg: pj.size, buf }
       if (s.ts === 1) {
         arg.ns2 = s.ns2
@@ -705,4 +720,6 @@ export default ({
   right: 5px
 .cardpj
   width: 18rem
+.ma-qcard-section
+  padding: 0 !important
 </style>

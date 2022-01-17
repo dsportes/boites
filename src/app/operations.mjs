@@ -866,7 +866,7 @@ export class PrefCompte extends OperationUI {
     super('Mise à jour d\'une préférence du compte', OUI, SELONMODE)
   }
 
-  excAffichages () { return [this.excAffichage1f] }
+  excAffichages () { return [this.excAffichage2] }
 
   // excActions(), défaut de Operation
 
@@ -891,7 +891,7 @@ export class CvAvatar extends OperationUI {
     super('Mise à jour de la carte de visite d\'un avatar', OUI, SELONMODE)
   }
 
-  excAffichages () { return [this.excAffichage1f] }
+  excAffichages () { return [this.excAffichage2] }
 
   // excActions(), défaut de Operation
 
@@ -915,7 +915,7 @@ export class NouveauSecret extends OperationUI {
     super('Création d\'un nouveau secret', OUI, SELONMODE)
   }
 
-  excAffichages () { return [this.excAffichage1f] }
+  excAffichages () { return [this.excAffichage2] }
 
   // excActions(), défaut de Operation
 
@@ -940,7 +940,7 @@ export class Maj1Secret extends OperationUI {
     super('Mise à jour d\'un secret', OUI, SELONMODE)
   }
 
-  excAffichages () { return [this.excAffichage1f] }
+  excAffichages () { return [this.excAffichage2] }
 
   // excActions(), défaut de Operation
 
@@ -964,7 +964,7 @@ export class PjSecret extends OperationUI {
     super('Mise à jour d\'une pièce jointe d\'un secret', OUI, SELONMODE)
   }
 
-  excAffichages () { return [this.excAffichage1f] }
+  excAffichages () { return [this.excAffichage2] }
 
   // excActions(), défaut de Operation
 

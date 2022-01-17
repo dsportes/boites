@@ -1855,11 +1855,16 @@ export class Secret {
         const map = row.mpjs ? deserial(row.mpjs) : {}
         for (const cpj in map) {
           const x = map[cpj]
-          const nomc = await crypt.decrypterStr(cles, crypt.b64ToU8(x[0]))
+          let nomc = await crypt.decrypterStr(cles, crypt.b64ToU8(x[0]))
+          let gz = false
+          if (nomc.endsWith('$')) {
+            gz = true
+            nomc = nomc.substring(0, nomc.length - 1)
+          }
           const i = nomc.indexOf('|')
           const j = nomc.lastIndexOf('|')
           this.nbpj++
-          this.mpj[cpj] = { nom: nomc.substring(0, i), type: nomc.substring(i + 1, j), dh: parseInt(nomc.substring(j + 1)), size: x[1] }
+          this.mpj[cpj] = { nom: nomc.substring(0, i), type: nomc.substring(i + 1, j), dh: parseInt(nomc.substring(j + 1)), size: x[1], gz: gz }
         }
       }
       if (this.ts === 1) {

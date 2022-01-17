@@ -1,9 +1,9 @@
 <template>
   <q-card-section class="q-pt-none shadow-8 fs-md">
     <div class="titre-lg">{{msg[phase]}}</div>
-    <div class="text-warning">Ce nom NE POURRA PLUS être changé</div>
-    <q-input dense counter v-model="nom" label="Nom de l'avatar"
-      :rules="[val => (val.length >= 4 && val.length <= 24) || 'Entre 4 et 24 caractères' ]"/>
+    <div class="text-warning">Ce nom NE POURRA PLUS être changé.
+      Caractères <span class="q-px-sm text-negative bg-yellow text-bold">{{interdits}}</span> et non imprimables (CR TAB ...) interdits.</div>
+    <q-input dense counter v-model="nom" label="Nom de l'avatar" :rules="[r1,r2]"/>
     <div class="row justify-between items-center no-wrap">
       <q-btn color="primary" flat label="Renoncer" size="md" @click="ko" />
       <q-btn color="warning" glossy :label="labelVal()" size="md" :icon-right="iconValider"
@@ -24,7 +24,10 @@ export default ({
     return {
       phase: 0,
       msg: msg,
-      nom: ''
+      nom: '',
+      interdits: '< > : " / \\ | ? *',
+      r2: val => val.length < 4 || val.length > 20 ? 'Entre 4 et 24 caractères' : true,
+      r1: val => /[<>:"/\\|?*\\x00-\\x1F]/.test(val) ? 'Caractères interdits' : true
     }
   },
   methods: {

@@ -22,7 +22,6 @@ let $router
 let dtf
 let idbalerte
 let pako
-const extensions = {}
 
 export function setup (gp, appconfig, router, store, pako1) {
   pako = pako1
@@ -32,19 +31,6 @@ export function setup (gp, appconfig, router, store, pako1) {
   $store = store
   $router = router
   dtf = new Intl.DateTimeFormat($cfg.locale, $cfg.datetimeformat)
-  for (const m in cfg.mimes) {
-    const ext = m.extensions
-    if (ext) {
-      ext.forEach(x => {
-        let e = extensions[x]
-        if (!e) {
-          e = []
-          extensions[x] = e
-        }
-        e.push(m)
-      })
-    }
-  }
   // testgz()
 }
 
@@ -90,6 +76,14 @@ export function select (u8, idx) {
   return new Uint8Array(l.sort())
 }
 
+export function gzipT (data) {
+  return pako.gzip(data)
+}
+
+export function ungzipT (data) {
+  return pako.ungzip(data)
+}
+
 export function gzip (arg) {
   if (!arg) return null
   // t: 0:binaire, 1:texte zippé, 2:texte non zippé
@@ -117,18 +111,6 @@ export function intersection (setA, setB) { // element de A aussi dans B
   const inter = new Set()
   for (const elem of setA) if (setB.has(elem)) inter.add(elem)
   return inter
-}
-
-export function mimesDeExt (n) {
-  if (!n) return null
-  const i = n.lastIndexOf('.')
-  const ext = i === -1 ? n : n.substring(i)
-  return extensions[ext]
-}
-
-export function extDeMime (m) {
-  const mt = cfg.mimes[m]
-  return mt ? mt.extensions : null
 }
 
 export function affidbmsg (msg) {
@@ -171,7 +153,11 @@ export function dlvDepassee (dlv) { return dlv < jourJ }
 
 export async function readFile (file, bin) {
   return new Promise((resolve, reject) => {
-    const image = { size: file.size, name: file.name, type: file.type }
+    const image = { size: file.size, name: file.name }
+    if (!file.type) {
+      image.type = file.name.endsWith('.md') ? 'text/markdown' : 'application/octet-stream'
+    } else image.type = file.type
+
     const reader = new FileReader()
     reader.addEventListener('load', (event) => {
       if (!bin) {

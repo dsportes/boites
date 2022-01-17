@@ -15,12 +15,14 @@
     </q-card-section>
     <q-separator />
     <q-card-section class="column justify-start">
-      <q-input dense v-model="nompj" label="Nom de la pièce jointe" :readonly="nom?true:false"/>
+      <div>Les caractères <span class="q-px-sm text-negative bg-yellow text-bold">{{interdits}}</span>
+      ainsi que les "non imprimables CR BS FF ..." ne sont pas autorisés afin que ce nom puisse servir comme nom de fichier.</div>
+      <q-input dense v-model="nompj" label="Nom de la pièce jointe" :readonly="nom?true:false" :rules="[r1, r2]"/>
     </q-card-section>
     <q-separator />
     <q-card-actions align="right">
       <q-btn flat icon="undo" label="Annuler" @click="fermer" />
-      <q-btn :disable="!file" flat icon="check" label="Valider" color="warning" @click="valider" />
+      <q-btn :disable="!valide" flat icon="check" label="Valider" color="warning" @click="valider" />
     </q-card-actions>
   </q-card>
 </template>
@@ -36,7 +38,9 @@ export default ({
 
   components: { BoutonHelp },
 
-  computed: { },
+  computed: {
+    valide () { return this.file && this.nompj && this.r1(this.nompj) === true }
+  },
 
   watch: {
     async fileList (file) {
@@ -52,7 +56,10 @@ export default ({
     return {
       fileList: null,
       file: { },
-      nompj: this.nom
+      nompj: this.nom,
+      interdits: '< > : " / \\ | ? *',
+      r2: val => val.length !== 0 || 'Valeur requise',
+      r1: val => /[<>:"/\\|?*\\x00-\\x1F]/.test(val) ? 'Caractères interdits' : true
     }
   },
 
