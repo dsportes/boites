@@ -61,6 +61,8 @@
         <q-card>
           <q-card-section>
             <div class="fs-md">Date-heure de dernière modification : {{secret.dh}}</div>
+            <div class="fs-md">Taille du texte du secret : {{secret.v1}}</div>
+            <div class="fs-md">Volume total des pièces jointes : {{secret.v2}}</div>
           </q-card-section>
           <q-card-actions align="right">
             <q-btn flat dense label="J'ai lu" color="primary" @click="plus = false"/>
@@ -372,8 +374,16 @@ export default ({
       this.saisiefichier = true
     },
 
-    supprpj (pj) {
-
+    async supprpj (pj) {
+      const cle = crypt.hash(pj.nom, false, true)
+      const s = this.secret
+      const arg = { ts: s.ts, id: s.id, ns: s.ns, cle, idc: null, lg: 0, buf: null }
+      if (s.ts === 1) {
+        arg.ns2 = s.ns2
+        arg.id2 = s.id2
+      }
+      await new PjSecret().run(arg)
+      this.saisiefichier = false
     },
 
     async okpj (pj) {
