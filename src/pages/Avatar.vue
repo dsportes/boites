@@ -62,7 +62,7 @@
 import { computed, /* onMounted, */ reactive, watch, ref, isRef } from 'vue'
 import { useStore } from 'vuex'
 import { onBoot } from '../app/page.mjs'
-import { Motscles, difference, Filtre } from '../app/util.mjs'
+import { Motscles, difference, Filtre, upload, normpath } from '../app/util.mjs'
 // import BoutonHelp from '../components/BoutonHelp.vue'
 import ApercuMotscles from '../components/ApercuMotscles.vue'
 import MotsCles from '../components/MotsCles.vue'
@@ -73,6 +73,8 @@ import ShowHtml from '../components/ShowHtml.vue'
 import { CvAvatar } from '../app/operations.mjs'
 import { Secret, data } from '../app/modele.mjs'
 import { crypt } from '../app/crypto.mjs'
+
+const enc = new TextEncoder()
 
 export default ({
   name: 'Avatar',
@@ -102,7 +104,7 @@ export default ({
       }
     },
     dkli (idx) { return this.$q.dark.isActive ? (idx ? 'sombre' + (idx % 2) : 'sombre0') : (idx ? 'clair' + (idx % 2) : 'clair0') },
-    action (n) {
+    async action (n, p) {
       if (this.secret) return
       if (n === 1) { // secret personnel
         this.ouvrirsecret(new Secret().nouveauP(this.avatar.id))
@@ -130,6 +132,8 @@ export default ({
           return
         }
         this.ouvrirsecret(new Secret().nouveauG(this.avatar.id, g))
+      } else if (n === 4) {
+        await this.upload(p)
       }
     },
     fermerfiltre () {
@@ -144,6 +148,33 @@ export default ({
         // console.log('CV changée : ' + resultat.info + '\n' + resultat.ph.substring(0, 30))
         const cvinfo = await this.avatar.cvToRow(resultat.ph, resultat.info)
         await new CvAvatar().run(this.avatar.id, cvinfo)
+      }
+    },
+    async upload (port) {
+      try {
+        let nbpj = 0
+        let v1 = 0, v2 = 0
+        for (let i = 0; i < this.state.lst.length; i++) {
+          const s = this.state.lst[i]
+          console.log(s.path)
+          const buf = enc.encode(s.txt.t)
+          v1 += buf.length
+          await upload(port, s.path + '.md', buf)
+          if (s.nbpj) {
+            for (const cpj in s.mpj) {
+              const pj = s.mpj[cpj]
+              const buf = await s.datapj(pj)
+              v2 += buf.length
+              const p = s.path + '/' + normpath(pj.nom, true)
+              await upload(port, p, buf)
+              nbpj++
+            }
+          }
+        }
+        this.diagnostic = 'Upload de ' + this.state.lst.length +
+          ' secrets (' + nbpj + 'pièce(s) jointe(s)) terminé avec succès. Volume total : ' + v1 + ' + ' + v2
+      } catch (e) {
+        this.diagnostic = 'Erreur du serveur local d\'upload : ' + e
       }
     }
   },

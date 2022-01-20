@@ -5,6 +5,10 @@
       <q-btn flat dense color="primary" size="md" icon="add" label="Nouveau secret personnel" @click="action(1)"/>
       <q-btn v-if="contact" flat dense size="md" color="primary" icon="add" :label="'Nouveau secret partagé avec ' +  contact.nom" @click="action(2)"/>
       <q-btn v-if="groupe" flat dense size="md" color="primary" icon="add" :label="'Nouveau secret du groupe ' +  groupe.nom" @click="action(3)"/>
+      <div class="row justify-center">
+        <q-input flat dense label="Port d'upload local" style="width:5rem" v-model="port" />
+        <q-btn class="q-ml-sm" flat dense icon="save" label="Upload local" @click="action(4, port)" />
+      </div>
     </q-card-actions>
     <q-separator/>
     <q-card-actions align="between">
@@ -119,7 +123,8 @@ export default ({
       mcedit2: false,
       menudd1: false,
       menudd2: false,
-      menudd3: false
+      menudd3: false,
+      port: 8000
     }
   },
 
@@ -153,8 +158,8 @@ export default ({
     fermeture () {
       if (this.fermer) this.fermer()
     },
-    action (n) {
-      this.$emit('action', n)
+    action (n, p) {
+      this.$emit('action', n, p)
       if (this.fermer) this.fermer()
     }
   },

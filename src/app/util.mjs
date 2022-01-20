@@ -176,6 +176,12 @@ export async function readFile (file, bin) {
   })
 }
 
+// eslint-disable-next-line no-control-regex
+const regex = /[.<>:"/\\|?* \x00-\x1F]/g
+// eslint-disable-next-line no-control-regex
+const regexdot = /[<>:"/\\|?* \x00-\x1F]/g
+export function normpath (s, dot) { return s.replace(dot ? regexdot : regex, '_') }
+
 export function edvol (vol) {
   const v = vol || 0
   if (v <= 999) return v + 'o'
@@ -397,6 +403,16 @@ export async function getImagePub (path, type) {
     return 'data:image/' + (type || 'png') + ';base64,' + s
   } catch (e) {
     return null
+  }
+}
+
+export async function upload (port, path, data) {
+  try {
+    const u = 'http://localhost:' + port + '/upload/' + $store.state.ui.org + '/' + path
+    const par = { method: 'post', url: u, data: data }
+    await axios(par)
+  } catch (e) {
+    throw e.toString()
   }
 }
 
@@ -669,6 +685,12 @@ export class NomAvatar {
   get sid () { return crypt.idToSid(this.id) }
 
   get cle () { return this.rnd }
+
+  get nomf () {
+    const i = this.nom.indexOf('\n')
+    const t = this.nom.substring(0, (i === -1 ? 16 : (i < 16 ? i : 16)))
+    return normpath(t) + '@' + this.sid
+  }
 }
 
 /** Filtre *************************************/

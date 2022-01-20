@@ -2,7 +2,7 @@ import { schemas } from './schemas.mjs'
 import { crypt } from './crypto.mjs'
 import { openIDB, closeIDB } from './db.mjs'
 import { openWS, closeWS } from './ws.mjs'
-import { store, appexc, serial, deserial, dlvDepassee, NomAvatar, gzip, ungzip, dhstring, getJourJ, cfg } from './util.mjs'
+import { store, appexc, serial, deserial, dlvDepassee, NomAvatar, gzip, ungzip, dhstring, getJourJ, cfg, ungzipT, normpath, getpj } from './util.mjs'
 import { remplacePage } from './page.mjs'
 
 let lgnom, lgtitre
@@ -1753,9 +1753,19 @@ export class Secret {
 
   get dh () { return dhstring(new Date(this.txt.d * 1000)) }
 
+  get nasrc () { return this.ts === 1 ? data.getNa(this.id, this.ic) : data.getNa(this.id) }
+
   get cles () {
     return this.ts ? (this.ts === 1 ? data.getNa(this.id, this.ic) : data.getNa(this.id).cle) : data.clek
   }
+
+  get nomf () {
+    const i = this.txt.t.indexOf('\n')
+    const t = this.txt.t.substring(0, (i === -1 ? 16 : (i < 16 ? i : 16)))
+    return normpath(t) + '@' + this.sid2
+  }
+
+  get path () { return this.nasrc.nomf + '/' + this.nomf }
 
   get contact () {
     if (this.ts !== 1) return null
@@ -1888,6 +1898,24 @@ export class Secret {
   fromIdb (idb) {
     schemas.deserialize('idbSecret', idb, this)
     this.txt.t = ungzip(this.txt.t)
+    this.nbpj = 0
+    if (this.v2) {
+      // eslint-disable-next-line no-unused-vars
+      for (const cpj in this.mpj) this.nbpj++
+    }
     return this
+  }
+
+  async datapj (pj) {
+    const cle = crypt.hash(pj.nom, false, true)
+    const x = pj.nom + '|' + pj.type + '|' + pj.dh + (pj.gz ? '$' : '')
+    const idc = crypt.u8ToB64(await crypt.crypter(data.clek, x, 1), true)
+    const secid = this.sid + '@' + this.sid2
+    const buf = await getpj(secid, cle + '@' + idc)
+    if (!buf) return null
+    const u8 = new Uint8Array(buf)
+    const buf2 = await crypt.decrypter(data.clek, u8)
+    const buf3 = pj.gz ? ungzipT(buf2) : buf2
+    return buf3
   }
 }

@@ -169,7 +169,7 @@ import PieceJointe from './PieceJointe.vue'
 import SelectMotscles from './SelectMotscles.vue'
 import EditeurTexteSecret from './EditeurTexteSecret.vue'
 import ShowHtml from './ShowHtml.vue'
-import { equ8, getJourJ, cfg, serial, Motscles, dhstring, getpj, gzipT, ungzipT } from '../app/util.mjs'
+import { equ8, getJourJ, cfg, serial, Motscles, dhstring, gzipT } from '../app/util.mjs'
 import { NouveauSecret, Maj1Secret, PjSecret } from '../app/operations.mjs'
 import { data, Secret } from '../app/modele.mjs'
 import { crypt } from '../app/crypto.mjs'
@@ -333,15 +333,7 @@ export default ({
     fermerpj () { this.saisiefichier = false },
 
     async urlDe (pj, b) {
-      const cle = crypt.hash(pj.nom, false, true)
-      const x = pj.nom + '|' + pj.type + '|' + pj.dh + (pj.gz ? '$' : '')
-      const idc = crypt.u8ToB64(await crypt.crypter(data.clek, x, 1), true)
-      const secid = this.secret.sid + '@' + this.secret.sid2
-      const buf = await getpj(secid, cle + '@' + idc)
-      if (!buf) return null
-      const u8 = new Uint8Array(buf)
-      const buf2 = await crypt.decrypter(data.clek, u8)
-      const buf3 = pj.gz ? ungzipT(buf2) : buf2
+      const buf3 = await this.secret.datapj(pj)
       const blob = new Blob([buf3], { type: pj.type })
       return b ? blob : URL.createObjectURL(blob)
     },
