@@ -91,7 +91,12 @@
 
     <div v-if="tabok==='pj'" class='col column items-center'>
       <q-btn :disable="state.ro !== 0" flat dense color="primary" class="q-mt-sm" size="md" icon="add" label="Ajouter une pièce jointe" @click="nompj='';saisiefichier=true"/>
-      <div v-if="state.ro !== 0" class="bg-yellow text-bold text-negative text-center">Le secret est en lecture seule, les pièces jointes peuvent visualisées mais ni créées, ni modifiées.</div>
+      <div v-if="mode === 3" class="bg-yellow text-bold text-negative text-center">
+        En mode avion, le secret est en lecture seule. Seules les pièces jointes déclarées accessibles dans ce mode peuvent visualisées (mais ni créées, ni modifiées).</div>
+      <div v-if="mode === 4" class="bg-yellow text-bold text-negative text-center">
+        En mode dégradé visio, le secret est en lecture seule et les pièces jointes ne peuvent pas être visualisées, ni créées, ni modifiées.</div>
+      <div v-if="mode < 3 && state.ro !== 0" class="bg-yellow text-bold text-negative text-center">
+        Le secret est en lecture seule, les pièces jointes peuvent visualisées mais ni créées, ni modifiées.</div>
       <div v-if="secret && secret.mpj" class="q-mt-sm row justify-around items-start">
         <q-card v-for="pj in secret.mpj" :key="pj.nom" class="cardpj q-pa-sm">
           <q-card-section class="ma-qcard-section">
@@ -99,12 +104,16 @@
             <div>Type : {{pj.type}}</div>
             <div>Taille : {{pj.size}}</div>
             <div>Date : {{dhstring(pj.dh)}}</div>
+            <div style="margin-left:-0.8rem">
+              <q-toggle v-model="state.avion[pj.cle]" :disable="!stpj3()" size="md" :color="state.avion[pj.cle] ? 'green' : 'grey'"
+                label="Consultable en mode avion" @update:model-value="chgAvion(pj)"/>
+            </div>
           </q-card-section>
           <q-card-actions class="ma-qcard-section" align="left">
-            <q-btn :disable="state.ro !== 0" flat dense color="primary" icon="visibility" label="Afficher" @click="affpj(pj)"/>
-            <q-btn :disable="state.ro !== 0" flat dense color="primary" icon="save" label="Enregistrer" @click="enregpj(pj)"/>
-            <q-btn :disable="state.ro !== 0" flat dense color="primary" icon="refresh" label="Remplacer" @click="majpj(pj)"/>
-            <q-btn :disable="state.ro !== 0" flat dense color="warning" icon="delete" label="Supprimer" @click="supprpj(pj)"/>
+            <q-btn :disable="!stpj1(pj.cle)" flat dense color="primary" icon="visibility" label="Afficher" @click="affpj(pj)"/>
+            <q-btn :disable="!stpj1(pj.cle)" flat dense color="primary" icon="save" label="Enregistrer" @click="enregpj(pj)"/>
+            <q-btn :disable="!stpj2()" flat dense color="primary" icon="refresh" label="Remplacer" @click="majpj(pj)"/>
+            <q-btn :disable="!stpj2()" flat dense color="warning" icon="delete" label="Supprimer" @click="supprpj(pj)"/>
           </q-card-actions>
         </q-card>
       </div>
@@ -173,6 +182,7 @@ import { equ8, getJourJ, cfg, serial, Motscles, dhstring, gzipT } from '../app/u
 import { NouveauSecret, Maj1Secret, PjSecret } from '../app/operations.mjs'
 import { data, Secret } from '../app/modele.mjs'
 import { crypt } from '../app/crypto.mjs'
+import { putPj } from '../app/db.mjs'
 import { saveAs } from 'file-saver'
 
 export default ({
@@ -259,9 +269,25 @@ export default ({
   },
 
   methods: {
+    stpj1 (cle) { // visibilité d'une pièce jointe
+      if (this.mode < 3) return true
+      if (this.mode === 4) return false
+      return this.state.avion[cle] // mode avion
+    },
+
+    stpj2 () { // mise à jour d'une pièce jointe
+      if (this.mode > 2) return false
+      return this.state.ro === 0
+    },
+
+    stpj3 () { // peut basculer accessible en mode avion
+      return this.mode === 1 || this.mode === 3
+    },
+
     dhstring (t) { return dhstring(new Date(t)) },
 
     dkli (idx) { return this.$q.dark.isActive ? (idx ? 'sombre' + (idx % 2) : 'sombre0') : (idx ? 'clair' + (idx % 2) : 'clair0') },
+
     togglerow (vk) {
       if (this.row[vk] === true) {
         this.row[vk] = false
@@ -359,6 +385,22 @@ export default ({
     wop (url) { // L'appel direct de wndow.open ne semble pas marcher dans une fonction async. Etrange !
       // console.log(url)
       window.open(url, '_blank')
+    },
+
+    async chgAvion (pj) {
+      const s = this.secret
+      const ap = this.state.avion[pj.cle]
+      const x = { id: s.id, ns: s.ns, cle: pj.cle, hv: pj.hv }
+      if (ap) {
+        // dispo en mode avion
+        const buf = await s.datapj(pj, true)
+        await putPj(x, buf) // en IDB
+        data.setPjidx([x]) // lst : array de { id, ns, cle, hv } - Dans le store
+      } else {
+        x.hv = null
+        await putPj(x, null) // suppr en IDB
+        data.setPjidx([x])
+      }
     },
 
     majpj (pj) {
@@ -539,6 +581,7 @@ export default ({
     })
     const prefs = computed(() => { return data.getPrefs() })
     const avatar = computed(() => { return $store.state.db.avatar })
+    const pjidx = computed(() => { return $store.state.db.pjidx })
     const contactcourant = computed(() => { return $store.state.db.contact })
     const groupecourant = computed(() => { return $store.state.db.groupe })
     const mode = computed(() => $store.state.ui.mode)
@@ -580,7 +623,8 @@ export default ({
       oralocal: null,
       templocal: null,
       dhlocal: 0,
-      listevoisins: []
+      listevoisins: [],
+      avion: {}
     })
     const mc = reactive({ categs: new Map(), lcategs: [], st: { enedition: false, modifie: false } })
 
@@ -652,8 +696,25 @@ export default ({
       }
     }
 
+    function setPjloc () {
+      const s = secret.value
+      if (!s || mode.value === 2 || mode.value === 4) { state.avion = {}; return } // En mode incognito/visio, c'est indéterminé (pas d'accès à IDB)
+      const avion = {}
+      const lst = data.getPjidx({ id: s.id, ns: s.ns })
+      if (s.nbpj) {
+        for (const cle in s.mpj) {
+          avion[cle] = false
+        }
+      }
+      if (lst && lst.length) {
+        lst.forEach(x => { avion[x.cle] = true })
+      }
+      state.avion = avion
+    }
+
     initState()
     chargerMc()
+    setPjloc()
 
     watch(() => prefs.value, (ap, av) => {
       chargerMc()
@@ -661,11 +722,16 @@ export default ({
 
     watch(() => secret.value, (ap, av) => {
       initState()
+      setPjloc()
       if (ap && (!av || av.pk !== ap.pk)) chargerMc() // le nouveau peut avoir un autre groupe
     })
 
     watch(() => voisins.value, (ap, av) => {
       state.listevoisins = lstvoisins(ap)
+    })
+
+    watch(() => pjidx.value, (ap, av) => {
+      setPjloc()
     })
 
     function avantFermeture () {

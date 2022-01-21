@@ -60,3 +60,13 @@ export const contactParId = (state) => (sid, sidc) => {
   }
   return null
 }
+
+export const pjidx = (state) => ({ id, ns, cle }) => {
+  const k = crypt.idToSid(id) + '@' + (!ns ? '' : crypt.idToSid(ns) + '@' + (!cle ? '' : cle))
+  const st = state.pjidx
+  const r = []
+  for (const kx in st) {
+    if (kx.startsWith(k)) r.push(st[kx])
+  }
+  return r
+}

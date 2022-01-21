@@ -1,9 +1,9 @@
-import { NomAvatar, store, post, affichermessage, cfg, sleep, affichererreur, appexc, difference } from './util.mjs'
+import { NomAvatar, store, post, affichermessage, cfg, sleep, affichererreur, appexc, difference, getpj } from './util.mjs'
 import { remplacePage } from './page.mjs'
 import {
   deleteIDB, idbSidCompte, commitRows, getCompte, getPrefs, getAvatars, getContacts, getCvs,
   getGroupes, getInvitcts, getInvitgrs, getMembres, getParrains, getRencontres, getSecrets,
-  purgeAvatars, purgeCvs, purgeGroupes, openIDB, enregLScompte, setEtat, getEtat
+  purgeAvatars, purgeCvs, purgeGroupes, openIDB, enregLScompte, setEtat, getEtat, getPjidx, putPj
 } from './db.mjs'
 import { Compte, Avatar, newObjet, commitMapObjets, data, SIZEAV, SIZEGR, Prefs } from './modele.mjs'
 import { AppExc, EXBRK, EXPS, F_BRO, INDEXT, X_SRV } from './api.mjs'
@@ -199,7 +199,7 @@ export class Operation {
     if (data.dh < ret.dh) data.dh = ret.dh
     const objets = []
     for (const id of avUtiles) data.vag.setVerAv(id, INDEXT.AVATAR, -1)
-    commitMapObjets(objets, await this.rowItemsToMapObjets(ret.rowItems)) // stockés en modele
+    await commitMapObjets(objets, await this.rowItemsToMapObjets(ret.rowItems)) // stockés en modele
     if (data.db) {
       await commitRows(objets)
       this.BRK()
@@ -212,7 +212,7 @@ export class Operation {
     const ret = await post(this, 'm1', 'syncAv', { sessionId: data.sessionId, avgr: id, lv })
     if (data.dh < ret.dh) data.dh = ret.dh
     const objets = []
-    commitMapObjets(objets, await this.rowItemsToMapObjets(ret.rowItems)) // stockés en modele
+    await commitMapObjets(objets, await this.rowItemsToMapObjets(ret.rowItems)) // stockés en modele
     if (data.db) {
       await commitRows(objets)
       this.BRK()
@@ -226,7 +226,7 @@ export class Operation {
     const ret = await post(this, 'm1', 'syncGr', { sessionId: data.sessionId, avgr: id, lv })
     if (data.dh < ret.dh) data.dh = ret.dh
     const objets = []
-    commitMapObjets(objets, await this.rowItemsToMapObjets(ret.rowItems)) // stockés en modele
+    await commitMapObjets(objets, await this.rowItemsToMapObjets(ret.rowItems)) // stockés en modele
     if (data.db) {
       await commitRows(objets)
       this.BRK()
@@ -243,13 +243,42 @@ export class Operation {
     const ret = await post(this, 'm1', 'chargtCVs', args)
     if (data.dh < ret.dh) data.dh = ret.dh
     const objets = []
-    const vcv = commitMapObjets(objets, await this.rowItemsToMapObjets(ret.rowItems)) // stockés en modele
+    const vcv = await commitMapObjets(objets, await this.rowItemsToMapObjets(ret.rowItems)) // stockés en modele
     if (vcv > nvvcv) nvvcv = vcv
     if (data.db) {
       await commitRows(objets)
       this.BRK()
     }
     return [nvvcv, objets.length]
+  }
+
+  async syncPjs () {
+    /* Vérification que toutes les PJ accessibles en avion sont, a) encore utiles, b) encore à jour */
+    const st = store().state.pjidx
+    const maj = []
+    for (const sidpj in st) {
+      const x = { ...st[sidpj] }
+      const secret = data.getSecret(x.id, x.ns)
+      if (secret) {
+        const pj = secret.mpj[x.cle]
+        if (pj) {
+          if (pj.hv !== x.hv) { // pj locale pas à jour
+            x.hv = pj.hv
+            // rechargement du contenu
+            const data = await getpj(secret.sid + '@' + secret.sid2, x.cle) // du serveur
+            putPj(x, data) // store en IDB
+            maj.push(x)
+          }
+        } else { // PJ n'existe plus
+          putPj(x, null) // delete en IDB
+          maj.push(x)
+        }
+      } else {
+        putPj(x, null) // delete en IDB, le secret n'existe plus
+        maj.push(x)
+      }
+    }
+    if (maj.length) data.setPjidx(maj) // MAJ du store
   }
 
   async traiteQueue (q) {
@@ -287,7 +316,7 @@ export class Operation {
     }
 
     /* Mise en store de tous les autres objets */
-    const vcv = commitMapObjets(objets, mapObj)
+    const vcv = await commitMapObjets(objets, mapObj)
 
     if (data.db) {
       await commitRows(objets)
@@ -527,6 +556,12 @@ export class OperationUI extends Operation {
       commitRows(hls)
     }
 
+    this.BRK()
+    {
+      const pjs = await getPjidx()
+      store().commit('db/majpjidx', pjs)
+    }
+
     if (cfg().debug) await sleep(1)
 
     this.BRK()
@@ -644,7 +679,7 @@ export class CreationCompte extends OperationUI {
       const prefs2 = mapObj.prefs // le DERNIER objet compte quand on en a reçu plusieurs (pas la liste)
       data.setCompte(prefs2)
       objets.push(prefs2)
-      commitMapObjets(objets, mapObj)
+      await commitMapObjets(objets, mapObj)
 
       // création de la base IDB et chargement des rows compte et avatar
       if (data.mode === 1) { // synchronisé : IL FAUT OUVRIR IDB (et écrire dedans)
@@ -704,6 +739,9 @@ export class ConnexionCompteAvion extends OperationUI {
       if (!compte || compte.pcbh !== data.ps.pcbh) {
         throw new AppExc(F_BRO, 'Compte non enregistré localement : aucune session synchronisée ne s\'est préalablement exécutée sur ce poste avec cette phrase secrète. Erreur dans la saisie de la ligne 2 de la phrase ?')
       }
+      let prefs = await getPrefs()
+      if (!prefs) prefs = new Prefs().nouveau(compte.id)
+      data.setPrefs(prefs)
       data.setCompte(compte)
 
       await this.chargementIdb(compte.id)

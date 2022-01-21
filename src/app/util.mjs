@@ -365,7 +365,7 @@ export async function getpj (secid, pjid) {
       responseType: 'arraybuffer',
       timeout: $cfg.debug ? 50000000 : 5000
     })
-    return r.status === 200 ? r.data : null
+    return r.status === 200 ? new Uint8Array(r.data) : null
   } catch (e) {
     return null
   }

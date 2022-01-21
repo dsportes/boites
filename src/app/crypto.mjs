@@ -34,9 +34,7 @@ function hash (str, big = false, b64 = false, seed = 0) {
   h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909)
   h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909)
   const r = big ? 4294967296n * BigInt(h2) + BigInt(h1) : 4294967296 * (2097151 & h2) + (h1 >>> 0)
-  if (Number.isSafeInteger(r)) {
-    console.log(r)
-  }
+  // if (Number.isSafeInteger(r)) { console.log(r) }
   return b64 ? int2base64(r) : r
 }
 

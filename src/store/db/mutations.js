@@ -29,7 +29,7 @@ Normalement quand une entrée existe il n'y a pas que le secret de référence d
 */
 
 const l1 = { compte: true, prefs: true, avatar: true, groupe: true, secret: true, contact: true }
-const l2 = { avatars: true, groupes: true, parrains: true, rencontres: true, repertoire: true }
+const l2 = { avatars: true, groupes: true, parrains: true, rencontres: true, repertoire: true, pjidx: true }
 const l3 = { contact: true, invitct: true, invitgr: true, membre: true, secret: true }
 const l4 = { avatar: true, groupe: true, parrain: true, rencontre: true }
 
@@ -253,4 +253,20 @@ function majvoisin (state, secret) {
     } // sinon le secret de référence est inconnu dans la session
     state['voisins@' + pkref] = { ...st }
   }
+}
+
+/* Pièces jointes */
+export function majpjidx (state, lst) { // lst : array de { id, ns, cle, hv }
+  const st = state.pjidx
+  let b = false
+  lst.forEach(x => {
+    const k = crypt.idToSid(x.id) + '@' + crypt.idToSid(x.ns) + '@' + x.cle
+    if (x.hv) {
+      st[k] = x
+    } else {
+      delete st[k]
+    }
+    b = true
+  })
+  if (b) state.pjidx = { ...st }
 }

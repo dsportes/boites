@@ -1,6 +1,6 @@
 import { schemas } from './schemas.mjs'
 import { crypt } from './crypto.mjs'
-import { openIDB, closeIDB } from './db.mjs'
+import { openIDB, closeIDB, putPj, getPjdata } from './db.mjs'
 import { openWS, closeWS } from './ws.mjs'
 import { store, appexc, serial, deserial, dlvDepassee, NomAvatar, gzip, ungzip, dhstring, getJourJ, cfg, ungzipT, normpath, getpj } from './util.mjs'
 import { remplacePage } from './page.mjs'
@@ -36,7 +36,7 @@ function titreEd (sid, txt) {
 - objets : array remplie par tous les objets à mettre en IDB
 Retourne vcv : version de la plus CV trouvée
 */
-export function commitMapObjets (objets, mapObj) { // SAUF mapObj.compte et mapObj.prefs
+export async function commitMapObjets (objets, mapObj) { // SAUF mapObj.compte et mapObj.prefs
   let vcv = 0
 
   function push (n) { mapObj[n].forEach((x) => { objets.push(x) }) }
@@ -109,6 +109,30 @@ export function commitMapObjets (objets, mapObj) { // SAUF mapObj.compte et mapO
 
   if (mapObj.secret) {
     data.setSecrets(mapObj.secret)
+    /* il peut y avoir des secrets ayant un changement de PJ */
+    const lst = []
+    const st = store().state.db.pjidx
+    for (let i = 0; i < mapObj.secret.length; i++) {
+      const secret = mapObj.secret[i]
+      for (const cle in secret.mpj) {
+        const pj = secret.mpj[cle]
+        const x = st ? st[secret.sidpj(cle)] : null
+        if (x && pj.hv !== x.hv) { // pj locale pas à jour
+          try {
+            const data = await getpj(secret.sid + '@' + secret.sid2, x.cle) // rechargement du contenu du serveur
+            x.hv = pj.hv
+            putPj(x, data) // store en IDB
+            lst.push(x)
+          } catch (e) {
+            console.log(e.toString())
+            x.hv = null
+            lst.push(x)
+            data.setPjPerdues(x)
+          }
+        }
+      }
+    }
+    if (lst.length) data.setPjidx(lst)
     push('secret')
   }
 
@@ -126,6 +150,21 @@ export function commitMapObjets (objets, mapObj) { // SAUF mapObj.compte et mapO
       }
     })
     push('cv')
+  }
+
+  /* Il peut y avoir des PJ non référencées, avatar / groupe disparu, PJ disparue */
+  {
+    const lst = []
+    const st = store().state.db.pjidx
+    for (const k in st) {
+      const x = st[k]
+      const secret = data.getSecret(x.id, x.ns)
+      if (secret && secret.nbpj) {
+        const pj = secret.mpj[x.cle]
+        if (!pj) { x.hv = null; lst.push(x) }
+      } else { x.hv = null; lst.push(x) }
+    }
+    if (lst.length) data.setPjidx(lst)
   }
 
   data.repertoire.commit() // un seul à la fin
@@ -409,6 +448,7 @@ class Session {
     this.naIdIx = {} // na par id ic/im
     this.naId = {} // na par id
     this.clec = {} // clés C des contacts id, ic
+    this.pjPerdues = [] // PJ accessibles en mode avion qui n'ont pas pu être récupérées et NE SONT PLUS ACCESSIBLES en avion
 
     this.opWS = null // opération WS en cours
     this.opUI = null // opération UI en cours
@@ -417,6 +457,8 @@ class Session {
 
     this.vag = new VAG()
   }
+
+  setPjPerdues (x) { this.pjPerdues.push(x) }
 
   /* Enregistre le nom d'avatar pour :
   - un avatar / groupe
@@ -572,7 +614,18 @@ class Session {
   purgeAvatars (lav) { if (lav.size) return store().commit('db/purgeAvatars', lav) }
 
   purgeGroupes (lgr) { if (lgr.size) return store().commit('db/purgeGroupes', lgr) }
+
+  /*
+  idx = { id, ns, cle } - ns cle peuvent être null
+  retourne un array de { id, ns, cle, hv }
+  */
+  getPjidx (idx) { return store().getters['db/pjidx'](idx) }
+
+  setPjidx (lst) { // lst : array de { id, ns, cle, hv }
+    store().commit('db/majpjidx', lst)
+  }
 }
+
 export const data = new Session()
 
 /* Création des objets selon leur table *******/
@@ -1874,7 +1927,9 @@ export class Secret {
           const i = nomc.indexOf('|')
           const j = nomc.lastIndexOf('|')
           this.nbpj++
-          this.mpj[cpj] = { nom: nomc.substring(0, i), type: nomc.substring(i + 1, j), dh: parseInt(nomc.substring(j + 1)), size: x[1], gz: gz }
+          const pj = { cle: cpj, nom: nomc.substring(0, i), type: nomc.substring(i + 1, j), dh: parseInt(nomc.substring(j + 1)), size: x[1], gz: gz }
+          pj.hv = this.hv(pj)
+          this.mpj[cpj] = pj
         }
       }
       if (this.ts === 1) {
@@ -1901,20 +1956,35 @@ export class Secret {
     this.nbpj = 0
     if (this.v2) {
       // eslint-disable-next-line no-unused-vars
-      for (const cpj in this.mpj) this.nbpj++
+      for (const cpj in this.mpj) {
+        const pj = this.mpj[cpj]
+        pj.hv = this.hv(pj)
+        this.nbpj++
+      }
     }
     return this
   }
 
-  async datapj (pj) {
-    const cle = crypt.hash(pj.nom, false, true)
-    const x = pj.nom + '|' + pj.type + '|' + pj.dh + (pj.gz ? '$' : '')
-    const idc = crypt.u8ToB64(await crypt.crypter(data.clek, x, 1), true)
+  hv (pj) { return crypt.hash(this.nomc(pj), false, true) }
+
+  nomc (pj) { return pj.nom + '|' + pj.type + '|' + pj.dh + (pj.gz ? '$' : '') }
+
+  cle (pj) { return crypt.hash(pj.nom, false, true) }
+
+  sidpj (cle) { return this.sid + '@' + this.sid2 + '@' + cle }
+
+  async idc (pj) { return crypt.u8ToB64(await crypt.crypter(data.clek, this.nomc(pj), 1), true) }
+
+  async datapj (pj, raw) {
     const secid = this.sid + '@' + this.sid2
-    const buf = await getpj(secid, cle + '@' + idc)
+    const x = { id: this.id, ns: this.ns, cle: pj.cle }
+    const y = data.getPjidx(x)
+    let buf = null
+    if (y.length) buf = await getPjdata(x)
+    if (!buf) buf = await getpj(secid, pj.cle + '@' + (await this.idc(pj)))
     if (!buf) return null
-    const u8 = new Uint8Array(buf)
-    const buf2 = await crypt.decrypter(data.clek, u8)
+    if (raw) return buf
+    const buf2 = await crypt.decrypter(data.clek, buf)
     const buf3 = pj.gz ? ungzipT(buf2) : buf2
     return buf3
   }

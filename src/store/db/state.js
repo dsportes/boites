@@ -11,7 +11,9 @@ export default function () {
     cvs: {}, // Toutes les cartes de visite : accès par data.repertoire
 
     parrains: {}, // Tous les parrains (pph) : un getter par id d'avatar
-    rencontres: {} // Toutes les rencontres (prh) : un getter par id d'avatar
+    rencontres: {}, // Toutes les rencontres (prh) : un getter par id d'avatar
+
+    pjidx: {} // index des pièces jointes disponibles en mode avion
 
     /*
     Groupés par sid d'avatar : contacts_sid invitcts_sid invitgrs_sid

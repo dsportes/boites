@@ -1,7 +1,7 @@
 /* eslint-disable func-call-spacing */
 import Dexie from 'dexie'
 import { Avatar, Compte, Prefs, Invitgr, Invitct, Contact, Parrain, Rencontre, Groupe, Membre, Secret, Cv, data } from './modele.mjs'
-import { store } from './util.mjs'
+import { store, deserial, serial } from './util.mjs'
 import { crypt } from './crypto.mjs'
 import { AppExc, E_DB, INDEXT } from './api.mjs'
 
@@ -18,7 +18,9 @@ const STORES = {
   groupe: 'id',
   membre: '[id+id2]', // im
   secret: '[id+id2]', // ns
-  cv: 'id'
+  cv: 'id',
+  pjidx: 'id',
+  pjdata: 'id'
 }
 
 const TABLES = []
@@ -58,7 +60,7 @@ export async function openIDB () {
   try {
     data.nombase = nombase()
     const db = new Dexie(data.nombase, { autoOpen: true })
-    db.version(1).stores(STORES)
+    db.version(2).stores(STORES)
     await db.open()
     data.db = db
     store().commit('ui/majstatutidb', 1)
@@ -137,13 +139,13 @@ export async function getAvatars (avu) { // avu : set des ids des avatars utiles
     const apurger = new Set()
     const r = []
     await data.db.avatar.each(async (idb) => {
-      if (avu.has(idb.id)) {
+      const x = new Avatar().fromIdb(await crypt.decrypter(data.clek, idb.data))
+      if (avu.has(x.id)) {
         vol += idb.data.length
-        const x = new Avatar().fromIdb(await crypt.decrypter(data.clek, idb.data))
         r.push(x)
         data.vag.setVerAv(x.sid, INDEXT.AVATAR, x.v)
       } else {
-        apurger.add(idb.id)
+        apurger.add(x.id)
       }
     })
     return { objs: r, vol: vol, apurger }
@@ -159,13 +161,13 @@ export async function getGroupes (gru) { // gru : set des Ids des groupes utiles
     const apurger = new Set()
     const r = []
     await data.db.groupe.each(async (idb) => {
-      if (gru.has(idb.id)) {
+      const x = new Groupe().fromIdb(await crypt.decrypter(data.clek, idb.data))
+      if (gru.has(x.id)) {
         vol += idb.data.length
-        const x = new Groupe().fromIdb(await crypt.decrypter(data.clek, idb.data))
         data.vag.setVerGr(x.sid, INDEXT.GROUPE, x.v)
         r.push(x)
       } else {
-        apurger.add(idb.id)
+        apurger.add(x.id)
       }
     })
     return { objs: r, vol: vol, apurger }
@@ -413,4 +415,57 @@ export async function commitRows (lobj) {
   } catch (e) {
     throw data.setErDB(EX2(e))
   }
+}
+
+/*
+  Gestion des pièces jointes
+  Table pjdata : id, data
+  - id : identifiant b64 crypté par la clé K de la pièce jointe. sid@sid2@cle
+  - data : contenu (éventuellement gzippé) crypté par la clé K de la pièce jointe. Comme en stockage serveur.
+  Table pjidx : id, hv
+  - id : le même que pjdata
+  - data : { id, ns, cle, hv } sérialisé, crypté par la clé k
+*/
+
+export async function getPjidx () {
+  // retourne une liste de { id, ns, cle, hv }
+  go()
+  try {
+    const r = []
+    await data.db.pjidx.each(async (idb) => {
+      const x = deserial(await crypt.decrypter(data.clek, idb.data))
+      r.push(x)
+    })
+    return r
+  } catch (e) {
+    throw data.setErDB(EX2(e))
+  }
+}
+
+export async function getPjdata ({ id, ns, cle }) {
+  /* retourne le contenu (gzippé crypté) de la pièce jointe clé du secret */
+  go()
+  try {
+    const sidpj = crypt.idToSid(id) + '@' + crypt.idToSid(ns) + '@' + cle
+    const idk = crypt.u8ToB64((await crypt.crypter(data.clek, sidpj, 1)))
+    const row = await data.db.pjdata.get(idk)
+    return row ? row.data : null
+  } catch (e) {
+    throw data.setErDB(EX2(e))
+  }
+}
+
+export async function putPj ({ id, ns, cle, hv }, buf) { // buf est gzippé / crypté. Si null, c'est une suppression
+  const sidpj = crypt.idToSid(id) + '@' + crypt.idToSid(ns) + '@' + cle
+  const idk = crypt.u8ToB64((await crypt.crypter(data.clek, sidpj, 1)))
+  const bufk = buf ? await crypt.crypter(data.clek, serial({ id, ns, cle, hv })) : null
+  await data.db.transaction('rw', TABLES, async () => {
+    if (buf) {
+      await data.db.pjidx.put({ id: idk, data: bufk })
+      await data.db.pjdata.put({ id: idk, data: buf })
+    } else {
+      await data.db.pjidx.delete(idk)
+      await data.db.pjdata.delete(idk)
+    }
+  })
 }
