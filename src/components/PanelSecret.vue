@@ -752,7 +752,7 @@ export default ({
       u8vide: new Uint8Array([]),
       state,
       mode,
-      limjours: cfg().limitesjour[0],
+      limjours: cfg().limitesjour.secrettemp,
       jourJ: getJourJ(),
       undo,
       undomcl,

@@ -848,7 +848,7 @@ export class Prefs {
 
 schemas.forSchema({
   name: 'idbAvatar',
-  cols: ['id', 'v', 'st', 'vcv', 'dds', 'photo', 'info', 'lct', 'lgr', 'vsh']
+  cols: ['id', 'v', 'st', 'vcv', 'dds', 'photo', 'info', 'lgr', 'vsh']
 })
 
 export class Avatar {
@@ -873,8 +873,6 @@ export class Avatar {
   get nom () { return nomEd(this.na.nom, this.info) }
 
   constructor () {
-    this.m1ct = new Map() // clé:idc val:ic
-    this.m2ct = new Map() // clé:ic val:idc
     this.m1gr = new Map() // clé:ni val: na, im
     this.m2gr = new Map() // clé:idg, val:im
   }
@@ -897,11 +895,8 @@ export class Avatar {
     return this
   }
 
-  async compileLists (lct, lgr, brut) {
-    this.m1ct.clear()
-    this.m2ct.clear()
+  async compileLists (lgr, brut) {
     this.m1gr.clear()
-    if (lct) lct.forEach(x => { this.m1ct.set(x[0], x[1]); this.m2ct.set(x[1], x[0]) })
     if (lgr) {
       for (const ni in lgr) {
         const y = lgr[ni]
@@ -914,21 +909,17 @@ export class Avatar {
   }
 
   async decompileLists () {
-    const lct = []
     const lgr = {}
-    this.m1ct.forEach((v, k) => { lct.push([k, v]) })
     for (const [ni, x] of this.m1gr) {
       lgr[ni] = await crypt.crypter(data.clek, serial([x.na.nom, x.na.rnd, x.im]))
     }
-    return [lct, lgr]
+    return lgr
   }
 
   decompileListsBrut () {
-    const lct = []
     const lgr = {}
-    this.m1ct.forEach((v, k) => { lct.push([k, v]) })
     for (const [ni, x] of this.m1gr) lgr[ni] = serial([x.na.nom, x.na.rnd, x.im])
-    return [lct, lgr]
+    return lgr
   }
 
   async fromRow (row) {
@@ -941,8 +932,7 @@ export class Avatar {
     const x = row.cva ? deserial(await crypt.decrypter(this.na.cle, row.cva)) : null
     this.photo = x ? x[0] : ''
     this.info = x ? x[1] : ''
-    const lct = deserial(await crypt.decrypter(data.clek, row.lctk))
-    await this.compileLists(lct, row.lgrk ? deserial(row.lgrk) : null)
+    await this.compileLists(row.lgrk ? deserial(row.lgrk) : null)
     return this
   }
 
@@ -952,25 +942,22 @@ export class Avatar {
 
   async toRow () {
     const r = { ...this }
-    const [lct, lgr] = await this.decompileLists()
+    const lgr = await this.decompileLists()
     r.cva = await this.cvToRow(this.photo, this.info)
-    r.lctk = await crypt.crypter(data.clek, serial(lct))
     r.lgrk = serial(lgr)
     return schemas.serialize('rowavatar', r)
   }
 
   get toIdb () {
     const r = { ...this }
-    const [lct, lgr] = this.decompileListsBrut()
-    r.lct = lct
+    const lgr = this.decompileListsBrut()
     r.lgr = lgr
     return schemas.serialize('idbAvatar', r)
   }
 
   fromIdb (idb) {
     schemas.deserialize('idbAvatar', idb, this)
-    this.compileLists(this.lct, this.lgr, true)
-    delete this.lct
+    this.compileLists(this.lgr, true)
     delete this.lgr
     return this
   }
@@ -1035,26 +1022,6 @@ export class Cv {
     return cl
   }
 
-  /*
-  nouveau (id, vcv, st, photo, info) {
-    this.id = id
-    this.vcv = vcv
-    this.st = st
-    this.photo = photo
-    this.info = info
-    return this
-  }
-
-  fromAvatar (av) { // av : objet Avatar
-    this.id = av.id
-    this.vcv = av.vcv
-    this.st = av.st
-    this.photo = av.photo
-    this.info = av.info
-    return this
-  }
-  */
-
   async fromRow (row) { // row : rowCv - item retour de sync
     this.id = row.id
     this.vcv = row.vcv
@@ -1118,24 +1085,28 @@ export class Cv {
 
 schemas.forSchema({
   name: 'idbContact',
-  cols: ['id', 'ic', 'v', 'st', 'q1', 'q2', 'qm1', 'qm2', 'ard', 'icb', 'data', 'mc', 'info', 'vsh']
+  cols: ['id', 'ic', 'v', 'st', 'dlv', 'q1', 'q2', 'qm1', 'qm2', 'ard', 'icb', 'data', 'mc', 'info', 'vsh']
 })
 /*
 - `id` : id de l'avatar A
 - `ic` : indice de contact de B pour A.
 - `v` :
-- `st` : statut entier de 3 chiffres, `x y z` : **les valeurs < 0 indiquent un row supprimé (les champs après sont null)**.
-  - `x` : 1: contact présumé actif, 2:disparu
-  - `y` : A accepte 1 (ou non 0) les partages de B.
-  - `z` : B accepte 1 (ou non 0) les partages de A.
+- `st` : statut entier de 2 chiffres, `x y` : **les valeurs < 0 indiquent un row supprimé (les champs après sont null)**.
+  - `x` :
+    - 0 : contact présumé actif,
+    - 1 : contact plus présumé actif,
+    - 2 : invitation à être contact plus en cours (sous contrôle de dlv),
+    - 3 : parrainage en cours (sous contrôle de dlv)
+    - 4 : parrainage refusé (sous contrôle de dlv)
+    - 9 : présumé disparu
+  - `y` : 0 1 2 3 selon que A et B acceptent le partage de secrets
+- `dlv` : date limite de validité de l'invitation à être contact *plus* ou du parrainage.
 - `q1 q2 qm1 qm2` : balance des quotas donnés / reçus par l'avatar A à l'avatar B (contact _fort_).
 - `ardc` : **ardoise** partagée entre A et B cryptée par la clé `cc` associée au contact _fort_ avec un avatar B.
 - `icbc` : pour un contact fort _accepté_, indice de A chez B (communiqué lors de l'acceptation par B) pour mise à jour dédoublée de l'ardoise et du statut, crypté par la clé `cc`.
 - `datak` : information cryptée par la clé K de A.
   - `nom rnd` : nom complet de l'avatar.
   - `cc` : 32 bytes aléatoires donnant la clé `cc` d'un contact _fort_ avec B (en attente ou accepté). Le hash de `cc` est **le numéro d'invitation** `ni` retrouvé en clé de invitct correspondant.
-  - `dlv` : date limite de validité de l'invitation à être contact _fort_ ou du parrainage.
-  - `pph` : hash du PBKFD de la phrase de parrainage.
 - `mc` : mots clés
 - `infok` : commentaire (personnel) de A sur B crypté par la clé K du membre
 - `vsh`
@@ -1152,7 +1123,7 @@ export class Contact {
 
   get suppr () { return this.st < 0 }
 
-  get horsLimite () { return false }
+  get horsLimite () { return !this.suppr ? dlvDepassee(this.dlv) : false }
 
   get sidav () { return this.sid }
 
@@ -1162,11 +1133,11 @@ export class Contact {
 
   get nom () { return nomEd(this.data.nom, this.cv ? this.cv.info : '') }
 
-  get stx () { return this.st > 0 ? Math.floor(this.st / 1000) : 0 }
+  get stx () { return this.st > 0 ? Math.floor(this.st / 10) : 0 }
 
-  get styz () { return this.st > 0 ? this.st % 100 : 0 }
+  get sty () { return this.st > 0 ? this.st % 10 : 0 }
 
-  get accepteNouveauSecret () { return this.st === 111 }
+  get accepteNouveauSecret () { return this.st !== 0 }
 
   majCc () {
     if (this.data.cc) data.setClec(this.id, this.ic, this.data.cc)
@@ -1180,6 +1151,7 @@ export class Contact {
     this.v = row.v
     this.st = row.st
     if (!this.suppr) {
+      this.dlv = row.dlv
       this.q1 = row.q1
       this.q2 = row.q2
       this.qm1 = row.qm1
@@ -1613,7 +1585,7 @@ export class Membre {
 
 schemas.forSchema({
   name: 'idbParrain',
-  cols: ['pph', 'id', 'v', 'ic', 'dlv', 'st', 'q1', 'q2', 'qm1', 'qm2', 'ph', 'cx', 'data', 'vsh']
+  cols: ['pph', 'id', 'v', 'ic', 'dlv', 'st', 'q1', 'q2', 'qm1', 'qm2', 'ph', 'cx', 'data', 'ard', 'vsh']
 })
 
 export class Parrain {
@@ -1647,8 +1619,9 @@ export class Parrain {
       this.ph = x[0]
       this.cx = x[1]
       this.data = deserial(await crypt.decrypter(this.clex, row.datax))
+      this.ard = await crypt.decrypter(this.data.cc, row.ardc)
       this.nap = new NomAvatar(this.data.nomp, this.data.rndp)
-      this.naf = new NomAvatar(this.data.nomp, this.data.rndp)
+      this.naf = new NomAvatar(this.data.nomf, this.data.rndf)
     }
     return this
   }
@@ -1657,6 +1630,7 @@ export class Parrain {
     const r = { ...this }
     r.datak = await crypt.crypter(data.clek, serial([this.ph, this.cx]))
     r.datax = await crypt.crypter(this.clex, serial(this.data))
+    r.ardc = await crypt.crypter(this.data.cc, this.ard)
     return schemas.serialize('rowparrain', r)
   }
 
@@ -1667,7 +1641,7 @@ export class Parrain {
   fromIdb (idb) {
     schemas.deserialize('idbParrain', idb, this)
     this.nap = new NomAvatar(this.data.nomp, this.data.rndp)
-    this.naf = new NomAvatar(this.data.nomp, this.data.rndp)
+    this.naf = new NomAvatar(this.data.nomf, this.data.rndf)
     return this
   }
 }
@@ -1840,7 +1814,7 @@ export class Secret {
     this.v = 0
     this.ns = (Math.floor(crypt.rnd4() / 3) * 3)
     this.ic = 0
-    this.st = getJourJ() + cfg().limitesjour[0]
+    this.st = getJourJ() + cfg().limitesjour.secrettemp
     this.ora = 0
     this.mc = new Uint8Array([])
     this.txt = { t: '', d: Math.floor(new Date().getTime() / 1000) }
@@ -1853,7 +1827,7 @@ export class Secret {
     this.ns = (Math.floor(crypt.rnd4() / 3) * 3) + 1
     this.v = 0
     this.ic = contact.ic
-    this.st = getJourJ() + cfg().limitesjour[0]
+    this.st = getJourJ() + cfg().limitesjour.secrettemp
     this.ora = 0
     this.mc = new Uint8Array([])
     this.id2 = contact.na.id
@@ -1872,7 +1846,7 @@ export class Secret {
     this.ora = 0
     this.mc = { 0: new Uint8Array([]) }
     this.mc[this.ic] = new Uint8Array([])
-    this.st = getJourJ() + cfg().limitesjour[0]
+    this.st = getJourJ() + cfg().limitesjour.secrettemp
     this.txt = { t: '', l: new Uint8Array([]), d: Math.floor(new Date().getTime() / 1000) }
     this.ref = ref || null
     return this

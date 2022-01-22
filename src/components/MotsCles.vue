@@ -1,6 +1,5 @@
 <template>
-<div ref="root">
-<q-card class="colomn shadow-8 petitelargeur">
+<q-card class="colomn shadow-8 petitelargeur maauto">
   <div class="q-pa-md">
     <bouton-help page="page1"/>
     <q-btn v-if="!motscles.mc.st.enedition" flat dense size="md" color="warning" label="Editer" @click="startEdit"/>
@@ -8,21 +7,23 @@
     <q-btn v-if="motscles.mc.st.enedition" flat dense size="md" color="primary" label="Annuler" @click="cancelEdit"/>
     <q-btn v-if="motscles.mc.st.enedition" :disable="!motscles.mc.st.modifie" flat dense size="md" color="warning" label="Valider" @click="okEdit"/>
   </div>
-  <div v-if="ajouter" class="column q-px-sm q-pb-md" style="width:100%">
-    <div class="row justify-end">
-      <q-btn size="sm" icon="close" dense color="primary" label="Renoncer" @click="undo"></q-btn>
-      <q-btn class="q-ml-md" size="sm" icon="check" dense color="primary" label="OK" @click="ok"></q-btn>
+  <div ref="root">
+    <div v-if="ajouter" class="column q-px-sm q-pb-md" style="width:100%">
+      <div class="row justify-end">
+        <q-btn size="sm" icon="close" dense color="primary" label="Renoncer" @click="undo"></q-btn>
+        <q-btn class="q-ml-md" size="sm" icon="check" dense color="primary" label="OK" @click="ok"></q-btn>
+      </div>
+      <q-input class="inp" v-model="categ" label="Catégorie" counter placeholder="Par exemple: Sections">
+        <template v-slot:hint>3 à 12 lettres, première majuscule. Vide pour 'obsolète'</template>
+      </q-input>
+      <div id="ta"><q-input class="inp" v-model="nom" label="Nom" counter maxlength="12" placeholder="Par exemple: Ecologie">
+        <template v-slot:hint>3 à 12 lettres, émoji conseillé en tête</template>
+        <template v-slot:append>
+          <q-btn icon="face" size="sm" dense @click="emoji=true"></q-btn>
+        </template>
+      </q-input></div>
     </div>
-    <q-input class="inp" v-model="categ" label="Catégorie" counter placeholder="Par exemple: Sections">
-      <template v-slot:hint>3 à 12 lettres, première majuscule. Vide pour 'obsolète'</template>
-    </q-input>
-    <div id="ta"><q-input class="inp" v-model="nom" label="Nom" counter maxlength="12" placeholder="Par exemple: Ecologie">
-      <template v-slot:hint>3 à 12 lettres, émoji conseillé en tête</template>
-      <template v-slot:append>
-        <q-btn icon="face" size="sm" dense @click="emoji=true"></q-btn>
-      </template>
-    </q-input></div>
-   </div>
+  </div>
   <q-splitter v-model="splitterModel" class="col" style="width:100%">
     <template v-slot:before>
       <q-tabs v-model="tab" no-caps vertical >
@@ -47,7 +48,6 @@
     <VuemojiPicker @emojiClick="emojiclick" data-source="emoji.json"/>
   </q-dialog>
 </q-card>
-</div>
 </template>
 <script>
 import { PrefCompte } from '../app/operations'

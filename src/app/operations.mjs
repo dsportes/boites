@@ -1,4 +1,4 @@
-import { NomAvatar, store, post, affichermessage, cfg, sleep, affichererreur, appexc, difference, getpj } from './util.mjs'
+import { NomAvatar, store, post, affichermessage, cfg, sleep, affichererreur, appexc, difference, getpj, getJourJ, serial } from './util.mjs'
 import { remplacePage } from './page.mjs'
 import {
   deleteIDB, idbSidCompte, commitRows, getCompte, getPrefs, getAvatars, getContacts, getCvs,
@@ -1016,6 +1016,77 @@ export class PjSecret extends OperationUI {
     try {
       const args = { sessionId: data.sessionId, ...arg }
       const ret = await post(this, 'm1', 'pjSecret', args)
+      if (data.dh < ret.dh) data.dh = ret.dh
+      this.finOK()
+    } catch (e) {
+      await this.finKO(e)
+    }
+  }
+}
+
+/******************************************************************
+ * Parrainage : args de m1/nouveauParrainage
+ * - sessionId
+ * - pph : hash de la phrase de parrainge
+ * - dlv : date limite de validité
+ * - id : de l'avatar parrain
+ * - aps : booléen - true si le parrain accepte le partage de secret (false si limitation à l'ardoise)
+ * - quotas: {q1 q2 qm1 qm2} : quotas donnés par le parrain
+ * - datak : [phrase de parrainage (string), clé X (u8)] sérialisé et crypté par la clé K du parrain
+ * - datax : sérialisation et cryptage par la clé X de :
+ *  - nomp, rndp : du parrain
+ *  - nomf, rndf : du filleul
+ *  - cc : u8, clé du couple
+ *  - ic : numéro de contact du filleul chez le parrain
+ * - ardc : mot d'accueil du parrain crypté par la clé du couple
+ * Pour créer le row contact :
+ * - ic : indice de contact du filleul chez le parrain
+ * - data2k : sérialisation et cryptage par la clé K du parrain de :
+ *  - nom, rnd du filleul
+ *  - cc : u8, clé du couple
+ * Retour :
+ * - dh :
+ */
+
+export class nouveauParrainage extends OperationUI {
+  constructor () {
+    super('Parrainage d\'un nouveau compte', OUI, SELONMODE)
+  }
+
+  excAffichages () { return [this.excAffichage2] }
+
+  // excActions(), défaut de Operation
+
+  async run (arg) {
+    /* { pph, pp, clex, id, aps, quotas: {q1, q2, qm1, qm2}, nomf, mot }
+    - pp : phrase de parrainage (string)
+    - pph : le hash de la clex (integer)
+    - clex : PBKFD de pp (u8)
+    - nomf : nom du filleul (string)
+    - mot : mot d'accueil (string)
+    - aps : booléen (accepta partage de secrets)
+    */
+    try {
+      const dlv = getJourJ() + cfg().limitesjour.parrainange
+      const ic = crypt.rnd4()
+      const cc = crypt.random(32)
+      const nap = data.getNa(arg.id)
+      const naf = new NomAvatar(arg.nomf)
+      const args = {
+        sessionId: data.sessionId,
+        pph: arg.pph,
+        dlv,
+        id: arg.id,
+        aps: arg.aps,
+        quotas: arg.quotas,
+        ic,
+        datak: await crypt.crypter(data.clek, serial([arg.pp, arg.clex])),
+        datax: await crypt.crypter(arg.clex, serial({ nomp: nap.nom, rndp: nap.rnd, nomf: naf.nom, rndf: naf.rnd, cc, ic })),
+        ardc: await crypt.crypter(cc, arg.mot),
+        data2k: await crypt.crypter(data.clek, serial({ nom: naf.nom, rnd: naf.rnd, cc })),
+        idf: naf.id
+      }
+      const ret = await post(this, 'm1', 'nouveauParrainage', args)
       if (data.dh < ret.dh) data.dh = ret.dh
       this.finOK()
     } catch (e) {

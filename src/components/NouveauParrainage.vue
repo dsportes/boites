@@ -1,0 +1,188 @@
+<template>
+  <q-card class="q-ma-xs petitelargeur fs-md">
+    <q-card-section class="column items-center">
+      <div class="titre-lg text-center">Parrainage d'un nouveau compte</div>
+      <q-btn flat @click="close" color="primary" label="Renoncer" class="q-ml-sm" />
+    </q-card-section>
+
+    <q-card-section>
+      <q-stepper v-model="step" vertical color="primary" animated>
+        <q-step :name="1" title="Phrase de parrainage" icon="settings" :done="step > 1">
+          <span class="fs-sm q-py-sm">Phrase à ne communiquer qu'au titulaire du compte à parrainer.</span>
+          <q-input dense v-model="phrase" label="Phrase libre" counter :rules="[r1]" maxlength="32"
+            @keydown.enter.prevent="crypterphrase" :type="isPwd ? 'password' : 'text'"
+            hint="Presser 'Entrée' à la fin de la saisie">
+          <template v-slot:append>
+            <q-icon :name="isPwd ? 'visibility_off' : 'visibility'" class="cursor-pointer" @click="isPwd = !isPwd"/>
+            <span :class="phrase.length === 0 ? 'disabled' : ''"><q-icon name="cancel" class="cursor-pointer"  @click="razphrase"/></span>
+          </template>
+          </q-input>
+          <div v-if="encours" class="t1">Cryptage en cours ...
+            <q-spinner color="primary" size="2rem" :thickness="3" />
+          </div>
+        </q-step>
+
+        <q-step :name="2" title="Phrase secrète du compte" icon="settings" :done="step > 2">
+          <span class="fs-sm q-py-sm">Saisir et confirmer la phrase secrète du compte qui permettra de s'authentifier pour y accéder.</span>
+          <phrase-secrete :init-val="ps" class="q-ma-xs" v-on:ok-ps="okps" verif icon-valider="check" label-valider="Suivant"></phrase-secrete>
+          <q-stepper-navigation>
+            <q-btn flat @click="step = 1" color="primary" label="Précédent" class="q-ml-sm" />
+          </q-stepper-navigation>
+        </q-step>
+
+        <q-step :name="3" title="Nom du premier avatar du compte" icon="settings" :done="step > 3" >
+          <nom-avatar class="q-ma-xs" v-on:ok-nom="oknom" icon-valider="check" label-valider="Suivant"></nom-avatar>
+          <q-stepper-navigation>
+            <q-btn flat @click="step = 2" color="primary" label="Précédent" class="q-ml-sm" />
+          </q-stepper-navigation>
+        </q-step>
+
+        <q-step :name="4" title="Quotas demandés" icon="settings" :done="step > 4" >
+          <quotas-volume :init-val="quotas" class="q-ma-xs" v-on:ok-quotas="okq"></quotas-volume>
+          <q-stepper-navigation>
+            <q-btn flat @click="step = 3" color="primary" label="Précédent" class="q-ml-sm" />
+          </q-stepper-navigation>
+        </q-step>
+
+        <q-step :name="5" title="Confirmation" icon="check" :done="step > 5" >
+          <q-icon :name="isPwd ? 'visibility_off' : 'visibility'" class="cursor-pointer" @click="isPwd = !isPwd"/>
+          <div class="t1">Mot de passe: <span class="sp1">{{isPwd ? '***' : mdp.mdp}}</span></div>
+          <div class="t1">Phrase secrète (ligne 1): <span class="sp1">{{isPwd ? '***' : ps.debut}}</span></div>
+          <div class="t1">Phrase secrète (ligne 2): <span class="sp1">{{isPwd ? '***' : ps.fin}}</span></div>
+          <div class="t1">Nom de l'avatar: <span class="sp1">{{nom}}</span></div>
+          <div class="t1">Quotas: <span class="sp1">{{'q1:' + quotas.q1 + ' q2:' + quotas.q2 + ' qm1:' + quotas.qm1 + ' qm2:' + quotas.qm2}}</span></div>
+          <q-stepper-navigation>
+            <q-btn flat @click="corriger" color="primary" label="Corriger" class="q-ml-sm" />
+            <q-btn @click="confirmer" color="warning" label="Confirmer" icon="check" class="q-ml-sm" />
+          </q-stepper-navigation>
+        </q-step>
+
+      </q-stepper>
+    </q-card-section>
+  </q-card>
+</template>
+
+<script>
+import { useStore } from 'vuex'
+import { computed } from 'vue'
+import PhraseSecrete from './PhraseSecrete.vue'
+import NomAvatar from './NomAvatar.vue'
+import QuotasVolume from './QuotasVolume.vue'
+import { CreationCompte } from '../app/operations.mjs'
+import { Quotas } from '../app/util.mjs'
+import { crypt } from '../app/crypto.mjs'
+
+export default ({
+  name: 'NouveauParrainage',
+
+  props: { close: Function },
+
+  components: {
+    PhraseSecrete, QuotasVolume, NomAvatar
+  },
+
+  data () {
+    return {
+      r1: val => (val.length > 15 && val.length < 33) || 'De 16 à 32 signes',
+      isPwd: false,
+      step: 1,
+      ps: null,
+      mdp: null,
+      quotas: new Quotas(this.quotasDef),
+      nom: '',
+      phrase: '',
+      encours: false
+    }
+  },
+
+  methods: {
+    crypterphrase () {
+      this.encours = true
+      setTimeout(async () => {
+        this.clex = await crypt.pbkfd(this.phrase)
+        this.pph = crypt.hashBin(this.clex)
+        this.encours = false
+        this.step = 2
+        console.log(this.pph)
+      }, 1)
+    },
+    razphrase () {
+      this.phrase = ''
+      this.encours = false
+    },
+    okmdp (mdp) {
+      this.mdp = mdp
+      this.step = 2
+    },
+    okps (ps) {
+      if (ps) {
+        this.ps = ps
+        this.step = 3
+      }
+    },
+    oknom (nom) {
+      this.nom = nom
+      this.step = 4
+    },
+    okq (q) {
+      this.quotas = new Quotas(q)
+      this.step = 5
+    },
+    async confirmer () {
+      await new CreationCompte().run(this.mdp, this.ps, this.nom, this.quotas)
+      this.ps = null
+      this.mdp = null
+      this.quotas = null
+      this.nom = ''
+      this.step = 1
+    },
+    corriger () {
+      this.step = 1
+    }
+  },
+
+  setup () {
+    const $store = useStore()
+    const org = computed(() => $store.state.ui.org)
+    const dialoguecreationcompte = computed({
+      get: () => $store.state.ui.dialoguecreationcompte,
+      set: (val) => $store.commit('ui/majdialoguecreationcompte', val)
+    })
+    return {
+      quotasDef: new Quotas({ q1: 1, q2: 1, qm1: 5, qm2: 5 }),
+      org,
+      dialoguecreationcompte
+    }
+  }
+})
+</script>
+
+<style lang="sass" scoped>
+@import '../css/app.sass'
+@import '../css/input.sass'
+.t1
+  font-size: 1.1rem
+  font-weight: bold
+  font-style: italic
+  color: $primary
+.sp1
+  margin-left: 1rem
+  font-size: 0.9rem
+  font-style: normal
+  font-family: 'Roboto Mono'
+.q-dialog__inner
+  padding: 0 !important
+</style>
+
+<style lang="sass">
+.q-stepper--vertical
+  padding: 4px !important
+.q-stepper--bordered
+  border: none
+.q-stepper__tab
+  padding: 2px 0 !important
+.q-stepper__step-inner
+  padding: 0px 2px 2px 18px !important
+.q-stepper__nav
+  padding: 0 !important
+</style>

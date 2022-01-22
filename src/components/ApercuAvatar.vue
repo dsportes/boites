@@ -1,5 +1,5 @@
 <template>
-<q-card class="q-pa-sm petitelargeur fs-md shadow-8">
+<q-card class="q-pa-sm petitelargeur maauto fs-md shadow-8">
   <div class="row justify-between full-width q-pa-xs">
     <bouton-help page="p1"/>
     <q-btn v-if="selectionner" dense size="md" color="secondary" icon="navigate_next" label="Sélectionner" @click="toAvatar"/>
@@ -99,12 +99,11 @@ export default ({
   }
 })
 </script>
-<style lang="css">
-@import '../css/cropper.css'
-</style>
-
 <style lang="sass" scoped>
 @import '../css/app.sass'
 .q-card > div
   box-shadow: inherit !important
+</style>
+<style lang="css">
+@import '../css/cropper.css'
 </style>

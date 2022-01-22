@@ -149,7 +149,7 @@ export function getJourJ () {
 }
 
 /* `dlv` : date limite de validité, en nombre de jours depuis le 1/1/2021. */
-export function dlvDepassee (dlv) { return dlv < jourJ }
+export function dlvDepassee (dlv) { return dlv !== 0 && dlv < jourJ }
 
 export async function readFile (file, bin) {
   return new Promise((resolve, reject) => {

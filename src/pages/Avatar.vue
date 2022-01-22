@@ -1,5 +1,5 @@
 <template>
-<q-page class="fs-md">
+<q-page class="fs-md q-pa-xs">
   <div v-if="tabavatar === 'secrets'" :class="$q.screen.gt.sm ? 'ml20' : 'q-pa-xs full-width'">
     <div v-if="state.lst && state.lst.length" class="col">
       <div v-for="(s, idx) in state.lst" :key="s.vk" :class="dkli(idx) + ' full-width row items-start q-py-xs'">
@@ -32,17 +32,30 @@
   </div>
 
   <div v-if="tabavatar === 'etc' && avatar">
-    <q-list class="full-width">
-      <q-expansion-item label="Carte de visite" default-opened
-        header-class="expansion-header-class-1 titre-lg bg-secondary text-white">
-        <div class="fake"><apercu-avatar class="maauto" page editer :avatar-id="avatar.id"/></div>
-      </q-expansion-item>
-      <q-expansion-item class="q-mt-xs" label="Mots clés du compte"
-        header-class="expansion-header-class-1 titre-lg bg-secondary text-white">
-        <div class="fake"><mots-cles class="maauto" :motscles="motscles"></mots-cles></div>
-      </q-expansion-item>
-    </q-list>
+    <q-expansion-item label="Carte de visite de l'avatar" group="groupeetc"
+      header-class="expansion-header-class-1 titre-lg bg-secondary text-white">
+      <apercu-avatar class="maauto" page editer :avatar-id="avatar.id"/>
+    </q-expansion-item>
+    <q-separator/>
+    <q-expansion-item label="Mots clés du compte" group="groupeetc"
+      header-class="expansion-header-class-1 titre-lg bg-secondary text-white">
+      <mots-cles :motscles="motscles"></mots-cles>
+    </q-expansion-item>
+    <q-separator/>
+    <q-expansion-item group="groupeetc"
+      header-class="expansion-header-class-1 bg-secondary text-white">
+      <template v-slot:header>
+        <q-item-section>
+          <div class="titre-lg">Parrainages de l'avatar ( {{nbparrains}} )</div>
+        </q-item-section>
+      </template>
+      <q-btn class="maauto" flat dense color="primary" icon="add" label="Nouveau parrainage" @click="nvpar = true"></q-btn>
+    </q-expansion-item>
   </div>
+
+  <q-dialog v-model="nvpar" class="moyennelargeur">
+    <NouveauParrainage :close="fermerParrain" />
+  </q-dialog>
 
   <q-dialog v-model="editsec" class="moyennelargeur">
     <panel-secret :secret="secret" :close="fermersecret"/>
@@ -69,6 +82,7 @@ import MotsCles from '../components/MotsCles.vue'
 import ApercuAvatar from '../components/ApercuAvatar.vue'
 import PanelSecret from '../components/PanelSecret.vue'
 import PanelFiltre from '../components/PanelFiltre.vue'
+import NouveauParrainage from '../components/NouveauParrainage.vue'
 import ShowHtml from '../components/ShowHtml.vue'
 import { CvAvatar } from '../app/operations.mjs'
 import { Secret, data } from '../app/modele.mjs'
@@ -79,16 +93,28 @@ const enc = new TextEncoder()
 export default ({
   name: 'Avatar',
 
-  components: { /* BoutonHelp, */ ApercuAvatar, ApercuMotscles, MotsCles, PanelSecret, PanelFiltre, ShowHtml },
+  components: { /* BoutonHelp, */ ApercuAvatar, ApercuMotscles, MotsCles, PanelSecret, PanelFiltre, ShowHtml, NouveauParrainage },
+
+  computed: {
+    nbparrains () {
+      let n = 0
+      for (const pph in this.parrains) {
+        if (this.parrains[pph].id === this.avatar.id) n++
+      }
+      return n
+    }
+  },
 
   data () {
     return {
       row: { },
-      editsec: false
+      editsec: false,
+      nvpar: false
     }
   },
 
   methods: {
+    fermerParrain () { this.nvpar = false },
     ouvrirsecret (s) {
       this.secret = s
       this.editsec = true
@@ -264,6 +290,7 @@ export default ({
       get: () => $store.state.db.secret,
       set: (val) => $store.commit('db/majsecret', val)
     })
+    const parrains = computed(() => { return data.getParrain() })
 
     const panelfiltre = ref(false)
 
@@ -348,6 +375,7 @@ export default ({
       compte,
       avatar,
       secret,
+      parrains,
       tabavatar,
       motscles,
       state,

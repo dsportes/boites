@@ -7,19 +7,18 @@
   </div>
 
   <div v-if="tabcompte === 'etc' && compte">
-    <q-list class="full-width">
-      <q-expansion-item label="Identité, mémo du compte" default-opened
-        header-class="expansion-header-class-1 titre-lg bg-secondary text-white">
-        <div class="q-pa-sm column justify-center petitelargeur maauto">
-          <div class="row justify-between items-center q-my-md"><span class="titre-md ">Code du compte : {{compte.sid}}</span><bouton-help page="page1"/></div>
-          <editeur-md ref="memoed" style="height:10rem" :texte="prefs.memo" editable label-ok="OK" v-on:ok="memook"></editeur-md>
-        </div>
-      </q-expansion-item>
-      <q-expansion-item class="q-mt-xs" label="Mots clés"
-        header-class="expansion-header-class-1 titre-lg bg-secondary text-white">
-        <div class="fake"><mots-cles class="petitelargeur maauto" :motscles="motscles"></mots-cles></div>
-      </q-expansion-item>
-    </q-list>
+    <q-expansion-item label="Identité, mémo du compte" default-opened  group="groupeetc"
+      header-class="expansion-header-class-1 titre-lg bg-secondary text-white">
+      <div class="q-pa-sm column justify-center petitelargeur maauto">
+        <div class="row justify-between items-center q-my-md"><span class="titre-md ">Code du compte : {{compte.sid}}</span><bouton-help page="page1"/></div>
+        <editeur-md ref="memoed" style="height:10rem" :texte="prefs.memo" editable label-ok="OK" v-on:ok="memook"></editeur-md>
+      </div>
+    </q-expansion-item>
+    <q-separator/>
+    <q-expansion-item class="q-mt-xs" label="Mots clés" group="groupeetc"
+      header-class="expansion-header-class-1 titre-lg bg-secondary text-white">
+      <div class="fake"><mots-cles class="petitelargeur maauto" :motscles="motscles"></mots-cles></div>
+    </q-expansion-item>
   </div>
 </q-page>
 </template>

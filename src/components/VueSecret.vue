@@ -141,7 +141,7 @@ export default ({
       } else {
         // création
         arg.ic = 0
-        arg.st = this.permlocal ? 99999 : (this.jourJ + cfg().limitesjour[0])
+        arg.st = this.permlocal ? 99999 : (this.jourJ + cfg().limitesjour.secrettemp)
         arg.ora = this.oralocal || 0
         if (s.ts === 1) {
           arg.ic2 = s.ic2
@@ -169,7 +169,7 @@ export default ({
     const im = toRef(props, 'im')
     const locsecret = toRef(props, 'secret')
     const jourJ = getJourJ()
-    const limjours = cfg().limitesjour[0]
+    const limjours = cfg().limitesjour.secrettemp
 
     function editer () {
       const s = locsecret.value
