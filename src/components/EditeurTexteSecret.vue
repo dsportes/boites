@@ -124,7 +124,6 @@ export default ({
   min-height: 1.1rem !important
   max-height: 1.6rem !important
 .ta
-  width: 100%
   margin: 0
   border-top: 1px solid $grey-5
   border-bottom: 1px solid $grey-5

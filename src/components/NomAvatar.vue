@@ -3,11 +3,16 @@
     <div class="titre-lg">{{msg[phase]}}</div>
     <div class="text-warning">Ce nom NE POURRA PLUS être changé.
       Caractères <span class="q-px-sm text-negative bg-yellow text-bold">{{interdits}}</span> et non imprimables (CR TAB ...) interdits.</div>
-    <q-input dense counter v-model="nom" label="Nom de l'avatar" :rules="[r1,r2]"/>
+    <q-input dense counter v-model="nom" label="Nom de l'avatar" :rules="[r1,r2]" maxlength="32"
+      @keydown.enter.prevent="ok" type="text" hint="Presser 'Entrée' à la fin de la saisie">
+      <template v-slot:append>
+        <span :class="nom.length === 0 ? 'disabled' : ''"><q-icon name="cancel" class="cursor-pointer"  @click="nom=''"/></span>
+      </template>
+    </q-input>
     <div class="row justify-between items-center no-wrap">
       <q-btn color="primary" flat label="Renoncer" size="md" @click="ko" />
       <q-btn color="warning" glossy :label="labelVal()" size="md" :icon-right="iconValider"
-      :disable="!nom || nom.length < 4 || nom.length > 24" @click="ok" />
+      :disable="r1(nom) !== true || r2(nom) !== true" @click="ok" />
     </div>
   </q-card-section>
 </template>
@@ -25,12 +30,15 @@ export default ({
       phase: 0,
       msg: msg,
       nom: '',
-      interdits: '< > : " / \\ | ? *',
-      r2: val => val.length < 4 || val.length > 20 ? 'Entre 4 et 24 caractères' : true,
-      r1: val => /[<>:"/\\|?*\\x00-\\x1F]/.test(val) ? 'Caractères interdits' : true
+      interdits: '< > : " / \\ | ? *'
     }
   },
   methods: {
+    r2 (val) { return val.length < 4 || val.length > 20 ? 'Entre 4 et 24 caractères' : true },
+    r1 (val) {
+      // eslint-disable-next-line no-control-regex
+      return /[<>:"/\\|?*\x00-\x1F]/.test(val) ? 'Caractères interdits' : true
+    },
     labelVal () {
       return this.phase < 2 ? 'OK' : this.labelValider
     },

@@ -1048,7 +1048,7 @@ export class PjSecret extends OperationUI {
  * - dh :
  */
 
-export class nouveauParrainage extends OperationUI {
+export class NouveauParrainage extends OperationUI {
   constructor () {
     super('Parrainage d\'un nouveau compte', OUI, SELONMODE)
   }

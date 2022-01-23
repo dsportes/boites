@@ -53,7 +53,7 @@
     </q-expansion-item>
   </div>
 
-  <q-dialog v-model="nvpar" class="moyennelargeur">
+  <q-dialog v-model="nvpar" persistent class="moyennelargeur">
     <NouveauParrainage :close="fermerParrain" />
   </q-dialog>
 

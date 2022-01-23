@@ -57,13 +57,16 @@ export default ({
       fileList: null,
       file: { },
       nompj: this.nom,
-      interdits: '< > : " / \\ | ? *',
-      r2: val => val.length !== 0 || 'Valeur requise',
-      r1: val => /[<>:"/\\|?*\\x00-\\x1F]/.test(val) ? 'Caractères interdits' : true
+      interdits: '< > : " / \\ | ? *'
     }
   },
 
   methods: {
+    r2 (val) { return val.length !== 0 || 'Valeur requise' },
+    r1 (val) {
+      // eslint-disable-next-line no-control-regex
+      return /[<>:"/\\|?*\x00-\x1F]/.test(val) ? 'Caractères interdits' : true
+    },
     fermer () {
       if (this.close) this.close()
     },

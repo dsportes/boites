@@ -17,27 +17,28 @@
             <span :class="phrase.length === 0 ? 'disabled' : ''"><q-icon name="cancel" class="cursor-pointer"  @click="razphrase"/></span>
           </template>
           </q-input>
-          <div v-if="encours" class="t1">Cryptage en cours ...
+          <div v-if="encours" class="fs-md text-italic text-primary">Cryptage en cours ...
             <q-spinner color="primary" size="2rem" :thickness="3" />
           </div>
         </q-step>
 
-        <q-step :name="2" title="Phrase secrète du compte" icon="settings" :done="step > 2">
-          <span class="fs-sm q-py-sm">Saisir et confirmer la phrase secrète du compte qui permettra de s'authentifier pour y accéder.</span>
-          <phrase-secrete :init-val="ps" class="q-ma-xs" v-on:ok-ps="okps" verif icon-valider="check" label-valider="Suivant"></phrase-secrete>
-          <q-stepper-navigation>
-            <q-btn flat @click="step = 1" color="primary" label="Précédent" class="q-ml-sm" />
-          </q-stepper-navigation>
-        </q-step>
-
-        <q-step :name="3" title="Nom du premier avatar du compte" icon="settings" :done="step > 3" >
+        <q-step :name="2" title="Nom du premier avatar du compte" icon="settings" :done="step > 3" >
           <nom-avatar class="q-ma-xs" v-on:ok-nom="oknom" icon-valider="check" label-valider="Suivant"></nom-avatar>
           <q-stepper-navigation>
             <q-btn flat @click="step = 2" color="primary" label="Précédent" class="q-ml-sm" />
           </q-stepper-navigation>
         </q-step>
 
-        <q-step :name="4" title="Quotas demandés" icon="settings" :done="step > 4" >
+        <q-step :name="3" title="Mot de bienvenue pour le futur nouveau compte" icon="settings" :done="step > 3" >
+          <textarea :class="'q-pa-xs full-width font-mono height-8 ta ' + dlclass" v-model="mot"/>
+          <div v-if="diagmot" class="fs-sm text-warning">De 10 à 140 signes ({{mot.length}})</div>
+          <q-stepper-navigation>
+            <q-btn flat @click="step = 2" color="primary" label="Précédent" class="q-ml-sm" />
+            <q-btn flat @click="okmot" color="primary" label="Suivant" :disable="mot.length<10" class="q-ml-sm" />
+          </q-stepper-navigation>
+        </q-step>
+
+        <q-step :name="4" title="Quotas transférés" icon="settings" :done="step > 4" >
           <quotas-volume :init-val="quotas" class="q-ma-xs" v-on:ok-quotas="okq"></quotas-volume>
           <q-stepper-navigation>
             <q-btn flat @click="step = 3" color="primary" label="Précédent" class="q-ml-sm" />
@@ -45,12 +46,13 @@
         </q-step>
 
         <q-step :name="5" title="Confirmation" icon="check" :done="step > 5" >
-          <q-icon :name="isPwd ? 'visibility_off' : 'visibility'" class="cursor-pointer" @click="isPwd = !isPwd"/>
-          <div class="t1">Mot de passe: <span class="sp1">{{isPwd ? '***' : mdp.mdp}}</span></div>
-          <div class="t1">Phrase secrète (ligne 1): <span class="sp1">{{isPwd ? '***' : ps.debut}}</span></div>
-          <div class="t1">Phrase secrète (ligne 2): <span class="sp1">{{isPwd ? '***' : ps.fin}}</span></div>
-          <div class="t1">Nom de l'avatar: <span class="sp1">{{nom}}</span></div>
-          <div class="t1">Quotas: <span class="sp1">{{'q1:' + quotas.q1 + ' q2:' + quotas.q2 + ' qm1:' + quotas.qm1 + ' qm2:' + quotas.qm2}}</span></div>
+          <div class="text-italic">Phrase de parrainage: <span class="sp1">{{phrase}}</span></div>
+          <div class="text-italic">Nom de l'avatar: <span class="sp1">{{nom}}</span></div>
+          <div class="text-italic">Mot de bienvenue: <span class="sp1">{{mot}}</span></div>
+          <div class="text-italic">Quotas: <span class="sp1">{{'q1:' + quotas.q1 + ' q2:' + quotas.q2 + ' qm1:' + quotas.qm1 + ' qm2:' + quotas.qm2}}</span></div>
+          <div style="margin-left:-0.8rem" class="text-primary">
+            <q-toggle v-model="aps" size="md" :color="aps ? 'green' : 'grey'" label="Partage de secrets avec cet avatar"/>
+          </div>
           <q-stepper-navigation>
             <q-btn flat @click="corriger" color="primary" label="Corriger" class="q-ml-sm" />
             <q-btn @click="confirmer" color="warning" label="Confirmer" icon="check" class="q-ml-sm" />
@@ -65,10 +67,9 @@
 <script>
 import { useStore } from 'vuex'
 import { computed } from 'vue'
-import PhraseSecrete from './PhraseSecrete.vue'
 import NomAvatar from './NomAvatar.vue'
 import QuotasVolume from './QuotasVolume.vue'
-import { CreationCompte } from '../app/operations.mjs'
+import { NouveauParrainage } from '../app/operations.mjs'
 import { Quotas } from '../app/util.mjs'
 import { crypt } from '../app/crypto.mjs'
 
@@ -78,25 +79,37 @@ export default ({
   props: { close: Function },
 
   components: {
-    PhraseSecrete, QuotasVolume, NomAvatar
+    QuotasVolume, NomAvatar
+  },
+
+  computed: {
+    dlclass () { return this.$q.dark.isActive ? 'sombre' : 'clair' }
   },
 
   data () {
     return {
-      r1: val => (val.length > 15 && val.length < 33) || 'De 16 à 32 signes',
       isPwd: false,
       step: 1,
-      ps: null,
-      mdp: null,
       quotas: new Quotas(this.quotasDef),
       nom: '',
       phrase: '',
+      mot: '',
+      diagmot: false,
+      aps: false,
       encours: false
     }
   },
 
+  watch: {
+    mot (ap, av) {
+      this.diagmot = ap.length < 10 || ap.length > 140
+    }
+  },
+
   methods: {
+    r1 (val) { return (val.length > 15 && val.length < 33) || 'De 16 à 32 signes' },
     crypterphrase () {
+      if (!this.r1(this.phrase)) return
       this.encours = true
       setTimeout(async () => {
         this.clex = await crypt.pbkfd(this.phrase)
@@ -110,31 +123,39 @@ export default ({
       this.phrase = ''
       this.encours = false
     },
-    okmdp (mdp) {
-      this.mdp = mdp
-      this.step = 2
-    },
-    okps (ps) {
-      if (ps) {
-        this.ps = ps
-        this.step = 3
-      }
-    },
     oknom (nom) {
       this.nom = nom
-      this.step = 4
+      this.step = 3
+    },
+    okmot () {
+      if (this.mot.length > 10) {
+        this.mot = this.mot.substring(0, 140)
+        this.step = 4
+      }
     },
     okq (q) {
       this.quotas = new Quotas(q)
       this.step = 5
     },
     async confirmer () {
-      await new CreationCompte().run(this.mdp, this.ps, this.nom, this.quotas)
-      this.ps = null
-      this.mdp = null
-      this.quotas = null
+      /* { pph, pp, clex, id, aps, quotas: {q1, q2, qm1, qm2}, nomf, mot }
+      - pp : phrase de parrainage (string)
+      - pph : le hash de la clex (integer)
+      - clex : PBKFD de pp (u8)
+      - nomf : nom du filleul (string)
+      - mot : mot d'accueil (string)
+      - aps : booléen (accepta partage de secrets)
+      */
+      const arg = { pph: this.pph, pp: this.phrase, clex: this.clex, id: this.avatar.id, aps: this.aps, quotas: { ...this.quotas }, nomf: this.nom, mot: this.mot }
+      await new NouveauParrainage().run(arg)
+      this.mot = ''
       this.nom = ''
-      this.step = 1
+      this.quotas = new Quotas(this.quotasDef)
+      this.pp = ''
+      this.clex = null
+      this.pph = 0
+      this.aps = false
+      if (this.close) this.close()
     },
     corriger () {
       this.step = 1
@@ -143,15 +164,10 @@ export default ({
 
   setup () {
     const $store = useStore()
-    const org = computed(() => $store.state.ui.org)
-    const dialoguecreationcompte = computed({
-      get: () => $store.state.ui.dialoguecreationcompte,
-      set: (val) => $store.commit('ui/majdialoguecreationcompte', val)
-    })
+    const avatar = computed(() => $store.state.db.avatar)
     return {
       quotasDef: new Quotas({ q1: 1, q2: 1, qm1: 5, qm2: 5 }),
-      org,
-      dialoguecreationcompte
+      avatar
     }
   }
 })
@@ -160,11 +176,11 @@ export default ({
 <style lang="sass" scoped>
 @import '../css/app.sass'
 @import '../css/input.sass'
-.t1
-  font-size: 1.1rem
-  font-weight: bold
-  font-style: italic
-  color: $primary
+.ta
+  margin: 0
+  border-top: 1px solid $grey-5
+  border-bottom: 1px solid $grey-5
+  overflow-y: auto
 .sp1
   margin-left: 1rem
   font-size: 0.9rem
