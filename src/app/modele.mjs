@@ -195,9 +195,11 @@ class Repertoire {
 
   getCv (id) {
     const sid = typeof id === 'string' ? id : crypt.idToSid(id)
+    const idn = typeof id === 'string' ? crypt.sidToId(id) : id
     let cv = this.rep[sid]
     if (!cv) {
       cv = new Cv(true)
+      cv.id = idn
       this.rep[sid] = cv
       this.modif = true
     }
@@ -1618,8 +1620,8 @@ export class Parrain {
       const x = deserial(await crypt.decrypter(data.clek, row.datak))
       this.ph = x[0]
       this.cx = x[1]
-      this.data = deserial(await crypt.decrypter(this.clex, row.datax))
-      this.ard = await crypt.decrypter(this.data.cc, row.ardc)
+      this.data = deserial(await crypt.decrypter(this.cx, row.datax))
+      this.ard = await crypt.decrypterStr(this.data.cc, row.ardc)
       this.nap = new NomAvatar(this.data.nomp, this.data.rndp)
       this.naf = new NomAvatar(this.data.nomf, this.data.rndf)
     }
@@ -1629,7 +1631,7 @@ export class Parrain {
   async toRow () {
     const r = { ...this }
     r.datak = await crypt.crypter(data.clek, serial([this.ph, this.cx]))
-    r.datax = await crypt.crypter(this.clex, serial(this.data))
+    r.datax = await crypt.crypter(this.cx, serial(this.data))
     r.ardc = await crypt.crypter(this.data.cc, this.ard)
     return schemas.serialize('rowparrain', r)
   }

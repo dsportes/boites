@@ -113,7 +113,9 @@ export default ({
       this.encours = true
       setTimeout(async () => {
         this.clex = await crypt.pbkfd(this.phrase)
-        this.pph = crypt.hashBin(this.clex)
+        let hx = ''
+        for (let i = 0; i < this.phrase.length; i = i + 2) hx += this.phrase.charAt(i)
+        this.pph = crypt.hash(hx)
         this.encours = false
         this.step = 2
         console.log(this.pph)

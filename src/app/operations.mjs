@@ -6,7 +6,7 @@ import {
   purgeAvatars, purgeCvs, purgeGroupes, openIDB, enregLScompte, setEtat, getEtat, getPjidx, putPj
 } from './db.mjs'
 import { Compte, Avatar, newObjet, commitMapObjets, data, SIZEAV, SIZEGR, Prefs } from './modele.mjs'
-import { AppExc, EXBRK, EXPS, F_BRO, INDEXT, X_SRV } from './api.mjs'
+import { AppExc, EXBRK, EXPS, F_BRO, INDEXT, X_SRV, E_WS } from './api.mjs'
 
 import { crypt } from './crypto.mjs'
 import { schemas } from './schemas.mjs'
@@ -109,6 +109,9 @@ export class Operation {
 
   async finKO (exc) {
     this.appexc = appexc(exc)
+    if (this.appexc.code === E_WS) {
+      this.appexc = data.setErWS(this.appexc)
+    }
     if (this instanceof OperationUI) {
       data.opUI = null
       this.majopencours(null)
@@ -488,7 +491,7 @@ export class OperationUI extends Operation {
       const { objs, vol } = await getContacts()
       if (objs && objs.length) {
         objs.forEach((c) => {
-          data.repertoire(c.na).plusCtc(c.id)
+          data.repertoire.getCv(c.na.id).plusCtc(c.id)
         })
       }
       data.setContacts(objs)
@@ -500,7 +503,7 @@ export class OperationUI extends Operation {
       const { objs, vol } = await getInvitcts()
       if (objs && objs.length) {
         objs.forEach((i) => {
-          data.repertoire(i.nab).plusCtc(i.id)
+          data.repertoire.getCv(i.nab.id).plusCtc(i.id)
         })
       }
       data.setInvitcts(objs, hls)
@@ -526,7 +529,7 @@ export class OperationUI extends Operation {
       const { objs, vol } = await getMembres()
       if (objs && objs.length) {
         objs.forEach((m) => {
-          data.repertoire(m.namb).plusMbr(m.id)
+          data.repertoire.getCv(m.namb.id).plusMbr(m.id)
         })
       }
       data.setMembres(objs, hls)
@@ -1053,7 +1056,7 @@ export class NouveauParrainage extends OperationUI {
     super('Parrainage d\'un nouveau compte', OUI, SELONMODE)
   }
 
-  excAffichages () { return [this.excAffichage2] }
+  excAffichages () { return [this.excAffichage1, this.excAffichage2] }
 
   // excActions(), défaut de Operation
 

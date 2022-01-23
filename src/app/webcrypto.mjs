@@ -69,7 +69,7 @@ export async function decrypter (cle, u8) {
 
 export async function decrypterStr (cle, buffer) {
   const buf = await decrypter(cle, buffer)
-  return dec.decode(buf)
+  return dec.decode(arrayBuffer(buf))
 }
 
 function abToPem (ab, pubpriv) { // ArrayBuffer

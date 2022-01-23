@@ -42,14 +42,19 @@
       <mots-cles :motscles="motscles"></mots-cles>
     </q-expansion-item>
     <q-separator/>
-    <q-expansion-item group="groupeetc"
-      header-class="expansion-header-class-1 bg-secondary text-white">
+    <q-expansion-item group="groupeetc" header-class="expansion-header-class-1 bg-secondary text-white">
       <template v-slot:header>
         <q-item-section>
-          <div class="titre-lg">Parrainages de l'avatar ( {{nbparrains}} )</div>
+          <div class="titre-lg">Parrainages de l'avatar ( {{state.parrains.length}} )</div>
         </q-item-section>
       </template>
-      <q-btn class="maauto" flat dense color="primary" icon="add" label="Nouveau parrainage" @click="nvpar = true"></q-btn>
+      <q-btn class="full-width maauto q-py-lg" flat dense color="primary" icon="add" label="Nouveau parrainage" @click="nvpar = true"></q-btn>
+      <div v-for="p in state.parrains" :key="p.pph" class="row">
+        <div class="col-3 q-pr-sm">{{p.data.nomf}}</div>
+        <div class="col-4 q-pr-sm">{{p.ph}}</div>
+        <div class="col-4 q-pr-sm">{{p.ard}}</div>
+        <q-btn class="col-1" size="sm" color="warning" flat dense icon="auto_delete" :label="nbj(p.dlv)"/>
+      </div>
     </q-expansion-item>
   </div>
 
@@ -75,7 +80,7 @@
 import { computed, /* onMounted, */ reactive, watch, ref, isRef } from 'vue'
 import { useStore } from 'vuex'
 import { onBoot } from '../app/page.mjs'
-import { Motscles, difference, Filtre, upload, normpath } from '../app/util.mjs'
+import { Motscles, difference, Filtre, upload, normpath, getJourJ } from '../app/util.mjs'
 // import BoutonHelp from '../components/BoutonHelp.vue'
 import ApercuMotscles from '../components/ApercuMotscles.vue'
 import MotsCles from '../components/MotsCles.vue'
@@ -96,13 +101,6 @@ export default ({
   components: { /* BoutonHelp, */ ApercuAvatar, ApercuMotscles, MotsCles, PanelSecret, PanelFiltre, ShowHtml, NouveauParrainage },
 
   computed: {
-    nbparrains () {
-      let n = 0
-      for (const pph in this.parrains) {
-        if (this.parrains[pph].id === this.avatar.id) n++
-      }
-      return n
-    }
   },
 
   data () {
@@ -325,8 +323,18 @@ export default ({
 
     const state = reactive({
       lst: [], // array des SECRETS des références ci-dessous répondant au filtre
-      filtre: new Filtre(avatar.value ? avatar.value.id : 0) // Filtre par défaut
+      filtre: new Filtre(avatar.value ? avatar.value.id : 0), // Filtre par défaut
+      parrains: []
     })
+
+    function mesParrains () {
+      const lst = []
+      for (const pph in parrains.value) {
+        const p = parrains.value[pph]
+        if (p.id === avatar.value.id) lst.push(p)
+      }
+      state.parrains = lst
+    }
 
     watch(() => state.filtre, (filtre, filtreavant) => {
       if (!filtre || !filtreavant || filtre.equal(filtreavant)) return
@@ -344,6 +352,7 @@ export default ({
     })
 
     latotale()
+    mesParrains()
 
     watch(() => avatar.value, (ap, av) => {
       // Avatar modifié : la liste des groupes a pu changer, recharger SI nécessaire
@@ -354,6 +363,7 @@ export default ({
           latotale()
         }
       }
+      mesParrains()
     })
 
     watch(() => contact.value, (ap, av) => {
@@ -370,6 +380,12 @@ export default ({
       }
     })
 
+    watch(() => parrains.value, (ap, av) => {
+      mesParrains()
+    })
+
+    function nbj (dlv) { return dlv - getJourJ() }
+
     return {
       diagnostic,
       compte,
@@ -380,6 +396,7 @@ export default ({
       motscles,
       state,
       nouveausecret,
+      nbj,
       nouvsec,
       mode,
       panelfiltre,
