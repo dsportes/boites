@@ -1146,6 +1146,25 @@ export class Contact {
     data.setNa(this.data.nom, this.data.rnd, this.id, this.ic)
   }
 
+  nouveau (id, na, cc, ard, icb) {
+    this.id = id
+    this.ic = crypt.rnd4()
+    this.v = 0
+    this.st = 0
+    this.dlv = 0
+    this.q1 = 0
+    this.q2 = 0
+    this.qm1 = 0
+    this.qm2 = 0
+    this.icb = icb
+    this.data = { nom: na.nom, rnd: na.rnd, cc: cc }
+    this.ard = ard
+    this.info = null
+    this.mc = null
+    this.vsh = 0
+    return this
+  }
+
   async fromRow (row) {
     this.vsh = row.vsh || 0
     this.id = row.id
@@ -1168,13 +1187,13 @@ export class Contact {
     return this
   }
 
-  async toRow () { // pas de toRow pour un supprimé
+  async toRow (noser) { // pas de toRow pour un supprimé
     const r = { ...this }
     r.datak = await crypt.crypter(data.clek, serial(r.data))
     r.infok = r.info ? await crypt.crypter(data.clek, r.info) : null
     r.ardc = r.ard ? await crypt.crypter(this.data.cc, r.ard) : null
     r.icbc = r.icb ? await crypt.crypter(this.data.cc, crypt.intTou8(r.icb)) : 0
-    return schemas.serialize('rowcontact', this)
+    return noser ? r : schemas.serialize('rowcontact', r)
   }
 
   get toIdb () { // Un supprimé n'est pas écrit en IDB
@@ -1574,7 +1593,10 @@ export class Membre {
 - `id` : id du parrain.
 - `v`
 - `dlv` : la date limite de validité permettant de purger les parrainages (quels qu'en soient les statuts).
-- `st` : <0: annulé par P, 0: en attente de décision de F
+- `st` : < 0: supprimé,
+  - 0: en attente de décision de F
+  - 1 : accepté
+  - 2 : refusé
 - `q1 q2 qm1 qm2` : quotas donnés par P à F en cas d'acceptation.
 - `datak` : cryptée par la clé K du parrain, **phrase de parrainage et clé X** (PBKFD de la phrase). La clé X figure afin de ne pas avoir à recalculer un PBKFD en session du parrain pour qu'il puisse afficher `datax`.
 - `datax` : données de l'invitation cryptées par le PBKFD de la phrase de parrainage.

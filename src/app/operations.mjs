@@ -5,7 +5,7 @@ import {
   getGroupes, getInvitcts, getInvitgrs, getMembres, getParrains, getRencontres, getSecrets,
   purgeAvatars, purgeCvs, purgeGroupes, openIDB, enregLScompte, setEtat, getEtat, getPjidx, putPj
 } from './db.mjs'
-import { Compte, Avatar, newObjet, commitMapObjets, data, SIZEAV, SIZEGR, Prefs } from './modele.mjs'
+import { Compte, Avatar, newObjet, commitMapObjets, data, SIZEAV, SIZEGR, Prefs, Contact } from './modele.mjs'
 import { AppExc, EXBRK, EXPS, F_BRO, INDEXT, X_SRV, E_WS } from './api.mjs'
 
 import { crypt } from './crypto.mjs'
@@ -907,7 +907,7 @@ export class PrefCompte extends OperationUI {
     super('Mise à jour d\'une préférence du compte', OUI, SELONMODE)
   }
 
-  excAffichages () { return [this.excAffichage2] }
+  excAffichages () { return [this.excAffichage1, this.excAffichage2] }
 
   // excActions(), défaut de Operation
 
@@ -932,7 +932,7 @@ export class CvAvatar extends OperationUI {
     super('Mise à jour de la carte de visite d\'un avatar', OUI, SELONMODE)
   }
 
-  excAffichages () { return [this.excAffichage2] }
+  excAffichages () { return [this.excAffichage1, this.excAffichage2] }
 
   // excActions(), défaut de Operation
 
@@ -956,7 +956,7 @@ export class NouveauSecret extends OperationUI {
     super('Création d\'un nouveau secret', OUI, SELONMODE)
   }
 
-  excAffichages () { return [this.excAffichage2] }
+  excAffichages () { return [this.excAffichage1, this.excAffichage2] }
 
   // excActions(), défaut de Operation
 
@@ -981,7 +981,7 @@ export class Maj1Secret extends OperationUI {
     super('Mise à jour d\'un secret', OUI, SELONMODE)
   }
 
-  excAffichages () { return [this.excAffichage2] }
+  excAffichages () { return [this.excAffichage1, this.excAffichage2] }
 
   // excActions(), défaut de Operation
 
@@ -1005,7 +1005,7 @@ export class PjSecret extends OperationUI {
     super('Mise à jour d\'une pièce jointe d\'un secret', OUI, SELONMODE)
   }
 
-  excAffichages () { return [this.excAffichage2] }
+  excAffichages () { return [this.excAffichage1, this.excAffichage2] }
 
   // excActions(), défaut de Operation
 
@@ -1090,6 +1090,158 @@ export class NouveauParrainage extends OperationUI {
         idf: naf.id
       }
       const ret = await post(this, 'm1', 'nouveauParrainage', args)
+      if (data.dh < ret.dh) data.dh = ret.dh
+      this.finOK()
+    } catch (e) {
+      await this.finKO(e)
+    }
+  }
+}
+
+/******************************************************************
+ * Acceptation / refus d'un parrainage
+ * - sessionId
+ * - ok : true si acceptation
+ * - pph : hash de la phrase de parrainage
+ * - idp : de l'avatar parrain
+ * - icp : ic du contact du filleul chez le parrain
+ * - ardc : mot du filleul crypté par la clé du couple
+ * Si acceptation
+ * - idf : id du filleul
+ * - icbc : indice de P comme contact chez F crypté par leur clé cc
+ * - clePub, rowCompte, rowAvatar, rowPrefs : v attribuées par le serveur
+ * - rowContact (du filleul) : st, dlv et quotas attribués par le serveur
+ *  Pour maj de sr des rows contact du parrain / filleul :
+ * - aps : booléen - true si le filleul accepte le partage de secret (false si limitation à l'ardoise)
+ * Retour : sessionId, dh
+ */
+
+export class AcceptationParrainage extends OperationUI {
+  constructor () {
+    super('Acceptation du parrainage d\'un nouveau compte', OUI, SELONMODE)
+    this.opsync = true
+  }
+
+  excAffichage2 () {
+    const options = [
+      { code: 'c', label: 'Corriger les données saisies', color: 'primary' },
+      { code: 'd', label: 'Abandonner la création, retourner au login', color: 'primary' }
+    ]
+    if (this.appexc.code === X_SRV) {
+      return [options, null]
+    }
+  }
+
+  excAffichage1f () {
+    const options = [
+      { code: 'd', label: 'Retourner au login', color: 'primary' }
+    ]
+    return [options, null]
+  }
+
+  excAffichages () { return [this.excAffichage1, this.excAffichage2, this.excAffichage1f] }
+
+  excActions () { return { d: deconnexion, c: this.excActionx, default: null } }
+
+  /* arg :
+  - ps : phrase secrète
+  - ard : réponse du filleul
+  - aps : accepte le partage de secret
+  */
+  async run (parrain, arg) {
+    try {
+      data.ps = arg.ps
+      await data.connexion(true) // On force A NE PAS OUVRIR IDB (compte pas encore connu)
+
+      this.BRK()
+      const kp = await crypt.genKeyPair()
+      const compte = new Compte().nouveau(arg.na, kp.privateKey)
+      const rowCompte = await compte.toRow()
+      data.setCompte(compte)
+      const prefs = new Prefs().nouveau(compte.id)
+      data.setPrefs(prefs)
+      const rowPrefs = await prefs.toRow()
+      const avatar = await new Avatar().nouveau(arg.na.id)
+      const rowAvatar = await avatar.toRow()
+
+      const nap = new NomAvatar(parrain.data.nomp, parrain.data.rndp)
+      const naf = new NomAvatar(parrain.data.nomf, parrain.data.rndf)
+      const contact = new Contact().nouveau(naf.id, nap, parrain.data.cc, arg.ard, parrain.data.ic)
+      const rowContactNS = contact.toRow(true)
+
+      const args = {
+        sessionId: data.sessionId,
+        ok: true,
+        pph: arg.pph,
+        idf: naf.id,
+        idp: parrain.id,
+        icp: parrain.ic,
+        ardc: rowContactNS.ardc,
+        aps: arg.aps,
+        icbc: rowContactNS.icbc,
+        clePub: kp.publicKey,
+        rowCompte,
+        rowPrefs,
+        rowAvatar,
+        rowContact: schemas.serialize('rowcontact', rowContactNS)
+      }
+      const ret = await post(this, 'm1', 'acceptParrainage', args)
+      if (data.dh < ret.dh) data.dh = ret.dh
+
+      /*
+      Le compte vient d'être créé et est déjà dans le modèle (clek enregistrée)
+      On peut désérialiser la liste d'items (compte, contact, avatar)
+      */
+      const mapObj = await this.rowItemsToMapObjets(ret.rowItems)
+      const compte2 = mapObj.compte // le DERNIER objet compte quand on en a reçu plusieurs (pas la liste)
+      data.setCompte(compte2)
+      const objets = [compte2]
+      const prefs2 = mapObj.prefs // le DERNIER objet compte quand on en a reçu plusieurs (pas la liste)
+      data.setCompte(prefs2)
+      objets.push(prefs2)
+      await commitMapObjets(objets, mapObj)
+
+      // création de la base IDB et chargement des rows compte et avatar
+      if (data.mode === 1) { // synchronisé : IL FAUT OUVRIR IDB (et écrire dedans)
+        this.BRK()
+        enregLScompte(compte2.sid)
+        await deleteIDB()
+        try {
+          await openIDB()
+        } catch (e) {
+          await deleteIDB(true)
+          throw e
+        }
+        await commitRows(objets)
+      }
+
+      data.statut = 2
+      data.dhsync = data.dh
+      if (data.db) {
+        await setEtat()
+      }
+      const res = this.finOK()
+      remplacePage('Compte')
+      return res
+    } catch (e) {
+      return await this.finKO(e)
+    }
+  }
+}
+
+export class RefusParrainage extends OperationUI {
+  constructor () {
+    super('Refus de parrainage d\'un nouveau compte', OUI, SELONMODE)
+  }
+
+  excAffichages () { return [this.excAffichage1, this.excAffichage2] }
+
+  // excActions(), défaut de Operation
+
+  async run (arg) {
+    try {
+      const args = { sessionId: data.sessionId, ok: true, pph: arg.pph, idp: arg.id, icp: arg.icp, ardc: arg.ardc }
+      const ret = await post(this, 'm1', 'acceptParrainage', args)
       if (data.dh < ret.dh) data.dh = ret.dh
       this.finOK()
     } catch (e) {

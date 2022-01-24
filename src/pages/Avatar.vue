@@ -49,11 +49,13 @@
         </q-item-section>
       </template>
       <q-btn class="full-width maauto q-py-lg" flat dense color="primary" icon="add" label="Nouveau parrainage" @click="nvpar = true"></q-btn>
-      <div v-for="p in state.parrains" :key="p.pph" class="row">
-        <div class="col-3 q-pr-sm">{{p.data.nomf}}</div>
-        <div class="col-4 q-pr-sm">{{p.ph}}</div>
-        <div class="col-4 q-pr-sm">{{p.ard}}</div>
-        <q-btn class="col-1" size="sm" color="warning" flat dense icon="auto_delete" :label="nbj(p.dlv)"/>
+      <div v-for="p in state.parrains" :key="p.pph" class="row justify-start">
+        <q-icon class="col-auto" size="sm" color="warning" :name="['hourglass_empty','thumb_up','thumb_down'][p.st]"/>
+        <div class="col-3 q-pr-xs">{{p.data.nomf}}</div>
+        <div class="col-3 q-pr-xs">{{p.ph}}</div>
+        <div class="col-4 q-pr-xs">{{p.ard}}</div>
+        <q-icon class="col-auto" size="sm" color="warning" name="auto_delete"/>
+        <div class="col-auto fs-sm">{{nbj(p.dlv)}}</div>
       </div>
     </q-expansion-item>
   </div>
