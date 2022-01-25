@@ -7,6 +7,10 @@ import { remplacePage } from './page.mjs'
 
 let lgnom, lgtitre
 
+async function idToIc (id) {
+  return crypt.hashBin(await crypt.crypter(data.clek, crypt.intToU8(id), 1), false, false)
+}
+
 function nomEd (nom, info) {
   if (!lgnom) lgnom = cfg().lgnom || 20
   if (info) {
@@ -1146,9 +1150,9 @@ export class Contact {
     data.setNa(this.data.nom, this.data.rnd, this.id, this.ic)
   }
 
-  nouveau (id, na, cc, ard, icb) {
+  async nouveau (id, na, cc, ard, icb) { // na: du contact, icb: ic de A chez le contact B
     this.id = id
-    this.ic = crypt.rnd4()
+    this.ic = await idToIc(na.id)
     this.v = 0
     this.st = 0
     this.dlv = 0
@@ -1159,6 +1163,7 @@ export class Contact {
     this.icb = icb
     this.data = { nom: na.nom, rnd: na.rnd, cc: cc }
     this.ard = ard
+    this.dh = new Date().getTime()
     this.info = null
     this.mc = null
     this.vsh = 0
@@ -1179,7 +1184,9 @@ export class Contact {
       this.qm2 = row.qm2
       this.data = deserial(await crypt.decrypter(data.clek, row.datak))
       this.majCc()
-      this.ard = row.ardc ? await crypt.decrypterStr(this.data.cc, row.ardc) : ''
+      const [d, t] = row.ardc ? deserial(await crypt.decrypter(this.data.cc, row.ardc)) : [0, '']
+      this.ard = t
+      this.dh = d
       this.icb = row.icbc ? crypt.u8ToInt(await crypt.decrypter(this.data.cc, row.icbc)) : 0
       this.mc = row.mc || null
       this.info = row.infok ? await crypt.decrypter(data.clek, row.infok) : ''
@@ -1191,7 +1198,7 @@ export class Contact {
     const r = { ...this }
     r.datak = await crypt.crypter(data.clek, serial(r.data))
     r.infok = r.info ? await crypt.crypter(data.clek, r.info) : null
-    r.ardc = r.ard ? await crypt.crypter(this.data.cc, r.ard) : null
+    r.ardc = r.ard ? await crypt.crypter(this.data.cc, serial([r.dh, r.ard])) : null
     r.icbc = r.icb ? await crypt.crypter(this.data.cc, crypt.intTou8(r.icb)) : 0
     return noser ? r : schemas.serialize('rowcontact', r)
   }
@@ -1561,7 +1568,9 @@ export class Membre {
       this.dlv = row.dlv
       this.data = deserial(await crypt.decrypter(this.cleg, row.datag))
       data.setNa(this.data.nom, this.data.rnd, this.id, this.im)
-      this.ard = row.ardg ? await crypt.decrypterStr(this.cleg, row.ardg) : ''
+      const [d, t] = row.ardg ? await crypt.decrypterStr(this.cleg, row.ardg) : [0, '']
+      this.ard = t
+      this.dh = d
       this.info = row.infok ? deserial(await crypt.decrypter(data.clek, row.infok)) : ''
       this.mc = row.mc
     }
@@ -1571,7 +1580,7 @@ export class Membre {
   async toRow () {
     const r = { ...this }
     r.datag = await crypt.crypter(this.cleg, serial(this.data))
-    r.ardg = await crypt.crypter(this.cleg, this.ard)
+    r.ardg = await crypt.crypter(this.cleg, serial([this.dh, this.ard]))
     r.infok = await crypt.crypter(data.clek, this.info)
     return schemas.serialize('rowmembre', r)
   }
@@ -1598,18 +1607,23 @@ export class Membre {
   - 1 : accepté
   - 2 : refusé
 - `q1 q2 qm1 qm2` : quotas donnés par P à F en cas d'acceptation.
-- `datak` : cryptée par la clé K du parrain, **phrase de parrainage et clé X** (PBKFD de la phrase). La clé X figure afin de ne pas avoir à recalculer un PBKFD en session du parrain pour qu'il puisse afficher `datax`.
+- `datak` : cryptée par la clé K du parrain, **phrase de parrainage et clé X** (PBKFD de la phrase).
+La clé X figure afin de ne pas avoir à recalculer un PBKFD en session du parrain pour qu'il puisse afficher `datax`.
 - `datax` : données de l'invitation cryptées par le PBKFD de la phrase de parrainage.
   - `nomp, rndp` : nom complet de l'avatar P.
   - `nomf, rndf` : nom complet du filleul F (donné par P).
   - `cc` : clé `cc` générée par P pour le couple P / F.
   - `ic` : numéro de contact du filleul chez le parrain.
+- `ardc` : ardoise (couple `[dh, texte]` cryptée par la clé `cc`).
+  - du parrain, mot de bienvenue écrit par le parrain (cryptée par la clé `cc`).
+  - du filleul, explication du refus par le filleul (cryptée par la clé `cc`) quand il décline l'offre.
+  Quand il accepte, ceci est inscrit sur l'ardoise de leur contact afin de ne pas disparaître.
 - `vsh`
 */
 
 schemas.forSchema({
   name: 'idbParrain',
-  cols: ['pph', 'id', 'v', 'ic', 'dlv', 'st', 'q1', 'q2', 'qm1', 'qm2', 'ph', 'cx', 'data', 'ard', 'vsh']
+  cols: ['pph', 'id', 'v', 'ic', 'dlv', 'st', 'q1', 'q2', 'qm1', 'qm2', 'ph', 'cx', 'data', 'ard', 'dh', 'vsh']
 })
 
 export class Parrain {
@@ -1643,7 +1657,9 @@ export class Parrain {
       this.ph = x[0]
       this.cx = x[1]
       this.data = deserial(await crypt.decrypter(this.cx, row.datax))
-      this.ard = await crypt.decrypterStr(this.data.cc, row.ardc)
+      const [d, t] = row.ardc ? deserial(await crypt.decrypterStr(this.data.cc, row.ardc)) : [0, '']
+      this.ard = t
+      this.dh = d
       this.nap = new NomAvatar(this.data.nomp, this.data.rndp)
       this.naf = new NomAvatar(this.data.nomf, this.data.rndf)
     }
@@ -1654,7 +1670,7 @@ export class Parrain {
     const r = { ...this }
     r.datak = await crypt.crypter(data.clek, serial([this.ph, this.cx]))
     r.datax = await crypt.crypter(this.cx, serial(this.data))
-    r.ardc = await crypt.crypter(this.data.cc, this.ard)
+    r.ardc = await crypt.crypter(this.data.cc, serial([this.dh, this.ard]))
     return schemas.serialize('rowparrain', r)
   }
 

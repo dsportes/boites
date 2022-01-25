@@ -1070,11 +1070,12 @@ export class NouveauParrainage extends OperationUI {
     - aps : booléen (accepta partage de secrets)
     */
     try {
-      const dlv = getJourJ() + cfg().limitesjour.parrainange
+      const dlv = getJourJ() + cfg().limitesjour.parrainage
       const ic = crypt.rnd4()
       const cc = crypt.random(32)
       const nap = data.getNa(arg.id)
       const naf = new NomAvatar(arg.nomf)
+      const dh = new Date().getTime()
       const args = {
         sessionId: data.sessionId,
         pph: arg.pph,
@@ -1085,7 +1086,7 @@ export class NouveauParrainage extends OperationUI {
         ic,
         datak: await crypt.crypter(data.clek, serial([arg.pp, arg.clex])),
         datax: await crypt.crypter(arg.clex, serial({ nomp: nap.nom, rndp: nap.rnd, nomf: naf.nom, rndf: naf.rnd, cc, ic })),
-        ardc: await crypt.crypter(cc, arg.mot),
+        ardc: await crypt.crypter(cc, serial([dh, arg.mot])),
         data2k: await crypt.crypter(data.clek, serial({ nom: naf.nom, rnd: naf.rnd, cc })),
         idf: naf.id
       }
