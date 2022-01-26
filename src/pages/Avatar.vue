@@ -23,8 +23,18 @@
     <div v-if="!state.lst || !state.lst.length" class="titre-lg text-italic">Aucun secret trouvé répondant à ce filtre</div>
   </div>
 
-  <div v-if="tabavatar === 'contacts'" class="full-width">
-    <div class="titre-lg">Contacts de l'avatar</div>
+  <div v-if="tabavatar === 'contacts'" :class="$q.screen.gt.sm ? 'ml20' : 'q-pa-xs full-width'">
+    <div v-if="state.contacts && state.contacts.length" class="col">
+      <div v-for="(c, idx) in state.contacts" :key="c.pk" :class="dkli(idx) + ' full-width row items-start q-py-xs cursor-pointer'" @click="contactcourant(c)">
+        <q-icon class="col-auto q-pr-xs" size="sm" :color="c.stx<2?'primary':'warning'"
+        :name="['o_thumb_up','thumb_up','o_hourglass_empty','hourglass_empty','hourglass_empty','','','','','thumb_down'][c.stx]"/>
+        <img class="col-auto photomax" :src="c.ph"/>
+        <div class="col-3 q-px-xs">{{c.nom}}</div>
+        <div class="col-4 q-pr-xs">{{c.ard.substring(0,40)}}</div>
+        <q-icon class="col-auto" size="sm" color="warning" :name="c.dlv!== 0?'auto_delete':'done'"/>
+        <div v-if="c.dlv!==0" class="col-auto fs-sm">{{nbj(c.dlv)}}</div>
+      </div>
+    </div>
   </div>
 
   <div v-if="tabavatar === 'groupes'" class="full-width">
@@ -52,7 +62,7 @@
       <div v-for="p in state.parrains" :key="p.pph" class="row justify-start">
         <q-icon class="col-auto" size="sm" color="warning" :name="['hourglass_empty','thumb_up','thumb_down'][p.st]"/>
         <div class="col-3 q-pr-xs">{{p.data.nomf}}</div>
-        <div class="col-3 q-pr-xs">{{p.ph}}</div>
+        <div class="col-3 q-px-xs">{{p.ph}}</div>
         <div class="col-4 q-pr-xs">{{p.ard}}</div>
         <q-icon class="col-auto" size="sm" color="warning" name="auto_delete"/>
         <div class="col-auto fs-sm">{{nbj(p.dlv)}}</div>
@@ -114,6 +124,9 @@ export default ({
   },
 
   methods: {
+    contactcourant (c) {
+      this.contact = c
+    },
     fermerParrain () { this.nvpar = false },
     ouvrirsecret (s) {
       this.secret = s
@@ -283,14 +296,18 @@ export default ({
     const compte = computed(() => { return $store.state.db.compte })
     const prefs = computed(() => { return $store.state.db.prefs })
     const avatar = computed(() => { return $store.state.db.avatar })
-    const contact = computed(() => { return $store.state.db.contact })
     const groupe = computed(() => { return $store.state.db.groupe })
     const mode = computed(() => $store.state.ui.mode)
     const secret = computed({ // secret courant
       get: () => $store.state.db.secret,
       set: (val) => $store.commit('db/majsecret', val)
     })
+    const contact = computed({ // contact courant
+      get: () => $store.state.db.contact,
+      set: (val) => $store.commit('db/majcontact', val)
+    })
     const parrains = computed(() => { return data.getParrain() })
+    const contacts = computed(() => { return avatar.value ? data.getContact(avatar.value.id) : [] })
 
     const panelfiltre = ref(false)
 
@@ -326,7 +343,8 @@ export default ({
     const state = reactive({
       lst: [], // array des SECRETS des références ci-dessous répondant au filtre
       filtre: new Filtre(avatar.value ? avatar.value.id : 0), // Filtre par défaut
-      parrains: []
+      parrains: [],
+      contacts: []
     })
 
     function mesParrains () {
@@ -336,6 +354,12 @@ export default ({
         if (p.id === avatar.value.id) lst.push(p)
       }
       state.parrains = lst
+    }
+
+    function mesContacts () {
+      const lst = []
+      for (const c in contacts.value) lst.push(contacts.value[c])
+      state.contacts = lst.sort((a, b) => { return a.nom < b.nom ? -1 : (a.nom > b.nom ? 1 : 0) })
     }
 
     watch(() => state.filtre, (filtre, filtreavant) => {
@@ -355,6 +379,7 @@ export default ({
 
     latotale()
     mesParrains()
+    mesContacts()
 
     watch(() => avatar.value, (ap, av) => {
       // Avatar modifié : la liste des groupes a pu changer, recharger SI nécessaire
@@ -366,6 +391,7 @@ export default ({
         }
       }
       mesParrains()
+      mesContacts()
     })
 
     watch(() => contact.value, (ap, av) => {
@@ -386,6 +412,10 @@ export default ({
       mesParrains()
     })
 
+    watch(() => contacts.value, (ap, av) => {
+      mesContacts()
+    })
+
     function nbj (dlv) { return dlv - getJourJ() }
 
     return {
@@ -393,6 +423,7 @@ export default ({
       compte,
       avatar,
       secret,
+      contact,
       parrains,
       tabavatar,
       motscles,
@@ -411,6 +442,9 @@ export default ({
 
 <style lang="sass" scoped>
 @import '../css/app.sass'
+.photomax
+  position: relative
+  top: -5px
 .ml20
   width: 100%
   padding: 0.2rem 0.2rem 0.2rem 23rem

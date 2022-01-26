@@ -287,7 +287,7 @@ export async function getSecrets () {
       vol += idb.data.length
       const x = new Secret().fromIdb(await crypt.decrypter(data.clek, idb.data))
       r.push(x)
-      if (x.estAv) {
+      if (x.ts < 2) {
         data.vag.setVerAv(x.sidavgr, INDEXT.SECRET, x.v)
       } else {
         data.vag.setVerGr(x.sidavgr, INDEXT.SECRET, x.v)

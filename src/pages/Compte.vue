@@ -1,7 +1,7 @@
 <template>
 <q-page class="fs-md q-pa-xs">
-  <div v-if="tabcompte === 'avatars' && compte" class="row justify-evenly">
-    <div v-for="e in compte.mac" :key="e.na.id" style="width:25rem">
+  <div v-if="tabcompte === 'avatars' && compte">
+    <div v-for="e in compte.mac" :key="e.na.id" class="full-width">
       <apercu-avatar page editer selectionner :avatar-id="e.na.id"/>
     </div>
   </div>

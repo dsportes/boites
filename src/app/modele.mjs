@@ -1091,7 +1091,7 @@ export class Cv {
 
 schemas.forSchema({
   name: 'idbContact',
-  cols: ['id', 'ic', 'v', 'st', 'dlv', 'q1', 'q2', 'qm1', 'qm2', 'ard', 'icb', 'data', 'mc', 'info', 'vsh']
+  cols: ['id', 'ic', 'v', 'st', 'dlv', 'q1', 'q2', 'qm1', 'qm2', 'ard', 'icb', 'data', 'mc', 'info', 'ard', 'dh', 'vsh']
 })
 /*
 - `id` : id de l'avatar A
@@ -1136,6 +1136,8 @@ export class Contact {
   get na () { return data.getNa(this.id, this.ic) } // na DU CONTACT
 
   get cv () { return data.repertoire.getCv(this.na.id) } // cv DU CONTACT
+
+  get ph () { const cv = this.cv; return cv.photo ? cv.photo : cfg().personne.default }
 
   get nom () { return nomEd(this.data.nom, this.cv ? this.cv.info : '') }
 

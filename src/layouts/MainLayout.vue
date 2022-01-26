@@ -65,9 +65,9 @@
                 <span class="q-px-sm">{{avatar && avatar.na ? (avatar.na.nom + (avatar.info ? ' [' + avatar.info + ']' : '')): ''}}</span>
               </div>
             </div>
-            <div class="col-xs-6 col-sm-3 col-md-3 fs-sm tbpage">
+            <div v-if="contact!=null" class="col-xs-6 col-sm-3 col-md-3 fs-sm tbpage">
               <q-icon size="sm" name="person"/>
-              <span class="q-px-sm">Victor Hugo</span>
+              <span class="q-px-sm">{{contact.nom}}</span>
             </div>
             <div class="col-xs-6 col-sm-3 col-md-3 fs-sm tbpage">
               <q-icon size="sm" name="people"/>
@@ -347,6 +347,7 @@ export default {
     const prefs = computed(() => $store.state.db.prefs)
     const avatar = computed(() => $store.state.db.avatar)
     const groupe = computed(() => $store.state.db.groupe)
+    const contact = computed(() => $store.state.db.contact) // contact courant
     const mode = computed(() => $store.state.ui.mode)
     const modeInitial = computed(() => $store.state.ui.modeinitial)
     const messagevisible = computed(() => $store.getters['ui/messagevisible'])
@@ -365,11 +366,7 @@ export default {
 
     function razdiagnostic () { $store.commit('ui/razdiagnostic') }
 
-    /*
-    watch(() => avatar.value, (ap, av) => {
-      if (ap) console.log(ap.info)
-    })
-    */
+    // watch(() => contact.value, (ap, av) => { if (ap) console.log(ap.nom) })
 
     return {
       personne,
@@ -391,6 +388,7 @@ export default {
       prefs,
       avatar,
       groupe,
+      contact,
       mode,
       modeInitial,
       messagevisible,

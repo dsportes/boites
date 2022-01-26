@@ -1,17 +1,15 @@
 <template>
-<q-card class="q-pa-sm petitelargeur maauto fs-md shadow-8">
-  <div class="row justify-between full-width q-pa-xs">
-    <bouton-help page="p1"/>
-    <q-btn v-if="selectionner" dense size="md" color="secondary" icon="navigate_next" label="Sélectionner" @click="toAvatar"/>
-    <q-btn v-if="editer" flat dense size="md" color="primary" icon="edit" label="Editer" @click="cvloc=true"/>
-  </div>
-  <div class="row justify-between items-center full-width q-my-sm">
-    <img class="col-auto photomax" :src="photo"/>
-    <div class="col text-center">
-      <span class='titre-lg text-bold'>{{ids[1]}}</span><span class='titre-sm q-pl-sm'>@{{ids[0]}}</span>
+<q-card class="q-pa-sm full-width fs-md shadow-8">
+  <div class="row justify-between items-center full-width q-my-lg">
+    <div class="col row justify-start items-center full-width ligne cursor-pointer" @click="toAvatar">
+      <img class="col-auto photomax" :src="photo"/>
+      <div class="col q-px-sm">
+        <span class='titre-lg text-bold'>{{ids[1]}}</span><span class='titre-sm q-pl-sm'>@{{ids[0]}}</span>
+      </div>
     </div>
+    <q-btn class="col-auto" v-if="editer" flat dense size="md" color="primary" icon="edit" @click="cvloc=true"/>
   </div>
-  <div class="full-width overflow-y-auto height-8 shadow-8"><show-html :texte="info"/></div>
+  <div class="full-width overflow-y-auto height-4 shadow-8"><show-html :texte="info"/></div>
   <q-dialog v-model="cvloc">
     <carte-visite :nomc="nomc" :close="closedialog" :photo-init="photo" :info-init="info" @ok="validercv"/>
   </q-dialog>
@@ -21,7 +19,6 @@
 <script>
 import { useStore } from 'vuex'
 import { watch, toRef, reactive, computed } from 'vue'
-import BoutonHelp from './BoutonHelp.vue'
 import ShowHtml from './ShowHtml.vue'
 import CarteVisite from './CarteVisite.vue'
 import { cfg } from '../app/util.mjs'
@@ -39,7 +36,7 @@ export default ({
   },
 
   components: {
-    BoutonHelp, ShowHtml, CarteVisite
+    ShowHtml, CarteVisite
   },
 
   computed: {
@@ -101,6 +98,8 @@ export default ({
 </script>
 <style lang="sass" scoped>
 @import '../css/app.sass'
+.ligne:hover
+  background-color: rgba(130, 130, 130, 0.5)
 .q-card > div
   box-shadow: inherit !important
 </style>
