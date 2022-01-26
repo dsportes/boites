@@ -1641,7 +1641,7 @@ export class Parrain {
 
   get sidav () { return crypt.idToSid(this.id) }
 
-  async fromRow (row) {
+  async fromRow (row, ph, clex) { // ph clex : donnés seulement à la création d'un compte parrainé
     this.vsh = row.vsh || 0
     this.pph = row.pph
     this.id = row.id
@@ -1653,11 +1653,16 @@ export class Parrain {
       this.q2 = row.q2
       this.qm1 = row.qm1
       this.qm2 = row.qm2
-      const x = deserial(await crypt.decrypter(data.clek, row.datak))
-      this.ph = x[0]
-      this.cx = x[1]
+      if (!clex) { // data.clek null à la création d'un compte parrainé !
+        const x = deserial(await crypt.decrypter(data.clek, row.datak))
+        this.ph = x[0]
+        this.cx = x[1]
+      } else {
+        this.ph = ph
+        this.cx = clex
+      }
       this.data = deserial(await crypt.decrypter(this.cx, row.datax))
-      const [d, t] = row.ardc ? deserial(await crypt.decrypterStr(this.data.cc, row.ardc)) : [0, '']
+      const [d, t] = row.ardc ? deserial(await crypt.decrypter(this.data.cc, row.ardc)) : [0, '']
       this.ard = t
       this.dh = d
       this.nap = new NomAvatar(this.data.nomp, this.data.rndp)
