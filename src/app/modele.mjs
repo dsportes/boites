@@ -7,7 +7,7 @@ import { remplacePage } from './page.mjs'
 
 let lgnom, lgtitre
 
-async function idToIc (id) {
+export async function idToIc (id) {
   return crypt.hashBin(await crypt.crypter(data.clek, crypt.intToU8(id), 1), false, false)
 }
 
@@ -1201,7 +1201,7 @@ export class Contact {
     r.datak = await crypt.crypter(data.clek, serial(r.data))
     r.infok = r.info ? await crypt.crypter(data.clek, r.info) : null
     r.ardc = r.ard ? await crypt.crypter(this.data.cc, serial([r.dh, r.ard])) : null
-    r.icbc = r.icb ? await crypt.crypter(this.data.cc, crypt.intTou8(r.icb)) : 0
+    r.icbc = r.icb ? await crypt.crypter(this.data.cc, crypt.intToU8(r.icb)) : 0
     return noser ? r : schemas.serialize('rowcontact', r)
   }
 
@@ -1604,10 +1604,9 @@ export class Membre {
 - `id` : id du parrain.
 - `v`
 - `dlv` : la date limite de validité permettant de purger les parrainages (quels qu'en soient les statuts).
-- `st` : < 0: supprimé,
-  - 0: en attente de décision de F
-  - 1 : accepté
-  - 2 : refusé
+- `st` : < 0: supprimé. xy :
+  - x : 0: en attente de décision de F, 1 : accepté, 2 : refusé
+  - y : 0: le parrrain accepte le partage de secrets, 1: refuse
 - `q1 q2 qm1 qm2` : quotas donnés par P à F en cas d'acceptation.
 - `datak` : cryptée par la clé K du parrain, **phrase de parrainage et clé X** (PBKFD de la phrase).
 La clé X figure afin de ne pas avoir à recalculer un PBKFD en session du parrain pour qu'il puisse afficher `datax`.
@@ -1638,6 +1637,10 @@ export class Parrain {
   get pk () { return this.sid }
 
   get suppr () { return this.st < 0 }
+
+  get stx () { return Math.floor(this.st / 10) }
+
+  get aps () { return this.st % 10 === 1 }
 
   get horsLimite () { return !this.suppr ? dlvDepassee(this.dlv) : false }
 

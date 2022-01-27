@@ -643,6 +643,8 @@ export class Phrase {
     this.pcb64 = u8ToB64(this.pcb)
     this.pcbh = crypt.hashBin(this.pcb)
     this.dpbh = crypt.hashBin(await crypt.pbkfd(debut))
+    this.debut = debut
+    this.fin = fin
   }
 }
 

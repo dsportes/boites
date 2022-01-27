@@ -58,7 +58,7 @@ export default ({
     }
   },
 
-  setup (props) {
+  setup (props, context) {
     const root1 = ref(null)
     const textelocal = ref('')
     const texteinp = ref('')
@@ -72,10 +72,6 @@ export default ({
     })
     */
 
-    textelocal.value = texteRef.value
-    texteinp.value = texteRef.value
-    if (editable.value) md.value = false
-
     watch(texteRef, (ap, av) => { // quand texte change, textelocal ne change pas si en édition
       if (textelocal.value === texteinp.value && textelocal.value !== ap) {
         // textelocal n'était PAS modifié, ni égal à la nouvelle valeur : alignement sur la nouvelle valeur
@@ -87,6 +83,14 @@ export default ({
     watch(editable, (ap, av) => {
       if (ap) md.value = false
     })
+
+    watch(textelocal, (ap, av) => {
+      context.emit('update:modelValue', ap)
+    })
+
+    textelocal.value = texteRef.value
+    texteinp.value = texteRef.value
+    if (editable.value) md.value = false
 
     affidbmsg('Quand Firefox est en mode privé, le premier affichage des emojis peut être long (plus d\'une minute)')
 

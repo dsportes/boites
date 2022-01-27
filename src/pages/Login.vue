@@ -38,7 +38,7 @@
     </div>
 
     <q-dialog v-model="dialcp">
-      Phrase trouvée : {{p.data.nomf}}
+      <AcceptParrain :parrain="p" :pph="pph" :close="fermerap" />
     </q-dialog>
   </q-page>
 </template>
@@ -48,6 +48,7 @@ import { computed } from 'vue'
 import { useStore } from 'vuex'
 import { ConnexionCompte, ConnexionCompteAvion } from '../app/operations'
 import PhraseSecrete from '../components/PhraseSecrete.vue'
+import AcceptParrain from '../components/AcceptParrain.vue'
 import { onBoot } from '../app/page.mjs'
 import { crypt } from '../app/crypto.mjs'
 import { get, deserial } from '../app/util.mjs'
@@ -55,7 +56,7 @@ import { Parrain } from '../app/modele.mjs'
 
 export default ({
   name: 'Login',
-  components: { PhraseSecrete },
+  components: { PhraseSecrete, AcceptParrain },
   data () {
     return {
       ps: null,
@@ -71,6 +72,10 @@ export default ({
   },
 
   methods: {
+    fermerap () {
+      this.dialcp = false
+      this.phrasepar = false
+    },
     connecter (ps) {
       if (ps) {
         if (this.$store.state.ui.mode === 3) {
@@ -97,7 +102,6 @@ export default ({
             const rowpar = deserial(new Uint8Array(resp))
             const p = new Parrain()
             await p.fromRow(rowpar, this.phrase, this.clex)
-            console.log(p.data.nomf, p.ard)
             this.phrasepar = false
             this.dialcp = true
             this.p = p

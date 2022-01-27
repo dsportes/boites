@@ -5,7 +5,7 @@ import {
   getGroupes, getInvitcts, getInvitgrs, getMembres, getParrains, getRencontres, getSecrets,
   purgeAvatars, purgeCvs, purgeGroupes, openIDB, enregLScompte, setEtat, getEtat, getPjidx, putPj
 } from './db.mjs'
-import { Compte, Avatar, newObjet, commitMapObjets, data, SIZEAV, SIZEGR, Prefs, Contact } from './modele.mjs'
+import { Compte, Avatar, newObjet, commitMapObjets, data, SIZEAV, SIZEGR, Prefs, Contact, idToIc } from './modele.mjs'
 import { AppExc, EXBRK, EXPS, F_BRO, INDEXT, X_SRV, E_WS } from './api.mjs'
 
 import { crypt } from './crypto.mjs'
@@ -1071,10 +1071,10 @@ export class NouveauParrainage extends OperationUI {
     */
     try {
       const dlv = getJourJ() + cfg().limitesjour.parrainage
-      const ic = crypt.rnd4()
       const cc = crypt.random(32)
       const nap = data.getNa(arg.id)
       const naf = new NomAvatar(arg.nomf)
+      const ic = await idToIc(naf.id)
       const dh = new Date().getTime()
       const args = {
         sessionId: data.sessionId,
@@ -1148,6 +1148,7 @@ export class AcceptationParrainage extends OperationUI {
   - ps : phrase secrète
   - ard : réponse du filleul
   - aps : accepte le partage de secret
+  - pph : hash phrase de parrainage
   */
   async run (parrain, arg) {
     try {
@@ -1156,27 +1157,26 @@ export class AcceptationParrainage extends OperationUI {
 
       this.BRK()
       const kp = await crypt.genKeyPair()
-      const compte = new Compte().nouveau(arg.na, kp.privateKey)
+      const compte = new Compte().nouveau(parrain.naf, kp.privateKey)
       const rowCompte = await compte.toRow()
       data.setCompte(compte)
       const prefs = new Prefs().nouveau(compte.id)
       data.setPrefs(prefs)
       const rowPrefs = await prefs.toRow()
-      const avatar = await new Avatar().nouveau(arg.na.id)
+      const avatar = await new Avatar().nouveau(parrain.naf.id)
       const rowAvatar = await avatar.toRow()
 
-      const nap = new NomAvatar(parrain.data.nomp, parrain.data.rndp)
-      const naf = new NomAvatar(parrain.data.nomf, parrain.data.rndf)
-      const contact = new Contact().nouveau(naf.id, nap, parrain.data.cc, arg.ard, parrain.data.ic)
-      const rowContactNS = contact.toRow(true)
+      const contact = new Contact()
+      await contact.nouveau(parrain.naf.id, parrain.nap, parrain.data.cc, arg.ard, parrain.data.ic)
+      const rowContactNS = await contact.toRow(true)
 
       const args = {
         sessionId: data.sessionId,
         ok: true,
         pph: arg.pph,
-        idf: naf.id,
+        idf: parrain.naf.id,
         idp: parrain.id,
-        icp: parrain.ic,
+        icp: parrain.data.ic,
         ardc: rowContactNS.ardc,
         aps: arg.aps,
         icbc: rowContactNS.icbc,
@@ -1239,9 +1239,14 @@ export class RefusParrainage extends OperationUI {
 
   // excActions(), défaut de Operation
 
-  async run (arg) {
+  /* arg :
+  - ard : réponse du filleul
+  - pph : hash phrase de parrainage
+  */
+  async run (parrain, arg) {
     try {
-      const args = { sessionId: data.sessionId, ok: true, pph: arg.pph, idp: arg.id, icp: arg.icp, ardc: arg.ardc }
+      const ardc = await crypt.crypter(this.data.cc, serial([new Date().getTime(), arg.ard]))
+      const args = { sessionId: data.sessionId, ok: false, pph: arg.pph, idp: parrain.id, icp: parrain.ic, ardc: ardc }
       const ret = await post(this, 'm1', 'acceptParrainage', args)
       if (data.dh < ret.dh) data.dh = ret.dh
       this.finOK()
