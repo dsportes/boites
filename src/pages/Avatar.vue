@@ -25,7 +25,7 @@
 
   <div v-if="tabavatar === 'contacts'" :class="$q.screen.gt.sm ? 'ml20' : 'q-pa-xs full-width'">
     <div v-if="state.contacts && state.contacts.length" class="col">
-      <div v-for="(c, idx) in state.contacts" :key="c.pk" :class="dkli(idx) + ' full-width row items-start q-py-xs cursor-pointer'" @click="contactcourant(c)">
+      <div v-for="(c, idx) in state.contacts" :key="c.pkv" :class="dkli(idx) + ' full-width row items-start q-py-xs cursor-pointer'" @click="contactcourant(c)">
         <q-icon class="col-auto q-pr-xs" size="sm" :color="c.stx<2?'primary':'warning'"
         :name="['o_thumb_up','thumb_up','o_hourglass_empty','hourglass_empty','hourglass_empty','','','','','thumb_down'][c.stx]"/>
         <img class="col-auto photomax" :src="c.ph"/>
@@ -308,6 +308,7 @@ export default ({
     })
     const parrains = computed(() => { return data.getParrain() })
     const contacts = computed(() => { return avatar.value ? data.getContact(avatar.value.id) : [] })
+    const repertoire = computed(() => { return $store.state.db.repertoire })
 
     const panelfiltre = ref(false)
 
@@ -413,6 +414,10 @@ export default ({
     })
 
     watch(() => contacts.value, (ap, av) => {
+      mesContacts()
+    })
+
+    watch(() => repertoire.value, (ap, av) => {
       mesContacts()
     })
 

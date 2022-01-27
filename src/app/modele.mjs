@@ -145,10 +145,10 @@ export async function commitMapObjets (objets, mapObj) { // SAUF mapObj.compte e
       if (!x.suppr) {
         const cv = data.repertoire.getCv(x.sid)
         if (cv) {
-          const xok = cv.fusionCV(x)
-          if (!xok) data.repertoire.setCv(cv) // cv est la nouvelle à intégrer
+          const f = cv.fusionCV(x)
+          data.repertoire.setCv(f)
         } else {
-          data.repertoire.setCv(x.sid)
+          data.repertoire.setCv(x)
         }
         if (x.vcv > vcv) vcv = x.vcv
       }
@@ -229,7 +229,7 @@ class Repertoire {
     const s = new Set()
     for (const sid in this.rep) {
       const cv = this.rep[sid]
-      if (cv.lctc.length || cv.lmbr.length) s.add(sid)
+      if (cv.lctc.length || cv.lmbr.length) s.add(crypt.sidToId(sid))
     }
     return s
   }
@@ -238,7 +238,7 @@ class Repertoire {
     const s = new Set()
     for (const sid in this.rep) {
       const cv = this.rep[sid]
-      if (cv.fake && (cv.lctc.length || cv.lmbr.length)) s.add(sid)
+      if (cv.fake && (cv.lctc.length || cv.lmbr.length)) s.add(crypt.sidToId(sid))
     }
     return s
   }
@@ -1033,7 +1033,7 @@ export class Cv {
     this.vcv = row.vcv
     this.st = row.cv
     if (!this.suppr) {
-      const x = row.phinf ? deserial(await crypt.decrypter(this.na.cle, row.phinf)) : null
+      const x = row.cva ? deserial(await crypt.decrypter(this.na.cle, row.cva)) : null
       this.photo = x ? x[0] : ''
       this.info = x ? x[1] : ''
     }
@@ -1079,11 +1079,11 @@ export class Cv {
     data.repertoire.setCv(this)
   }
 
-  fusionCV (cv) {
-    if (!this.fake && this.vcv > cv.vcv) return true // existante plus récente
-    cv.lctc = this.lctc
-    cv.lmbr = this.lmbr
-    return false
+  fusionCV (x) {
+    if (!this.fake && this.vcv > x.vcv) return this // existante plus récente
+    x.lctc = this.lctc
+    x.lmbr = this.lmbr
+    return x
   }
 }
 
@@ -1126,6 +1126,8 @@ export class Contact {
   get sid2 () { return '' + this.ic }
 
   get pk () { return this.sid + '/' + this.sid2 }
+
+  get pkv () { const cv = this.cv; return this.sid + '/' + this.sid2 + '/' + this.v + '/' + (cv ? cv.vcv : 0) }
 
   get suppr () { return this.st < 0 }
 
