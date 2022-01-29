@@ -2,11 +2,11 @@ import { NomAvatar, store, post, affichermessage, cfg, sleep, affichererreur, ap
 import { remplacePage } from './page.mjs'
 import {
   deleteIDB, idbSidCompte, commitRows, getCompte, getPrefs, getAvatars, getContacts, getCvs,
-  getGroupes, getInvitcts, getInvitgrs, getMembres, getParrains, getRencontres, getSecrets,
+  getGroupes, getInvitgrs, getMembres, getParrains, getRencontres, getSecrets,
   purgeAvatars, purgeCvs, purgeGroupes, openIDB, enregLScompte, setEtat, getEtat, getPjidx, putPj
 } from './db.mjs'
-import { Compte, Avatar, newObjet, commitMapObjets, data, SIZEAV, SIZEGR, Prefs, Contact, idToIc } from './modele.mjs'
-import { AppExc, EXBRK, EXPS, F_BRO, INDEXT, X_SRV, E_WS } from './api.mjs'
+import { Compte, Avatar, rowItemsToMapObjets, commitMapObjets, data, Prefs, Contact, idToIc, Invitgr } from './modele.mjs'
+import { AppExc, EXBRK, EXPS, F_BRO, INDEXT, X_SRV, E_WS, SIZEAV, SIZEGR } from './api.mjs'
 
 import { crypt } from './crypto.mjs'
 import { schemas } from './schemas.mjs'
@@ -149,35 +149,36 @@ export class Operation {
     this.break = true
   }
 
-  /*
-  Retourne une map avec une entrée pour chaque table et en valeur,
-  - pour compte : LE DERNIER objet reçu, pas la liste historique
-  - pour les autres, l'array des objets
-  */
-  async rowItemsToMapObjets (rowItems) {
-    const res = {}
-    for (let i = 0; i < rowItems.length; i++) {
-      const item = rowItems[i]
-      const row = schemas.deserialize('row' + item.table, item.serial)
-      if (item.table === 'compte') {
-        // le dernier quand on en a reçu plusieurs et non la liste
-        if (row.pcbh !== data.ps.pcbh) throw EXPS // phrase secrète changée => déconnexion
-        const obj = new Compte()
-        res.compte = await obj.fromRow(row)
-      } else if (item.table === 'prefs') {
-        // le dernier quand on en a reçu plusieurs et non la liste
-        const obj = new Prefs()
-        res.prefs = await obj.fromRow(row)
-      } else {
-        if (!res[item.table]) res[item.table] = []
-        const obj = newObjet(item.table)
-        await obj.fromRow(row)
-        res[item.table].push(obj)
+  /* Obtention des invitGr du compte et traitement de régularisation ***********************************/
+  async getInvitGrs () {
+    const ids = data.getCompte().allAvId()
+    const ret = await post(this, 'm1', 'chargerInvitGr', { sessionId: data.sessionId, ids: Array.from(ids) })
+    if (data.dh < ret.dh) data.dh = ret.dh
+    const lstInvitGr = []
+    if (ret.rowItems.length) {
+      for (let i = 0; i < ret.rowItems.length; i++) {
+        const item = ret.rowItems[i]
+        if (item.table === 'invitgr') {
+          const row = schemas.deserialize('rowinvitgr', item.serial)
+          const obj = new Invitgr()
+          await obj.fromRow(row)
+          lstInvitGr.push(obj)
+        }
       }
     }
-    return res
+    await this.traitInvitGr(lstInvitGr)
   }
 
+  /* Traitement des invitGr, appel de régularisation ********************************/
+  async traitInvitGr (lstInvitGr) {
+    for (let i = 0; i < lstInvitGr.length; i++) {
+      const iv = lstInvitGr[i]
+      const ret = await post(this, 'm1', 'regulGr', { sessionId: data.sessionId, id: iv.id, ni: iv.ni, nomck: iv.nomck })
+      if (data.dh < ret.dh) data.dh = ret.dh
+    }
+  }
+
+  /* Abonnements aux avatars et groupes utiles ********************************/
   async abonnements (avUtiles, grUtiles, nosign) {
     // Abonner / (signer sauf si nosign) la session au compte, avatars et groupes
     const compte = data.getCompte()
@@ -193,7 +194,7 @@ export class Operation {
     this.BRK()
   }
 
-  /* Recharge depuis le serveur les avatars du compte */
+  /* Recharge depuis le serveur les avatars du compte ************************/
   async chargerAvatars (avUtiles, tous) {
     // idsVers : map de clé:id de l'avatar, valeur: version détenue en session
     const idsVers = { }
@@ -202,7 +203,7 @@ export class Operation {
     if (data.dh < ret.dh) data.dh = ret.dh
     const objets = []
     for (const id of avUtiles) data.vag.setVerAv(id, INDEXT.AVATAR, -1)
-    await commitMapObjets(objets, await this.rowItemsToMapObjets(ret.rowItems)) // stockés en modele
+    await commitMapObjets(objets, await rowItemsToMapObjets(ret.rowItems)) // stockés en modele
     if (data.db) {
       await commitRows(objets)
       this.BRK()
@@ -215,7 +216,7 @@ export class Operation {
     const ret = await post(this, 'm1', 'syncAv', { sessionId: data.sessionId, avgr: id, lv })
     if (data.dh < ret.dh) data.dh = ret.dh
     const objets = []
-    await commitMapObjets(objets, await this.rowItemsToMapObjets(ret.rowItems)) // stockés en modele
+    await commitMapObjets(objets, await rowItemsToMapObjets(ret.rowItems)) // stockés en modele
     if (data.db) {
       await commitRows(objets)
       this.BRK()
@@ -229,7 +230,7 @@ export class Operation {
     const ret = await post(this, 'm1', 'syncGr', { sessionId: data.sessionId, avgr: id, lv })
     if (data.dh < ret.dh) data.dh = ret.dh
     const objets = []
-    await commitMapObjets(objets, await this.rowItemsToMapObjets(ret.rowItems)) // stockés en modele
+    await commitMapObjets(objets, await rowItemsToMapObjets(ret.rowItems)) // stockés en modele
     if (data.db) {
       await commitRows(objets)
       this.BRK()
@@ -246,7 +247,7 @@ export class Operation {
     const ret = await post(this, 'm1', 'chargtCVs', args)
     if (data.dh < ret.dh) data.dh = ret.dh
     const objets = []
-    const vcv = await commitMapObjets(objets, await this.rowItemsToMapObjets(ret.rowItems)) // stockés en modele
+    const vcv = await commitMapObjets(objets, await rowItemsToMapObjets(ret.rowItems)) // stockés en modele
     if (vcv > nvvcv) nvvcv = vcv
     if (data.db) {
       await commitRows(objets)
@@ -284,6 +285,7 @@ export class Operation {
     if (maj.length) data.setPjidx(maj) // MAJ du store
   }
 
+  /* traiteQueue ********************************************************************************/
   async traiteQueue (q) {
     const lavAvant = data.setIdsAvatarsUtiles
     const lgrAvant = data.setIdsGroupesUtiles
@@ -303,7 +305,7 @@ export class Operation {
     /* Transforme tous les items en objet (décryptés / désrialisés)
     - les retourne ventilés dans une map par table
     */
-    const mapObj = await this.rowItemsToMapObjets(items)
+    const mapObj = await rowItemsToMapObjets(items)
     const objets = [] // Tous les objets à enregistrer dans IDB
 
     /* Traitement spécial de compte et prefs */
@@ -316,6 +318,9 @@ export class Operation {
       // Une mise à jour de prefs est notifiée
       data.setPrefs(mapObj.prefs)
       objets.push(mapObj.prefs)
+    }
+    if (mapObj.invitgr) {
+      await this.traitInvitGr(mapObj.invitgr)
     }
 
     /* Mise en store de tous les autres objets */
@@ -424,7 +429,8 @@ export class OperationUI extends Operation {
     return [options, null]
   }
 
-  /* Chargement de la totalité de la base en mémoire :
+  /* Chargement de la totalité de la base en mémoire : **************************************/
+  /*
   - détermine les avatars et groupes référencés dans les rows de Idb
   - supprime de la base comme de la mémoire les rows / objets inutiles
   - puis récupère les CVs et supprime celles non référencées
@@ -496,18 +502,6 @@ export class OperationUI extends Operation {
       }
       data.setContacts(objs)
       this.majidblec({ table: 'contact', st: true, vol: vol, nbl: objs.length })
-    }
-
-    this.BRK()
-    {
-      const { objs, vol } = await getInvitcts()
-      if (objs && objs.length) {
-        objs.forEach((i) => {
-          data.repertoire.getCv(i.nab.id).plusCtc(i.id)
-        })
-      }
-      data.setInvitcts(objs, hls)
-      this.majidblec({ table: 'invitct', st: true, vol: vol, nbl: objs.length })
     }
 
     this.BRK()
@@ -675,7 +669,7 @@ export class CreationCompte extends OperationUI {
       Le compte vient d'être créé et est déjà dans le modèle (clek enregistrée)
       On peut désérialiser la liste d'items (compte et avatar)
       */
-      const mapObj = await this.rowItemsToMapObjets(ret.rowItems)
+      const mapObj = await rowItemsToMapObjets(ret.rowItems)
       const compte2 = mapObj.compte // le DERNIER objet compte quand on en a reçu plusieurs (pas la liste)
       data.setCompte(compte2)
       const objets = [compte2]
@@ -800,6 +794,11 @@ export class ConnexionCompte extends OperationUI {
       let [compte, prefs] = await this.lectureCompte()
       data.setCompte(compte)
       data.setPrefs(prefs)
+
+      /* récupération et régularisation des invitGr : maj sur le serveur des avatars du compte
+        AVANT chargement des avatars afin d'avoir tous les groupes au plus tôt
+      */
+      this.getInvitGrs()
 
       if (data.db) {
         enregLScompte(compte.sid) // La phrase secrète a pu changer : celle du serveur est installée
@@ -1193,7 +1192,7 @@ export class AcceptationParrainage extends OperationUI {
       Le compte vient d'être créé et est déjà dans le modèle (clek enregistrée)
       On peut désérialiser la liste d'items (compte, contact, avatar)
       */
-      const mapObj = await this.rowItemsToMapObjets(ret.rowItems)
+      const mapObj = await rowItemsToMapObjets(ret.rowItems)
       const compte2 = mapObj.compte // le DERNIER objet compte quand on en a reçu plusieurs (pas la liste)
       data.setCompte(compte2)
       const objets = [compte2]

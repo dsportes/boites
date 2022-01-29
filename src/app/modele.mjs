@@ -2,40 +2,93 @@ import { schemas } from './schemas.mjs'
 import { crypt } from './crypto.mjs'
 import { openIDB, closeIDB, putPj, getPjdata } from './db.mjs'
 import { openWS, closeWS } from './ws.mjs'
-import { store, appexc, serial, deserial, dlvDepassee, NomAvatar, gzip, ungzip, dhstring, getJourJ, cfg, ungzipT, normpath, getpj } from './util.mjs'
+import {
+  store, appexc, serial, deserial, dlvDepassee, NomAvatar, gzip, ungzip, dhstring,
+  getJourJ, cfg, ungzipT, normpath, getpj, nomEd, titreEd, idToIc
+} from './util.mjs'
 import { remplacePage } from './page.mjs'
+import { SIZEAV, SIZEGR, EXPS } from './api.mjs'
 
-let lgnom, lgtitre
-
-export async function idToIc (id) {
-  return crypt.hashBin(await crypt.crypter(data.clek, crypt.intToU8(id), 1), false, false)
+export async function traitInvitGr (row) {
+  const cpriv = data.avc(row.id).cpriv
+  const nomc = deserial(await crypt.decrypterRSA(cpriv, row.datap))
+  return { id: row.id, ni: row.ni, nomck: crypt.crypter(data.clek, nomc) }
 }
 
-function nomEd (nom, info) {
-  if (!lgnom) lgnom = cfg().lgnom || 20
-  if (info) {
-    const i = info.indexOf('\n')
-    const inf = info.substring(0, (i === -1 ? lgnom : (i > lgnom ? lgnom : i)))
-    return nom + ' [' + inf + ']'
+/** Invitgr **********************************/
+/*
+- `id` : id du membre invité.
+- `ni` : hash du numéro d'invitation.
+- `datap` : crypté par la clé publique du membre invité.
+  - `nom rnd` : nom complet du groupe (donne sa clé).
+  Ceci permet de calculer son `im` (hash de l'encryption de `id` par `rnd`).
+Jamais stocké en IDB : dès réception, le row avatar correspondant est "régularisé"
+*/
+
+schemas.forSchema({
+  name: 'idbInvitgr',
+  cols: ['id', 'ni', 'v', 'dlv', 'st', 'data', 'vsh']
+})
+
+export class Invitgr {
+  get table () { return 'invitgr' }
+  async fromRow (row) {
+    this.id = row.id
+    this.ni = row.ni
+    const cpriv = data.avc(row.id).cpriv
+    const nomc = deserial(await crypt.decrypterRSA(cpriv, row.datap))
+    this.nomck = await crypt.crypter(data.clek, nomc)
+    return this
   }
-  return nom
 }
-
-function titreEd (sid, txt) {
-  if (!lgtitre) lgtitre = cfg().lgtitre || 50
-  let t = ''
-  if (txt) {
-    const i = txt.indexOf('\n')
-    t = txt.substring(0, (i === -1 ? lgtitre : (i < lgtitre ? i : lgtitre)))
+/*
+  Retourne une map avec une entrée pour chaque table et en valeur,
+  - pour compte : LE DERNIER objet reçu, pas la liste historique
+  - pour les autres, l'array des objets
+*/
+export async function rowItemsToMapObjets (rowItems) {
+  const res = {}
+  for (let i = 0; i < rowItems.length; i++) {
+    const item = rowItems[i]
+    const row = schemas.deserialize('row' + item.table, item.serial)
+    if (item.table === 'compte') {
+      // le dernier quand on en a reçu plusieurs et non la liste
+      if (row.pcbh !== data.ps.pcbh) throw EXPS // phrase secrète changée => déconnexion
+      const obj = new Compte()
+      res.compte = await obj.fromRow(row)
+    } else if (item.table === 'prefs') {
+      // le dernier quand on en a reçu plusieurs et non la liste
+      const obj = new Prefs()
+      res.prefs = await obj.fromRow(row)
+    } else {
+      if (!res[item.table]) res[item.table] = []
+      const obj = newObjet(item.table)
+      await obj.fromRow(row)
+      res[item.table].push(obj)
+    }
   }
-  if (sid && t) return sid + ' [' + t + ']'
-  if (!sid && t) return t
-  if (sid && !t) return sid
-  return '?'
+  return res
 }
 
-/* mapObj : clé par table, valeur : array des objets
-- ne traite pas 'compte'
+/* Création des objets selon leur table *******/
+function newObjet (table) {
+  switch (table) {
+    case 'compte' : return new Compte()
+    case 'avatar' : return new Avatar()
+    case 'contact' : return new Contact()
+    case 'invitgr' : return new Invitgr()
+    case 'parrain' : return new Parrain()
+    case 'rencontre' : return new Rencontre()
+    case 'groupe' : return new Groupe()
+    case 'membre' : return new Membre()
+    case 'secret' : return new Secret()
+    case 'cv' : return new Cv()
+  }
+}
+
+/* mapObj : clé par table, valeur : array des objets **************************************/
+/*
+- ne traite ni 'compte', ni 'prefs', ni 'invitgr'
 - inscrit en store OU les supprime du store s'il y était
 - objets : array remplie par tous les objets à mettre en IDB
 Retourne vcv : version de la plus CV trouvée
@@ -53,11 +106,6 @@ export async function commitMapObjets (objets, mapObj) { // SAUF mapObj.compte e
   if (mapObj.groupe) {
     data.setGroupes(mapObj.groupe)
     push('groupe')
-  }
-
-  if (mapObj.invitgr) {
-    data.setInvitGrs(mapObj.invitgr)
-    push('invitgr')
   }
 
   if (mapObj.contact) {
@@ -175,8 +223,6 @@ export async function commitMapObjets (objets, mapObj) { // SAUF mapObj.compte e
   return vcv
 }
 
-export const SIZEAV = 7
-export const SIZEGR = 3
 export const MODES = ['inconnu', 'synchronisé', 'incognito', 'avion', 'visio']
 
 /* Répertoire des CV **********************************************************/
@@ -579,24 +625,6 @@ class Session {
     }
   }
 
-  getInvitct (id, ni) { return store().getters['db/invitct'](id, ni) }
-
-  setInvitcts (lobj, hls) {
-    if (lobj.length) {
-      if (hls) lobj.forEach(obj => { if (obj.suppr || obj.horslimite) hls.push(obj) })
-      store().commit('db/setObjets', ['invitct', lobj])
-    }
-  }
-
-  getInvitgr (id, ni) { return store().getters['db/invitgr'](id, ni) }
-
-  setInvitgrs (lobj, hls) {
-    if (lobj.length) {
-      if (hls) lobj.forEach(obj => { if (obj.suppr || obj.horslimite) hls.push(obj) })
-      store().commit('db/setObjets', ['invitgr', lobj])
-    }
-  }
-
   getMembre (sid, sid2) { return store().getters['db/membre'](sid, sid2) }
 
   getMembreParId (sidg, sidm) { return store().getters['db/membreParId'](sidg, sidm) }
@@ -633,23 +661,6 @@ class Session {
 }
 
 export const data = new Session()
-
-/* Création des objets selon leur table *******/
-export function newObjet (table) {
-  switch (table) {
-    case 'compte' : return new Compte()
-    case 'avatar' : return new Avatar()
-    case 'contact' : return new Contact()
-    case 'invitct' : return new Invitct()
-    case 'invitgr' : return new Invitgr()
-    case 'parrain' : return new Parrain()
-    case 'rencontre' : return new Rencontre()
-    case 'groupe' : return new Groupe()
-    case 'membre' : return new Membre()
-    case 'secret' : return new Secret()
-    case 'cv' : return new Cv()
-  }
-}
 
 /** Compte **********************************/
 
@@ -1342,156 +1353,6 @@ export class Groupe {
 
   fromIdb (idb) {
     schemas.deserialize('idbGroupe', idb, this)
-    return this
-  }
-}
-
-/** Invitct reçue par A de B **********************************/
-/*
-- `id` : id de A.
-- `ni` : numéro aléatoire d'invitation en complément de `id` (généré par B).
-- `v` :
-- `dlv` : la date limite de validité permettant de purger les rencontres (quels qu'en soient les statuts).
-- `st` : <= 0: annulée, 0: en attente
-- `datap` : données cryptées par la clé publique de B.
-  - `nom rnd` : nom complet de B.
-  - `ic` : index de A dans la liste des contacts de B (pour que A puisse écrire le statut et l'ardoise dans `contact` de B).
-  - `cc` : clé `cc` du contact *fort* A / B, définie par B.
-- `vsh`
-*/
-
-schemas.forSchema({
-  name: 'idbInvitct',
-  cols: ['id', 'ni', 'v', 'dlv', 'st', 'data', 'vsh']
-})
-
-export class Invitct {
-  get table () { return 'invitct' }
-
-  get sid () { return crypt.idToSid(this.id) }
-
-  get sid2 () { return crypt.idToSid(this.ni) }
-
-  get pk () { return this.sid + '/' + this.sid2 }
-
-  get suppr () { return this.st < 0 }
-
-  get horsLimite () { return !this.suppr ? dlvDepassee(this.dlv) : false }
-
-  get sidav () { return this.sid }
-
-  get clec () { return this.data.cc }
-
-  async fromRow (row) {
-    this.vsh = row.vsh
-    this.id = row.id
-    this.ni = row.ni
-    this.v = row.v
-    this.dlv = row.dlv
-    this.st = row.st
-    if (!this.suppr) {
-      const cpriv = data.avc(this.id).cpriv
-      this.data = deserial(await crypt.decrypterRSA(cpriv, row.datap))
-      this.nab = data.setNa(this.data.nom, this.data.rnd)
-    }
-    return this
-  }
-
-  async toRow (clepub) {
-    const r = { ...this }
-    r.datap = await crypt.crypterRSA(clepub, serial(this.data))
-    return schemas.serialize('rowinvitct', this)
-  }
-
-  get toIdb () {
-    return schemas.serialize('idbInvitct', this)
-  }
-
-  fromIdb (idb) {
-    schemas.deserialize('idbInvitct', idb, this)
-    this.nab = data.setNa(this.data.nom, this.data.rnd)
-    return this
-  }
-}
-
-/** Invitgr **********************************/
-/*
-- `id` : id du membre invité.
-- `ni` : numéro d'invitation.
-- `v` :
-- `dlv` :
-- `st` : statut.  < 0 signifie supprimé. 0: invité.
-- `datap` : crypté par la clé publique du membre invité.
-  - `nom rnd` : nom complet du groupe (donne sa clé).
-  - `im` : indice de membre de l'invité dans le groupe.
-  - `idi` : id du membre invitant.
-  - `p` : 0:lecteur, 1:auteur, 2:administrateur.
-- `vsh`
-*/
-
-schemas.forSchema({
-  name: 'idbInvitgr',
-  cols: ['id', 'ni', 'v', 'dlv', 'st', 'data', 'vsh']
-})
-
-export class Invitgr {
-  get table () { return 'invitgr' }
-
-  get sid () { return crypt.idToSid(this.id) }
-
-  get sid2 () { return crypt.idToSid(this.ni) }
-
-  get pk () { return this.sid + '/' + this.sid2 }
-
-  get suppr () { return this.st < 0 }
-
-  get horsLimite () { return !this.suppr ? dlvDepassee(this.dlv) : false }
-
-  get sidav () { return this.sid }
-
-  get stx () { return this.st < 0 ? -1 : Math.floor(this.st / 10) }
-
-  get sty () { return this.st < 0 ? -1 : this.st % 10 }
-
-  // retourne le membre correspondant si cet invitgr est invité ou actif sinon null, et le groupe
-  membreGroupe () {
-    const x = this.stx
-    if (x !== 2 && x !== 3) return null
-    const m = data.membre(this.idg, this.data.im)
-    const g = data.getGroupe(this.idg)
-    return [m, g]
-  }
-
-  async fromRow (row) {
-    this.vsh = row.vsh || 0
-    this.id = row.id
-    this.ni = row.ni
-    this.v = row.v
-    this.dlv = row.dlv
-    this.st = row.st
-    if (!this.suppr) {
-      const cpriv = data.avc(this.id).cpriv
-      this.data = deserial(await crypt.decrypterRSA(cpriv, row.datap))
-      this.nag = data.setNa(this.data.nom, this.data.rnd)
-      this.nam = data.setNa(this.data.nom, this.data.rnd, this.id, data.im)
-    }
-    return this
-  }
-
-  async toRow (clepub) {
-    const r = { ...this }
-    r.datap = await crypt.crypter(clepub, serial(this.data))
-    return schemas.serialize('rowinvitgr', r)
-  }
-
-  get toIdb () {
-    return schemas.serialize('idbInvitgr', this)
-  }
-
-  fromIdb (idb) {
-    schemas.deserialize('idbInvitgr', idb, this)
-    this.nag = data.setNa(this.data.nom, this.data.rnd)
-    this.nam = data.setNa(this.data.nom, this.data.rnd, this.id, data.im)
     return this
   }
 }

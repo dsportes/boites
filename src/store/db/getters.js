@@ -23,16 +23,6 @@ export const contact = (state) => (id, ic) => {
   return !ic ? lc || { } : (lc ? lc[ic] : null)
 }
 
-export const invitct = (state) => (id, ni) => {
-  const lc = state['invitcts@' + Sid(id)]
-  return !ni ? lc || { } : (lc ? lc[Sid(ni)] : null)
-}
-
-export const invitgr = (state) => (id, ni) => {
-  const lc = state['invitgrs@' + Sid(id)]
-  return !ni ? lc || { } : (lc ? lc[Sid(ni)] : null)
-}
-
 export const membre = (state) => (id, im) => {
   const lc = state['membres@' + Sid(id)]
   return !im ? lc || { } : (lc ? lc[im] : null)

@@ -1,6 +1,6 @@
 /* eslint-disable func-call-spacing */
 import Dexie from 'dexie'
-import { Avatar, Compte, Prefs, Invitgr, Invitct, Contact, Parrain, Rencontre, Groupe, Membre, Secret, Cv, data } from './modele.mjs'
+import { Avatar, Compte, Prefs, Invitgr, Contact, Parrain, Rencontre, Groupe, Membre, Secret, Cv, data } from './modele.mjs'
 import { store, deserial, serial } from './util.mjs'
 import { crypt } from './crypto.mjs'
 import { AppExc, E_DB, INDEXT } from './api.mjs'
@@ -12,7 +12,6 @@ const STORES = {
   avatar: 'id',
   invitgr: '[id+id2]', // ni
   contact: '[id+id2]', // ic
-  invitct: '[id+id2]', // ni
   parrain: 'id', // pph
   rencontre: 'id', // prh
   groupe: 'id',
@@ -185,24 +184,6 @@ export async function getInvitgrs () {
       vol += idb.data.length
       const x = new Invitgr().fromIdb(await crypt.decrypter(data.clek, idb.data))
       r.push(x)
-      data.vag.setVerAv(x.sidav, INDEXT.INVITGR, x.v)
-    })
-    return { objs: r, vol: vol }
-  } catch (e) {
-    throw data.setErDB(EX2(e))
-  }
-}
-
-export async function getInvitcts () {
-  go()
-  try {
-    let vol = 0
-    const r = []
-    await data.db.invitct.each(async (idb) => {
-      vol += idb.data.length
-      const x = new Invitct().fromIdb(await crypt.decrypter(data.clek, idb.data))
-      r.push(x)
-      data.vag.setVerAv(x.sidav, INDEXT.INVITCT, x.v)
     })
     return { objs: r, vol: vol }
   } catch (e) {

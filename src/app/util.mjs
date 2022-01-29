@@ -120,6 +120,35 @@ export function affidbmsg (msg) {
   }
 }
 
+export async function idToIc (id) {
+  return crypt.hashBin(await crypt.crypter(data.clek, crypt.intToU8(id), 1), false, false)
+}
+
+let lgnom, lgtitre
+
+export function nomEd (nom, info) {
+  if (!lgnom) lgnom = cfg().lgnom || 20
+  if (info) {
+    const i = info.indexOf('\n')
+    const inf = info.substring(0, (i === -1 ? lgnom : (i > lgnom ? lgnom : i)))
+    return nom + ' [' + inf + ']'
+  }
+  return nom
+}
+
+export function titreEd (sid, txt) {
+  if (!lgtitre) lgtitre = cfg().lgtitre || 50
+  let t = ''
+  if (txt) {
+    const i = txt.indexOf('\n')
+    t = txt.substring(0, (i === -1 ? lgtitre : (i < lgtitre ? i : lgtitre)))
+  }
+  if (sid && t) return sid + ' [' + t + ']'
+  if (!sid && t) return t
+  if (sid && !t) return sid
+  return '?'
+}
+
 export function store () { return $store }
 
 export function cfg () { return $cfg }

@@ -6,7 +6,6 @@ export const IDBLEC_RAZ = {
   avatar: { st: false, vol: 0, nbl: 0 },
   invitgr: { st: false, vol: 0, nbl: 0 },
   contact: { st: false, vol: 0, nbl: 0 },
-  invitct: { st: false, vol: 0, nbl: 0 },
   parrain: { st: false, vol: 0, nbl: 0 },
   rencontre: { st: false, vol: 0, nbl: 0 },
   groupe: { st: false, vol: 0, nbl: 0 },
