@@ -20,8 +20,7 @@ export async function traitInvitGr (row) {
 - `id` : id du membre invité.
 - `ni` : hash du numéro d'invitation.
 - `datap` : crypté par la clé publique du membre invité.
-  - `nom rnd` : nom complet du groupe (donne sa clé).
-  Ceci permet de calculer son `im` (hash de l'encryption de `id` par `rnd`).
+  - `nom rnd im` : nom complet du groupe (donne sa clé).
 Jamais stocké en IDB : dès réception, le row avatar correspondant est "régularisé"
 */
 
@@ -1475,7 +1474,7 @@ export class Parrain {
 
   get sid () { return crypt.idToSid(this.pph) }
 
-  get sid2 () { return null }
+  get sid2 () { return crypt.idToSid(this.id) }
 
   get pk () { return this.sid }
 
@@ -1564,7 +1563,7 @@ export class Rencontre {
 
   get sid () { return crypt.idToSid(this.prh) }
 
-  get sid2 () { return null }
+  get sid2 () { return crypt.idToSid(this.id) }
 
   get pk () { return this.sid }
 

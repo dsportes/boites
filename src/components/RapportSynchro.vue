@@ -37,9 +37,7 @@ import { edvol } from '../app/util'
 
 const labels = [
   'Avatars des comptes',
-  'Invitations reçues à être membre de groupes',
   'Contacts des avatars',
-  'Invitations reçues à être contact',
   'Parrainages de nouveaux comptes',
   'Rencontres avec un compte existant',
   'Groupes accédés',
@@ -51,7 +49,7 @@ const labels = [
   'Purge des cartes de visite obsolètes'
 ]
 
-const tables = ['avatar', 'invitgr', 'contact', 'invitct', 'parrain', 'rencontre', 'groupe', 'membre', 'secret', 'purgeav', 'purgegr', 'cv', 'purgecv']
+const tables = ['avatar', 'contact', 'parrain', 'rencontre', 'groupe', 'membre', 'secret', 'purgeav', 'purgegr', 'cv', 'purgecv']
 
 export default ({
   name: 'RapportSynchro',

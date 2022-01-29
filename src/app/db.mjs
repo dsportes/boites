@@ -1,6 +1,6 @@
 /* eslint-disable func-call-spacing */
 import Dexie from 'dexie'
-import { Avatar, Compte, Prefs, Invitgr, Contact, Parrain, Rencontre, Groupe, Membre, Secret, Cv, data } from './modele.mjs'
+import { Avatar, Compte, Prefs, Contact, Parrain, Rencontre, Groupe, Membre, Secret, Cv, data } from './modele.mjs'
 import { store, deserial, serial } from './util.mjs'
 import { crypt } from './crypto.mjs'
 import { AppExc, E_DB, INDEXT } from './api.mjs'
@@ -10,7 +10,6 @@ const STORES = {
   compte: 'id',
   prefs: 'id',
   avatar: 'id',
-  invitgr: '[id+id2]', // ni
   contact: '[id+id2]', // ic
   parrain: 'id', // pph
   rencontre: 'id', // prh
@@ -175,22 +174,6 @@ export async function getGroupes (gru) { // gru : set des Ids des groupes utiles
   }
 }
 
-export async function getInvitgrs () {
-  go()
-  try {
-    let vol = 0
-    const r = []
-    await data.db.invitgr.each(async (idb) => {
-      vol += idb.data.length
-      const x = new Invitgr().fromIdb(await crypt.decrypter(data.clek, idb.data))
-      r.push(x)
-    })
-    return { objs: r, vol: vol }
-  } catch (e) {
-    throw data.setErDB(EX2(e))
-  }
-}
-
 export async function getContacts () {
   go()
   try {
@@ -331,10 +314,10 @@ export async function purgeAvatars (lav) {
       for (let i = 0; i < idac.length; i++) {
         const id = { id: idac[i] }
         await data.db.avatar.where(id).delete()
-        await data.db.invitgr.where(id).delete()
         await data.db.contact.where(id).delete()
-        await data.db.invitct.where(id).delete()
         await data.db.secret.where(id).delete()
+        await data.db.rencontre.where({ id2: id }).delete()
+        await data.db.parrain.where({ id2: id }).delete()
       }
     })
     return lav.size
@@ -388,7 +371,11 @@ export async function commitRows (lobj) {
         if (!x.suppr) {
           await d.db[x.table].put(x.row)
         } else {
-          await d.db[x.table].delete(x.row.id)
+          if (x.row.id2) {
+            await d.db[x.table].where({ id: x.row.id, id2: x.row.id2 }).delete()
+          } else {
+            await d.db[x.table].where({ id: x.row.id }).delete()
+          }
         }
         // if (cfg().debug) console.log(x.suppr ? 'del ' : 'put ' + x.table + ' - ' + (x.id || x.pk))
       }

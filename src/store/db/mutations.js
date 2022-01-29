@@ -6,7 +6,7 @@ groupes: {}, // Tous les groupes
 parrains: {}, // Tous les parrains (pph) : un getter par id d'avatar
 rencontres: {} // Toutes les rencontres (prh) : un getter par id d'avatar
 
-Groupés par sid d'avatar : contacts@sid invitcts@sid invitgrs@sid
+Groupés par sid d'avatar : contacts@sid invitcts@sid
 Groupés par sid de groupe : membres@sid
 Groupés par sid d'avatar ou de groupe : secrets@sid
 
@@ -72,10 +72,6 @@ export function purgeAvatars (state, val) { // val : Set des ids des avatars INU
   let na = 0
   const xc = state.contacts
   let nc = 0
-  const xi = state.invitcts
-  let ni = 0
-  const xj = state.invitgrs
-  let nj = 0
   const xs = state.secrets
   let ns = 0
   const xp = state.parrains
@@ -86,8 +82,6 @@ export function purgeAvatars (state, val) { // val : Set des ids des avatars INU
     const sid = crypt.idToSid(id)
     if (xa[sid]) { na++; delete xa[sid] }
     if (xc[sid]) { nc++; delete xc[sid] }
-    if (xi[sid]) { ni++; delete xi[sid] }
-    if (xj[sid]) { nj++; delete xj[sid] }
     if (xs[sid]) { ns++; delete xs[sid] }
     for (const sidp of xp) {
       const p = xp[sidp]
@@ -100,12 +94,10 @@ export function purgeAvatars (state, val) { // val : Set des ids des avatars INU
   }
   if (na) state.avatars = { ...xa }
   if (nc) state.contacts = { ...xc }
-  if (ni) state.invitcts = { ...xi }
-  if (nj) state.invitgrs = { ...xj }
   if (ns) state.secrets = { ...xs }
   if (np) state.parrains = { ...xp }
   if (nr) state.rencontres = { ...xr }
-  return na + nc + ni + nj + ns + np + nr
+  return na + nc + ns + np + nr
 }
 
 /* purge des groupes inutiles et membres, secrets associés */

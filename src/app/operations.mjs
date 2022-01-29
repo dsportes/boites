@@ -1,11 +1,11 @@
-import { NomAvatar, store, post, affichermessage, cfg, sleep, affichererreur, appexc, difference, getpj, getJourJ, serial } from './util.mjs'
+import { NomAvatar, store, post, affichermessage, cfg, sleep, affichererreur, appexc, idToIc, difference, getpj, getJourJ, serial, edvol } from './util.mjs'
 import { remplacePage } from './page.mjs'
 import {
   deleteIDB, idbSidCompte, commitRows, getCompte, getPrefs, getAvatars, getContacts, getCvs,
-  getGroupes, getInvitgrs, getMembres, getParrains, getRencontres, getSecrets,
+  getGroupes, getMembres, getParrains, getRencontres, getSecrets,
   purgeAvatars, purgeCvs, purgeGroupes, openIDB, enregLScompte, setEtat, getEtat, getPjidx, putPj
 } from './db.mjs'
-import { Compte, Avatar, rowItemsToMapObjets, commitMapObjets, data, Prefs, Contact, idToIc, Invitgr } from './modele.mjs'
+import { Compte, Avatar, rowItemsToMapObjets, commitMapObjets, data, Prefs, Contact, Invitgr } from './modele.mjs'
 import { AppExc, EXBRK, EXPS, F_BRO, INDEXT, X_SRV, E_WS, SIZEAV, SIZEGR } from './api.mjs'
 
 import { crypt } from './crypto.mjs'
@@ -221,6 +221,7 @@ export class Operation {
       await commitRows(objets)
       this.BRK()
     }
+    return objets.length
   }
 
   /* Recharge depuis le serveur les groupes et les tables associées (membres, secrets) */
@@ -235,6 +236,7 @@ export class Operation {
       await commitRows(objets)
       this.BRK()
     }
+    return objets.length
   }
 
   /* Synchronisation et abonnements des CVs */
@@ -258,6 +260,8 @@ export class Operation {
 
   async syncPjs () {
     /* Vérification que toutes les PJ accessibles en avion sont, a) encore utiles, b) encore à jour */
+    let nbp = 0
+    let vol = 0
     const st = store().state.pjidx
     const maj = []
     for (const sidpj in st) {
@@ -270,19 +274,22 @@ export class Operation {
             x.hv = pj.hv
             // rechargement du contenu
             const data = await getpj(secret.sid + '@' + secret.sid2, x.cle) // du serveur
-            putPj(x, data) // store en IDB
+            nbp++
+            vol += data.length
+            await putPj(x, data) // store en IDB
             maj.push(x)
           }
         } else { // PJ n'existe plus
-          putPj(x, null) // delete en IDB
+          await putPj(x, null) // delete en IDB
           maj.push(x)
         }
       } else {
-        putPj(x, null) // delete en IDB, le secret n'existe plus
+        await putPj(x, null) // delete en IDB, le secret n'existe plus
         maj.push(x)
       }
     }
     if (maj.length) data.setPjidx(maj) // MAJ du store
+    return [nbp, vol]
   }
 
   /* traiteQueue ********************************************************************************/
@@ -483,13 +490,6 @@ export class OperationUI extends Operation {
         })
       }
       this.majidblec({ table: 'cv', st: true, vol: vol, nbl: objs.length })
-    }
-
-    this.BRK()
-    {
-      const { objs, vol } = await getInvitgrs()
-      data.setInvitgrs(objs, hls)
-      this.majidblec({ table: 'invitgr', st: true, vol: vol, nbl: objs.length })
     }
 
     this.BRK()
@@ -798,7 +798,7 @@ export class ConnexionCompte extends OperationUI {
       /* récupération et régularisation des invitGr : maj sur le serveur des avatars du compte
         AVANT chargement des avatars afin d'avoir tous les groupes au plus tôt
       */
-      this.getInvitGrs()
+      await this.getInvitGrs()
 
       if (data.db) {
         enregLScompte(compte.sid) // La phrase secrète a pu changer : celle du serveur est installée
@@ -859,22 +859,26 @@ export class ConnexionCompte extends OperationUI {
 
       // Chargement depuis le serveur des avatars non obtenus de IDB (sync), tous (incognito)
       for (const idav of avUtiles) {
-        await this.chargerAv(idav, !data.db) // tous en incognito
+        const n = await this.chargerAv(idav, !data.db) // tous en incognito
         const av = data.getAvatar(idav)
-        this.majsynclec({ st: 0, sid: av.sid, nom: 'Avatar ' + av.na.nom, nbl: 0 })
+        this.majsynclec({ st: 1, sid: av.sid, nom: 'Avatar ' + av.na.nom, nbl: n })
       }
 
       // Chargement depuis le serveur des groupes non obtenus de IDB (sync), tous (incognito)
       for (const idgr of grUtiles) {
-        await this.chargerGr(idgr, !data.db) // tous en incognito)
+        const n = await this.chargerGr(idgr, !data.db) // tous en incognito)
         const gr = data.getGroupe(idgr)
-        this.majsynclec({ st: 0, sid: gr.sid, nom: 'Groupe ' + gr.na.nom, nbl: 0 })
+        this.majsynclec({ st: 1, sid: gr.sid, nom: 'Groupe ' + gr.na.nom, nbl: n })
       }
 
       // Synchroniser les CVs (et s'abonner)
       const [nvvcv, nbcv] = await this.syncCVs(data.vcv)
       this.majsynclec({ st: 1, sid: '$CV', nom: 'Cartes de visite', nbl: nbcv })
       if (data.vcv < nvvcv) data.vcv = nvvcv
+
+      // Recharger les pièces jointes manquantes
+      const [nbp, vol] = await this.syncPjs()
+      this.majsynclec({ st: 1, sid: '$PJ', nom: 'Pièces jointes "avion" : ' + edvol(vol), nbl: nbp })
 
       // Traiter les notifications éventuellement arrivées
       while (data.syncqueue.length) {

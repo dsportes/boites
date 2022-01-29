@@ -4,7 +4,6 @@ export const MODE_INCOGNITO = 2
 export const MODE_AVION = 3
 export const IDBLEC_RAZ = {
   avatar: { st: false, vol: 0, nbl: 0 },
-  invitgr: { st: false, vol: 0, nbl: 0 },
   contact: { st: false, vol: 0, nbl: 0 },
   parrain: { st: false, vol: 0, nbl: 0 },
   rencontre: { st: false, vol: 0, nbl: 0 },

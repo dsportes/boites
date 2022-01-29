@@ -16,7 +16,7 @@ export default function () {
     pjidx: {} // index des pièces jointes disponibles en mode avion
 
     /*
-    Groupés par sid d'avatar : contacts_sid invitcts_sid invitgrs_sid
+    Groupés par sid d'avatar : contacts_sid invitcts_sid
     Groupés par sid de groupe : membres_sid
     Groupés par sid d'avatar ou de groupe : secrets_sid
     */
