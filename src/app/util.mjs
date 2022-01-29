@@ -553,7 +553,7 @@ export class Motscles {
     if (this.mode === 2 || (this.mode === 3 && this.idg)) {
       const gr = data.getGroupe(this.idg)
       this.mapg = gr ? gr.mc : {}
-      if (this.mode === 2 && gr.maxSty === 2) this.src = this.mapg
+      if (this.mode === 2 && gr.maxStp === 2) this.src = this.mapg
       this.fusion(this.mapg)
     }
     this.tri()

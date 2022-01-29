@@ -173,7 +173,7 @@ export class Operation {
   async traitInvitGr (lstInvitGr) {
     for (let i = 0; i < lstInvitGr.length; i++) {
       const iv = lstInvitGr[i]
-      const ret = await post(this, 'm1', 'regulGr', { sessionId: data.sessionId, id: iv.id, ni: iv.ni, nomck: iv.nomck })
+      const ret = await post(this, 'm1', 'regulGr', { sessionId: data.sessionId, id: iv.id, ni: iv.ni, datak: iv.datak })
       if (data.dh < ret.dh) data.dh = ret.dh
     }
   }
