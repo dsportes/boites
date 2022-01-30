@@ -31,8 +31,7 @@
         <img class="col-auto photomax" :src="c.ph"/>
         <div class="col-3 q-px-xs">{{c.nom}}</div>
         <div class="col-4 q-pr-xs">{{c.ard.substring(0,40)}}</div>
-        <q-icon class="col-auto" size="sm" color="warning" :name="c.dlv!== 0?'auto_delete':'done'"/>
-        <div v-if="c.dlv!==0" class="col-auto fs-sm">{{nbj(c.dlv)}}</div>
+        <div class="col-auto fs-sm">{{c.dhed}}</div>
       </div>
     </div>
   </div>

@@ -4,7 +4,7 @@ import { openIDB, closeIDB, putPj, getPjdata } from './db.mjs'
 import { openWS, closeWS } from './ws.mjs'
 import {
   store, appexc, serial, deserial, dlvDepassee, NomAvatar, gzip, ungzip, dhstring,
-  getJourJ, cfg, ungzipT, normpath, getpj, nomEd, titreEd, idToIc, post
+  getJourJ, cfg, ungzipT, normpath, getpj, nomEd, titreEd, post
 } from './util.mjs'
 import { remplacePage } from './page.mjs'
 import { SIZEAV, SIZEGR, EXPS } from './api.mjs'
@@ -1170,27 +1170,11 @@ export class Contact {
 
   get accepteNouveauSecret () { return this.st !== 0 }
 
+  get dhed () { return dhstring(this.dh) }
+
   majCc () {
     if (this.data.cc) data.setClec(this.id, this.ic, this.data.cc)
     data.setNa(this.data.nom, this.data.rnd, this.id, this.ic)
-  }
-
-  async nouveau (id, na, cc, ard, icb) { // na: du contact, icb: ic de A chez le contact B
-    this.id = id
-    this.ic = await idToIc(na.id)
-    this.v = 0
-    this.st = 0
-    this.q1 = 0
-    this.q2 = 0
-    this.qm1 = 0
-    this.qm2 = 0
-    this.data = { nom: na.nom, rnd: na.rnd, cc: cc, icb: icb }
-    this.ard = ard
-    this.dh = new Date().getTime()
-    this.info = null
-    this.mc = null
-    this.vsh = 0
-    return this
   }
 
   async fromRow (row) {
@@ -1221,12 +1205,20 @@ export class Contact {
     return this
   }
 
-  async toRow (noser) { // pas de toRow pour un supprimé
+  toRowP (datak, ardc) { // datak est fourni crypté pour un parrainage (contact du parrain par le filleul)
+    const r = { ...this }
+    r.datak = datak
+    r.infok = null
+    r.ardc = ardc
+    return schemas.serialize('rowcontact', r)
+  }
+
+  async toRow () { // datak est fourni crypté pour un parrainage (contact du parrain par le filleul)
     const r = { ...this }
     r.datak = await crypt.crypter(data.clek, serial(r.data))
     r.infok = r.info ? await crypt.crypter(data.clek, r.info) : null
     r.ardc = r.ard ? await crypt.crypter(this.data.cc, serial([r.dh, r.ard])) : null
-    return noser ? r : schemas.serialize('rowcontact', r)
+    return schemas.serialize('rowcontact', r)
   }
 
   get toIdb () {
@@ -1509,7 +1501,7 @@ export class Parrain {
         this.cx = clex
       }
       this.data = deserial(await crypt.decrypter(this.cx, row.datax))
-      this.datak2 = row.datak2
+      this.data2k = row.data2k
       const [d, t] = row.ardc ? deserial(await crypt.decrypter(this.data.cc, row.ardc)) : [0, '']
       this.ard = t
       this.dh = d

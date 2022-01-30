@@ -14,6 +14,7 @@ import { schemas } from './schemas.mjs'
 const OUI = 1
 const NON = 0
 const SELONMODE = 2
+const MO = 1024 * 1024
 
 export function deconnexion () { data.deconnexion() }
 
@@ -1032,26 +1033,10 @@ export class PjSecret extends OperationUI {
 
 /******************************************************************
  * Parrainage : args de m1/nouveauParrainage
- * - sessionId
- * - pph : hash de la phrase de parrainge
- * - dlv : date limite de validité
- * - id : de l'avatar parrain
- * - aps : booléen - true si le parrain accepte le partage de secret (false si limitation à l'ardoise)
- * - quotas: {q1 q2 qm1 qm2} : quotas donnés par le parrain
- * - datak : [phrase de parrainage (string), clé X (u8)] sérialisé et crypté par la clé K du parrain
- * - datax : sérialisation et cryptage par la clé X de :
- *  - nomp, rndp : du parrain
- *  - nomf, rndf : du filleul
- *  - cc : u8, clé du couple
- *  - ic : numéro de contact du filleul chez le parrain
- * - ardc : mot d'accueil du parrain crypté par la clé du couple
- * Pour créer le row contact :
- * - ic : indice de contact du filleul chez le parrain
- * - data2k : sérialisation et cryptage par la clé K du parrain de :
- *  - nom, rnd du filleul
- *  - cc : u8, clé du couple
+  sessionId: data.sessionId,
+  rowParrain: serial(rowParrain)
  * Retour :
- * - dh :
+ * dh :
  */
 
 export class NouveauParrainage extends OperationUI {
@@ -1064,35 +1049,39 @@ export class NouveauParrainage extends OperationUI {
   // excActions(), défaut de Operation
 
   async run (arg) {
-    /* { pph, pp, clex, id, aps, quotas: {q1, q2, qm1, qm2}, nomf, mot }
+    /* { pph, pp, clex, id, aps, quotas, nomf, mot }
     - pp : phrase de parrainage (string)
     - pph : le hash de la clex (integer)
     - clex : PBKFD de pp (u8)
+    - id: du parrain
+    - aps : booléen (accepta partage de secrets)
+    - quotas: {q1, q2, qm1, qm2}
     - nomf : nom du filleul (string)
     - mot : mot d'accueil (string)
-    - aps : booléen (accepta partage de secrets)
     */
     try {
-      const dlv = getJourJ() + cfg().limitesjour.parrainage
       const cc = crypt.random(32)
       const nap = data.getNa(arg.id)
       const naf = new NomAvatar(arg.nomf)
-      const ic = await idToIc(naf.id)
-      const dh = new Date().getTime()
-      const args = {
-        sessionId: data.sessionId,
+      const icp = await idToIc(naf.id)
+      const icf = crypt.rnd4()
+      const x = serial([new Date().getTime(), arg.mot])
+      // parrain : ['pph', 'id', 'v', 'dlv', 'st', 'q1', 'q2', 'qm1', 'qm2', 'datak', 'datax', 'data2k', 'ardc', 'vsh']
+      const rowParrain = {
         pph: arg.pph,
-        dlv,
         id: arg.id,
-        aps: arg.aps,
-        quotas: arg.quotas,
-        ic,
+        v: 0,
+        st: 0,
+        dlv: getJourJ() + cfg().limitesjour.parrainage,
+        ...arg.quotas,
         datak: await crypt.crypter(data.clek, serial([arg.pp, arg.clex])),
-        datax: await crypt.crypter(arg.clex, serial({ nomp: nap.nom, rndp: nap.rnd, nomf: naf.nom, rndf: naf.rnd, cc, ic })),
-        ardc: await crypt.crypter(cc, serial([dh, arg.mot])),
-        data2k: await crypt.crypter(data.clek, serial({ nom: naf.nom, rnd: naf.rnd, cc })),
-        idf: naf.id
+        datax: await crypt.crypter(arg.clex, serial({ nomp: nap.nom, rndp: nap.rnd, icp, nomf: naf.nom, rndf: naf.rnd, icf, cc, aps: arg.aps })),
+        data2k: await crypt.crypter(data.clek, serial({ nom: naf.nom, rnd: naf.rnd, ic: icf, cc })),
+        ardc: await crypt.crypter(cc, x),
+        vsh: 0
       }
+
+      const args = { sessionId: data.sessionId, rowParrain: serial(rowParrain) }
       const ret = await post(this, 'm1', 'nouveauParrainage', args)
       if (data.dh < ret.dh) data.dh = ret.dh
       this.finOK()
@@ -1113,7 +1102,8 @@ export class NouveauParrainage extends OperationUI {
  * Si acceptation
  * - idf : id du filleul
  * - icbc : indice de P comme contact chez F crypté par leur clé cc
- * - clePub, rowCompte, rowAvatar, rowPrefs : v attribuées par le serveur
+ * - clePub
+ * - rowCompte, rowAvatar, rowPrefs : v attribuées par le serveur
  * - rowContact (du filleul) : st, dlv et quotas attribués par le serveur
  *  Pour maj de sr des rows contact du parrain / filleul :
  * - aps : booléen - true si le filleul accepte le partage de secret (false si limitation à l'ardoise)
@@ -1150,7 +1140,7 @@ export class AcceptationParrainage extends OperationUI {
   /* arg :
   - ps : phrase secrète
   - ard : réponse du filleul
-  - aps : accepte le partage de secret
+  - aps : true si le filleul accepte le partage de secret
   - pph : hash phrase de parrainage
   */
   async run (parrain, arg) {
@@ -1169,9 +1159,41 @@ export class AcceptationParrainage extends OperationUI {
       const avatar = await new Avatar().nouveau(parrain.naf.id)
       const rowAvatar = await avatar.toRow()
 
-      const contact = new Contact()
-      await contact.nouveau(parrain.naf.id, parrain.nap, parrain.data.cc, arg.ard, parrain.data.ic)
-      const rowContactNS = await contact.toRow(true)
+      const x = parrain.data.aps ? 1 : 0
+      const y = arg.aps ? 1 : 0
+      const dh = new Date().getTime()
+      const ardc = await crypt.crypter(parrain.data.cc, serial([dh, arg.ard]))
+
+      const p = new Contact()
+      p.id = parrain.id
+      p.ic = parrain.data.icp
+      p.v = 0
+      p.st = (10 * x) + y
+      p.q1 = -parrain.q1 * MO
+      p.q2 = -parrain.q2 * MO
+      p.qm1 = -parrain.qm1 * MO
+      p.qm2 = -parrain.qm2 * MO
+      p.mc = new Uint8Array([])
+      p.info = null
+      p.vsh = 0
+      const rowContactP = p.toRowP(parrain.data2k, ardc)
+
+      const f = new Contact()
+      f.id = parrain.naf.id
+      f.ic = parrain.data.icf
+      f.v = 0
+      f.st = (10 * y) + x
+      f.q1 = parrain.q1 * MO
+      f.q2 = parrain.q2 * MO
+      f.qm1 = parrain.qm1 * MO
+      f.qm2 = parrain.qm2 * MO
+      f.ard = arg.ard
+      f.dh = dh
+      f.data = { nom: parrain.nap.nom, rnd: parrain.nap.rnd, ic: parrain.data.icp, cc: parrain.data.cc }
+      f.mc = new Uint8Array([])
+      f.info = null
+      f.vsh = 0
+      const rowContactF = await f.toRow()
 
       const args = {
         sessionId: data.sessionId,
@@ -1179,15 +1201,12 @@ export class AcceptationParrainage extends OperationUI {
         pph: arg.pph,
         idf: parrain.naf.id,
         idp: parrain.id,
-        icp: parrain.data.ic,
-        ardc: rowContactNS.ardc,
-        aps: arg.aps,
-        icbc: rowContactNS.icbc,
         clePub: kp.publicKey,
         rowCompte,
         rowPrefs,
         rowAvatar,
-        rowContact: schemas.serialize('rowcontact', rowContactNS)
+        rowContactP,
+        rowContactF
       }
       const ret = await post(this, 'm1', 'acceptParrainage', args)
       if (data.dh < ret.dh) data.dh = ret.dh
@@ -1203,7 +1222,7 @@ export class AcceptationParrainage extends OperationUI {
       const prefs2 = mapObj.prefs // le DERNIER objet compte quand on en a reçu plusieurs (pas la liste)
       data.setCompte(prefs2)
       objets.push(prefs2)
-      await commitMapObjets(objets, mapObj)
+      await commitMapObjets(objets, mapObj) // avatar, contactf en plus de compte prefs
 
       // création de la base IDB et chargement des rows compte et avatar
       if (data.mode === 1) { // synchronisé : IL FAUT OUVRIR IDB (et écrire dedans)
@@ -1248,8 +1267,14 @@ export class RefusParrainage extends OperationUI {
   */
   async run (parrain, arg) {
     try {
-      const ardc = await crypt.crypter(this.data.cc, serial([new Date().getTime(), arg.ard]))
-      const args = { sessionId: data.sessionId, ok: false, pph: arg.pph, idp: parrain.id, icp: parrain.ic, ardc: ardc }
+      const args = {
+        sessionId: data.sessionId,
+        ok: false,
+        pph: parrain.pph,
+        idp: parrain.id,
+        icp: parrain.ic,
+        ardc: await crypt.crypter(parrain.data.cc, serial([new Date().getTime(), arg.ard]))
+      }
       const ret = await post(this, 'm1', 'acceptParrainage', args)
       if (data.dh < ret.dh) data.dh = ret.dh
       this.finOK()

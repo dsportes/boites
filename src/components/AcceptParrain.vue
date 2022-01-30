@@ -94,7 +94,7 @@ export default ({
     return {
       isPwd: false,
       jourJ: getJourJ(),
-      apsp: this.parrain ? this.parrain.aps : false,
+      apsp: this.parrain ? this.parrain.data.aps : false,
       step: 1,
       ps: null,
       apsf: false,
