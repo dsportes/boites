@@ -92,6 +92,7 @@
           <q-tabs class="" v-model="tabavatar" inline-label no-caps dense>
             <q-btn v-if="tabavatar==='secrets' && $q.screen.lt.md" size="md" dense icon="search" color="secondary" @click="optAvatar('recherche')"/>
             <q-tab name="secrets" label="Secrets" />
+            <q-btn v-if="tabavatar==='contacts' && $q.screen.lt.md" size="md" dense icon="search" color="secondary" @click="optAvatarCt('recherche')"/>
             <q-tab name="contacts" label="Contacts" />
             <q-tab name="groupes" label="Groupes" />
             <q-tab name="etc" label="Etc." />
@@ -221,7 +222,6 @@ export default {
     return {
       idbs: ['~assets/database_gris.svg', '~assets/database_vert.svg', '~assets/database_rouge.svg'],
       console: console,
-      tabavatarsec: false,
       menugauche1: false,
       menugauche4: false
     }
@@ -237,8 +237,11 @@ export default {
     },
 
     optAvatar (opt) {
-      this.tabavatarsec = false
       this.$store.commit('ui/majevtavatar', opt)
+    },
+
+    optAvatarCt (opt) {
+      this.$store.commit('ui/majevtavatarct', opt)
     },
 
     tocompte () {
