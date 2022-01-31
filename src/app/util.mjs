@@ -803,7 +803,7 @@ export class Filtre {
 
   filtre (s) {
     if (s.ts === 0 && !this.perso) return false
-    if (s.ts === 1 && (this.contactId === 0 || (this.contactId !== -1 && this.contactId !== s.id2))) return false
+    if (s.ts === 1 && (this.contactId === 0 || (this.contactId !== -1 && this.contactId !== s.id))) return false
     if (s.ts === 2 && (this.groupeId === 0 || (this.groupeId !== -1 && this.groupeId !== s.id))) return false
     const im = s.ts !== 2 || !this.m2gr ? 0 : this.m2gr.get(s.id)
     let mcs = im === 0 ? s.mc : s.mc[im]

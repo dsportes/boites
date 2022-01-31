@@ -1158,6 +1158,12 @@ export class Contact {
 
   get na () { return data.getNa(this.id, this.ic) } // na DU CONTACT
 
+  get id2 () { return this.na.id }
+
+  get ic2 () { return this.data.ic }
+
+  get cle () { return this.data.cc }
+
   get cv () { return data.repertoire.getCv(this.na.id) } // cv DU CONTACT
 
   get ph () { const cv = this.cv; return cv.photo ? cv.photo : cfg().personne.default }
@@ -1683,7 +1689,7 @@ export class Secret {
   get nasrc () { return this.ts === 1 ? data.getNa(this.id, this.ic) : data.getNa(this.id) }
 
   get cles () {
-    return this.ts ? (this.ts === 1 ? data.getNa(this.id, this.ic) : data.getNa(this.id).cle) : data.clek
+    return this.ts ? (this.ts === 1 ? this.contact.cle : data.getNa(this.id).cle) : data.clek
   }
 
   get nomf () {
@@ -1730,9 +1736,9 @@ export class Secret {
     this.st = getJourJ() + cfg().limitesjour.secrettemp
     this.ora = 0
     this.mc = new Uint8Array([])
-    this.id2 = contact.na.id
+    this.id2 = contact.id2
     this.ns2 = (Math.floor(crypt.rnd4() / 3) * 3) + 1
-    this.ic2 = contact.icb
+    this.ic2 = contact.ic2
     this.txt = { t: '', l: new Uint8Array([]), d: Math.floor(new Date().getTime() / 1000) }
     this.ref = ref || null
     return this
@@ -1850,7 +1856,8 @@ export class Secret {
   async idc (pj) { return crypt.u8ToB64(await crypt.crypter(data.clek, this.nomc(pj), 1), true) }
 
   async datapj (pj, raw) {
-    const secid = this.sid + '@' + this.sid2
+    let secid = this.sid + '@' + this.sid2
+    if (this.ts === 1 && this.id2 < this.id) secid = crypt.idToSid(this.id2) + '@' + crypt.idToSid(this.ns2)
     const x = { id: this.id, ns: this.ns, cle: pj.cle }
     const y = data.getPjidx(x)
     let buf = null
