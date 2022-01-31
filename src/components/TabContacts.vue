@@ -1,7 +1,7 @@
 <template>
 <div :class="$q.screen.gt.sm ? 'ml20' : 'q-pa-xs full-width'">
   <div v-if="state.contacts && state.contacts.length" class="col">
-    <div v-for="(c, idx) in state.contacts" :key="c.pkv" @click="contactcourant(c)"
+    <div v-for="(c, idx) in state.contacts" :key="c.pkv"
       :class="dkli(idx) + ' contactcourant full-width row items-start q-py-xs cursor-pointer'">
       <q-icon class="col-auto q-pr-xs" size="sm" :color="c.stx<2?'primary':'warning'"
       :name="['o_thumb_up','thumb_up','o_hourglass_empty','hourglass_empty','hourglass_empty','','','','','thumb_down'][c.stx]"/>
@@ -9,25 +9,27 @@
       <div class="col-3 q-px-xs">{{c.nom}}</div>
       <div class="col-4 q-pr-xs">{{c.ard.substring(0,40)}}</div>
       <div class="col-auto fs-sm">{{c.dhed}}</div>
-      <q-menu touch-position context-menu >
-        <q-list dense style="min-width: 100px">
+      <q-menu touch-position transition-show="scale" transition-hide="scale">
+        <q-list dense style="min-width: 10rem">
+          <q-item clickable v-close-popup @click="afficher(c)">
+            <q-item-section>Afficher / éditer le contact</q-item-section>
+          </q-item>
+          <q-separator />
           <q-item clickable v-close-popup @click="voirsecrets(c)">
             <q-item-section>Voir les secrets partagés</q-item-section>
           </q-item>
-          <q-item clickable v-close-popup>
-            <q-item-section>New</q-item-section>
-          </q-item>
           <q-separator />
-          <q-item clickable>
-            <q-item-section>Preferences</q-item-section>
-            <q-item-section side>
-              <q-icon name="keyboard_arrow_right" />
-            </q-item-section>
+          <q-item clickable v-close-popup @click="nouveausecret(c)">
+            <q-item-section>Nouveau secret partagé</q-item-section>
           </q-item>
         </q-list>
       </q-menu>
     </div>
   </div>
+
+  <q-dialog v-model="editct" class="moyennelargeur">
+    <panel-contact :close="fermeredit"/>
+  </q-dialog>
 
   <q-dialog v-model="panelfiltre" position="left">
     <panel-filtre-contacts></panel-filtre-contacts>
@@ -44,18 +46,20 @@ import { computed, reactive, watch, ref } from 'vue'
 import { useStore } from 'vuex'
 import { Motscles, getJourJ } from '../app/util.mjs'
 import PanelFiltreContacts from './PanelFiltreContacts.vue'
+import PanelContact from './PanelContact.vue'
 import { data } from '../app/modele.mjs'
 
 export default ({
   name: 'TabContacts',
 
-  components: { PanelFiltreContacts },
+  components: { PanelFiltreContacts, PanelContact },
 
   computed: {
   },
 
   data () {
     return {
+      editct: false
     }
   },
 
@@ -65,17 +69,25 @@ export default ({
       this.evtfiltresecrets = { cmd: 'fs', arg: c }
     },
 
+    nouveausecret (c) {
+      this.contact = c
+      this.evtfiltresecrets = { cmd: 'nv', arg: c }
+    },
+
+    afficher (c) {
+      this.contact = c
+      this.editct = true
+    },
+
     contactcourant (c) {
       console.log(c.nom)
       this.contact = c
     },
 
+    fermeredit () { this.editct = false },
+
     fermerfiltre () {
       this.panelfiltre = false
-    },
-
-    async action (n, p) {
-
     },
 
     dkli (idx) { return this.$q.dark.isActive ? (idx ? 'sombre' + (idx % 2) : 'sombre0') : (idx ? 'clair' + (idx % 2) : 'clair0') }

@@ -61,8 +61,7 @@ export default ({
 
   data () {
     return {
-      row: { },
-      editsec: false
+      row: { }
     }
   },
 
@@ -126,7 +125,6 @@ export default ({
 
     rechercher (f) {
       this.state.filtre = f
-      // console.log(JSON.stringify(f))
     },
 
     async upload (port) {
@@ -327,23 +325,34 @@ export default ({
       panelfiltre.value = onoff
     }
 
+    const editsec = ref(false)
+
     const evtfiltresecrets2 = computed(() => $store.state.ui.evtfiltresecrets2)
     watch(() => evtfiltresecrets2.value, (ap) => {
-      filtreVisible(true)
+      const c = ap.arg
+      const cmd = ap.cmd
+      if (cmd === 'fs') filtreVisible(true)
       setTimeout(() => {
-        const c = ap.arg
-        const cmd = ap.cmd
-        console.log(cmd, c.nom)
         const f = new Filtre()
         f.contactId = c.id
         f.perso = false
-        recherche.a = f.etat()
+        recherche.a = f.etat() // pour que le panel de filtre affiche le filtre choisi
         recherche.p = deserial(serial(recherche.a))
+        state.filtre = f // pour activer la rechercher selon ce filtre sans avoir à appuyer sur "Rechercher"
+        if (cmd === 'nv') {
+          if (c.accepteNouveauSecret) {
+            secret.value = new Secret().nouveauC(avatar.value.id, c)
+            editsec.value = true
+          } else {
+            this.diagnostic = 'Le contact ' + (c ? c.nom : '?') + ' n\'est pas en état d\'accepter le partage de nouveaux secrets.'
+          }
+        }
       }, 100)
     })
 
     return {
       filtreVisible,
+      editsec,
       diagnostic,
       avatar,
       secret,
