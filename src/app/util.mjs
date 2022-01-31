@@ -753,6 +753,41 @@ export class Filtre {
     this.asc = true // ascendant, descendant
   }
 
+  etat () {
+    const f = this
+    const a = {
+      perso: f.perso,
+      ct: f.contactId,
+      gr: f.groupeId,
+      mc1: f.m1,
+      mc2: f.m2,
+      perm: f.perm,
+      temp: f.temp,
+      texte: f.texte,
+      corps: f.corps,
+      modif: f.modif,
+      tri: f.asc ? f.tri : -f.tri
+    }
+    return a
+  }
+
+  depuisEtat (a) {
+    const f = this
+    f.perso = a.perso
+    f.contactId = a.ct
+    f.groupeId = a.gr
+    f.m1 = a.mc1
+    f.m2 = a.mc2
+    f.perm = a.perm
+    f.temp = a.temp
+    f.texte = a.texte
+    f.corps = a.corps
+    f.modif = a.modif
+    f.asc = a.tri >= 0
+    f.tri = a.tri >= 0 ? a.tri : -a.tri
+    return f
+  }
+
   equal (f) {
     return this.avId === f.avId && this.changement(f) === 0
   }

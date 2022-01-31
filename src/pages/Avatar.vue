@@ -109,7 +109,10 @@ export default ({
     // watch(() => groupe.value, (ap, av) => { motscles.recharger() })
     watch(() => prefs.value, (ap, av) => { motscles.recharger() })
 
-    const tabavatar = computed(() => $store.state.ui.tabavatar)
+    const tabavatar = computed({
+      get: () => $store.state.ui.tabavatar,
+      set: (val) => $store.commit('ui/majtabavatar', val)
+    })
 
     const state = reactive({
       parrains: []
@@ -135,6 +138,14 @@ export default ({
     })
 
     function nbj (dlv) { return dlv - getJourJ() }
+
+    const evtfiltresecrets = computed(() => $store.state.ui.evtfiltresecrets)
+    watch(() => evtfiltresecrets.value, (ap) => {
+      tabavatar.value = 'secrets'
+      setTimeout(() => {
+        $store.commit('ui/majevtfiltresecrets2', ap)
+      }, 100)
+    })
 
     return {
       diagnostic,

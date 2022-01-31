@@ -36,7 +36,7 @@
 </div>
 </template>
 <script>
-import { Motscles, difference, Filtre, getJourJ, upload, normpath } from '../app/util.mjs'
+import { Motscles, difference, Filtre, getJourJ, upload, normpath, deserial, serial } from '../app/util.mjs'
 import { computed, reactive, watch, ref, isRef } from 'vue'
 import { useStore } from 'vuex'
 import { Secret, data } from '../app/modele.mjs'
@@ -45,6 +45,7 @@ import ShowHtml from '../components/ShowHtml.vue'
 import ApercuMotscles from '../components/ApercuMotscles.vue'
 import PanelSecret from '../components/PanelSecret.vue'
 import PanelFiltre from '../components/PanelFiltre.vue'
+import { useQuasar } from 'quasar'
 
 const enc = new TextEncoder()
 
@@ -159,6 +160,7 @@ export default ({
 
   setup () {
     const $store = useStore()
+    const $q = useQuasar()
 
     let watchStop = null
     function getRefSecrets () {
@@ -247,10 +249,9 @@ export default ({
     const motscles = new Motscles(mc, 1, null)
     motscles.recharger()
 
-    const z = new Uint8Array([])
     const recherche = reactive({ // doit correspondre au Filtre par défaut
-      a: { perso: true, ct: 0, gr: 0, mc1: z, mc2: z, perm: true, temp: 99998, modif: 0, texte: '', corps: false, tri: 0 },
-      p: { perso: true, ct: 0, gr: 0, mc1: z, mc2: z, perm: true, temp: 99998, modif: 0, texte: '', corps: false, tri: 0 }
+      a: new Filtre(avatar.value ? avatar.value.id : 0).etat(),
+      p: new Filtre(avatar.value ? avatar.value.id : 0).etat()
     })
 
     // watch(() => groupe.value, (ap, av) => { motscles.recharger() })
@@ -260,8 +261,6 @@ export default ({
     watch(() => evtavatar.value, (ap) => {
       if (ap.evt === 'recherche') panelfiltre.value = true
     })
-
-    // const tabavatar = computed(() => $store.state.ui.tabavatar)
 
     function nouveausecret (id2) { // pour un couple seulement, id2 du contact de l'avatar du compte
       const s = new Secret()
@@ -322,7 +321,29 @@ export default ({
 
     function nbj (dlv) { return dlv - getJourJ() }
 
+    function filtreVisible (onoff) {
+      const v = $q.screen.gt.sm
+      if (v) return
+      panelfiltre.value = onoff
+    }
+
+    const evtfiltresecrets2 = computed(() => $store.state.ui.evtfiltresecrets2)
+    watch(() => evtfiltresecrets2.value, (ap) => {
+      filtreVisible(true)
+      setTimeout(() => {
+        const c = ap.arg
+        const cmd = ap.cmd
+        console.log(cmd, c.nom)
+        const f = new Filtre()
+        f.contactId = c.id
+        f.perso = false
+        recherche.a = f.etat()
+        recherche.p = deserial(serial(recherche.a))
+      }, 100)
+    })
+
     return {
+      filtreVisible,
       diagnostic,
       avatar,
       secret,

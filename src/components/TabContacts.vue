@@ -1,13 +1,31 @@
 <template>
 <div :class="$q.screen.gt.sm ? 'ml20' : 'q-pa-xs full-width'">
   <div v-if="state.contacts && state.contacts.length" class="col">
-    <div v-for="(c, idx) in state.contacts" :key="c.pkv" :class="dkli(idx) + ' contactcourant full-width row items-start q-py-xs cursor-pointer'" @click="contactcourant(c)">
+    <div v-for="(c, idx) in state.contacts" :key="c.pkv" @click="contactcourant(c)"
+      :class="dkli(idx) + ' contactcourant full-width row items-start q-py-xs cursor-pointer'">
       <q-icon class="col-auto q-pr-xs" size="sm" :color="c.stx<2?'primary':'warning'"
       :name="['o_thumb_up','thumb_up','o_hourglass_empty','hourglass_empty','hourglass_empty','','','','','thumb_down'][c.stx]"/>
       <img class="col-auto photomax" :src="c.ph"/>
       <div class="col-3 q-px-xs">{{c.nom}}</div>
       <div class="col-4 q-pr-xs">{{c.ard.substring(0,40)}}</div>
       <div class="col-auto fs-sm">{{c.dhed}}</div>
+      <q-menu touch-position context-menu >
+        <q-list dense style="min-width: 100px">
+          <q-item clickable v-close-popup @click="voirsecrets(c)">
+            <q-item-section>Voir les secrets partagés</q-item-section>
+          </q-item>
+          <q-item clickable v-close-popup>
+            <q-item-section>New</q-item-section>
+          </q-item>
+          <q-separator />
+          <q-item clickable>
+            <q-item-section>Preferences</q-item-section>
+            <q-item-section side>
+              <q-icon name="keyboard_arrow_right" />
+            </q-item-section>
+          </q-item>
+        </q-list>
+      </q-menu>
     </div>
   </div>
 
@@ -42,7 +60,13 @@ export default ({
   },
 
   methods: {
+    voirsecrets (c) {
+      this.contact = c
+      this.evtfiltresecrets = { cmd: 'fs', arg: c }
+    },
+
     contactcourant (c) {
+      console.log(c.nom)
       this.contact = c
     },
 
@@ -112,6 +136,11 @@ export default ({
       if (ap.evt === 'recherche') panelfiltre.value = true
     })
 
+    const evtfiltresecrets = computed({ // secret courant
+      get: () => $store.state.ui.evtfiltresecrets,
+      set: (val) => $store.commit('ui/majevtfiltresecrets', val)
+    })
+
     return {
       compte,
       avatar,
@@ -120,7 +149,8 @@ export default ({
       state,
       nbj,
       panelfiltre,
-      mode
+      mode,
+      evtfiltresecrets
     }
   }
 

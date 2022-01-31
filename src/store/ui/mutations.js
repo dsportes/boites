@@ -160,6 +160,14 @@ export function majevtavatar (state, val) {
   state.evtavatar = { evt: val }
 }
 
+export function majevtfiltresecrets (state, val) {
+  state.evtfiltresecrets = val
+}
+
+export function majevtfiltresecrets2 (state, val) {
+  state.evtfiltresecrets2 = val
+}
+
 export function majevtavatarct (state, val) {
   state.evtavatarct = { evt: val }
 }

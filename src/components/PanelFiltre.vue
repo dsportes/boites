@@ -95,7 +95,7 @@
 
 <script>
 import { useStore } from 'vuex'
-import { computed, toRef, watch, onMounted } from 'vue'
+import { computed, toRef, watch /*, onMounted */ } from 'vue'
 import { Filtre, serial, deserial } from '../app/util.mjs'
 import ApercuMotscles from './ApercuMotscles.vue'
 import SelectMotscles from './SelectMotscles.vue'
@@ -134,19 +134,7 @@ export default ({
     changermc1 (mc) { this.state.a.mc1 = mc },
     changermc2 (mc) { this.state.a.mc2 = mc },
     ok () {
-      const f = new Filtre(this.avatar.id)
-      f.perso = this.state.a.perso
-      f.contactId = this.state.a.ct
-      f.groupeId = this.state.a.gr
-      f.m1 = this.state.a.mc1
-      f.m2 = this.state.a.mc2
-      f.perm = this.state.a.perm
-      f.temp = this.state.a.temp
-      f.texte = this.state.a.texte
-      f.corps = this.state.a.corps
-      f.modif = this.state.a.modif
-      f.asc = this.state.a.tri >= 0
-      f.tri = this.state.a.tri >= 0 ? this.state.a.tri : -this.state.a.tri
+      const f = new Filtre(this.avatar ? this.avatar.id : 0).depuisEtat(this.state.a)
       this.state.p = deserial(serial(this.state.a))
       this.$emit('ok', f)
       if (this.fermer) this.fermer()
@@ -215,14 +203,14 @@ export default ({
       optionsct2.splice(2, 1, { label: 'Secrets partagés avec ' + contact.value.nom, value: contact.value.id })
     })
 
-    onMounted(() => {
-      if (contact.value) {
-        optionsct2.splice(2, 1, { label: 'Secrets partagés avec ' + contact.value.nom, value: contact.value.id })
-      }
-      if (groupe.value) {
-        optionsgr2.splice(2, 1, { label: 'Secrets partagés avec le groupe ' + groupe.value.nom, value: groupe.value.id })
-      }
-    })
+    // onMounted(() => {
+    if (contact.value) {
+      optionsct2.splice(2, 1, { label: 'Secrets partagés avec ' + contact.value.nom, value: contact.value.id })
+    }
+    if (groupe.value) {
+      optionsgr2.splice(2, 1, { label: 'Secrets partagés avec le groupe ' + groupe.value.nom, value: groupe.value.id })
+    }
+    // })
 
     return {
       avatar,
