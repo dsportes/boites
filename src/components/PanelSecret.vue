@@ -360,6 +360,7 @@ export default ({
 
     async urlDe (pj, b) {
       const buf3 = await this.secret.datapj(pj)
+      if (!buf3) return null
       const blob = new Blob([buf3], { type: pj.type })
       return b ? blob : URL.createObjectURL(blob)
     },
@@ -421,14 +422,14 @@ export default ({
     },
 
     async okpj (pj) {
+      const s = this.secret
       const cle = crypt.hash(pj.nompj, false, true)
       pj.gz = pj.type.startsWith('text/')
       const x = pj.nompj + '|' + pj.type + '|' + new Date().getTime() + (pj.gz ? '$' : '')
-      const idc = crypt.u8ToB64(await crypt.crypter(data.clek, x, 1), true)
       // console.log(pj.nompj, pj.size, pj.type)
-      const s = this.secret
+      const idc = crypt.u8ToB64(await crypt.crypter(s.cles, x, 1), true)
       const b = pj.gz ? gzipT(pj.u8) : pj.u8
-      const buf = await crypt.crypter(data.clek, b)
+      const buf = await crypt.crypter(s.cles, b)
       const arg = { ts: s.ts, id: s.id, ns: s.ns, cle, idc, lg: pj.size, buf }
       if (s.ts === 1) {
         arg.ns2 = s.ns2

@@ -4,6 +4,7 @@ IMPLEMENTATION de webcrypto.js EN UTILISANT Web Cryptography API (sans Node)
 
 import { sha256 as jssha256 } from 'js-sha256'
 import { toByteArray, fromByteArray } from './base64.mjs'
+import { AppExc, E_BRO } from './api.mjs'
 
 function ab2b (ab) { return new Uint8Array(ab) }
 
@@ -52,19 +53,35 @@ export function arrayBuffer (u8) {
 
 export async function crypter (cle, u8, idxIV) {
   if (typeof u8 === 'string') u8 = enc.encode(u8)
-  const key = await window.crypto.subtle.importKey('raw', arrayBuffer(cle), 'aes-cbc', false, ['encrypt'])
+  if (!(cle instanceof Uint8Array) || cle.length !== 32) throw new AppExc(E_BRO, 'Crypter : cle incorrecte (pas Uint8Array ou longueur != 32)')
+  if (!(u8 instanceof Uint8Array)) throw new AppExc(E_BRO, 'Crypter : buffer incorrect (pas Uint8Array)')
   const n = !idxIV ? Number(random(1)) : idxIV
   const iv = SALTS[n]
   const x0 = new Uint8Array(1).fill(n)
-  const buf = await crypto.subtle.encrypt({ name: 'aes-cbc', iv: iv }, key, arrayBuffer(u8))
-  return ab2b(concat([x0, new Uint8Array(buf)]))
+  try {
+    const key = await window.crypto.subtle.importKey('raw', arrayBuffer(cle), 'aes-cbc', false, ['encrypt'])
+    const buf = await crypto.subtle.encrypt({ name: 'aes-cbc', iv: iv }, key, arrayBuffer(u8))
+    return ab2b(concat([x0, new Uint8Array(buf)]))
+  } catch (e) {
+    const x1 = 'u8: ' + JSON.stringify(u8.slice(0, 4))
+    const x2 = ' / cle: ' + JSON.stringify(cle.slice(0, 4))
+    throw new AppExc(E_BRO, 'Crypter : échec / ' + x1 + x2 + ' / ' + e.toString(), e.stack)
+  }
 }
 
 export async function decrypter (cle, u8) {
-  const key = await window.crypto.subtle.importKey('raw', arrayBuffer(cle), 'aes-cbc', false, ['decrypt'])
-  const iv = SALTS[Number(u8[0])]
-  const r = await crypto.subtle.decrypt({ name: 'aes-cbc', iv: iv }, key, arrayBuffer(u8.slice(1)))
-  return ab2b(r)
+  if (!(cle instanceof Uint8Array) || cle.length !== 32) throw new AppExc(E_BRO, 'Decrypter : cle incorrecte (pas Uint8Array ou longueur != 32)')
+  if (!(u8 instanceof Uint8Array)) throw new AppExc(E_BRO, 'Decrypter : buffer incorrect (pas Uint8Array)')
+  try {
+    const key = await window.crypto.subtle.importKey('raw', arrayBuffer(cle), 'aes-cbc', false, ['decrypt'])
+    const iv = SALTS[Number(u8[0])]
+    const r = await crypto.subtle.decrypt({ name: 'aes-cbc', iv: iv }, key, arrayBuffer(u8.slice(1)))
+    return ab2b(r)
+  } catch (e) {
+    const x1 = 'u8: ' + JSON.stringify(u8.slice(0, 4))
+    const x2 = ' / cle: ' + JSON.stringify(cle.slice(0, 4))
+    throw new AppExc(E_BRO, 'Decrypter : échec / ' + x1 + x2 + ' / ' + e.toString(), e.stack)
+  }
 }
 
 export async function decrypterStr (cle, buffer) {
@@ -103,18 +120,34 @@ export async function genKeyPair (asPem) {
 export async function crypterRSA (clepub, u8) {
   if (typeof u8 === 'string') u8 = enc.encode(u8)
   const k = typeof clepub === 'string' ? keyToU8(clepub, 'PUBLIC') : clepub
-  // !!! SHA-1 pour que Node puisse decrypter !!!
-  const key = await window.crypto.subtle.importKey('spki', arrayBuffer(k), { name: 'RSA-OAEP', hash: 'SHA-1' }, false, ['encrypt'])
-  const buf = await crypto.subtle.encrypt({ name: 'RSA-OAEP' }, key, arrayBuffer(u8))
-  return ab2b(buf)
+  if (!(k instanceof Uint8Array)) throw new AppExc(E_BRO, 'Crypter RSA : cle publique incorrecte (pas Uint8Array)')
+  if (!(u8 instanceof Uint8Array)) throw new AppExc(E_BRO, 'Crypter RSA : buffer incorrect (pas Uint8Array)')
+  try {
+    // !!! SHA-1 pour que Node puisse decrypter !!!
+    const key = await window.crypto.subtle.importKey('spki', arrayBuffer(k), { name: 'RSA-OAEP', hash: 'SHA-1' }, false, ['encrypt'])
+    const buf = await crypto.subtle.encrypt({ name: 'RSA-OAEP' }, key, arrayBuffer(u8))
+    return ab2b(buf)
+  } catch (e) {
+    const x1 = 'u8: ' + JSON.stringify(u8.slice(0, 4))
+    const x2 = ' / cle: ' + JSON.stringify(k.slice(0, 4))
+    throw new AppExc(E_BRO, 'Crypter RSA : échec / ' + x1 + x2 + ' / ' + e.toString(), e.stack)
+  }
 }
 
 export async function decrypterRSA (clepriv, u8) {
   const k = typeof clepriv === 'string' ? keyToU8(clepriv, 'PRIVATE') : clepriv
-  // !!! SHA-1 pour que Node puisse decrypter !!!
-  const key = await window.crypto.subtle.importKey('pkcs8', arrayBuffer(k), { name: 'RSA-OAEP', hash: 'SHA-1' }, false, ['decrypt'])
-  const r = await crypto.subtle.decrypt({ name: 'RSA-OAEP' }, key, arrayBuffer(u8))
-  return ab2b(r)
+  if (!(k instanceof Uint8Array)) throw new AppExc(E_BRO, 'Decrypter RSA : cle publique incorrecte (pas Uint8Array)')
+  if (!(u8 instanceof Uint8Array)) throw new AppExc(E_BRO, 'Decrypter RSA : buffer incorrect (pas Uint8Array)')
+  try {
+    // !!! SHA-1 pour que Node puisse decrypter !!!
+    const key = await window.crypto.subtle.importKey('pkcs8', arrayBuffer(k), { name: 'RSA-OAEP', hash: 'SHA-1' }, false, ['decrypt'])
+    const r = await crypto.subtle.decrypt({ name: 'RSA-OAEP' }, key, arrayBuffer(u8))
+    return ab2b(r)
+  } catch (e) {
+    const x1 = 'u8: ' + JSON.stringify(u8.slice(0, 4))
+    const x2 = ' / cle: ' + JSON.stringify(k.slice(0, 4))
+    throw new AppExc(E_BRO, 'Décrypter RSA : échec / ' + x1 + x2 + ' / ' + e.toString(), e.stack)
+  }
 }
 
 export function concat (arrays) {

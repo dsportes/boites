@@ -130,11 +130,6 @@ export async function commitMapObjets (objets, mapObj) { // SAUF mapObj.compte e
     push('contact')
   }
 
-  if (mapObj.invitct) {
-    data.setInvitCts(mapObj.invitct)
-    push('invitct')
-  }
-
   if (mapObj.parrain) {
     data.setParrains(mapObj.parrain)
     push('parrain')
@@ -1689,7 +1684,7 @@ export class Secret {
   get nasrc () { return this.ts === 1 ? data.getNa(this.id, this.ic) : data.getNa(this.id) }
 
   get cles () {
-    return this.ts ? (this.ts === 1 ? this.contact.cle : data.getNa(this.id).cle) : data.clek
+    return this.ts ? (this.ts === 1 ? data.getClec(this.id, this.ic) : data.getNa(this.id).cle) : data.clek
   }
 
   get nomf () {
@@ -1851,21 +1846,23 @@ export class Secret {
 
   cle (pj) { return crypt.hash(pj.nom, false, true) }
 
-  sidpj (cle) { return this.sid + '@' + this.sid2 + '@' + cle }
+  sidpj (cle) { return this.secidpj + '@' + cle }
 
-  async idc (pj) { return crypt.u8ToB64(await crypt.crypter(data.clek, this.nomc(pj), 1), true) }
+  get secidpj () { const [a, b] = this.secidpjA; return crypt.idToSid(a) + '@' + crypt.idToSid(b) }
+
+  get secidpjA () { const b = this.ts === 1 && this.id2 < this.id; return [b ? this.id2 : this.id, b ? this.ns2 : this.ns] }
+
+  async idc (pj) { return crypt.u8ToB64(await crypt.crypter(this.cles, this.nomc(pj), 1), true) }
 
   async datapj (pj, raw) {
-    let secid = this.sid + '@' + this.sid2
-    if (this.ts === 1 && this.id2 < this.id) secid = crypt.idToSid(this.id2) + '@' + crypt.idToSid(this.ns2)
-    const x = { id: this.id, ns: this.ns, cle: pj.cle }
-    const y = data.getPjidx(x)
+    const [a, b] = this.secidpjA
+    const y = data.getPjidx({ id: a, ns: b, cle: pj.cle })
     let buf = null
-    if (y.length) buf = await getPjdata(x)
-    if (!buf) buf = await getpj(secid, pj.cle + '@' + (await this.idc(pj)))
+    if (y.length) buf = await getPjdata({ id: a, ns: b, cle: pj.cle })
+    if (!buf) buf = await getpj(this.secidpj, pj.cle + '@' + (await this.idc(pj)))
     if (!buf) return null
     if (raw) return buf
-    const buf2 = await crypt.decrypter(data.clek, buf)
+    const buf2 = await crypt.decrypter(this.cles, buf)
     const buf3 = pj.gz ? ungzipT(buf2) : buf2
     return buf3
   }
