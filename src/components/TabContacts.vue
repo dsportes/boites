@@ -1,7 +1,7 @@
 <template>
 <div :class="$q.screen.gt.sm ? 'ml20' : 'q-pa-xs full-width'">
-  <div v-if="state.contacts && state.contacts.length" class="col">
-    <div v-for="(c, idx) in state.contacts" :key="c.pkv"
+  <div v-if="state.lst && state.lst.length" class="col">
+    <div v-for="(c, idx) in state.lst" :key="c.pkv"
       :class="dkli(idx) + ' contactcourant full-width row items-start q-py-xs cursor-pointer'">
       <q-icon class="col-auto q-pr-xs" size="sm" :color="c.stx<2?'primary':'warning'"
       :name="['o_thumb_up','thumb_up','o_hourglass_empty','hourglass_empty','hourglass_empty','','','','','thumb_down'][c.stx]"/>
@@ -32,11 +32,11 @@
   </q-dialog>
 
   <q-dialog v-model="panelfiltre" position="left">
-    <panel-filtre-contacts></panel-filtre-contacts>
+    <panel-filtre-contacts @ok="rechercher" :motscles="motscles" :etat-interne="recherche" :fermer="fermerfiltre"></panel-filtre-contacts>
   </q-dialog>
 
   <q-page-sticky v-if="$q.screen.gt.sm" position="top-left" expand :offset="[5,5]">
-    <panel-filtre-contacts></panel-filtre-contacts>
+    <panel-filtre-contacts @ok="rechercher" :motscles="motscles" :etat-interne="recherche" :fermer="fermerfiltre"></panel-filtre-contacts>
   </q-page-sticky>
 
 </div>
@@ -44,7 +44,7 @@
 <script>
 import { computed, reactive, watch, ref } from 'vue'
 import { useStore } from 'vuex'
-import { Motscles, getJourJ } from '../app/util.mjs'
+import { Motscles, FiltreCtc } from '../app/util.mjs'
 import PanelFiltreContacts from './PanelFiltreContacts.vue'
 import PanelContact from './PanelContact.vue'
 import { data } from '../app/modele.mjs'
@@ -90,8 +90,11 @@ export default ({
       this.panelfiltre = false
     },
 
-    dkli (idx) { return this.$q.dark.isActive ? (idx ? 'sombre' + (idx % 2) : 'sombre0') : (idx ? 'clair' + (idx % 2) : 'clair0') }
+    rechercher (f) {
+      this.state.filtre = f
+    },
 
+    dkli (idx) { return this.$q.dark.isActive ? (idx ? 'sombre' + (idx % 2) : 'sombre0') : (idx ? 'clair' + (idx % 2) : 'clair0') }
   },
 
   setup () {
@@ -112,36 +115,36 @@ export default ({
     const motscles = new Motscles(mc, 1, null)
     motscles.recharger()
 
-    // watch(() => groupe.value, (ap, av) => { motscles.recharger() })
-    watch(() => prefs.value, (ap, av) => { motscles.recharger() })
-
-    const state = reactive({
-      contacts: []
+    const recherche = reactive({ // doit correspondre au Filtre par défaut
+      a: new FiltreCtc().etat(),
+      p: new FiltreCtc().etat()
     })
+
+    watch(() => prefs.value, (ap, av) => { motscles.recharger() })
 
     const panelfiltre = ref(false)
 
-    function mesContacts () {
+    function getContacts () {
+      const f = state.filtre
+      f.debutFiltre()
       const lst = []
-      for (const c in contacts.value) lst.push(contacts.value[c])
-      state.contacts = lst.sort((a, b) => { return a.nom < b.nom ? -1 : (a.nom > b.nom ? 1 : 0) })
+      for (const c in contacts.value) {
+        const ct = contacts.value[c]
+        if (f.filtre(ct)) lst.push(ct)
+      }
+      state.lst = lst
     }
 
-    mesContacts()
+    function trier () {
+      const l = []; state.lst.forEach(x => l.push(x))
+      l.sort((a, b) => state.filtre.fntri(a, b))
+      state.lst = l
+    }
 
-    watch(() => avatar.value, (ap, av) => {
-      mesContacts()
-    })
-
-    watch(() => contacts.value, (ap, av) => {
-      mesContacts()
-    })
-
-    watch(() => repertoire.value, (ap, av) => {
-      mesContacts()
-    })
-
-    function nbj (dlv) { return dlv - getJourJ() }
+    function latotale () {
+      getContacts()
+      trier()
+    }
 
     const evtavatarct = computed(() => $store.state.ui.evtavatarct)
     watch(() => evtavatarct.value, (ap) => {
@@ -153,14 +156,44 @@ export default ({
       set: (val) => $store.commit('ui/majevtfiltresecrets', val)
     })
 
+    const state = reactive({
+      lst: [], // array des Contacts répondant au filtre
+      filtre: new FiltreCtc() // Filtre par défaut
+    })
+
+    latotale()
+
+    watch(() => state.filtre, (filtre, filtreavant) => {
+      if (!filtre || !filtreavant || filtre.equal(filtreavant)) return
+      const chg = filtre.changement(filtreavant)
+      if (chg >= 2) {
+        latotale()
+      }
+      if (chg >= 1) {
+        trier()
+      }
+    })
+
+    watch(() => avatar.value, (ap, av) => {
+      latotale()
+    })
+
+    watch(() => contacts.value, (ap, av) => {
+      latotale()
+    })
+
+    watch(() => repertoire.value, (ap, av) => {
+      latotale()
+    })
+
     return {
       compte,
       avatar,
       contact,
       motscles,
       state,
-      nbj,
       panelfiltre,
+      recherche,
       mode,
       evtfiltresecrets
     }

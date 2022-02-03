@@ -95,7 +95,7 @@
 
 <script>
 import { useStore } from 'vuex'
-import { computed, toRef, watch /*, onMounted */ } from 'vue'
+import { computed, toRef, watch } from 'vue'
 import { Filtre, serial, deserial } from '../app/util.mjs'
 import ApercuMotscles from './ApercuMotscles.vue'
 import SelectMotscles from './SelectMotscles.vue'
@@ -203,14 +203,12 @@ export default ({
       optionsct2.splice(2, 1, { label: 'Secrets partagés avec ' + contact.value.nom, value: contact.value.id })
     })
 
-    // onMounted(() => {
     if (contact.value) {
       optionsct2.splice(2, 1, { label: 'Secrets partagés avec ' + contact.value.nom, value: contact.value.id })
     }
     if (groupe.value) {
       optionsgr2.splice(2, 1, { label: 'Secrets partagés avec le groupe ' + groupe.value.nom, value: groupe.value.id })
     }
-    // })
 
     return {
       avatar,

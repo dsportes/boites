@@ -724,6 +724,95 @@ export class NomAvatar {
   }
 }
 
+/** Filtre des contacts *************************************/
+export class FiltreCtc {
+  constructor () {
+    this.m1 = new Uint8Array([])
+    this.m2 = new Uint8Array([])
+    this.aps = 0 // 0:tous 1:acceptant le partage de secrets 2:n'acceptant pas le partage
+    this.texte = '' // contacts dont le nom contient ce texte
+    this.corps = false // true: rechercher le texte dans l'ardoise et l'info aussi
+    /*
+    2 : par date de dernière modification de l'ardoise
+    1 : par ordre alphabétique du nom
+    */
+    this.tri = 3
+    this.asc = true // ascendant, descendant
+  }
+
+  etat () {
+    const f = this
+    const a = {
+      mc1: f.m1,
+      mc2: f.m2,
+      aps: f.aps,
+      texte: f.texte,
+      corps: f.corps,
+      tri: f.asc ? f.tri : -f.tri
+    }
+    return a
+  }
+
+  depuisEtat (a) {
+    const f = this
+    f.m1 = a.mc1
+    f.m2 = a.mc2
+    f.aps = a.aps
+    f.texte = a.texte
+    f.corps = a.corps
+    f.asc = a.tri >= 0
+    f.tri = a.tri >= 0 ? a.tri : -a.tri
+    return f
+  }
+
+  equal (f) {
+    return this.changement(f) === 0
+  }
+
+  debutFiltre () {
+    this.f1 = new Set(this.m1)
+    this.f2 = new Set(this.m2)
+  }
+
+  filtre (c) {
+    const sx = new Set(c.mc)
+    if (difference(this.f1, sx).size) return false
+    if (intersection(this.f2, sx).size) return false
+
+    if (this.aps === 1 && !c.accepteNouveauSecret) return false
+    if (this.aps === 2 && c.accepteNouveauSecret) return false
+
+    if (this.texte && c.nom.indexOf(this.texte) === -1) {
+      if (!this.corps) return false
+      if (c.ard.indexOf(this.texte) === -1 && c.info.indexOf(this.texte) === -1) return false
+    }
+    return true
+  }
+
+  tri1 (a, b) {
+    if (this.asc) {
+      return a.nom < b.nom ? -1 : (a.nom > b.nom ? 1 : 0)
+    } else {
+      return a.nom < b.nom ? 1 : (a.nom > b.nom ? -1 : 0)
+    }
+  }
+
+  tri2 (a, b) { return this.asc ? (a.dh < b.dh ? -1 : (a.dh > b.dh ? 1 : 0)) : (a.dh < b.dh ? 1 : (a.dh > b.dh ? -1 : 0)) }
+
+  fntri (a, b) {
+    return this.tri === 1 ? this.tri1(a, b) : this.tri2(a, b)
+  }
+
+  changement (f) {
+    // niveau de changement avec le filtre précédemment employé.
+    // 0: aucun, 1:tri seulement, 2:filtre
+    if (!f) return 2
+    if (!equ8(this.m1, f.m1) || !equ8(this.m2, f.m2) || this.aps !== f.aps || this.texte !== f.texte || this.corps !== f.corps) return 2
+    if (this.tri !== f.tri || this.asc !== f.asc) return 1
+    return 0
+  }
+}
+
 /** Filtre *************************************/
 export class Filtre {
   constructor (avId) {
@@ -848,7 +937,7 @@ export class Filtre {
   }
 
   changement (f) {
-    // niveau de changement avec le filtre précemment employé.
+    // niveau de changement avec le filtre précédemment employé.
     // 0: aucun, 1:tri seulement, 2:filtre seulement, 3: base changée
     if (!f) return 3
     if (this.perso !== f.perso || this.contactId !== f.contactId || this.groupeId !== f.groupeId) return 3
