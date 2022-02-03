@@ -43,9 +43,7 @@ export default function () {
 
     page: 'Org',
 
-    tabcompte: 'avatars',
     tabavatar: 'secrets',
-    tabgroupe: 'etc',
     evtavatar: null,
     evtavatarct: null,
     evtfiltresecrets: null,

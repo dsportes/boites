@@ -1,12 +1,14 @@
 <template>
-<q-page class="fs-md q-pa-xs">
-  <div v-if="tabcompte === 'avatars' && compte">
-    <div v-for="e in compte.mac" :key="e.na.id" class="full-width">
-      <apercu-avatar page editer selectionner :avatar-id="e.na.id"/>
-    </div>
+<q-page class="fs-md row">
+  <div v-if="compte" class="col-12 col-md-7 q-pa-xs">
+    <q-expansion-item label="Sélectionner un des avatars du compte" default-opened
+        header-class="expansion-header-class-1 titre-lg bg-primary text-white">
+      <div v-for="e in compte.mac" :key="e.na.id" class="full-width">
+        <apercu-avatar page editer selectionner :avatar-id="e.na.id"/>
+      </div>
+    </q-expansion-item>
   </div>
-
-  <div v-if="tabcompte === 'etc' && compte">
+  <div v-if="compte" class="col-12 col-md-5 q-px-xs">
     <q-expansion-item label="Identité, mémo du compte" default-opened  group="groupeetc"
       header-class="expansion-header-class-1 titre-lg bg-secondary text-white">
       <div class="q-pa-sm column justify-center petitelargeur maauto">
@@ -73,7 +75,6 @@ export default ({
     // En déconnexion, compte passe à null et provoque un problème dans la page. Un getter ne marche pas ?!
     const compte = computed(() => $store.state.db.compte)
     const prefs = computed(() => $store.state.db.prefs)
-    const tabcompte = computed(() => $store.state.ui.tabcompte)
     const cvs = computed(() => $store.state.db.cvs)
     const mode = computed(() => $store.state.ui.mode)
 
@@ -94,8 +95,7 @@ export default ({
       compte,
       prefs,
       mode,
-      cvs,
-      tabcompte
+      cvs
     }
   }
 

@@ -78,15 +78,6 @@
         </q-toolbar-title>
       </q-toolbar>
 
-      <q-toolbar inset v-if="page === 'Compte'">
-        <div class="window-width font-cf">
-          <q-tabs v-model="tabcompte" inline-label no-caps dense>
-            <q-tab name="avatars" label="Avatars" />
-            <q-tab name="etc" label="Etc." />
-          </q-tabs>
-        </div>
-      </q-toolbar>
-
       <q-toolbar inset v-if="page === 'Avatar'">
         <div class="window-width font-cf">
           <q-tabs class="" v-model="tabavatar" inline-label no-caps dense>
@@ -333,10 +324,6 @@ export default {
       get: () => $store.state.ui.org,
       set: (val) => $store.commit('ui/majorg', val)
     })
-    const tabcompte = computed({
-      get: () => $store.state.ui.tabcompte,
-      set: (val) => $store.commit('ui/majtabcompte', val)
-    })
     const tabavatar = computed({
       get: () => $store.state.ui.tabavatar,
       set: (val) => $store.commit('ui/majtabavatar', val)
@@ -405,7 +392,6 @@ export default {
       sessionId,
       msgdegrade,
       statut,
-      tabcompte,
       tabavatar
     }
   }

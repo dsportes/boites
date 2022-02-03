@@ -80,16 +80,8 @@ export function majconfirmstopop (state, val) {
   state.confirmstopop = val
 }
 
-export function majtabcompte (state, val) {
-  state.tabcompte = val
-}
-
 export function majtabavatar (state, val) {
   state.tabavatar = val
-}
-
-export function majtabgroupe (state, val) {
-  state.tabgroupe = val
 }
 
 export function majinfomode (state, val) {
