@@ -11,13 +11,7 @@ function ab2b (ab) { return new Uint8Array(ab) }
 const enc = new TextEncoder()
 const dec = new TextDecoder()
 
-export const SALTS = new Array(256)
-export function setSalts (a) {
-  const b = new Uint8Array(a)
-  for (let i = 0; i < 256; i++) {
-    SALTS[i] = Uint8Array.prototype.slice.call(b, i * 16, (i + 1) * 16)
-  }
-}
+import { SALTS } from './salts.mjs'
 
 export async function pbkfd (secret) {
   const passwordKey = await window.crypto.subtle.importKey('raw', enc.encode(secret), 'PBKDF2', false, ['deriveKey'])

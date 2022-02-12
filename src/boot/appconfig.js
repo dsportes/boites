@@ -1,6 +1,5 @@
 import { boot } from 'quasar/wrappers'
-import { setup, getJsonPub, getImagePub, getBinPub } from '../app/util.mjs'
-import { setSalts } from '../app/webcrypto.mjs'
+import { setup, getJsonPub, getImagePub } from '../app/util.mjs'
 const pako = require('pako')
 
 import FakeIndexedDB from 'fake-indexeddb/build/fakeIndexedDB'
@@ -64,7 +63,5 @@ export default boot(async ({ app, router, store /* Vue */ }) => {
   pagesHelp(cfg)
   gp.$cfg = cfg
   console.log('Build : ' + cfg.build)
-  const salts = await getBinPub('salts')
-  setSalts(salts)
   setup(gp, cfg, router, store, pako)
 })
