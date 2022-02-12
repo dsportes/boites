@@ -2,49 +2,44 @@
   <q-dialog v-model="dialoguecreationcompte">
   <q-card class="q-ma-xs petitelargeur fs-md">
     <q-card-section class="column items-center">
-      <div class="titre-lg text-center">Création d'un compte SANS parrain</div>
+      <div class="titre-lg text-center">Création du compte d'un comptable</div>
+      <div class="titre-sm text-center text-italic">!!! l'autorisation doit avoir été enregistrée en configuration !!!</div>
       <q-btn flat @click="close" color="primary" label="Renoncer" class="q-ml-sm" />
     </q-card-section>
 
     <q-card-section>
       <q-stepper v-model="step" vertical color="primary" animated>
-        <q-step :name="1" title="Saisie du mot de passe" icon="settings" :done="step > 1">
-          <span class="fs-sm q-py-sm">Donner le mot de passe du "grand argentier" qui permet de s'octroyer
-          des quotas sans limite sans avoir besoin d'être parrainé par un compte existant.</span>
-          <mdp-admin :init-val="mdp" class="q-ma-xs" v-on:ok-mdp="okmdp"></mdp-admin>
-        </q-step>
-
-        <q-step :name="2" title="Phrase secrète du compte" icon="settings" :done="step > 2">
+        <q-step :name="1" title="Phrase secrète du compte" icon="settings" :done="step > 2">
           <span class="fs-sm q-py-sm">Saisir et confirmer la phrase secrète du compte qui permettra de s'authentifier pour y accéder.</span>
           <phrase-secrete :init-val="ps" class="q-ma-xs" v-on:ok-ps="okps" verif icon-valider="check" label-valider="Suivant"></phrase-secrete>
-          <q-stepper-navigation>
-            <q-btn flat @click="step = 1" color="primary" label="Précédent" class="q-ml-sm" />
-          </q-stepper-navigation>
         </q-step>
 
-        <q-step :name="3" title="Nom du premier avatar du compte" icon="settings" :done="step > 3" >
+        <q-step :name="2" title="Nom du premier avatar du compte" icon="settings" :done="step > 3" >
           <nom-avatar class="q-ma-xs" v-on:ok-nom="oknom" icon-valider="check" label-valider="Suivant"></nom-avatar>
           <q-stepper-navigation>
             <q-btn flat @click="step = 2" color="primary" label="Précédent" class="q-ml-sm" />
           </q-stepper-navigation>
         </q-step>
 
-        <q-step :name="4" title="Quotas demandés" icon="settings" :done="step > 4" >
-          <quotas-volume :init-val="quotas" class="q-ma-xs" v-on:ok-quotas="okq"></quotas-volume>
+        <q-step :name="3" title="Forfaits auto-attribués" icon="settings" :done="step > 4" >
+          <choix-forfaits v-model="forfaits"/>
           <q-stepper-navigation>
-            <q-btn flat @click="step = 3" color="primary" label="Précédent" class="q-ml-sm" />
+            <q-btn flat @click="step = 2" color="primary" label="Précédent" class="q-ml-sm" />
+            <q-btn flat @click="step = 4" color="primary" label="Suivant" class="q-ml-sm" />
           </q-stepper-navigation>
         </q-step>
 
-        <q-step :name="5" title="Confirmation" icon="check" :done="step > 5" >
-          <q-icon :name="isPwd ? 'visibility_off' : 'visibility'" class="cursor-pointer" @click="isPwd = !isPwd"/>
-          <div class="t1">Mot de passe: <span class="sp1">{{isPwd ? '***' : mdp.mdp}}</span></div>
-          <div class="t1">Phrase secrète (ligne 1): <span class="sp1">{{isPwd ? '***' : ps.debut}}</span></div>
-          <div class="t1">Phrase secrète (ligne 2): <span class="sp1">{{isPwd ? '***' : ps.fin}}</span></div>
-          <div class="t1">Nom de l'avatar: <span class="sp1">{{nom}}</span></div>
-          <div class="t1">Quotas: <span class="sp1">{{'q1:' + quotas.q1 + ' q2:' + quotas.q2 + ' qm1:' + quotas.qm1 + ' qm2:' + quotas.qm2}}</span></div>
+        <q-step :name="4" title="Confirmation" icon="check" :done="step > 5" >
+          <q-icon :name="isPwd ? 'visibility_off' : 'visibility'" size="md" class="cursor-pointer" @click="isPwd = !isPwd"/>
+          <div>Phrase secrète (ligne 1): <span class="font-mono q-pl-md">{{isPwd ? '***' : ps.debut}}</span></div>
+          <div>Phrase secrète (ligne 2): <span class="font-mono q-pl-md">{{isPwd ? '***' : ps.fin}}</span></div>
+          <div>Nom de l'avatar: <span class="font-mono q-pl-md">{{nom}}</span></div>
+          <div>Forfaits:
+            <span class="font-mono q-pl-md">{{'v1: ' + forfaits[0] + 'MB'}}</span>
+            <span class="font-mono q-pl-lg">{{'v2: ' + forfaits[1] + '*100MB'}}</span>
+          </div>
           <q-stepper-navigation>
-            <q-btn flat @click="corriger" color="primary" label="Corriger" class="q-ml-sm" />
+            <q-btn flat @click="step = 3" color="primary" label="Corriger" class="q-ml-sm" />
             <q-btn @click="confirmer" color="warning" label="Confirmer" icon="check" class="q-ml-sm" />
           </q-stepper-navigation>
         </q-step>
@@ -59,26 +54,23 @@
 import { useStore } from 'vuex'
 import { computed } from 'vue'
 import PhraseSecrete from './PhraseSecrete.vue'
-import MdpAdmin from './MdpAdmin.vue'
+import ChoixForfaits from './ChoixForfaits.vue'
 import NomAvatar from './NomAvatar.vue'
-import QuotasVolume from './QuotasVolume.vue'
-import { CreationCompte } from '../app/operations.mjs'
-import { Quotas } from '../app/util.mjs'
+// import { CreationCompte } from '../app/operations.mjs'
 
 export default ({
   name: 'DialogueCreationCompte',
 
   components: {
-    PhraseSecrete, MdpAdmin, QuotasVolume, NomAvatar
+    PhraseSecrete, NomAvatar, ChoixForfaits
   },
 
   data () {
     return {
-      isPwd: false,
+      isPwd: true,
       step: 1,
       ps: null,
-      mdp: null,
-      quotas: new Quotas(this.quotasDef),
+      forfaits: [4, 4],
       nom: ''
     }
   },
@@ -87,33 +79,21 @@ export default ({
     close () {
       this.dialoguecreationcompte = false
     },
-    okmdp (mdp) {
-      this.mdp = mdp
-      this.step = 2
-    },
     okps (ps) {
       if (ps) {
         this.ps = ps
-        this.step = 3
+        this.step = 2
       }
     },
     oknom (nom) {
       this.nom = nom
-      this.step = 4
-    },
-    okq (q) {
-      this.quotas = new Quotas(q)
-      this.step = 5
+      this.step = 3
     },
     async confirmer () {
-      await new CreationCompte().run(this.mdp, this.ps, this.nom, this.quotas)
+      // await new CreationCompte().run(this.ps, this.nom, this.forfaits)
       this.ps = null
-      this.mdp = null
-      this.quotas = null
+      this.forfaits = [4, 4]
       this.nom = ''
-      this.step = 1
-    },
-    corriger () {
       this.step = 1
     }
   },
@@ -126,7 +106,6 @@ export default ({
       set: (val) => $store.commit('ui/majdialoguecreationcompte', val)
     })
     return {
-      quotasDef: new Quotas({ q1: 1, q2: 1, qm1: 5, qm2: 5 }),
       org,
       dialoguecreationcompte
     }
@@ -136,13 +115,6 @@ export default ({
 
 <style lang="sass" scoped>
 @import '../css/app.sass'
-.sp1
-  margin-left: 1rem
-  font-size: 0.9rem
-  font-style: normal
-  font-family: 'Roboto Mono'
-.t1
-  font-size: 0.9rem
 .q-dialog__inner
   padding: 0 !important
 </style>

@@ -7,7 +7,7 @@
           <q-btn flat label="Test msg" color="primary" @click="testm"/>
           <q-btn flat label="CV" color="primary" @click="cvloc=true"/>
           <bouton-help page="page1"/>
-          <editeur-md ref="edmd" style="height:10rem" :texte="memo" v-model="texteedite" editable label-ok="Valider" v-on:ok="memook"></editeur-md>
+          <choix-forfaits v-model="forfaits"/>
         </q-card-section>
         <q-card-section class="q-ma-xs">
           <phrase-secrete v-on:ok-ps="okps" icon-valider="check" verif label-ok="OK"></phrase-secrete>
@@ -41,7 +41,7 @@ import { computed, ref } from 'vue'
 import { crypt } from '../app/crypto.mjs'
 import PhraseSecrete from '../components/PhraseSecrete.vue'
 import MdpAdmin from '../components/MdpAdmin.vue'
-import EditeurMd from '../components/EditeurMd.vue'
+import ChoixForfaits from '../components/ChoixForfaits.vue'
 import BoutonHelp from '../components/BoutonHelp.vue'
 import CarteVisite from '../components/CarteVisite.vue'
 import { post, affichermessage, afficherdiagnostic, testEcho, NomAvatar } from '../app/util.mjs'
@@ -50,17 +50,21 @@ export default ({
   name: 'DialogueCrypto',
 
   components: {
-    PhraseSecrete, MdpAdmin, EditeurMd, BoutonHelp, CarteVisite
+    PhraseSecrete, MdpAdmin, ChoixForfaits, BoutonHelp, CarteVisite
   },
 
   watch: {
     texteedite (ap) {
       console.log(ap)
+    },
+    forfaits (ap) {
+      console.log('Forfaits', this.forfaits[0], this.forfaits[1])
     }
   },
 
   data () {
     return {
+      forfaits: [2, 3],
       ps: null,
       mdp: null,
       memo: 'Mon beau memo',

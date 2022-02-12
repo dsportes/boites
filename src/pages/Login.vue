@@ -34,7 +34,7 @@
             <q-spinner color="primary" size="2rem" :thickness="3" />
           </div>
       </q-card>
-      <q-btn flat color="primary" icon="add_circle" label="Nouveau compte (sans parrain)" @click="dialoguecreationcompte = true"/>
+      <q-btn flat color="secondary" icon="add_moderator" size="sm" @click="dialoguecreationcompte = true"/>
     </div>
 
     <q-dialog v-model="dialcp">

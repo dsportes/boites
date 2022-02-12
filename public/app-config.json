@@ -8,6 +8,7 @@
       ["leszsanglotszLONGSz", "garezauzGORILLEz"],
       ["auzvillagezSANSz", "jaizmauvaisezREPUTATIONz"]
     ],
+    "forfaits" : { "Aucun": 0, "XXS": 1, "XS": 2, "SM": 4, "MD": 8, "LG": 16, "XL": 32, "XXL": 64 },
     "mdpadmin" : "motdepassedugrandargentier",
     "pathlogo" : "icons/favicon-96x96.png",
     "orgs": { "doda": { "pathicon":"doda-icon.png" }, "super": { "pathicon":"super-icon.png" } },
