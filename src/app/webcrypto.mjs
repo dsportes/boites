@@ -11,7 +11,8 @@ function ab2b (ab) { return new Uint8Array(ab) }
 const enc = new TextEncoder()
 const dec = new TextDecoder()
 
-import { SALTS } from './salts.mjs'
+import { ALLSALTS, SALTS } from './salts.mjs'
+const localkey = ALLSALTS.slice(32, 64)
 
 export async function pbkfd (secret) {
   const passwordKey = await window.crypto.subtle.importKey('raw', enc.encode(secret), 'PBKDF2', false, ['deriveKey'])
@@ -43,6 +44,14 @@ export function arrayBuffer (u8) {
   }
   // https://stackoverflow.com/questions/37228285/uint8array-to-arraybuffer
   return u8.buffer.slice(u8.byteOffset, u8.byteLength + u8.byteOffset)
+}
+
+export async function cryptersoft (u8) {
+  return await crypter(localkey, u8, 1)
+}
+
+export async function decryptersoft (u8) {
+  return await decrypter(localkey, u8)
 }
 
 export async function crypter (cle, u8, idxIV) {

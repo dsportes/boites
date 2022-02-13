@@ -1,5 +1,5 @@
 import { schemas } from './schemas.mjs'
-import { crypt } from './crypto.mjs'
+import { crypt, cryptersoft, decryptersoft } from './crypto.mjs'
 import { openIDB, closeIDB, putPj, getPjdata } from './db.mjs'
 import { openWS, closeWS } from './ws.mjs'
 import {
@@ -7,7 +7,7 @@ import {
   getJourJ, cfg, ungzipT, normpath, getpj, nomEd, titreEd, post
 } from './util.mjs'
 import { remplacePage } from './page.mjs'
-import { SIZEAV, SIZEGR, EXPS } from './api.mjs'
+import { SIZEAV, SIZEGR, EXPS, Compteurs } from './api.mjs'
 
 export async function traitInvitGr (row) {
   const cpriv = data.avc(row.id).cpriv
@@ -698,7 +698,7 @@ export class Compte {
     return s
   }
 
-  nouveau (nomAvatar, cpriv) {
+  nouveau (nomAvatar, cprivav, cpriv) {
     this.id = crypt.rnd6()
     this.v = 0
     this.dds = 0
@@ -706,8 +706,9 @@ export class Compte {
     this.pcbh = data.ps.pcbh
     this.k = crypt.random(32)
     data.clek = this.k
+    this.cpriv = cpriv
     this.mac = { }
-    this.mac[nomAvatar.sid] = { na: nomAvatar, cpriv: cpriv }
+    this.mac[nomAvatar.sid] = { na: nomAvatar, cpriv: cprivav }
     data.setNa(nomAvatar.nom, nomAvatar.rnd)
     this.vsh = 0
     return this
@@ -727,6 +728,7 @@ export class Compte {
     this.dds = row.dds
     this.dpbh = row.dpbh
     this.k = await crypt.decrypter(data.ps.pcb, row.kx)
+    this.cpriv = await crypt.decrypter(this.k, row.cprivk)
     this.pcbh = row.pcbh
     data.clek = this.k
     this.mac = {}
@@ -746,6 +748,7 @@ export class Compte {
       const x = this.mac[sid]
       m[sid] = [x.na.nom, x.na.rnd, x.cpriv]
     }
+    r.cprivk = await crypt.crypter(data.clek, this.cpriv)
     r.mack = await crypt.crypter(data.clek, serial(m))
     r.kx = await crypt.crypter(data.ps.pcb, this.k)
     return schemas.serialize('rowcompte', r)
@@ -850,6 +853,135 @@ export class Prefs {
     return schemas.clone('idbPrefs', this, new Prefs())
   }
 }
+
+/** Compta *********************************
+- `id` : du compte.
+- `idp` : pour un filleul, id du parrain (null pour un parrain).
+- `v` :
+- `dds` : date de dernière signature du compte (dernière connexion). Un compte en sursis ou bloqué ne signe plus, sa disparition physique est déjà programmée.
+- `st` :
+  - 0 : normal.
+  - 1 : en sursis 1.
+  - 2 : en sursis 2.
+  - 3 : bloqué.
+- `dst` : date du dernier changement de st.
+- `data`: compteurs sérialisés (non cryptés)
+- `vsh` :
+*/
+
+schemas.forSchema({
+  name: 'idbCompta',
+  cols: ['id', 'idp', 'v', 'dds', 'st', 'dst', 'data', 'vsh']
+})
+
+export class Compta {
+  get table () { return 'compta' }
+
+  get sid () { return crypt.idToSid(this.id) }
+
+  get sid2 () { return null }
+
+  get pk () { return this.sid }
+
+  get suppr () { return false }
+
+  get horsLimite () { return false }
+
+  nouveau (id, idp, compteurs) {
+    this.id = id
+    this.idp = idp
+    this.v = 0
+    this.vsh = 0
+    this.st = 0
+    this.dst = 0
+    this.data = compteurs.serial
+    return this
+  }
+
+  async fromRow (row) {
+    this.vsh = row.vsh || 0
+    this.id = row.id
+    this.idp = row.idp
+    this.v = row.v
+    this.dds = row.dds
+    this.st = row.st
+    this.data = new Compteurs(row.data)
+    return this
+  }
+
+  async toRow () {
+    const r = { ...this }
+    r.data = this.data.serial
+    return schemas.serialize('rowcompta', r)
+  }
+
+  get toIdb () {
+    return schemas.serialize('idbCompta', this)
+  }
+
+  fromIdb (idb) {
+    schemas.deserialize('idbCompta', idb, this)
+    return this
+  }
+
+  get clone () {
+    return schemas.clone('idbCompta', this, new Compta())
+  }
+}
+
+/** Ardoise *********************************
+- `id` : du compte.
+- `dh` : date-heure de dernière mise à jour.
+- `data`: contenu sérialisé _crypté soft_ de l'ardoise.
+- `vsh`:
+*/
+
+schemas.forSchema({
+  name: 'idbArdoise',
+  cols: ['id', 'dh', 'data', 'vsh']
+})
+
+export class Ardoise {
+  get table () { return 'ardoise' }
+
+  get sid () { return crypt.idToSid(this.id) }
+
+  get sid2 () { return null }
+
+  get pk () { return this.sid }
+
+  get suppr () { return false }
+
+  get horsLimite () { return false }
+
+  async fromRow (row) {
+    this.vsh = row.vsh || 0
+    this.id = row.id
+    this.dh = row.dh
+    this.data = deserial(await decryptersoft(row.data))
+    return this
+  }
+
+  async toRow () {
+    const r = { ...this }
+    r.data = await cryptersoft(serial(this.data))
+    return schemas.serialize('rowardoise', r)
+  }
+
+  get toIdb () {
+    return schemas.serialize('idbArdoise', this)
+  }
+
+  fromIdb (idb) {
+    schemas.deserialize('idbArdoise', idb, this)
+    return this
+  }
+
+  get clone () {
+    return schemas.clone('idbArdoise', this, new Ardoise())
+  }
+}
+
 /** Avatar **********************************/
 /*
 - `id` : id de l'avatar
