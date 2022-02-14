@@ -26,7 +26,7 @@
           <div class="titre-lg">Parrainages de l'avatar ( {{state.parrains.length}} )</div>
         </q-item-section>
       </template>
-      <q-btn class="full-width maauto q-py-lg" flat dense color="primary" icon="add" label="Nouveau parrainage" @click="nvpar = true"></q-btn>
+      <q-btn v-if="compte.estComptable" class="full-width maauto q-py-lg" flat dense color="primary" icon="add" label="Nouveau parrainage" @click="nvpar = true"></q-btn>
       <div v-for="p in state.parrains" :key="p.pph" class="row justify-start">
         <q-icon class="col-auto" size="sm" color="warning" :name="['hourglass_empty','thumb_up','thumb_down'][p.st]"/>
         <div class="col-3 q-pr-xs">{{p.data.nomf}}</div>
@@ -96,6 +96,7 @@ export default ({
     })
     const compte = computed(() => { return $store.state.db.compte })
     const prefs = computed(() => { return $store.state.db.prefs })
+    const compta = computed(() => { return $store.state.db.compta })
     const avatar = computed(() => { return $store.state.db.avatar })
     const groupe = computed(() => { return $store.state.db.groupe })
     const mode = computed(() => $store.state.ui.mode)
@@ -150,6 +151,7 @@ export default ({
     return {
       diagnostic,
       compte,
+      compta,
       avatar,
       groupe,
       contact,

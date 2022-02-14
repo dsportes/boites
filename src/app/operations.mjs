@@ -694,6 +694,7 @@ export class CreationCompte extends OperationUI {
       data.setArdoise(ardoise)
       const objets = [compte2, compta2, prefs2, ardoise]
       await commitMapObjets(objets, mapObj) // l'avatar n'a pas été traité, les singletons l'ont été juste ci-avant
+      data.estComptable = true
 
       // création de la base IDB et chargement des rows compte et avatar
       if (data.mode === 1) { // synchronisé : IL FAUT OUVRIR IDB (et écrire dedans)
@@ -801,6 +802,7 @@ export class ConnexionCompte extends OperationUI {
     const rowArdoise = schemas.deserialize('rowardoise', ret.ardoise.serial)
     const ardoise = new Ardoise()
     await ardoise.fromRow(rowArdoise)
+    if (ret.estComptable) data.estComptable = true
     return [c, p, compta, ardoise]
   }
 
@@ -1096,7 +1098,7 @@ export class NouveauParrainage extends OperationUI {
     - clex : PBKFD de pp (u8)
     - id: du parrain
     - aps : booléen (accepta partage de secrets)
-    - quotas: {q1, q2, qm1, qm2}
+    - forfaits: [1, 2]
     - nomf : nom du filleul (string)
     - mot : mot d'accueil (string)
     */

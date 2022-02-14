@@ -493,6 +493,7 @@ class Session {
     this.dh = 0 // plus haute date-heure retournée par un POST au serveur
     this.vcv = 0 // version des cartes de visite détenues
     this.clek = null // clé K du compte authentifié
+    this.estComptable = false
 
     this.naIdIx = {} // na par id ic/im
     this.naId = {} // na par id
@@ -699,6 +700,8 @@ export class Compte {
   get suppr () { return false }
 
   get horsLimite () { return false }
+
+  get estComptable () { return data.estComptable }
 
   allAvId () {
     const s = new Set()

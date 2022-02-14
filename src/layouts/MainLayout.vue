@@ -9,6 +9,7 @@
               <q-tooltip>Changer d'organisation</q-tooltip>
             </span>
           </span>
+          <q-icon v-if="compte!=null && compte.estComptable" size="sm" color="secondary" name="savings" aria-label="Compte de comptable"/>
           <span v-if="compte != null" :class="page!=='Avatar' ? 'disabled' : 'cursor-pointer'" @click="tocompte">
             <q-icon size="sm" name="home" aria-label="Accueil du compte"/>
             <span class="fs-md q-px-sm">{{ prefs.titre }}</span>
@@ -206,7 +207,8 @@ export default {
   },
 
   computed: {
-    tbclass () { return this.$q.dark.isActive ? ' sombre1' : ' clair1' }
+    tbclass () { return this.$q.dark.isActive ? ' sombre1' : ' clair1' },
+    estcomptable () { return data.estComptable }
   },
 
   data () {

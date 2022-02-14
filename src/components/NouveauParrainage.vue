@@ -38,18 +38,22 @@
           </q-stepper-navigation>
         </q-step>
 
-        <q-step :name="4" title="Quotas transférés" icon="settings" :done="step > 4" >
-          <quotas-volume :init-val="quotas" class="q-ma-xs" v-on:ok-quotas="okq"></quotas-volume>
+        <q-step :name="4" title="Forfaits attribués" icon="settings" :done="step > 4" >
+          <choix-forfaits v-model="forfaits" class="q-ma-xs"/>
           <q-stepper-navigation>
             <q-btn flat @click="step = 3" color="primary" label="Précédent" class="q-ml-sm" />
+            <q-btn flat @click="step = 5" color="primary" label="Suivant" class="q-ml-sm" />
           </q-stepper-navigation>
         </q-step>
 
         <q-step :name="5" title="Confirmation" icon="check" :done="step > 5" >
-          <div class="text-italic">Phrase de parrainage: <span class="sp1">{{phrase}}</span></div>
-          <div class="text-italic">Nom de l'avatar: <span class="sp1">{{nom}}</span></div>
-          <div class="text-italic">Mot de bienvenue: <span class="sp1">{{mot}}</span></div>
-          <div class="text-italic">Quotas: <span class="sp1">{{'q1:' + quotas.q1 + ' q2:' + quotas.q2 + ' qm1:' + quotas.qm1 + ' qm2:' + quotas.qm2}}</span></div>
+          <div>Phrase de parrainage: <span class="font-mono q-pl-md">{{phrase}}</span></div>
+          <div>Nom de l'avatar: <span class="font-mono q-pl-md">{{nom}}</span></div>
+          <div>Mot de bienvenue: <span class="font-mono q-pl-md">{{mot}}</span></div>
+          <div>Forfaits:
+            <span class="font-mono q-pl-md">{{'v1: ' + forfaits[0] + 'MB'}}</span>
+            <span class="font-mono q-pl-lg">{{'v2: ' + forfaits[1] + '*100MB'}}</span>
+          </div>
           <div style="margin-left:-0.8rem" class="text-primary">
             <q-toggle v-model="aps" size="md" :color="aps ? 'green' : 'grey'" label="Partage de secrets avec cet avatar"/>
           </div>
@@ -68,9 +72,8 @@
 import { useStore } from 'vuex'
 import { computed } from 'vue'
 import NomAvatar from './NomAvatar.vue'
-import QuotasVolume from './QuotasVolume.vue'
-import { NouveauParrainage } from '../app/operations.mjs'
-import { Quotas } from '../app/util.mjs'
+import ChoixForfaits from './ChoixForfaits.vue'
+// import { NouveauParrainage } from '../app/operations.mjs'
 import { crypt } from '../app/crypto.mjs'
 
 export default ({
@@ -78,9 +81,7 @@ export default ({
 
   props: { close: Function },
 
-  components: {
-    QuotasVolume, NomAvatar
-  },
+  components: { ChoixForfaits, NomAvatar },
 
   computed: {
     dlclass () { return this.$q.dark.isActive ? 'sombre' : 'clair' }
@@ -90,7 +91,7 @@ export default ({
     return {
       isPwd: false,
       step: 1,
-      quotas: new Quotas(this.quotasDef),
+      forfaits: [1, 1],
       nom: '',
       phrase: '',
       mot: '',
@@ -135,24 +136,22 @@ export default ({
         this.step = 4
       }
     },
-    okq (q) {
-      this.quotas = new Quotas(q)
-      this.step = 5
-    },
     async confirmer () {
-      /* { pph, pp, clex, id, aps, quotas: {q1, q2, qm1, qm2}, nomf, mot }
+      /* { pph, pp, clex, id, aps, forfaits, nomf, mot }
       - pp : phrase de parrainage (string)
       - pph : le hash de la clex (integer)
       - clex : PBKFD de pp (u8)
+      - forfaits : [1, 2]
       - nomf : nom du filleul (string)
       - mot : mot d'accueil (string)
       - aps : booléen (accepta partage de secrets)
       */
-      const arg = { pph: this.pph, pp: this.phrase, clex: this.clex, id: this.avatar.id, aps: this.aps, quotas: { ...this.quotas }, nomf: this.nom, mot: this.mot }
-      await new NouveauParrainage().run(arg)
+      // eslint-disable-next-line no-unused-vars
+      const arg = { pph: this.pph, pp: this.phrase, clex: this.clex, id: this.avatar.id, aps: this.aps, forfaits: this.forfaits, nomf: this.nom, mot: this.mot }
+      // await new NouveauParrainage().run(arg)
       this.mot = ''
       this.nom = ''
-      this.quotas = new Quotas(this.quotasDef)
+      this.forfaits = [1, 1]
       this.pp = ''
       this.clex = null
       this.pph = 0
@@ -167,8 +166,9 @@ export default ({
   setup () {
     const $store = useStore()
     const avatar = computed(() => $store.state.db.avatar)
+    const compta = computed(() => { return $store.state.db.compta })
     return {
-      quotasDef: new Quotas({ q1: 1, q2: 1, qm1: 5, qm2: 5 }),
+      compta,
       avatar
     }
   }
@@ -183,11 +183,6 @@ export default ({
   border-top: 1px solid $grey-5
   border-bottom: 1px solid $grey-5
   overflow-y: auto
-.sp1
-  margin-left: 1rem
-  font-size: 0.9rem
-  font-style: normal
-  font-family: 'Roboto Mono'
 .q-dialog__inner
   padding: 0 !important
 </style>
