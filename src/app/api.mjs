@@ -90,7 +90,7 @@ schemas.forSchema({
 
 schemas.forSchema({
   name: 'ardoise',
-  cols: ['id', 'dh', 'data', 'vsh']
+  cols: ['id', 'v', 'data', 'vsh']
 })
 
 schemas.forSchema({

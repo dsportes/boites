@@ -946,7 +946,7 @@ export class Compta {
 /** Ardoise *********************************
 - `id` : du compte.
 - `dh` : date-heure de dernière mise à jour.
-- `data`: contenu sérialisé _crypté soft_ de l'ardoise.
+- `data`: contenu sérialisé _crypté soft_ de l'ardoise. Un array d'échanges
 - `vsh`:
 */
 
@@ -971,14 +971,21 @@ export class Ardoise {
   async fromRow (row) {
     this.vsh = row.vsh || 0
     this.id = row.id
-    this.dh = row.dh
-    this.data = deserial(await crypt.decryptersoft(row.data))
+    this.v = row.v
+    this.data = row.data ? deserial(await crypt.decryptersoft(row.data)) : []
     return this
+  }
+
+  nouveau (id) {
+    this.id = id
+    this.v = new Date().getTime()
+    this.data = null
+    this.vsh = 0
   }
 
   async toRow () {
     const r = { ...this }
-    r.data = await crypt.cryptersoft(serial(this.data))
+    r.data = this.data.length ? await crypt.cryptersoft(serial(this.data)) : null
     return schemas.serialize('rowardoise', r)
   }
 

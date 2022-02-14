@@ -190,7 +190,7 @@ export function setObjets (state, [table, lobj]) { // lobj : array d'objets
 
 export function setCompte (state, obj) { if (!state.compte || state.compte.v < obj.v) state.compte = obj }
 export function setCompta (state, obj) { if (!state.compta || state.compta.v < obj.v) state.compta = obj }
-export function setArdoise (state, obj) { if (!state.ardoise || state.ardoise.dh < obj.dh) state.ardoise = obj }
+export function setArdoise (state, obj) { if (!state.ardoise || state.ardoise.v < obj.v) state.ardoise = obj }
 export function setPrefs (state, obj) { if (!state.prefs || state.prefs.v < obj.v) state.prefs = obj }
 
 /* Enregistrement de toutes les cv d'un coup */

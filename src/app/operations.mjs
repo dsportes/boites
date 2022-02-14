@@ -5,7 +5,7 @@ import {
   getGroupes, getMembres, getParrains, getRencontres, getSecrets,
   purgeAvatars, purgeCvs, purgeGroupes, openIDB, enregLScompte, setEtat, getEtat, getPjidx, putPj
 } from './db.mjs'
-import { Compte, Avatar, rowItemsToMapObjets, commitMapObjets, data, Prefs, Contact, Invitgr, Compta } from './modele.mjs'
+import { Compte, Avatar, rowItemsToMapObjets, commitMapObjets, data, Prefs, Contact, Invitgr, Compta, Ardoise } from './modele.mjs'
 import { AppExc, EXBRK, EXPS, F_BRO, INDEXT, X_SRV, E_WS, SIZEAV, SIZEGR } from './api.mjs'
 
 import { crypt } from './crypto.mjs'
@@ -316,16 +316,26 @@ export class Operation {
     const mapObj = await rowItemsToMapObjets(items)
     const objets = [] // Tous les objets à enregistrer dans IDB
 
-    /* Traitement spécial de compte et prefs */
+    /* Traitement spécial des singletons */
     if (mapObj.compte) {
       // Une mise à jour de compte est notifiée
       data.setCompte(mapObj.compte)
       objets.push(mapObj.compte)
     }
+    if (mapObj.compta) {
+      // Une mise à jour de compta est notifiée
+      data.setCompta(mapObj.compta)
+      objets.push(mapObj.compta)
+    }
     if (mapObj.prefs) {
       // Une mise à jour de prefs est notifiée
       data.setPrefs(mapObj.prefs)
       objets.push(mapObj.prefs)
+    }
+    if (mapObj.ardoise) {
+      // Une mise à jour de prefs est notifiée
+      data.setArdoise(mapObj.ardoise)
+      objets.push(mapObj.ardoise)
     }
     if (mapObj.invitgr) {
       await this.traitInvitGr(mapObj.invitgr)
@@ -680,7 +690,9 @@ export class CreationCompte extends OperationUI {
       data.setCompta(compta2)
       const prefs2 = mapObj.prefs // le DERNIER objet compte quand on en a reçu plusieurs (pas la liste)
       data.setPrefs(prefs2)
-      const objets = [compte2, compta2, prefs2]
+      const ardoise = mapObj.ardoise // le DERNIER objet compte quand on en a reçu plusieurs (pas la liste)
+      data.setArdoise(ardoise)
+      const objets = [compte2, compta2, prefs2, ardoise]
       await commitMapObjets(objets, mapObj) // l'avatar n'a pas été traité, les singletons l'ont été juste ci-avant
 
       // création de la base IDB et chargement des rows compte et avatar
@@ -786,7 +798,10 @@ export class ConnexionCompte extends OperationUI {
     const rowCompta = schemas.deserialize('rowcompta', ret.compta.serial)
     const compta = new Compta()
     await compta.fromRow(rowCompta)
-    return [c, p, compta]
+    const rowArdoise = schemas.deserialize('rowardoise', ret.ardoise.serial)
+    const ardoise = new Ardoise()
+    await ardoise.fromRow(rowArdoise)
+    return [c, p, compta, ardoise]
   }
 
   async run (ps) {
@@ -796,10 +811,11 @@ export class ConnexionCompte extends OperationUI {
       this.BRK()
 
       // obtention du compte depuis le serveur
-      let [compte, prefs, compta] = await this.lectureCompte()
+      let [compte, prefs, compta, ardoise] = await this.lectureCompte()
       data.setCompte(compte)
       data.setPrefs(prefs)
       data.setCompta(compta)
+      data.setArdoise(ardoise)
 
       /* récupération et régularisation des invitGr : maj sur le serveur des avatars du compte
         AVANT chargement des avatars afin d'avoir tous les groupes au plus tôt
@@ -820,14 +836,31 @@ export class ConnexionCompte extends OperationUI {
         - ré-enregistrement du compte en modèle et IDB
         - suppression des avatars obsolètes non référencés par la nouvelle version du compte, y compris dans la liste des versions
         */
-        const [compte2, prefs2, compta2] = await this.lectureCompte() // PEUT sortir en EXPS si changement de phrase secrète
+        const [compte2, prefs2, compta2, ardoise2] = await this.lectureCompte() // PEUT sortir en EXPS si changement de phrase secrète
+        const lobj = []
+        let b = false
         if (compte2.v > compte.v) {
           compte = compte2
           data.setCompte(compte2)
+          lobj.push(compte)
+          b = true
+        }
+        if (prefs2.v > prefs.v) {
           data.setPrefs(prefs2)
           prefs = prefs2
+          lobj.push(prefs)
+        }
+        if (compta2.v > compta.v) {
           data.setCompta(compta2)
           compta = compta2
+          lobj.push(compta)
+        }
+        if (ardoise2.v > ardoise.v) {
+          data.setArdoise(ardoise2)
+          ardoise = ardoise2
+          lobj.push(ardoise)
+        }
+        if (b) {
           avUtiles = data.setIdsAvatarsUtiles
           const avInutiles = difference(data.setIdsAvatarsStore, avUtiles)
           if (avInutiles.size) {
@@ -835,9 +868,9 @@ export class ConnexionCompte extends OperationUI {
             await data.db.purgeAvatars(avInutiles)// en IDB
             for (const id of avInutiles) data.vag.delVerAv(id)
           }
-          this.BRK()
-          await commitRows([compte, compta, prefs])
         }
+        this.BRK()
+        if (lobj.length) await commitRows(lobj)
       }
 
       await this.chargerAvatars(avUtiles, !data.db)
