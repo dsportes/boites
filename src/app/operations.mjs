@@ -1,11 +1,11 @@
 import { NomAvatar, store, post, affichermessage, cfg, sleep, affichererreur, appexc, idToIc, difference, getpj, getJourJ, serial, edvol } from './util.mjs'
 import { remplacePage } from './page.mjs'
 import {
-  deleteIDB, idbSidCompte, commitRows, getCompte, getPrefs, getAvatars, getContacts, getCvs,
+  deleteIDB, idbSidCompte, commitRows, getCompte, getCompta, getArdoise, getPrefs, getAvatars, getContacts, getCvs,
   getGroupes, getMembres, getParrains, getRencontres, getSecrets,
   purgeAvatars, purgeCvs, purgeGroupes, openIDB, enregLScompte, setEtat, getEtat, getPjidx, putPj
 } from './db.mjs'
-import { Compte, Avatar, rowItemsToMapObjets, commitMapObjets, data, Prefs, Contact, Invitgr } from './modele.mjs'
+import { Compte, Avatar, rowItemsToMapObjets, commitMapObjets, data, Prefs, Contact, Invitgr, Compta } from './modele.mjs'
 import { AppExc, EXBRK, EXPS, F_BRO, INDEXT, X_SRV, E_WS, SIZEAV, SIZEGR } from './api.mjs'
 
 import { crypt } from './crypto.mjs'
@@ -453,6 +453,10 @@ export class OperationUI extends Operation {
       let prefs = await getPrefs()
       if (!prefs) prefs = new Prefs().nouveau(id)
       data.setPrefs(prefs)
+      const compta = await getCompta()
+      if (compta) data.setCompta(compta)
+      const ardoise = await getArdoise()
+      if (ardoise) data.setArdoise(ardoise)
     }
 
     this.BRK()
@@ -598,26 +602,18 @@ export class ProcessQueue extends OperationWS {
   }
 }
 
-/* ********************************************************* */
-/* On poste :
-- les rows Compte et prefs, v et dds à 0
-- la clé publique de l'avatar pour la table avrsa
-- les quotas pour la table avgrvq
+/* Création d'un compte comptable******************************************
+On poste :
+- les rows Compte, Compta, Prefs, v et dds à 0
+- les clés publiques du compte et de l'avatar pour la table avrsa
 - le row Avatar, v et dds à 0
 Retour:
-- status :
-  0: créé et connecté
-  1: était déjà créé avec la bonne phrase secrète, transformé en login
-  2: début de phrase secrète déjà utilisée - refus
-  -1: erreur technique
 - dh, sessionId
-- rowItems retournés :
-  compte
-  avatar
+- rowItems retournés : compte compta prefs avatar
 */
 export class CreationCompte extends OperationUI {
   constructor () {
-    super('Création de compte', OUI, SELONMODE)
+    super('Création d\'un compte de comptable', OUI, SELONMODE)
     this.opsync = true
   }
 
@@ -642,27 +638,34 @@ export class CreationCompte extends OperationUI {
 
   excActions () { return { d: deconnexion, c: this.excActionx, default: null } }
 
-  async run (mdp, ps, nom, quotas) {
+  async run (ps, nom, forfaits) {
     try {
-      // eslint-disable-next-line no-unused-vars
-      const d = data
       data.ps = ps
 
       await data.connexion(true) // On force A NE PAS OUVRIR IDB (compte pas encore connu)
 
       this.BRK()
-      const kp = await crypt.genKeyPair()
+      const kpav = await crypt.genKeyPair()
+      const kpc = await crypt.genKeyPair()
       const nomAvatar = new NomAvatar(nom) // nouveau
-      const compte = new Compte().nouveau(nomAvatar, kp.privateKey)
+
+      const compte = new Compte().nouveau(nomAvatar, kpav.privateKey, kpc.privateKey)
       const rowCompte = await compte.toRow()
-      data.setCompte(compte)
       const prefs = new Prefs().nouveau(compte.id)
-      data.setPrefs(prefs)
       const rowPrefs = await prefs.toRow()
+      data.setPrefs(prefs) // tout de suite à cause de l'afficahage qui va y chercher des trucs
+      data.setCompte(compte)
+
+      const compta = new Compta().nouveau(compte.id, null)
+      compta.compteurs.setRes(64, 64)
+      compta.compteurs.setF1(forfaits[0])
+      compta.compteurs.setF2(forfaits[1])
+      const rowCompta = await compta.toRow()
+
       const avatar = await new Avatar().nouveau(nomAvatar.id)
       const rowAvatar = await avatar.toRow()
 
-      const args = { sessionId: data.sessionId, mdp64: mdp.mdp64, q1: quotas.q1, q2: quotas.q2, qm1: quotas.qm1, qm2: quotas.qm2, clePub: kp.publicKey, rowCompte, rowAvatar, rowPrefs }
+      const args = { sessionId: data.sessionId, clePubAv: kpav.publicKey, clePubC: kpc.publicKey, rowCompte, rowCompta, rowAvatar, rowPrefs }
       const ret = await post(this, 'm1', 'creationCompte', args)
       // maj du modèle en mémoire
       if (data.dh < ret.dh) data.dh = ret.dh
@@ -673,11 +676,12 @@ export class CreationCompte extends OperationUI {
       const mapObj = await rowItemsToMapObjets(ret.rowItems)
       const compte2 = mapObj.compte // le DERNIER objet compte quand on en a reçu plusieurs (pas la liste)
       data.setCompte(compte2)
-      const objets = [compte2]
+      const compta2 = mapObj.compta // le DERNIER objet compte quand on en a reçu plusieurs (pas la liste)
+      data.setCompta(compta2)
       const prefs2 = mapObj.prefs // le DERNIER objet compte quand on en a reçu plusieurs (pas la liste)
-      data.setCompte(prefs2)
-      objets.push(prefs2)
-      await commitMapObjets(objets, mapObj)
+      data.setPrefs(prefs2)
+      const objets = [compte2, compta2, prefs2]
+      await commitMapObjets(objets, mapObj) // l'avatar n'a pas été traité, les singletons l'ont été juste ci-avant
 
       // création de la base IDB et chargement des rows compte et avatar
       if (data.mode === 1) { // synchronisé : IL FAUT OUVRIR IDB (et écrire dedans)
@@ -772,29 +776,30 @@ export class ConnexionCompte extends OperationUI {
     // maj du modèle en mémoire
     if (data.dh < ret.dh) data.dh = ret.dh
     // construction de l'objet compte
-    const rowCompte = schemas.deserialize('rowcompte', ret.rowItems[0].serial)
+    const rowCompte = schemas.deserialize('rowcompte', ret.compte.serial)
     if (data.ps.pcbh !== rowCompte.pcbh) throw EXPS // changt de phrase secrète
     const c = new Compte()
     await c.fromRow(rowCompte)
-    const rowPrefs = schemas.deserialize('rowprefs', ret.rowItems[1].serial)
+    const rowPrefs = schemas.deserialize('rowprefs', ret.prefs.serial)
     const p = new Prefs()
     await p.fromRow(rowPrefs)
-    return [c, p]
+    const rowCompta = schemas.deserialize('rowcompta', ret.compta.serial)
+    const compta = new Compta()
+    await compta.fromRow(rowCompta)
+    return [c, p, compta]
   }
 
   async run (ps) {
     try {
-      // eslint-disable-next-line no-unused-vars
-      const d = data
-
       data.ps = ps
       await data.connexion()
       this.BRK()
 
       // obtention du compte depuis le serveur
-      let [compte, prefs] = await this.lectureCompte()
+      let [compte, prefs, compta] = await this.lectureCompte()
       data.setCompte(compte)
       data.setPrefs(prefs)
+      data.setCompta(compta)
 
       /* récupération et régularisation des invitGr : maj sur le serveur des avatars du compte
         AVANT chargement des avatars afin d'avoir tous les groupes au plus tôt
@@ -803,7 +808,7 @@ export class ConnexionCompte extends OperationUI {
 
       if (data.db) {
         enregLScompte(compte.sid) // La phrase secrète a pu changer : celle du serveur est installée
-        await commitRows([compte, prefs])
+        await commitRows([compte, prefs, compta])
         this.BRK()
         await this.chargementIdb(compte.id)
       }
@@ -815,11 +820,14 @@ export class ConnexionCompte extends OperationUI {
         - ré-enregistrement du compte en modèle et IDB
         - suppression des avatars obsolètes non référencés par la nouvelle version du compte, y compris dans la liste des versions
         */
-        const [compte2, prefs2] = await this.lectureCompte() // PEUT sortir en EXPS si changement de phrase secrète
+        const [compte2, prefs2, compta2] = await this.lectureCompte() // PEUT sortir en EXPS si changement de phrase secrète
         if (compte2.v > compte.v) {
           compte = compte2
           data.setCompte(compte2)
           data.setPrefs(prefs2)
+          prefs = prefs2
+          data.setCompta(compta2)
+          compta = compta2
           avUtiles = data.setIdsAvatarsUtiles
           const avInutiles = difference(data.setIdsAvatarsStore, avUtiles)
           if (avInutiles.size) {
@@ -828,7 +836,7 @@ export class ConnexionCompte extends OperationUI {
             for (const id of avInutiles) data.vag.delVerAv(id)
           }
           this.BRK()
-          await commitRows([compte])
+          await commitRows([compte, compta, prefs])
         }
       }
 
@@ -842,8 +850,8 @@ export class ConnexionCompte extends OperationUI {
         if (data.db) await data.db.purgeGroupes(grAPurger)
       }
 
-      // Abonnements et signature du compte, ses avatars et ses groupes
-      await this.abonnements(avUtiles, grUtiles)
+      // Abonnements et signature du compte, ses avatars et ses groupes SI PAS EN SURSIS
+      if (!compta.st) await this.abonnements(avUtiles, grUtiles)
 
       /* État chargé correspondant à l'état local :
       - presque vide le cas échéant - incognito ou première synchro

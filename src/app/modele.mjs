@@ -1,5 +1,5 @@
 import { schemas } from './schemas.mjs'
-import { crypt, cryptersoft, decryptersoft } from './crypto.mjs'
+import { crypt } from './crypto.mjs'
 import { openIDB, closeIDB, putPj, getPjdata } from './db.mjs'
 import { openWS, closeWS } from './ws.mjs'
 import {
@@ -40,24 +40,21 @@ export class Invitgr {
   - pour compte : LE DERNIER objet reçu, pas la liste historique
   - pour les autres, l'array des objets
 */
+export function estSingleton (t) { return ['compte', 'compta', 'prefs', 'ardoise'].indexOf(t) !== -1 }
+
 export async function rowItemsToMapObjets (rowItems) {
   const res = {}
   for (let i = 0; i < rowItems.length; i++) {
     const item = rowItems[i]
     const row = schemas.deserialize('row' + item.table, item.serial)
-    if (item.table === 'compte') {
+    if (item.table === 'compte' && row.pcbh !== data.ps.pcbh) throw EXPS // phrase secrète changée => déconnexion
+    const obj = newObjet(item.table)
+    await obj.fromRow(row)
+    if (estSingleton(item.table)) {
       // le dernier quand on en a reçu plusieurs et non la liste
-      if (row.pcbh !== data.ps.pcbh) throw EXPS // phrase secrète changée => déconnexion
-      const obj = new Compte()
-      res.compte = await obj.fromRow(row)
-    } else if (item.table === 'prefs') {
-      // le dernier quand on en a reçu plusieurs et non la liste
-      const obj = new Prefs()
-      res.prefs = await obj.fromRow(row)
+      res[item.table] = obj
     } else {
       if (!res[item.table]) res[item.table] = []
-      const obj = newObjet(item.table)
-      await obj.fromRow(row)
       res[item.table].push(obj)
     }
   }
@@ -68,6 +65,9 @@ export async function rowItemsToMapObjets (rowItems) {
 function newObjet (table) {
   switch (table) {
     case 'compte' : return new Compte()
+    case 'compta' : return new Compta()
+    case 'prefs' : return new Prefs()
+    case 'ardoise' : return new Ardoise()
     case 'avatar' : return new Avatar()
     case 'contact' : return new Contact()
     case 'invitgr' : return new Invitgr()
@@ -82,7 +82,7 @@ function newObjet (table) {
 
 /* mapObj : clé par table, valeur : array des objets **************************************/
 /*
-- ne traite ni 'compte', ni 'prefs', ni 'invitgr'
+- ne traite ni les singletons ('compte compta prefs ardoise'), ni 'invitgr'
 - inscrit en store OU les supprime du store s'il y était
 - objets : array remplie par tous les objets à mettre en IDB
 Retourne vcv : version de la plus CV trouvée
@@ -567,6 +567,14 @@ class Session {
 
   setCompte (compte) { store().commit('db/setCompte', compte) }
 
+  getCompta () { return store().state.db.compta }
+
+  setCompta (compta) { store().commit('db/setCompta', compta) }
+
+  getArdoise () { return store().state.db.ardoise }
+
+  setArdoise (ardoise) { store().commit('db/setArdoise', ardoise) }
+
   getPrefs () { return store().state.db.prefs }
 
   setPrefs (prefs) { store().commit('db/setPrefs', prefs) }
@@ -887,14 +895,14 @@ export class Compta {
 
   get horsLimite () { return false }
 
-  nouveau (id, idp, compteurs) {
+  nouveau (id, idp) {
     this.id = id
     this.idp = idp
     this.v = 0
     this.vsh = 0
     this.st = 0
     this.dst = 0
-    this.data = compteurs.serial
+    this.compteurs = new Compteurs()
     return this
   }
 
@@ -905,26 +913,32 @@ export class Compta {
     this.v = row.v
     this.dds = row.dds
     this.st = row.st
-    this.data = new Compteurs(row.data)
+    this.compteurs = new Compteurs(row.data).calculauj()
     return this
   }
 
   async toRow () {
     const r = { ...this }
-    r.data = this.data.serial
+    r.data = this.compteurs.calculauj().serial
     return schemas.serialize('rowcompta', r)
   }
 
   get toIdb () {
-    return schemas.serialize('idbCompta', this)
+    this.data = serial(this.compteurs.calculauj())
+    const x = schemas.serialize('idbCompta', this)
+    delete this.data
+    return x
   }
 
   fromIdb (idb) {
     schemas.deserialize('idbCompta', idb, this)
+    this.compteurs = new Compteurs(this.data).calculauj()
+    delete this.data
     return this
   }
 
   get clone () {
+    this.compteurs.calculauj()
     return schemas.clone('idbCompta', this, new Compta())
   }
 }
@@ -958,13 +972,13 @@ export class Ardoise {
     this.vsh = row.vsh || 0
     this.id = row.id
     this.dh = row.dh
-    this.data = deserial(await decryptersoft(row.data))
+    this.data = deserial(await crypt.decryptersoft(row.data))
     return this
   }
 
   async toRow () {
     const r = { ...this }
-    r.data = await cryptersoft(serial(this.data))
+    r.data = await crypt.cryptersoft(serial(this.data))
     return schemas.serialize('rowardoise', r)
   }
 

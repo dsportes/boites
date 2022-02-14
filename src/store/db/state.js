@@ -2,6 +2,8 @@ export default function () {
   return {
     compte: null,
     prefs: null,
+    compta: null,
+    ardoise: null,
     avatar: null, // avatar courant
     groupe: null, // groupe courant
     contact: null, // contact courant

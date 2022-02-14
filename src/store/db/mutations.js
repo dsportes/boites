@@ -28,7 +28,7 @@ Normalement quand une entrée existe il n'y a pas que le secret de référence d
 
 */
 
-const l1 = { compte: true, prefs: true, avatar: true, groupe: true, secret: true, contact: true }
+const l1 = { compte: true, compta: true, ardoise: true, prefs: true, avatar: true, groupe: true, secret: true, contact: true }
 const l2 = { avatars: true, groupes: true, parrains: true, rencontres: true, repertoire: true, pjidx: true }
 const l3 = { contact: true, membre: true, secret: true }
 const l4 = { avatar: true, groupe: true, parrain: true, rencontre: true }
@@ -189,6 +189,8 @@ export function setObjets (state, [table, lobj]) { // lobj : array d'objets
 }
 
 export function setCompte (state, obj) { if (!state.compte || state.compte.v < obj.v) state.compte = obj }
+export function setCompta (state, obj) { if (!state.compta || state.compta.v < obj.v) state.compta = obj }
+export function setArdoise (state, obj) { if (!state.ardoise || state.ardoise.dh < obj.dh) state.ardoise = obj }
 export function setPrefs (state, obj) { if (!state.prefs || state.prefs.v < obj.v) state.prefs = obj }
 
 /* Enregistrement de toutes les cv d'un coup */

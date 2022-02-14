@@ -56,7 +56,7 @@ import { computed } from 'vue'
 import PhraseSecrete from './PhraseSecrete.vue'
 import ChoixForfaits from './ChoixForfaits.vue'
 import NomAvatar from './NomAvatar.vue'
-// import { CreationCompte } from '../app/operations.mjs'
+import { CreationCompte } from '../app/operations.mjs'
 
 export default ({
   name: 'DialogueCreationCompte',
@@ -90,7 +90,7 @@ export default ({
       this.step = 3
     },
     async confirmer () {
-      // await new CreationCompte().run(this.ps, this.nom, this.forfaits)
+      await new CreationCompte().run(this.ps, this.nom, this.forfaits)
       this.ps = null
       this.forfaits = [4, 4]
       this.nom = ''

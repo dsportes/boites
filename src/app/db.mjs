@@ -1,6 +1,6 @@
 /* eslint-disable func-call-spacing */
 import Dexie from 'dexie'
-import { Avatar, Compte, Prefs, Contact, Parrain, Rencontre, Groupe, Membre, Secret, Cv, data } from './modele.mjs'
+import { Avatar, Compte, Prefs, Compta, Ardoise, Contact, Parrain, Rencontre, Groupe, Membre, Secret, Cv, data, estSingleton } from './modele.mjs'
 import { store, deserial, serial } from './util.mjs'
 import { crypt } from './crypto.mjs'
 import { AppExc, E_DB, INDEXT } from './api.mjs'
@@ -8,6 +8,8 @@ import { AppExc, E_DB, INDEXT } from './api.mjs'
 const STORES = {
   etat: 'id',
   compte: 'id',
+  compta: 'id',
+  ardoise: 'id',
   prefs: 'id',
   avatar: 'id',
   contact: '[id+id2]', // ic
@@ -125,6 +127,26 @@ export async function getPrefs () {
   try {
     const idb = await data.db.prefs.get('1')
     return idb ? new Prefs().fromIdb(await crypt.decrypter(data.clek, idb.data)) : null
+  } catch (e) {
+    throw data.setErDB(EX2(e))
+  }
+}
+
+export async function getCompta () {
+  go()
+  try {
+    const idb = await data.db.compta.get('1')
+    return idb ? new Compta().fromIdb(await crypt.decrypter(data.clek, idb.data)) : null
+  } catch (e) {
+    throw data.setErDB(EX2(e))
+  }
+}
+
+export async function getArdoise () {
+  go()
+  try {
+    const idb = await data.db.ardoise.get('1')
+    return idb ? new Ardoise().fromIdb(await crypt.decrypter(data.clek, idb.data)) : null
   } catch (e) {
     throw data.setErDB(EX2(e))
   }
@@ -354,7 +376,7 @@ export async function commitRows (lobj) {
     for (let i = 0; i < lobj.length; i++) {
       const obj = lobj[i]
       const x = { table: obj.table, row: {} }
-      x.row.id = obj.table === 'compte' || obj.table === 'prefs' ? '1' : crypt.u8ToB64(await crypt.crypter(data.clek, obj.sid, 1), true)
+      x.row.id = estSingleton(obj.table) ? '1' : crypt.u8ToB64(await crypt.crypter(data.clek, obj.sid, 1), true)
       if (obj.sid2) x.row.id2 = crypt.u8ToB64(await crypt.crypter(data.clek, obj.sid2, 1), true)
       if (!obj.suppr) {
         x.row.data = await crypt.crypter(obj.table === 'compte' ? d.ps.pcb : d.clek, obj.toIdb)
@@ -362,7 +384,11 @@ export async function commitRows (lobj) {
       } else {
         x.suppr = true
         lidb.push(x)
-        if (obj.table === 'compte') lidb.push({ table: 'prefs', suppr: true, row: { id: '1' } })
+        if (obj.table === 'compte') {
+          lidb.push({ table: 'prefs', suppr: true, row: { id: '1' } })
+          lidb.push({ table: 'compta', suppr: true, row: { id: '1' } })
+          lidb.push({ table: 'ardoise', suppr: true, row: { id: '1' } })
+        }
       }
     }
     await d.db.transaction('rw', TABLES, async () => {
