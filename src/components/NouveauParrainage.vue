@@ -40,6 +40,15 @@
 
         <q-step :name="4" title="Forfaits attribués" icon="settings" :done="step > 4" >
           <choix-forfaits v-model="forfaits" class="q-ma-xs"/>
+          <div v-if="compte.estComptable">
+            <div style="margin-left:-0.8rem" class="text-primary">
+              <q-toggle v-model="estParrain" size="md" color="primary" :label="estParrain ? 'Compte parrain lui-même' : 'Compte filleul standard'"/>
+            </div>
+            <div v-if="estParrain">
+              <div>Ressources maximales attribuables aux filleuls</div>
+              <choix-forfaits v-model="ressources" class="q-ma-xs"/>
+            </div>
+          </div>
           <q-stepper-navigation>
             <q-btn flat @click="step = 3" color="primary" label="Précédent" class="q-ml-sm" />
             <q-btn flat @click="step = 5" color="primary" label="Suivant" class="q-ml-sm" />
@@ -50,9 +59,13 @@
           <div>Phrase de parrainage: <span class="font-mono q-pl-md">{{phrase}}</span></div>
           <div>Nom de l'avatar: <span class="font-mono q-pl-md">{{nom}}</span></div>
           <div>Mot de bienvenue: <span class="font-mono q-pl-md">{{mot}}</span></div>
-          <div>Forfaits:
+          <div>Forfaits du compte:
             <span class="font-mono q-pl-md">{{'v1: ' + forfaits[0] + 'MB'}}</span>
             <span class="font-mono q-pl-lg">{{'v2: ' + forfaits[1] + '*100MB'}}</span>
+          </div>
+          <div v-if="estParrain">Ressources pour filleuls:
+            <span class="font-mono q-pl-md">{{'v1: ' + ressources[0] + 'MB'}}</span>
+            <span class="font-mono q-pl-lg">{{'v2: ' + ressources[1] + '*100MB'}}</span>
           </div>
           <div style="margin-left:-0.8rem" class="text-primary">
             <q-toggle v-model="aps" size="md" :color="aps ? 'green' : 'grey'" label="Partage de secrets avec cet avatar"/>
@@ -73,7 +86,7 @@ import { useStore } from 'vuex'
 import { computed } from 'vue'
 import NomAvatar from './NomAvatar.vue'
 import ChoixForfaits from './ChoixForfaits.vue'
-// import { NouveauParrainage } from '../app/operations.mjs'
+import { NouveauParrainage } from '../app/operations.mjs'
 import { crypt } from '../app/crypto.mjs'
 
 export default ({
@@ -92,6 +105,8 @@ export default ({
       isPwd: false,
       step: 1,
       forfaits: [1, 1],
+      ressources: [4, 4],
+      estParrain: false,
       nom: '',
       phrase: '',
       mot: '',
@@ -137,18 +152,18 @@ export default ({
       }
     },
     async confirmer () {
-      /* { pph, pp, clex, id, aps, forfaits, nomf, mot }
-      - pp : phrase de parrainage (string)
-      - pph : le hash de la clex (integer)
-      - clex : PBKFD de pp (u8)
-      - forfaits : [1, 2]
-      - nomf : nom du filleul (string)
-      - mot : mot d'accueil (string)
-      - aps : booléen (accepta partage de secrets)
-      */
-      // eslint-disable-next-line no-unused-vars
-      const arg = { pph: this.pph, pp: this.phrase, clex: this.clex, id: this.avatar.id, aps: this.aps, forfaits: this.forfaits, nomf: this.nom, mot: this.mot }
-      // await new NouveauParrainage().run(arg)
+      const arg = {
+        pph: this.pph, // le hash de la clex (integer)
+        pp: this.phrase, // phrase de parrainage (string)
+        clex: this.clex, // PBKFD de pp (u8)
+        id: this.avatar.id,
+        aps: this.aps, // booléen (accepta partage de secrets)
+        forfaits: this.forfaits,
+        ressources: this.estParrain ? this.ressources : null,
+        nomf: this.nom, // nom du filleul (string)
+        mot: this.mot
+      }
+      await new NouveauParrainage().run(arg)
       this.mot = ''
       this.nom = ''
       this.forfaits = [1, 1]
@@ -166,9 +181,9 @@ export default ({
   setup () {
     const $store = useStore()
     const avatar = computed(() => $store.state.db.avatar)
-    const compta = computed(() => { return $store.state.db.compta })
+    const compte = computed(() => { return $store.state.db.compte })
     return {
-      compta,
+      compte,
       avatar
     }
   }

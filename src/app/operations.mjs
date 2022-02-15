@@ -1075,12 +1075,11 @@ export class PjSecret extends OperationUI {
 }
 
 /******************************************************************
- * Parrainage : args de m1/nouveauParrainage
+Parrainage : args de m1/nouveauParrainage
   sessionId: data.sessionId,
   rowParrain: serial(rowParrain)
- * Retour :
- * dh :
- */
+Retour : dh
+*/
 
 export class NouveauParrainage extends OperationUI {
   constructor () {
@@ -1092,15 +1091,37 @@ export class NouveauParrainage extends OperationUI {
   // excActions(), défaut de Operation
 
   async run (arg) {
-    /* { pph, pp, clex, id, aps, quotas, nomf, mot }
-    - pp : phrase de parrainage (string)
-    - pph : le hash de la clex (integer)
-    - clex : PBKFD de pp (u8)
-    - id: du parrain
-    - aps : booléen (accepta partage de secrets)
-    - forfaits: [1, 2]
-    - nomf : nom du filleul (string)
-    - mot : mot d'accueil (string)
+    /*
+      pph: this.pph, // le hash de la clex (integer)
+      pp: this.phrase, // phrase de parrainage (string)
+      clex: this.clex, // PBKFD de pp (u8)
+      id: this.avatar.id,
+      aps: this.aps, // booléen (accepta partage de secrets)
+      forfaits: this.forfaits,
+      ressources: this.estParrain ? this.ressources : null,
+      nomf: this.nom, // nom du filleul (string)
+      mot: this.mot
+    row Parrain :
+    - `pph` : hash du PBKFD de la phrase de parrainage.
+    - `id` : id du parrain.
+    - `v`
+    - `dlv` : la date limite de validité permettant de purger les parrainages (quels qu'en soient les statuts).
+    - `st` : < 0: supprimé,
+      - 0: en attente de décision de F
+      - 1 : accepté
+      - 2 : refusé
+    - `datak` : cryptée par la clé K du parrain, **phrase de parrainage et clé X** (PBKFD de la phrase). La clé X figure afin de ne pas avoir à recalculer un PBKFD en session du parrain pour qu'il puisse afficher `datax`.
+    - `datax` : données de l'invitation cryptées par le PBKFD de la phrase de parrainage.
+      - `nomp, rndp, icp` : nom complet et indice de l'avatar P.
+      - `nomf, rndf, icf` : nom complet et indice du filleul F (donné par P).
+      - `cc` : clé `cc` générée par P pour le couple P / F.
+      - `aps` : `true` si le parrain accepte le partage de secrets.
+      - `f: [f1 f2]` : forfaits attribués par P à F.
+      - `r: [r1 r2]` : si non null, réserve attribuable aux filleuls si le compte _parrainé_ est en fait un _parrain_ lui-même.
+    - `data2k` : c'est le `datak` du futur contact créé en cas d'acceptation.
+      - `nom rnd` : nom complet du contact (B).
+      - `cc` : 32 bytes aléatoires donnant la clé `cc` d'un contact avec B (en attente ou accepté).
+      - `icb` : indice de A dans les contacts de B
     */
     try {
       const cc = crypt.random(32)
@@ -1109,16 +1130,15 @@ export class NouveauParrainage extends OperationUI {
       const icp = await idToIc(naf.id)
       const icf = crypt.rnd4()
       const x = serial([new Date().getTime(), arg.mot])
-      // parrain : ['pph', 'id', 'v', 'dlv', 'st', 'q1', 'q2', 'qm1', 'qm2', 'datak', 'datax', 'data2k', 'ardc', 'vsh']
+      const datax = { nomp: nap.nom, rndp: nap.rnd, icp, nomf: naf.nom, rndf: naf.rnd, icf, cc, aps: arg.aps, f: arg.forfaits, r: arg.ressources }
       const rowParrain = {
         pph: arg.pph,
         id: arg.id,
         v: 0,
         st: 0,
         dlv: getJourJ() + cfg().limitesjour.parrainage,
-        ...arg.quotas,
         datak: await crypt.crypter(data.clek, serial([arg.pp, arg.clex])),
-        datax: await crypt.crypter(arg.clex, serial({ nomp: nap.nom, rndp: nap.rnd, icp, nomf: naf.nom, rndf: naf.rnd, icf, cc, aps: arg.aps })),
+        datax: await crypt.crypter(arg.clex, serial(datax)),
         data2k: await crypt.crypter(data.clek, serial({ nom: naf.nom, rnd: naf.rnd, ic: icf, cc })),
         ardc: await crypt.crypter(cc, x),
         vsh: 0
