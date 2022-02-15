@@ -709,8 +709,8 @@ export class Compte {
     return s
   }
 
-  nouveau (nomAvatar, cprivav, cpriv) {
-    this.id = crypt.rnd6()
+  nouveau (nomAvatar, cprivav, cpriv, id) {
+    this.id = id || crypt.rnd6()
     this.v = 0
     this.dds = 0
     this.dpbh = data.ps.dpbh

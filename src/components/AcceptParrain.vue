@@ -1,18 +1,28 @@
 <template>
   <q-card class="q-ma-xs petitelargeur fs-md">
     <q-card-section class="column items-center">
-      <div class="titre-lg text-center">Acceptation d'un parrainage</div>
+      <div class="titre-lg text-center">{{'Acceptation du parrainage d\'un compte '+ (estpar ? 'PARRAIN' : 'filleul standard')}}</div>
     </q-card-section>
 
     <q-card-section>
       <q-stepper v-model="step" vertical color="primary" animated>
         <q-step :name="1" title="Proposition de parrainage" icon="settings" :done="step > 1">
-          <div class="t1">Premier avatar du nouveau compte: <span class="sp1">{{parrain.data.nomf}}</span></div>
-          <div class="t1">Nom de son parrain: <span class="sp1">{{parrain.data.nomp}}</span></div>
-          <div class="t1">Quotas offerts: <span class="sp1">{{'q1:' + parrain.q1 + ' q2:' + parrain.q2 + ' qm1:' + parrain.qm1 + ' qm2:' + parrain.qm2}}</span></div>
+          <div>Premier avatar du nouveau compte: <span class="font-mono q-pl-md">{{parrain.data.nomf}}</span></div>
+          <div>Nom du parrain: <span class="font-mono q-pl-md">{{parrain.data.nomp}}</span></div>
+          <div>Forfaits du compte:
+            <span class="font-mono q-pl-md">{{'v1: ' + parrain.data.f[0] + 'MB'}}</span>
+            <span class="font-mono q-pl-lg">{{'v2: ' + parrain.data.f[1] + '*100MB'}}</span>
+          </div>
+          <div v-if="estpar">Ressources attribuables aux futurs filleuls:
+            <div>
+            <span class="font-mono q-pl-md">{{'v1: ' + parrain.data.r[0] + 'MB'}}</span>
+            <span class="font-mono q-pl-lg">{{'v2: ' + parrain.data.r[1] + '*100MB'}}</span>
+            </div>
+          </div>
           <div class="t1">Validité: <span class="sp1">{{parrain.dlv - jourJ}}</span> jour(s)</div>
           <div style="margin-left:-0.8rem" class="text-primary">
-            <q-toggle v-model="apsp" size="md" disable :color="apsp ? 'green' : 'grey'" label="Le parrain accepte le partage de secrets avec cet avatar"/>
+            <q-toggle v-model="apsp" size="md" disable :color="apsp ? 'green' : 'grey'"
+              :label="'Le parrain ' + (!apsp ? 'n\'accepte pas' : 'accepte') + ' le partage de secrets avec cet avatar'"/>
           </div>
           <show-html class="full-width height-6" :texte="parrain.ard" />
           <q-stepper-navigation>
@@ -43,15 +53,15 @@
 
         <q-step :name="4" title="Confirmation" icon="check" :done="step > 5" >
           <q-icon :name="isPwd ? 'visibility_off' : 'visibility'" class="cursor-pointer" @click="isPwd = !isPwd"/>
-          <div class="t1">Phrase secrète (ligne 1): <span class="sp1">{{isPwd ? '***' : ps.debut}}</span></div>
-          <div class="t1">Phrase secrète (ligne 2): <span class="sp1">{{isPwd ? '***' : ps.fin}}</span></div>
-          <div class="t1">Nom de l'avatar: <span class="sp1">{{parrain.nomf}}</span></div>
-          <div class="t1">Quotas: <span class="sp1">{{'q1:' + parrain.q1 + ' q2:' + parrain.q2 + ' qm1:' + parrain.qm1 + ' qm2:' + parrain.qm2}}</span></div>
+          <div>Phrase secrète (ligne 1): <span class="font-mono q-pl-md">{{isPwd ? '***' : ps.debut}}</span></div>
+          <div>Phrase secrète (ligne 2): <span class="font-mono q-pl-md">{{isPwd ? '***' : ps.fin}}</span></div>
           <div style="margin-left:-0.8rem" class="text-primary">
-            <q-toggle v-model="apsp" size="md" disable :color="apsp ? 'green' : 'grey'" label="Le parrain accepte le partage de secrets"/>
+            <q-toggle v-model="apsp" size="md" disable :color="apsp ? 'green' : 'grey'"
+              :label="'Le parrain ' + (!apsp ? 'n\'accepte pas' : 'accepte') + ' le partage de secrets avec cet avatar'"/>
           </div>
           <div style="margin-left:-0.8rem" class="text-primary">
-            <q-toggle v-model="apsf" size="md" :color="apsf ? 'green' : 'grey'" label="Accepter le partage de secrets avec le parrain"/>
+            <q-toggle v-model="apsf" size="md" disable :color="apsf ? 'green' : 'grey'"
+              :label="(!apsf ? 'Ne pas accepter' : 'Accepter') + ' le partage de secrets avec cet avatar'"/>
           </div>
 
           <q-stepper-navigation>
@@ -89,6 +99,10 @@ export default ({
   props: { parrain: Object, pph: Number, close: Function },
 
   components: { PhraseSecrete, EditeurMd, ShowHtml },
+
+  computed: {
+    estpar () { return this.parrain.data.r !== null }
+  },
 
   data () {
     return {
@@ -146,13 +160,6 @@ export default ({
 
 <style lang="sass" scoped>
 @import '../css/app.sass'
-.sp1
-  margin-left: 1rem
-  font-size: 0.9rem
-  font-style: normal
-  font-family: 'Roboto Mono'
-.t1
-  font-size: 0.9rem
 .q-dialog__inner
   padding: 0 !important
 </style>

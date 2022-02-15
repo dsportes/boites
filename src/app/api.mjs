@@ -29,6 +29,8 @@ export class AppExc {
 export const EXBRK = new AppExc(E_BRK, 'Interruption volontaire')
 export const EXPS = new AppExc(F_BRO, 'La phrase secrète a changé depuis l\'authentification du comptE Déconnexion et reconnexion requise')
 
+export const MC = { NOUVEAU: 255, LISTENOIRE: 254, PARRAIN: 253, FILLEUL: 252, INTRODUCTEUR: 251, INTRODUIT: 250 }
+
 export const SIZEAV = 5
 export const SIZEGR = 3
 

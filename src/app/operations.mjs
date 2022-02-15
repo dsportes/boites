@@ -6,7 +6,7 @@ import {
   purgeAvatars, purgeCvs, purgeGroupes, openIDB, enregLScompte, setEtat, getEtat, getPjidx, putPj
 } from './db.mjs'
 import { Compte, Avatar, rowItemsToMapObjets, commitMapObjets, data, Prefs, Contact, Invitgr, Compta, Ardoise } from './modele.mjs'
-import { AppExc, EXBRK, EXPS, F_BRO, INDEXT, X_SRV, E_WS, SIZEAV, SIZEGR } from './api.mjs'
+import { AppExc, EXBRK, EXPS, F_BRO, INDEXT, X_SRV, E_WS, SIZEAV, SIZEGR, MC } from './api.mjs'
 
 import { crypt } from './crypto.mjs'
 import { schemas } from './schemas.mjs'
@@ -14,7 +14,6 @@ import { schemas } from './schemas.mjs'
 const OUI = 1
 const NON = 0
 const SELONMODE = 2
-const MO = 1024 * 1024
 
 export function deconnexion () { data.deconnexion() }
 
@@ -578,6 +577,40 @@ export class OperationUI extends Operation {
 
     this.BRK()
   }
+
+  async postCreation (ret) {
+    const mapObj = await rowItemsToMapObjets(ret.rowItems)
+    const compte2 = mapObj.compte // le DERNIER objet compte quand on en a reçu plusieurs (pas la liste)
+    data.setCompte(compte2)
+    const compta2 = mapObj.compta // le DERNIER objet compte quand on en a reçu plusieurs (pas la liste)
+    data.setCompta(compta2)
+    const prefs2 = mapObj.prefs // le DERNIER objet compte quand on en a reçu plusieurs (pas la liste)
+    data.setPrefs(prefs2)
+    const ardoise = mapObj.ardoise // le DERNIER objet compte quand on en a reçu plusieurs (pas la liste)
+    data.setArdoise(ardoise)
+    const objets = [compte2, compta2, prefs2, ardoise]
+    await commitMapObjets(objets, mapObj) // l'avatar n'a pas été traité, les singletons l'ont été juste ci-avant
+
+    // création de la base IDB et chargement des rows compte et avatar
+    if (data.mode === 1) { // synchronisé : IL FAUT OUVRIR IDB (et écrire dedans)
+      this.BRK()
+      enregLScompte(compte2.sid)
+      await deleteIDB()
+      try {
+        await openIDB()
+      } catch (e) {
+        await deleteIDB(true)
+        throw e
+      }
+      await commitRows(objets)
+    }
+
+    data.statut = 2
+    data.dhsync = data.dh
+    if (data.db) {
+      await setEtat()
+    }
+  }
 }
 
 /* ********************************************************* */
@@ -683,38 +716,9 @@ export class CreationCompte extends OperationUI {
       Le compte vient d'être créé et est déjà dans le modèle (clek enregistrée)
       On peut désérialiser la liste d'items (compte et avatar)
       */
-      const mapObj = await rowItemsToMapObjets(ret.rowItems)
-      const compte2 = mapObj.compte // le DERNIER objet compte quand on en a reçu plusieurs (pas la liste)
-      data.setCompte(compte2)
-      const compta2 = mapObj.compta // le DERNIER objet compte quand on en a reçu plusieurs (pas la liste)
-      data.setCompta(compta2)
-      const prefs2 = mapObj.prefs // le DERNIER objet compte quand on en a reçu plusieurs (pas la liste)
-      data.setPrefs(prefs2)
-      const ardoise = mapObj.ardoise // le DERNIER objet compte quand on en a reçu plusieurs (pas la liste)
-      data.setArdoise(ardoise)
-      const objets = [compte2, compta2, prefs2, ardoise]
-      await commitMapObjets(objets, mapObj) // l'avatar n'a pas été traité, les singletons l'ont été juste ci-avant
+      this.postCreation(ret)
+
       data.estComptable = true
-
-      // création de la base IDB et chargement des rows compte et avatar
-      if (data.mode === 1) { // synchronisé : IL FAUT OUVRIR IDB (et écrire dedans)
-        this.BRK()
-        enregLScompte(compte2.sid)
-        await deleteIDB()
-        try {
-          await openIDB()
-        } catch (e) {
-          await deleteIDB(true)
-          throw e
-        }
-        await commitRows(objets)
-      }
-
-      data.statut = 2
-      data.dhsync = data.dh
-      if (data.db) {
-        await setEtat()
-      }
       const res = this.finOK()
       remplacePage('Compte')
       return res
@@ -1112,6 +1116,8 @@ export class NouveauParrainage extends OperationUI {
       - 2 : refusé
     - `datak` : cryptée par la clé K du parrain, **phrase de parrainage et clé X** (PBKFD de la phrase). La clé X figure afin de ne pas avoir à recalculer un PBKFD en session du parrain pour qu'il puisse afficher `datax`.
     - `datax` : données de l'invitation cryptées par le PBKFD de la phrase de parrainage.
+      - `idcp` : id du compte parrain
+      - `idcf` : id du futur compte filleul
       - `nomp, rndp, icp` : nom complet et indice de l'avatar P.
       - `nomf, rndf, icf` : nom complet et indice du filleul F (donné par P).
       - `cc` : clé `cc` générée par P pour le couple P / F.
@@ -1122,15 +1128,20 @@ export class NouveauParrainage extends OperationUI {
       - `nom rnd` : nom complet du contact (B).
       - `cc` : 32 bytes aléatoires donnant la clé `cc` d'un contact avec B (en attente ou accepté).
       - `icb` : indice de A dans les contacts de B
+      - `idcf` : id du compte filleul
     */
     try {
+      const compte = data.getCompte()
+
       const cc = crypt.random(32)
       const nap = data.getNa(arg.id)
       const naf = new NomAvatar(arg.nomf)
       const icp = await idToIc(naf.id)
       const icf = crypt.rnd4()
+      const idcf = crypt.rnd6()
       const x = serial([new Date().getTime(), arg.mot])
-      const datax = { nomp: nap.nom, rndp: nap.rnd, icp, nomf: naf.nom, rndf: naf.rnd, icf, cc, aps: arg.aps, f: arg.forfaits, r: arg.ressources }
+      const datax = { idcp: compte.id, idcf, nomp: nap.nom, rndp: nap.rnd, icp, nomf: naf.nom, rndf: naf.rnd, icf, cc, aps: arg.aps, f: arg.forfaits, r: arg.ressources }
+      const data2 = { nom: naf.nom, rnd: naf.rnd, ic: icf, cc, idcf }
       const rowParrain = {
         pph: arg.pph,
         id: arg.id,
@@ -1139,7 +1150,7 @@ export class NouveauParrainage extends OperationUI {
         dlv: getJourJ() + cfg().limitesjour.parrainage,
         datak: await crypt.crypter(data.clek, serial([arg.pp, arg.clex])),
         datax: await crypt.crypter(arg.clex, serial(datax)),
-        data2k: await crypt.crypter(data.clek, serial({ nom: naf.nom, rnd: naf.rnd, ic: icf, cc })),
+        data2k: await crypt.crypter(data.clek, serial(data2)),
         ardc: await crypt.crypter(cc, x),
         vsh: 0
       }
@@ -1163,11 +1174,11 @@ export class NouveauParrainage extends OperationUI {
  * - icp : ic du contact du filleul chez le parrain
  * - ardc : mot du filleul crypté par la clé du couple
  * Si acceptation
- * - idf : id du filleul
+ * - idf : id du filleul (avatar)
  * - icbc : indice de P comme contact chez F crypté par leur clé cc
- * - clePub
- * - rowCompte, rowAvatar, rowPrefs : v attribuées par le serveur
- * - rowContact (du filleul) : st, dlv et quotas attribués par le serveur
+ * - clePubAv, clePubC : clés publiques de l'avatar et du compte
+ * - rowCompte, rowCompta, rowAvatar, rowPrefs : v attribuées par le serveur
+ * - rowContact (du filleul) : st, dlv par le serveur
  *  Pour maj de sr des rows contact du parrain / filleul :
  * - aps : booléen - true si le filleul accepte le partage de secret (false si limitation à l'ardoise)
  * Retour : sessionId, dh
@@ -1212,15 +1223,29 @@ export class AcceptationParrainage extends OperationUI {
       await data.connexion(true) // On force A NE PAS OUVRIR IDB (compte pas encore connu)
 
       this.BRK()
-      const kp = await crypt.genKeyPair()
-      const compte = new Compte().nouveau(parrain.naf, kp.privateKey)
+      const kpav = await crypt.genKeyPair()
+      const kpc = await crypt.genKeyPair()
+      const estpar = parrain.data.r !== null
+
+      const compte = new Compte().nouveau(parrain.naf, kpav.privateKey, kpc.privateKey, parrain.data.idcf)
       const rowCompte = await compte.toRow()
       data.setCompte(compte)
+
       const prefs = new Prefs().nouveau(compte.id)
       data.setPrefs(prefs)
       const rowPrefs = await prefs.toRow()
+
       const avatar = await new Avatar().nouveau(parrain.naf.id)
       const rowAvatar = await avatar.toRow()
+
+      const compta = new Compta().nouveau(compte.id, estpar ? null : parrain.data.idcp) // du "filleul / introduit"
+      compta.compteurs.setF1(parrain.data.f[0])
+      compta.compteurs.setF2(parrain.data.f[1])
+      if (estpar) {
+        compta.compteurs.setF1(parrain.data.r[0])
+        compta.compteurs.setF1(parrain.data.r[1])
+      }
+      const rowCompta = await compta.calculauj().toRow()
 
       const x = parrain.data.aps ? 1 : 0
       const y = arg.aps ? 1 : 0
@@ -1232,11 +1257,7 @@ export class AcceptationParrainage extends OperationUI {
       p.ic = parrain.data.icp
       p.v = 0
       p.st = (10 * x) + y
-      p.q1 = -parrain.q1 * MO
-      p.q2 = -parrain.q2 * MO
-      p.qm1 = -parrain.qm1 * MO
-      p.qm2 = -parrain.qm2 * MO
-      p.mc = new Uint8Array([])
+      p.mc = new Uint8Array([MC.NOUVEAU, (estpar ? MC.INTRODUIT : MC.FILLEUL)])
       p.info = null
       p.vsh = 0
       const rowContactP = p.toRowP(parrain.data2k, ardc)
@@ -1246,14 +1267,10 @@ export class AcceptationParrainage extends OperationUI {
       f.ic = parrain.data.icf
       f.v = 0
       f.st = (10 * y) + x
-      f.q1 = parrain.q1 * MO
-      f.q2 = parrain.q2 * MO
-      f.qm1 = parrain.qm1 * MO
-      f.qm2 = parrain.qm2 * MO
       f.ard = arg.ard
       f.dh = dh
       f.data = { nom: parrain.nap.nom, rnd: parrain.nap.rnd, ic: parrain.data.icp, cc: parrain.data.cc }
-      f.mc = new Uint8Array([])
+      f.mc = new Uint8Array([MC.NOUVEAU, (estpar ? MC.INTRODUCTEUR : MC.PARRAIN)])
       f.info = null
       f.vsh = 0
       const rowContactF = await f.toRow()
@@ -1263,49 +1280,26 @@ export class AcceptationParrainage extends OperationUI {
         ok: true,
         pph: arg.pph,
         idf: parrain.naf.id,
-        idp: parrain.id,
-        clePub: kp.publicKey,
+        idcp: parrain.data.idcp, // id compte parrain
+        forfaits: parrain.data.f, // A déduire des ressources du row compta du parrain
+        clePubAv: kpav.publicKey,
+        clePubC: kpc.publicKey,
         rowCompte,
         rowPrefs,
         rowAvatar,
+        rowCompta,
         rowContactP,
         rowContactF
       }
       const ret = await post(this, 'm1', 'acceptParrainage', args)
       if (data.dh < ret.dh) data.dh = ret.dh
-
       /*
       Le compte vient d'être créé et est déjà dans le modèle (clek enregistrée)
       On peut désérialiser la liste d'items (compte, contact, avatar)
       */
-      const mapObj = await rowItemsToMapObjets(ret.rowItems)
-      const compte2 = mapObj.compte // le DERNIER objet compte quand on en a reçu plusieurs (pas la liste)
-      data.setCompte(compte2)
-      const objets = [compte2]
-      const prefs2 = mapObj.prefs // le DERNIER objet compte quand on en a reçu plusieurs (pas la liste)
-      data.setCompte(prefs2)
-      objets.push(prefs2)
-      await commitMapObjets(objets, mapObj) // avatar, contactf en plus de compte prefs
+      this.postCreation(ret)
 
-      // création de la base IDB et chargement des rows compte et avatar
-      if (data.mode === 1) { // synchronisé : IL FAUT OUVRIR IDB (et écrire dedans)
-        this.BRK()
-        enregLScompte(compte2.sid)
-        await deleteIDB()
-        try {
-          await openIDB()
-        } catch (e) {
-          await deleteIDB(true)
-          throw e
-        }
-        await commitRows(objets)
-      }
-
-      data.statut = 2
-      data.dhsync = data.dh
-      if (data.db) {
-        await setEtat()
-      }
+      data.estComptable = false
       const res = this.finOK()
       remplacePage('Compte')
       return res
