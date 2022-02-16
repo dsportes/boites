@@ -898,6 +898,8 @@ export class Compta {
 
   get horsLimite () { return false }
 
+  get estParrain () { return this.idp === null }
+
   nouveau (id, idp) {
     this.id = id
     this.idp = idp
@@ -1365,14 +1367,17 @@ export class Contact {
   toRowP (datak, ardc) { // datak est fourni crypté pour un parrainage (contact du parrain par le filleul)
     const r = { ...this }
     r.datak = datak
+    r.datap = null
     r.infok = null
     r.ardc = ardc
     return schemas.serialize('rowcontact', r)
   }
 
-  async toRow () { // datak est fourni crypté pour un parrainage (contact du parrain par le filleul)
+  async toRow () {
+    this.majCc()
     const r = { ...this }
     r.datak = await crypt.crypter(data.clek, serial(r.data))
+    r.datap = null
     r.infok = r.info ? await crypt.crypter(data.clek, r.info) : null
     r.ardc = r.ard ? await crypt.crypter(this.data.cc, serial([r.dh, r.ard])) : null
     return schemas.serialize('rowcontact', r)

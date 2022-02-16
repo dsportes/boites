@@ -1241,11 +1241,8 @@ export class AcceptationParrainage extends OperationUI {
       const compta = new Compta().nouveau(compte.id, estpar ? null : parrain.data.idcp) // du "filleul / introduit"
       compta.compteurs.setF1(parrain.data.f[0])
       compta.compteurs.setF2(parrain.data.f[1])
-      if (estpar) {
-        compta.compteurs.setF1(parrain.data.r[0])
-        compta.compteurs.setF1(parrain.data.r[1])
-      }
-      const rowCompta = await compta.calculauj().toRow()
+      if (estpar) compta.compteurs.setRes(parrain.data.r)
+      const rowCompta = await compta.toRow()
 
       const x = parrain.data.aps ? 1 : 0
       const y = arg.aps ? 1 : 0
@@ -1258,7 +1255,6 @@ export class AcceptationParrainage extends OperationUI {
       p.v = 0
       p.st = (10 * x) + y
       p.mc = new Uint8Array([MC.NOUVEAU, (estpar ? MC.INTRODUIT : MC.FILLEUL)])
-      p.info = null
       p.vsh = 0
       const rowContactP = p.toRowP(parrain.data2k, ardc)
 
@@ -1277,9 +1273,9 @@ export class AcceptationParrainage extends OperationUI {
 
       const args = {
         sessionId: data.sessionId,
-        ok: true,
         pph: arg.pph,
         idf: parrain.naf.id,
+        idp: parrain.id,
         idcp: parrain.data.idcp, // id compte parrain
         forfaits: parrain.data.f, // A déduire des ressources du row compta du parrain
         clePubAv: kpav.publicKey,
@@ -1322,19 +1318,16 @@ export class RefusParrainage extends OperationUI {
   - ard : réponse du filleul
   - pph : hash phrase de parrainage
   */
-  async run (parrain, arg) {
+  async run (parrain, ard) {
     try {
+      await data.connexion(true) // On force A NE PAS OUVRIR IDB (compte pas encore connu)
       const args = {
         sessionId: data.sessionId,
-        ok: false,
         pph: parrain.pph,
-        idp: parrain.id,
-        icp: parrain.ic,
-        ardc: await crypt.crypter(parrain.data.cc, serial([new Date().getTime(), arg.ard]))
+        ardc: await crypt.crypter(parrain.data.cc, serial([new Date().getTime(), ard]))
       }
-      const ret = await post(this, 'm1', 'acceptParrainage', args)
-      if (data.dh < ret.dh) data.dh = ret.dh
-      this.finOK()
+      await post(this, 'm1', 'refusParrainage', args)
+      data.deconnexion()
     } catch (e) {
       await this.finKO(e)
     }

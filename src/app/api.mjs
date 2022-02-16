@@ -263,10 +263,10 @@ export class Compteurs {
     return true
   }
 
-  setRes (delta1, delta2) { // maj réserve de forfaits à attribués aux dilleuls
+  setRes (delta) { // maj réserve de forfaits à attribués aux dilleuls
     this.calculauj()
-    this.res1 = this.res1 + delta1
-    this.res2 = this.res2 + delta2
+    this.res1 = this.res1 + delta[0]
+    this.res2 = this.res2 + delta[1]
     this.maj = true
     return true
   }

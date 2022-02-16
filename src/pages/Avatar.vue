@@ -20,13 +20,13 @@
     </q-expansion-item>
     <q-separator/>
 
-    <q-expansion-item group="groupeetc" header-class="expansion-header-class-1 bg-secondary text-white">
+    <q-expansion-item v-if="compta.estParrain" group="groupeetc" header-class="expansion-header-class-1 bg-secondary text-white">
       <template v-slot:header>
         <q-item-section>
           <div class="titre-lg">Parrainages de l'avatar ( {{state.parrains.length}} )</div>
         </q-item-section>
       </template>
-      <q-btn v-if="compte.estComptable" class="full-width maauto q-py-lg" flat dense color="primary" icon="add" label="Nouveau parrainage" @click="nvpar = true"></q-btn>
+      <q-btn class="full-width maauto q-py-lg" flat dense color="primary" icon="add" label="Nouveau parrainage" @click="nvpar = true"></q-btn>
       <div v-for="p in state.parrains" :key="p.pph" class="row justify-start">
         <q-icon class="col-auto" size="sm" color="warning" :name="['hourglass_empty','thumb_up','thumb_down'][p.st]"/>
         <div class="col-3 q-pr-xs">{{p.data.nomf}}</div>

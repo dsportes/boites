@@ -60,7 +60,7 @@
               :label="'Le parrain ' + (!apsp ? 'n\'accepte pas' : 'accepte') + ' le partage de secrets avec cet avatar'"/>
           </div>
           <div style="margin-left:-0.8rem" class="text-primary">
-            <q-toggle v-model="apsf" size="md" disable :color="apsf ? 'green' : 'grey'"
+            <q-toggle v-model="apsf" size="md" :color="apsf ? 'green' : 'grey'"
               :label="(!apsf ? 'Ne pas accepter' : 'Accepter') + ' le partage de secrets avec cet avatar'"/>
           </div>
 
@@ -146,9 +146,8 @@ export default ({
       this.fermer()
     },
     async refuser () {
-      const arg = { ard: this.texte, pph: this.pph }
       this.razps()
-      await new RefusParrainage().run(this.parrain, arg)
+      await new RefusParrainage().run(this.parrain, this.texte)
       this.fermer()
     }
   },
