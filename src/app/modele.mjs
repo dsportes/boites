@@ -4,7 +4,7 @@ import { openIDB, closeIDB, putPj, getPjdata } from './db.mjs'
 import { openWS, closeWS } from './ws.mjs'
 import {
   store, appexc, serial, deserial, dlvDepassee, NomAvatar, gzip, ungzip, dhstring,
-  getJourJ, cfg, ungzipT, normpath, getpj, nomEd, titreEd, post
+  getJourJ, cfg, ungzipT, normpath, getpj, nomEd, titreEd, post, mcsToU8, u8ToMcs
 } from './util.mjs'
 import { remplacePage } from './page.mjs'
 import { SIZEAV, SIZEGR, EXPS, Compteurs } from './api.mjs'
@@ -950,8 +950,14 @@ export class Compta {
 
 /** Ardoise *********************************
 - `id` : du compte.
-- `dh` : date-heure de dernière mise à jour.
-- `data`: contenu sérialisé _crypté soft_ de l'ardoise. Un array d'échanges
+- `v` : date-heure de dernière mise à jour.
+- `dhl` : date-heure de dernière lecture par le titulaire
+- `mcp` : mots clés du parrain - String de la forme `245/232/114/`
+- `mcc` : mots clés du comptable
+- `data`: contenu sérialisé _crypté soft_ de l'ardoise. Array des échanges :
+  - `dh` : date-heure d'écriture de l'échange
+  - `aut`: auteur : 0:titulaire du compte, 1:parrain du compte, 2:comptable
+  - `texte`: texte
 - `vsh`:
 */
 
@@ -977,6 +983,9 @@ export class Ardoise {
     this.vsh = row.vsh || 0
     this.id = row.id
     this.v = row.v
+    this.dhl = row.dhl
+    this.mcp = mcsToU8(row.mcp)
+    this.mcc = mcsToU8(row.mcc)
     this.data = row.data ? deserial(await crypt.decryptersoft(row.data)) : []
     return this
   }
@@ -984,6 +993,9 @@ export class Ardoise {
   nouveau (id) {
     this.id = id
     this.v = new Date().getTime()
+    this.dhl = this.v
+    this.mcp = null
+    this.mcc = null
     this.data = null
     this.vsh = 0
   }
@@ -991,6 +1003,8 @@ export class Ardoise {
   async toRow () {
     const r = { ...this }
     r.data = this.data.length ? await crypt.cryptersoft(serial(this.data)) : null
+    r.mcp = u8ToMcs(this.mcp)
+    r.mcc = u8ToMcs(this.mcc)
     return schemas.serialize('rowardoise', r)
   }
 
