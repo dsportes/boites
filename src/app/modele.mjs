@@ -950,9 +950,10 @@ export class Compta {
 
 /** Ardoise *********************************
 - `id` : du compte.
-- `v` : date-heure de dernière mise à jour.
+- `v` :
+- `dhe` : date-heure de dernière mise à jour.
 - `dhl` : date-heure de dernière lecture par le titulaire
-- `mcp` : mots clés du parrain - String de la forme `245/232/114/`
+- `mcp` : mots clés du parrain - String de la forme `/245/232/114/`
 - `mcc` : mots clés du comptable
 - `data`: contenu sérialisé _crypté soft_ de l'ardoise. Array des échanges :
   - `dh` : date-heure d'écriture de l'échange
@@ -963,7 +964,7 @@ export class Compta {
 
 schemas.forSchema({
   name: 'idbArdoise',
-  cols: ['id', 'dh', 'data', 'vsh']
+  cols: ['id', 'v', 'dhe', 'dhl', 'mcp', 'mcc', 'data', 'vsh']
 })
 
 export class Ardoise {
@@ -983,6 +984,7 @@ export class Ardoise {
     this.vsh = row.vsh || 0
     this.id = row.id
     this.v = row.v
+    this.dhe = row.dhe
     this.dhl = row.dhl
     this.mcp = mcsToU8(row.mcp)
     this.mcc = mcsToU8(row.mcc)
@@ -993,6 +995,7 @@ export class Ardoise {
   nouveau (id) {
     this.id = id
     this.v = new Date().getTime()
+    this.dhe = this.v
     this.dhl = this.v
     this.mcp = null
     this.mcc = null

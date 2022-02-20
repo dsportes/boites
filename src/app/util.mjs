@@ -183,13 +183,15 @@ export function dlvDepassee (dlv) { return dlv !== 0 && dlv < jourJ }
 // Mots clés en string ('245/232/21' en Uint8Array)
 export function mcsToU8 (s) {
   const a = []
-  const x = s ? s.split('/') : []
-  x.forEach(n => a.push(parseInt(n)))
+  if (s) {
+    const x = s.substring(1, s.length - 1).split('/')
+    x.forEach(n => a.push(parseInt(n)))
+  }
   return new Uint8Array(a)
 }
 
 export function u8ToMcs (u8) {
-  return u8 && u8.length ? u8.join('/') : null
+  return u8 && u8.length ? '/' + u8.join('/') + '/' : null
 }
 
 export async function readFile (file, bin) {
