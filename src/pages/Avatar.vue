@@ -27,8 +27,8 @@
         </q-item-section>
       </template>
       <q-btn class="full-width maauto q-py-lg" flat dense color="primary" icon="add" label="Nouveau parrainage" @click="nvpar = true"></q-btn>
-      <div v-for="p in state.parrains" :key="p.pph" class="row justify-start">
-        <q-icon class="col-auto" size="sm" color="warning" :name="['hourglass_empty','thumb_up','thumb_down'][p.st]"/>
+      <div v-for="p in state.parrains" :key="p.pph" class="row justify-start cursor-pointer" @click="selecpar(p)">
+        <q-icon class="col-auto" size="sm" color="warning" :name="['hourglass_empty','thumb_down','thumb_up','thumb_up'][p.st]"/>
         <div class="col-3 q-pr-xs">{{p.data.nomf}}</div>
         <div class="col-3 q-px-xs">{{p.ph}}</div>
         <div class="col-4 q-pr-xs">{{p.ard}}</div>
@@ -38,6 +38,10 @@
     </q-expansion-item>
 
   </div>
+
+  <q-dialog v-model="detailpar" persistent class="moyennelargeur">
+    <InfoParrainage :p="parcour" :close="fermerinfo" />
+  </q-dialog>
 
   <q-dialog v-model="nvpar" persistent class="moyennelargeur">
     <NouveauParrainage :close="fermerParrain" />
@@ -54,6 +58,7 @@ import { Motscles, getJourJ } from '../app/util.mjs'
 import MotsCles from '../components/MotsCles.vue'
 import ApercuAvatar from '../components/ApercuAvatar.vue'
 import NouveauParrainage from '../components/NouveauParrainage.vue'
+import InfoParrainage from '../components/InfoParrainage.vue'
 import { CvAvatar } from '../app/operations.mjs'
 import TabSecrets from '../components/TabSecrets.vue'
 import TabContacts from '../components/TabContacts.vue'
@@ -62,19 +67,22 @@ import { data } from '../app/modele.mjs'
 export default ({
   name: 'Avatar',
 
-  components: { ApercuAvatar, MotsCles, TabSecrets, NouveauParrainage, TabContacts },
+  components: { ApercuAvatar, MotsCles, TabSecrets, NouveauParrainage, TabContacts, InfoParrainage },
 
   computed: {
   },
 
   data () {
     return {
-      nvpar: false
+      nvpar: false,
+      detailpar: false,
+      parcour: null
     }
   },
 
   methods: {
-
+    fermerinfo () { this.detailpar = false },
+    selecpar (p) { this.parcour = p; this.detailpar = true },
     fermerParrain () { this.nvpar = false },
 
     async validercv (resultat) {

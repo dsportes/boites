@@ -1616,8 +1616,9 @@ export class Membre {
 - `dlv` : la date limite de validité permettant de purger les parrainages (quels qu'en soient les statuts).
 - `st` : < 0: supprimé,
   - 0: en attente de décision de F
-  - 1 : accepté
-  - 2 : refusé
+  - 1 : refusé
+  - 2 : accepté avec partage
+  - 3 : accepté sans partage
 - `datak` : cryptée par la clé K du parrain, **phrase de parrainage et clé X** (PBKFD de la phrase). La clé X figure afin de ne pas avoir à recalculer un PBKFD en session du parrain pour qu'il puisse afficher `datax`.
 - `datax` : données de l'invitation cryptées par le PBKFD de la phrase de parrainage.
   - `nomp, rndp, icp` : nom complet et indice de l'avatar P.
@@ -1638,7 +1639,7 @@ export class Membre {
 
 schemas.forSchema({
   name: 'idbParrain',
-  cols: ['pph', 'id', 'v', 'ic', 'st', 'dlv', 'q1', 'q2', 'qm1', 'qm2', 'ph', 'cx', 'data', 'datak2', 'ard', 'dh', 'vsh']
+  cols: ['pph', 'id', 'v', 'dlv', 'st', 'ph', 'cx', 'data', 'data2k', 'ard', 'dh', 'vsh']
 })
 
 export class Parrain {
@@ -1646,7 +1647,7 @@ export class Parrain {
 
   get sid () { return crypt.idToSid(this.pph) }
 
-  get sid2 () { return crypt.idToSid(this.id) }
+  get sid2 () { return null }
 
   get pk () { return this.sid }
 
@@ -1668,10 +1669,6 @@ export class Parrain {
     this.v = row.v
     if (!this.suppr) {
       this.dlv = row.dlv
-      this.q1 = row.q1
-      this.q2 = row.q2
-      this.qm1 = row.qm1
-      this.qm2 = row.qm2
       if (!clex) { // data.clek null à la création d'un compte parrainé !
         const x = deserial(await crypt.decrypter(data.clek, row.datak))
         this.ph = x[0]

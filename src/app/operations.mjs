@@ -1166,6 +1166,30 @@ export class NouveauParrainage extends OperationUI {
 }
 
 /******************************************************************
+Parrainage : args de m1/supprParrainage
+args : sessionId, pph, dlv: 0 (suppr) 999 (prolongation)
+Retour : dh
+*/
+
+export class SupprParrainage extends OperationUI {
+  constructor () {
+    super('Suppression / prolongation d\'un parrainage', OUI, SELONMODE)
+  }
+
+  excAffichages () { return [this.excAffichage1, this.excAffichage2] }
+
+  async run (arg) {
+    try {
+      const args = { sessionId: data.sessionId, pph: arg.pph, dlv: arg.dlv }
+      const ret = await post(this, 'm1', 'supprParrainage', args)
+      if (data.dh < ret.dh) data.dh = ret.dh
+      this.finOK()
+    } catch (e) {
+      await this.finKO(e)
+    }
+  }
+}
+/******************************************************************
  * Acceptation / refus d'un parrainage
  * - sessionId
  * - ok : true si acceptation
