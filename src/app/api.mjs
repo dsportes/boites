@@ -386,7 +386,7 @@ export class DateJour {
 
   get Date () { return new Date((j0 + this.nbj) * 86400000) }
 
-  get dateSuppr () { return - (this.nbj + nbjSuppr) }
+  get dateSuppr () { return -(this.nbj + nbjSuppr) }
 }
 
 export const j99 = new DateJour(new Date('2099-12-31T23:59:59')).nbj // 29220 = 365 * 80 + 20 (années bisextiles)
