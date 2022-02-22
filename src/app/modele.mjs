@@ -1297,12 +1297,12 @@ schemas.forSchema({
     - 0 : n'accepte pas le partage de secrets.
     - 1 : accepte le partage de secrets.
     - 2 : présumé disparu
-- `q1 q2 qm1 qm2` : balance des quotas donnés / reçus par l'avatar A à l'avatar B.
 - `ardc` : **ardoise** partagée entre A et B cryptée par la clé `cc` associée au contact _fort_ avec un avatar B. Couple `[dh, texte]`.
 - `datak` : information cryptée par la clé K de A.
   - `nom rnd` : nom complet du contact (B).
   - `cc` : 32 bytes aléatoires donnant la clé `cc` d'un contact _plus_ avec B (en attente ou accepté).
   - `icb` : indice de A dans les contacts de B
+  - `idcf` : si ce contact est un avatar d'un compte filleul, id du compte filleul.
 - `datap` : mêmes données que `datak` mais cryptées par la clé publique de A.
 - `mc` : mots clés à propos du contact.
 - `infok` : commentaire à propos du contact crypté par la clé K du membre.
