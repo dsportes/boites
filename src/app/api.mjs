@@ -109,7 +109,7 @@ schemas.forSchema({
 
 schemas.forSchema({
   name: 'rowcontact',
-  cols: ['id', 'ic', 'v', 'st', 'ardc', 'datap', 'datak', 'mc', 'infok', 'vsh']
+  cols: ['id', 'ic', 'v', 'st', 'nccc', 'ardc', 'datap', 'datak', 'mc', 'infok', 'vsh']
 })
 
 schemas.forSchema({

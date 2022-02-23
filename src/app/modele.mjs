@@ -1286,17 +1286,19 @@ export class Cv {
 
 schemas.forSchema({
   name: 'idbContact',
-  cols: ['id', 'ic', 'v', 'st', 'dlv', 'q1', 'q2', 'qm1', 'qm2', 'ard', 'icb', 'data', 'mc', 'info', 'ard', 'dh', 'vsh']
+  cols: ['id', 'ic', 'v', 'st', 'ncc', 'data', 'mc', 'info', 'ard', 'dh', 'vsh']
 })
 /*
 - `id` : id de l'avatar A
 - `ic` : indice de contact de B pour A.
 - `v` :
-- `st` : statut entier de 2 chiffres, `x y` : **les valeurs < 0 indiquent un row supprimé (les champs après sont null)**. `xy` dans le contact de A est `yx` dans le contact de B.
-  - `x` :
+- `st` : statut entier de 2 chiffres, `xy` : **les valeurs < 0 indiquent un row supprimé (les champs après sont null)**. `xy` dans le contact de A est `yx` dans le contact de B.
+  - `x` : x c'est LE COMPTE, y c'est l'autre (le contact)
     - 0 : n'accepte pas le partage de secrets.
     - 1 : accepte le partage de secrets.
     - 2 : présumé disparu
+- `nccc` : numéro de COMPTE du contact **s'il accepte le partage de secrets**
+ (y vaut 1, redondance assumée), crypté par la clé `cc`.
 - `ardc` : **ardoise** partagée entre A et B cryptée par la clé `cc` associée au contact _fort_ avec un avatar B. Couple `[dh, texte]`.
 - `datak` : information cryptée par la clé K de A.
   - `nom rnd` : nom complet du contact (B).
@@ -1344,7 +1346,7 @@ export class Contact {
 
   get sty () { return this.st > 0 ? this.st % 10 : 0 }
 
-  get accepteNouveauSecret () { return this.st !== 0 }
+  get accepteNouveauSecret () { return this.st !== 11 }
 
   get dhed () { return dhstring(this.dh) }
 
@@ -1372,6 +1374,7 @@ export class Contact {
         this.data = deserial(await crypt.decrypter(data.clek, row.datak))
       }
       this.majCc()
+      this.ncc = row.nccc ? await crypt.decrypter(this.data.cc, row.nccc) : null
       const [d, t] = row.ardc ? deserial(await crypt.decrypter(this.data.cc, row.ardc)) : [0, '']
       this.ard = t
       this.dh = d
@@ -1381,22 +1384,15 @@ export class Contact {
     return this
   }
 
-  toRowP (datak, ardc) { // datak est fourni crypté pour un parrainage (contact du parrain par le filleul)
+  async toRow (datak, cc) {
+    // Pour acceptation d'un parrainage, datak et cc fournis (this.data n'existe pas)
+    if (!cc) this.majCc()
     const r = { ...this }
-    r.datak = datak
-    r.datap = null
-    r.infok = null
-    r.ardc = ardc
-    return schemas.serialize('rowcontact', r)
-  }
-
-  async toRow () {
-    this.majCc()
-    const r = { ...this }
-    r.datak = await crypt.crypter(data.clek, serial(r.data))
+    r.nccc = this.ncc ? await crypt.crypter(cc || this.data.cc, this.ncc) : null
+    r.datak = datak || await crypt.crypter(data.clek, serial(r.data))
     r.datap = null
     r.infok = r.info ? await crypt.crypter(data.clek, r.info) : null
-    r.ardc = r.ard ? await crypt.crypter(this.data.cc, serial([r.dh, r.ard])) : null
+    r.ardc = r.ard ? await crypt.crypter(cc || this.data.cc, serial([r.dh, r.ard])) : null
     return schemas.serialize('rowcontact', r)
   }
 
@@ -1621,6 +1617,8 @@ export class Membre {
   - 3 : accepté sans partage
 - `datak` : cryptée par la clé K du parrain, **phrase de parrainage et clé X** (PBKFD de la phrase). La clé X figure afin de ne pas avoir à recalculer un PBKFD en session du parrain pour qu'il puisse afficher `datax`.
 - `datax` : données de l'invitation cryptées par le PBKFD de la phrase de parrainage.
+  - `idcp` : id du compte parrain.
+  - `idcf` : id du compte filleul.
   - `nomp, rndp, icp` : nom complet et indice de l'avatar P.
   - `nomf, rndf, icf` : nom complet et indice du filleul F (donné par P).
   - `cc` : clé `cc` générée par P pour le couple P / F.
@@ -1630,7 +1628,8 @@ export class Membre {
 - `data2k` : c'est le `datak` du futur contact créé en cas d'acceptation.
   - `nom rnd` : nom complet du contact (B).
   - `cc` : 32 bytes aléatoires donnant la clé `cc` d'un contact avec B (en attente ou accepté).
-  - `icb` : indice de A dans les contacts de B
+  - `icb` : indice de A dans les contacts de B.
+  - `idcf` : id du compte filleul.
 - `ardc` : ardoise (couple `[dh, texte]` cryptée par la clé `cc`).
   - du parrain, mot de bienvenue écrit par le parrain (cryptée par la clé `cc`).
   - du filleul, explication du refus par le filleul (cryptée par la clé `cc`) quand il décline l'offre. Quand il accepte, ceci est inscrit sur l'ardoise de leur contact afin de ne pas disparaître.

@@ -1140,7 +1140,20 @@ export class NouveauParrainage extends OperationUI {
       const icf = crypt.rnd4()
       const idcf = crypt.rnd6()
       const x = serial([new Date().getTime(), arg.mot])
-      const datax = { idcp: compte.id, idcf, nomp: nap.nom, rndp: nap.rnd, icp, nomf: naf.nom, rndf: naf.rnd, icf, cc, aps: arg.aps, f: arg.forfaits, r: arg.ressources }
+      const datax = {
+        idcp: compte.id,
+        idcf,
+        nomp: nap.nom,
+        rndp: nap.rnd,
+        icp,
+        nomf: naf.nom,
+        rndf: naf.rnd,
+        icf,
+        cc,
+        aps: arg.aps,
+        f: arg.forfaits,
+        r: arg.ressources
+      }
       const data2 = { nom: naf.nom, rnd: naf.rnd, ic: icf, cc, idcf }
       const rowParrain = {
         pph: arg.pph,
@@ -1166,7 +1179,7 @@ export class NouveauParrainage extends OperationUI {
 }
 
 /******************************************************************
-Parrainage : args de m1/supprParrainage
+Suppression / prolongation d'un parrainage : args de m1/supprParrainage
 args : sessionId, pph, dlv: 0 (suppr) 999 (prolongation)
 Retour : dh
 */
@@ -1190,21 +1203,18 @@ export class SupprParrainage extends OperationUI {
   }
 }
 /******************************************************************
- * Acceptation / refus d'un parrainage
+ * Acceptation d'un parrainage
  * - sessionId
- * - ok : true si acceptation
  * - pph : hash de la phrase de parrainage
  * - idp : de l'avatar parrain
  * - icp : ic du contact du filleul chez le parrain
+ * - idcp : id du compte parrain pour maj de son row compta
  * - ardc : mot du filleul crypté par la clé du couple
- * Si acceptation
  * - idf : id du filleul (avatar)
  * - icbc : indice de P comme contact chez F crypté par leur clé cc
  * - clePubAv, clePubC : clés publiques de l'avatar et du compte
- * - rowCompte, rowCompta, rowAvatar, rowPrefs : v attribuées par le serveur
- * - rowContact (du filleul) : st, dlv par le serveur
- *  Pour maj de sr des rows contact du parrain / filleul :
- * - aps : booléen - true si le filleul accepte le partage de secret (false si limitation à l'ardoise)
+ * - rowCompte, rowCompta, rowAvatar, rowPrefs, rowContactF ("MOI" le filleul), rowContactP (du parrain)
+ *  : v attribuées par le serveur
  * Retour : sessionId, dh
  */
 
@@ -1243,6 +1253,7 @@ export class AcceptationParrainage extends OperationUI {
   */
   async run (parrain, arg) {
     try {
+      // LE COMPTE EST CELUI DU FILLEUL
       data.ps = arg.ps
       await data.connexion(true) // On force A NE PAS OUVRIR IDB (compte pas encore connu)
 
@@ -1269,24 +1280,28 @@ export class AcceptationParrainage extends OperationUI {
       const rowCompta = await compta.toRow()
 
       const x = parrain.data.aps ? 1 : 0
-      const y = arg.aps ? 1 : 0
+      const y = arg.aps ? 1 : 0 // y c'est MOI
       const dh = new Date().getTime()
-      const ardc = await crypt.crypter(parrain.data.cc, serial([dh, arg.ard]))
 
-      const p = new Contact()
+      const p = new Contact() // Contact dans LE COMPTE PARRAIN
       p.id = parrain.id
       p.ic = parrain.data.icp
       p.v = 0
       p.st = (10 * x) + y
+      p.ncc = y ? parrain.data.idcf : null // si j'accepte le partage, le parrain a mon numéro de compte
+      p.ard = arg.ard
+      p.dh = dh
       p.mc = new Uint8Array([MC.NOUVEAU, (estpar ? MC.INTRODUIT : MC.FILLEUL)])
+      p.info = null
       p.vsh = 0
-      const rowContactP = p.toRowP(parrain.data2k, ardc)
+      const rowContactP = await p.toRow(parrain.data2k, parrain.data.cc)
 
-      const f = new Contact()
+      const f = new Contact() // Contact dans "MON" COMPTE
       f.id = parrain.naf.id
       f.ic = parrain.data.icf
       f.v = 0
-      f.st = (10 * y) + x
+      f.st = (10 * y) + x // si le parrain accepte le partage, J'AI son numéro de compte
+      p.ncc = x ? parrain.data.idcp : null
       f.ard = arg.ard
       f.dh = dh
       f.data = { nom: parrain.nap.nom, rnd: parrain.nap.rnd, ic: parrain.data.icp, cc: parrain.data.cc }
@@ -1300,7 +1315,7 @@ export class AcceptationParrainage extends OperationUI {
         pph: arg.pph,
         idf: parrain.naf.id,
         idp: parrain.id,
-        idcp: parrain.data.idcp, // id compte parrain
+        idcp: parrain.data.idcp, // id compte parrain : pour maj de son row compta
         forfaits: parrain.data.f, // A déduire des ressources du row compta du parrain
         clePubAv: kpav.publicKey,
         clePubC: kpc.publicKey,
@@ -1352,6 +1367,51 @@ export class RefusParrainage extends OperationUI {
       }
       await post(this, 'm1', 'refusParrainage', args)
       data.deconnexion()
+    } catch (e) {
+      await this.finKO(e)
+    }
+  }
+}
+
+/*********************************************************
+ * MAJ Contact
+ */
+
+export class MajContact extends OperationUI {
+  constructor () {
+    super('Refus de parrainage d\'un nouveau compte', OUI, SELONMODE)
+  }
+
+  excAffichages () { return [this.excAffichage1, this.excAffichage2] }
+
+  // excActions(), défaut de Operation
+
+  /* arg :
+  - aps : accepte le partage de secret
+  - ard : ardoise
+  - mc : mots clés
+  - info
+  */
+  async run (contact, arg) {
+    try {
+      const compte = data.getCompte()
+      const nccc = arg.aps ? await crypt.crypter(contact.data.cc, '' + compte.id) : null
+      const ardc = arg.ard !== contact.ard
+        ? await crypt.crypter(contact.data.cc, serial([new Date().getTime(), arg.ard]))
+        : null
+      const args = {
+        sessionId: data.sessionId,
+        id: contact.id,
+        ic: contact.ic,
+        idb: contact.id2,
+        icb: contact.ic2,
+        nccc,
+        ardc,
+        infok: arg.info === contact.info ? null : await crypt.crypter(data.clek, arg.info),
+        mc: arg.mc
+      }
+      await post(this, 'm1', 'majContact', args)
+      this.finOK()
     } catch (e) {
       await this.finKO(e)
     }
