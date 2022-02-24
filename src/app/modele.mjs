@@ -1374,12 +1374,12 @@ export class Contact {
         this.data = deserial(await crypt.decrypter(data.clek, row.datak))
       }
       this.majCc()
-      this.ncc = row.nccc ? await crypt.decrypter(this.data.cc, row.nccc) : null
+      this.ncc = row.nccc ? parseInt(await crypt.decrypterStr(this.data.cc, row.nccc)) : null
       const [d, t] = row.ardc ? deserial(await crypt.decrypter(this.data.cc, row.ardc)) : [0, '']
       this.ard = t
       this.dh = d
-      this.mc = row.mc || null
-      this.info = row.infok ? await crypt.decrypter(data.clek, row.infok) : ''
+      this.mc = row.mc || new Uint8Array([])
+      this.info = row.infok ? await crypt.decrypterStr(data.clek, row.infok) : ''
     }
     return this
   }
@@ -1388,7 +1388,7 @@ export class Contact {
     // Pour acceptation d'un parrainage, datak et cc fournis (this.data n'existe pas)
     if (!cc) this.majCc()
     const r = { ...this }
-    r.nccc = this.ncc ? await crypt.crypter(cc || this.data.cc, this.ncc) : null
+    r.nccc = this.ncc ? await crypt.crypter(cc || this.data.cc, '' + this.ncc) : null
     r.datak = datak || await crypt.crypter(data.clek, serial(r.data))
     r.datap = null
     r.infok = r.info ? await crypt.crypter(data.clek, r.info) : null

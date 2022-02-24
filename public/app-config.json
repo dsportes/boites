@@ -18,5 +18,17 @@
     "limitesjour": { "secrettemp": 60, "parrainage" : 14 },
     "lgnom": 20,
     "lgtitre": 50,
-    "motscles": { "200": "Statut/Nouveau", "201": "Statut/A lire", "202": "Statut/Lu", "203": "Visibilité/Favori", "204": "Important", "205": "Visibilité/Caché" }
+    "motscles": { 
+      "255": "Statut/Nouveau",
+      "254": "Visibilité/Liste noire",
+      "253": "Compte/Parrain",
+      "252": "Compte/Filleul",
+      "251": "Compte/Introducteur",
+      "250": "Compte/Introduit",
+      "249": "Visibilité/Favori",
+      "248": "Visibilité/Important",
+      "247": "Visibilité/Obsolète",
+      "246": "Visibilité/A lire",
+      "245": "Visibilité/A traiter"
+    }
 }

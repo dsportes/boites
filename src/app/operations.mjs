@@ -1,4 +1,4 @@
-import { NomAvatar, store, post, affichermessage, cfg, sleep, affichererreur, appexc, idToIc, difference, getpj, getJourJ, serial, edvol } from './util.mjs'
+import { NomAvatar, store, post, affichermessage, cfg, sleep, affichererreur, appexc, idToIc, difference, getpj, getJourJ, serial, edvol, equ8 } from './util.mjs'
 import { remplacePage } from './page.mjs'
 import {
   deleteIDB, idbSidCompte, commitRows, getCompte, getCompta, getArdoise, getPrefs, getAvatars, getContacts, getCvs,
@@ -88,8 +88,8 @@ export class Operation {
 
   messageOK () { affichermessage('Succès de l\'opération "' + this.nom + '"') }
 
-  messageKO () {
-    if (data.statut === 0) {
+  messageKO (err) {
+    if (err || data.statut === 0) {
       affichermessage('Échec de l\'opération "' + this.nom + '"', true)
     } else {
       affichermessage('Succès partiel de l\'opération "' + this.nom + '"', true)
@@ -115,7 +115,7 @@ export class Operation {
     if (this instanceof OperationUI) {
       data.opUI = null
       this.majopencours(null)
-      this.messageKO()
+      this.messageKO(true)
     } else {
       data.opWS = null
     }
@@ -1379,10 +1379,10 @@ export class RefusParrainage extends OperationUI {
 
 export class MajContact extends OperationUI {
   constructor () {
-    super('Refus de parrainage d\'un nouveau compte', OUI, SELONMODE)
+    super('Mise à jour d\'un contact', OUI, SELONMODE)
   }
 
-  excAffichages () { return [this.excAffichage1, this.excAffichage2] }
+  excAffichages () { return [this.excAffichage1, this.excAffichage2, this.excAffichage1f] }
 
   // excActions(), défaut de Operation
 
@@ -1408,7 +1408,7 @@ export class MajContact extends OperationUI {
         nccc,
         ardc,
         infok: arg.info === contact.info ? null : await crypt.crypter(data.clek, arg.info),
-        mc: arg.mc
+        mc: equ8(arg.mc, contact.mc) ? null : arg.mc
       }
       await post(this, 'm1', 'majContact', args)
       this.finOK()
