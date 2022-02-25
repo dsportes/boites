@@ -68,6 +68,18 @@ export class Operation {
     }
   }
 
+  excAffichage1c () {
+    const options = [
+      { code: 'c', label: 'Continuer malgré la dégradation du mode', color: 'warning' },
+      { code: 'd', label: 'Se déconnecter et retourner au login', color: 'primary' },
+      { code: 'r', label: 'Essayer de se reconnecter', color: 'primary' }
+    ]
+    if (this.appexc.idb || this.appexc.net || this.appexc === EXBRK) {
+      const conseil = data.degraderMode()
+      return [options, conseil]
+    }
+  }
+
   excAffichage2 () {
     const options = [
       { code: 'c', label: 'Corriger les données saisies', color: 'primary' },
@@ -78,10 +90,27 @@ export class Operation {
     }
   }
 
+  excAffichage2c () {
+    const options = [
+      { code: 'x', label: 'Corriger la phrase secrète saisie', color: 'primary' },
+      { code: 'd', label: 'Retourner au login', color: 'primary' }
+    ]
+    if (this.appexc.code === X_SRV) {
+      return [options, null]
+    }
+  }
+
   excAffichage1f () {
     const options = [
       { code: 'd', label: 'Retourner au login', color: 'primary' },
       { code: 'r', label: 'Essayer de  reconnecter le compte', color: 'primary' }
+    ]
+    return [options, null]
+  }
+
+  excAffichage3 () {
+    const options = [
+      { code: 'd', label: 'Retourner au login', color: 'primary' }
     ]
     return [options, null]
   }
@@ -416,36 +445,6 @@ export class OperationUI extends Operation {
     }, 100)
   }
 
-  excAffichage1c () {
-    const options = [
-      { code: 'c', label: 'Continuer malgré la dégradation du mode', color: 'warning' },
-      { code: 'd', label: 'Se déconnecter et retourner au login', color: 'primary' },
-      { code: 'r', label: 'Essayer de se reconnecter', color: 'primary' }
-    ]
-    if (this.appexc.idb || this.appexc.net || this.appexc === EXBRK) {
-      const conseil = data.degraderMode()
-      return [options, conseil]
-    }
-  }
-
-  excAffichage2c () {
-    const options = [
-      { code: 'x', label: 'Corriger la phrase secrète saisie', color: 'primary' },
-      { code: 'd', label: 'Retourner au login', color: 'primary' }
-    ]
-    if (this.appexc.code === X_SRV) {
-      return [options, null]
-    }
-  }
-
-  excAffichage1fc () {
-    const options = [
-      { code: 'd', label: 'Retourner au login', color: 'primary' },
-      { code: 'r', label: 'Essayer de  reconnecter le compte', color: 'primary' }
-    ]
-    return [options, null]
-  }
-
   /* Chargement de la totalité de la base en mémoire : **************************************/
   /*
   - détermine les avatars et groupes référencés dans les rows de Idb
@@ -670,14 +669,7 @@ export class CreationCompte extends OperationUI {
     }
   }
 
-  excAffichage1f () {
-    const options = [
-      { code: 'd', label: 'Retourner au login', color: 'primary' }
-    ]
-    return [options, null]
-  }
-
-  excAffichages () { return [this.excAffichage1, this.excAffichage2, this.excAffichage1f] }
+  excAffichages () { return [this.excAffichage1, this.excAffichage2, this.excAffichage3] }
 
   excActions () { return { d: deconnexion, c: this.excActionx, default: null } }
 
@@ -735,11 +727,9 @@ export class ConnexionCompteAvion extends OperationUI {
     this.opsync = true
   }
 
-  excAffichages () { return [this.excAffichage1c, this.excAffichage2c, this.excAffichage1fc] }
+  excAffichages () { return [this.excAffichage1c, this.excAffichage2c, this.excAffichage1f] }
 
-  excActions () {
-    return { d: deconnexion, x: this.excActionx, r: reconnexion, default: null }
-  }
+  excActions () { return { d: deconnexion, x: this.excActionx, r: reconnexion, default: null } }
 
   async run (ps) {
     try {
@@ -780,11 +770,9 @@ export class ConnexionCompte extends OperationUI {
     this.opsync = true
   }
 
-  excAffichages () { return [this.excAffichage1c, this.excAffichage2c, this.excAffichage1fc] }
+  excAffichages () { return [this.excAffichage1c, this.excAffichage2c, this.excAffichage1f] }
 
-  excActions () {
-    return { d: deconnexion, x: this.excActionx, r: reconnexion, default: null }
-  }
+  excActions () { return { d: deconnexion, x: this.excActionx, r: reconnexion, default: null } }
 
   async lectureCompte () {
     // obtention du compte depuis le serveur
@@ -958,7 +946,7 @@ export class PrefCompte extends OperationUI {
     super('Mise à jour d\'une préférence du compte', OUI, SELONMODE)
   }
 
-  excAffichages () { return [this.excAffichage1, this.excAffichage2] }
+  excAffichages () { return [this.excAffichage1, this.excAffichage2, this.excAffichage1f] }
 
   // excActions(), défaut de Operation
 
@@ -983,7 +971,7 @@ export class CvAvatar extends OperationUI {
     super('Mise à jour de la carte de visite d\'un avatar', OUI, SELONMODE)
   }
 
-  excAffichages () { return [this.excAffichage1, this.excAffichage2] }
+  excAffichages () { return [this.excAffichage1, this.excAffichage2, this.excAffichage1f] }
 
   // excActions(), défaut de Operation
 
@@ -1007,7 +995,7 @@ export class NouveauSecret extends OperationUI {
     super('Création d\'un nouveau secret', OUI, SELONMODE)
   }
 
-  excAffichages () { return [this.excAffichage1, this.excAffichage2] }
+  excAffichages () { return [this.excAffichage1, this.excAffichage2, this.excAffichage1f] }
 
   // excActions(), défaut de Operation
 
@@ -1032,7 +1020,7 @@ export class Maj1Secret extends OperationUI {
     super('Mise à jour d\'un secret', OUI, SELONMODE)
   }
 
-  excAffichages () { return [this.excAffichage1, this.excAffichage2] }
+  excAffichages () { return [this.excAffichage1, this.excAffichage2, this.excAffichage1f] }
 
   // excActions(), défaut de Operation
 
@@ -1056,7 +1044,7 @@ export class PjSecret extends OperationUI {
     super('Mise à jour d\'une pièce jointe d\'un secret', OUI, SELONMODE)
   }
 
-  excAffichages () { return [this.excAffichage1, this.excAffichage2] }
+  excAffichages () { return [this.excAffichage1, this.excAffichage2, this.excAffichage1f] }
 
   // excActions(), défaut de Operation
 
@@ -1090,7 +1078,7 @@ export class NouveauParrainage extends OperationUI {
     super('Parrainage d\'un nouveau compte', OUI, SELONMODE)
   }
 
-  excAffichages () { return [this.excAffichage1, this.excAffichage2] }
+  excAffichages () { return [this.excAffichage1, this.excAffichage2, this.excAffichage1f] }
 
   // excActions(), défaut de Operation
 
@@ -1189,7 +1177,7 @@ export class SupprParrainage extends OperationUI {
     super('Suppression / prolongation d\'un parrainage', OUI, SELONMODE)
   }
 
-  excAffichages () { return [this.excAffichage1, this.excAffichage2] }
+  excAffichages () { return [this.excAffichage1, this.excAffichage2, this.excAffichage1f] }
 
   async run (arg) {
     try {
@@ -1234,14 +1222,7 @@ export class AcceptationParrainage extends OperationUI {
     }
   }
 
-  excAffichage1f () {
-    const options = [
-      { code: 'd', label: 'Retourner au login', color: 'primary' }
-    ]
-    return [options, null]
-  }
-
-  excAffichages () { return [this.excAffichage1, this.excAffichage2, this.excAffichage1f] }
+  excAffichages () { return [this.excAffichage1, this.excAffichage2, this.excAffichage3] }
 
   excActions () { return { d: deconnexion, c: this.excActionx, default: null } }
 
