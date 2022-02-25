@@ -68,7 +68,24 @@ export class Operation {
     }
   }
 
-  excAffichage1c () {
+  excAffichage2 () {
+    const options = [
+      { code: 'c', label: 'Corriger les données saisies', color: 'primary' },
+      { code: 'd', label: 'Se déconnecter, retourner au login', color: 'primary' }
+    ]
+    if (this.appexc.code === X_SRV) {
+      return [options, null]
+    }
+  }
+
+  excAffichage3 () {
+    const options = [
+      { code: 'd', label: 'Retourner au login', color: 'primary' }
+    ]
+    return [options, null]
+  }
+
+  excAffichage4 () {
     const options = [
       { code: 'c', label: 'Continuer malgré la dégradation du mode', color: 'warning' },
       { code: 'd', label: 'Se déconnecter et retourner au login', color: 'primary' },
@@ -80,17 +97,15 @@ export class Operation {
     }
   }
 
-  excAffichage2 () {
+  excAffichage5 () {
     const options = [
-      { code: 'c', label: 'Corriger les données saisies', color: 'primary' },
-      { code: 'd', label: 'Se déconnecter, retourner au login', color: 'primary' }
+      { code: 'd', label: 'Retourner au login', color: 'primary' },
+      { code: 'r', label: 'Essayer de  reconnecter le compte', color: 'primary' }
     ]
-    if (this.appexc.code === X_SRV) {
-      return [options, null]
-    }
+    return [options, null]
   }
 
-  excAffichage2c () {
+  excAffichage6 () {
     const options = [
       { code: 'x', label: 'Corriger la phrase secrète saisie', color: 'primary' },
       { code: 'd', label: 'Retourner au login', color: 'primary' }
@@ -100,19 +115,25 @@ export class Operation {
     }
   }
 
-  excAffichage1f () {
+  excAffichage7 () {
     const options = [
-      { code: 'd', label: 'Retourner au login', color: 'primary' },
-      { code: 'r', label: 'Essayer de  reconnecter le compte', color: 'primary' }
-    ]
-    return [options, null]
-  }
-
-  excAffichage3 () {
-    const options = [
+      { code: 'x', label: 'Corriger la phrase secrète saisie', color: 'primary' },
       { code: 'd', label: 'Retourner au login', color: 'primary' }
     ]
-    return [options, null]
+    if (this.appexc.code === F_BRO) {
+      return [options, null]
+    }
+  }
+
+  excActionc () {
+    remplacePage('Compte')
+  }
+
+  excActionx () {
+    deconnexion()
+    setTimeout(() => {
+      this.ouvrircreationcompte()
+    }, 100)
   }
 
   messageOK () { affichermessage('Succès de l\'opération "' + this.nom + '"') }
@@ -434,17 +455,6 @@ export class OperationUI extends Operation {
     this.majopencours(this)
   }
 
-  excActionc () {
-    remplacePage('Compte')
-  }
-
-  excActionx () {
-    deconnexion()
-    setTimeout(() => {
-      this.ouvrircreationcompte()
-    }, 100)
-  }
-
   /* Chargement de la totalité de la base en mémoire : **************************************/
   /*
   - détermine les avatars et groupes référencés dans les rows de Idb
@@ -619,7 +629,7 @@ export class OperationWS extends Operation {
     data.opWS = this
   }
 
-  excAffichages () { return [this.excAffichage1, this.excAffichage1f] }
+  excAffichages () { return [this.excAffichage1, this.excAffichage5] }
 
   excActions () { return { d: deconnexion, r: reconnexion, default: null } }
 }
@@ -644,6 +654,11 @@ export class ProcessQueue extends OperationWS {
   }
 }
 
+/*********************************************************************/
+/* Pour toutes opérations UI
+E_WS, '01-Session interrompue. Se déconnecter et tenter de se reconnecter'
+*/
+
 /* Création d'un compte comptable******************************************
 On poste :
 - les rows Compte, Compta, Prefs, v et dds à 0
@@ -652,21 +667,14 @@ On poste :
 Retour:
 - dh, sessionId
 - rowItems retournés : compte compta prefs avatar
+X_SRV, '02-Cette phrase secrète n\'est pas reconnue comme étant l\'une des comptables de l\'organisation')
+X_SRV, '03-Phrase secrète probablement déjà utilisée. Vérifier que le compte n\'existe pas déjà en essayant de s\'y connecter avec la phrase secrète'
+X_SRV, '04-Une phrase secrète semblable est déjà utilisée. Changer a minima la première ligne de la phrase secrète pour ce nouveau compte'
 */
 export class CreationCompte extends OperationUI {
   constructor () {
     super('Création d\'un compte de comptable', OUI, SELONMODE)
     this.opsync = true
-  }
-
-  excAffichage2 () {
-    const options = [
-      { code: 'c', label: 'Corriger les données saisies', color: 'primary' },
-      { code: 'd', label: 'Abandonner la création, retourner au login', color: 'primary' }
-    ]
-    if (this.appexc.code === X_SRV) {
-      return [options, null]
-    }
   }
 
   excAffichages () { return [this.excAffichage1, this.excAffichage2, this.excAffichage3] }
@@ -727,7 +735,7 @@ export class ConnexionCompteAvion extends OperationUI {
     this.opsync = true
   }
 
-  excAffichages () { return [this.excAffichage1c, this.excAffichage2c, this.excAffichage1f] }
+  excAffichages () { return [this.excAffichage4, this.excAffichage5, this.excAffichage7] }
 
   excActions () { return { d: deconnexion, x: this.excActionx, r: reconnexion, default: null } }
 
@@ -763,14 +771,19 @@ export class ConnexionCompteAvion extends OperationUI {
   }
 }
 
-/* Connexion à un compte par sa phrase secrète (synchronisé et incognito) **/
+/* Connexion à un compte par sa phrase secrète (synchronisé et incognito)
+X_SRV, '08-Compte non authentifié : aucun compte n\'est déclaré avec cette phrase secrète'
+A_SRV, '09-Données de préférence absentes'
+A_SRV, '10-Données de comptabilité absentes'
+A_SRV, '11-Données des échanges avec parrain / comptable absentes'
+**/
 export class ConnexionCompte extends OperationUI {
   constructor () {
     super('Connexion à un compte', OUI, SELONMODE)
     this.opsync = true
   }
 
-  excAffichages () { return [this.excAffichage1c, this.excAffichage2c, this.excAffichage1f] }
+  excAffichages () { return [this.excAffichage4, this.excAffichage5, this.excAffichage6] }
 
   excActions () { return { d: deconnexion, x: this.excActionx, r: reconnexion, default: null } }
 
@@ -940,15 +953,14 @@ export class ConnexionCompte extends OperationUI {
 
 /******************************************************
 Mise à jour d'une préférence d'un compte
+X_SRV, '06-Compte non trouvé. Ne devrait pas arriver (bug probable)'
 */
 export class PrefCompte extends OperationUI {
   constructor () {
     super('Mise à jour d\'une préférence du compte', OUI, SELONMODE)
   }
 
-  excAffichages () { return [this.excAffichage1, this.excAffichage2, this.excAffichage1f] }
-
-  // excActions(), défaut de Operation
+  excAffichages () { return [this.excAffichage1, this.excAffichage2, this.excAffichage5] }
 
   async run (code, datak) {
     try {
@@ -965,15 +977,14 @@ export class PrefCompte extends OperationUI {
 
 /******************************************************
 Mise à jour de la carte de visite d'un avatar
+A_SRV, '07-Avatar non trouvé'
 */
 export class CvAvatar extends OperationUI {
   constructor () {
     super('Mise à jour de la carte de visite d\'un avatar', OUI, SELONMODE)
   }
 
-  excAffichages () { return [this.excAffichage1, this.excAffichage2, this.excAffichage1f] }
-
-  // excActions(), défaut de Operation
+  excAffichages () { return [this.excAffichage1, this.excAffichage2, this.excAffichage5] }
 
   async run (id, phinfo) {
     try {
@@ -989,15 +1000,14 @@ export class CvAvatar extends OperationUI {
 
 /******************************************************
 Création d'un nouveau secret P
+X_SRV, '12-Forfait dépassé'
 */
 export class NouveauSecret extends OperationUI {
   constructor () {
     super('Création d\'un nouveau secret', OUI, SELONMODE)
   }
 
-  excAffichages () { return [this.excAffichage1, this.excAffichage2, this.excAffichage1f] }
-
-  // excActions(), défaut de Operation
+  excAffichages () { return [this.excAffichage1, this.excAffichage2, this.excAffichage5] }
 
   // arg = { ts, id, ns, ic, st, ora, v1, mcg, mc, im, txts, dups, refs, id2, ns2, ic2, dups2 }
   async run (arg) {
@@ -1014,15 +1024,15 @@ export class NouveauSecret extends OperationUI {
 
 /******************************************************
 Maj 1 d'un secret P : txt, mc, perm
+A_SRV, '13-Secret inexistant'
+X_SRV, '12-Forfait dépassé'
 */
 export class Maj1Secret extends OperationUI {
   constructor () {
     super('Mise à jour d\'un secret', OUI, SELONMODE)
   }
 
-  excAffichages () { return [this.excAffichage1, this.excAffichage2, this.excAffichage1f] }
-
-  // excActions(), défaut de Operation
+  excAffichages () { return [this.excAffichage1, this.excAffichage2, this.excAffichage5] }
 
   async run (arg) { // arg = ts, id, ns, v1, mc, im, mcg, txts, ora, temp, id2, ns2
     try {
@@ -1038,15 +1048,15 @@ export class Maj1Secret extends OperationUI {
 
 /******************************************************
 Pièce jointe d'un secret P : txt, mc, perm
+A_SRV, '13-Secret inexistant'
+X_SRV, '12-Forfait dépassé'
 */
 export class PjSecret extends OperationUI {
   constructor () {
     super('Mise à jour d\'une pièce jointe d\'un secret', OUI, SELONMODE)
   }
 
-  excAffichages () { return [this.excAffichage1, this.excAffichage2, this.excAffichage1f] }
-
-  // excActions(), défaut de Operation
+  excAffichages () { return [this.excAffichage1, this.excAffichage2, this.excAffichage5] }
 
   async run (arg) {
     /* { ts, id: s.id, ns: s.ns, cle, idc, buf, lg, id2, ns2}
@@ -1071,6 +1081,8 @@ Parrainage : args de m1/nouveauParrainage
   sessionId: data.sessionId,
   rowParrain: serial(rowParrain)
 Retour : dh
+X_SRV, '14-Cette phrase de parrainage est trop proche d\'une déjà enregistrée' + x
+
 */
 
 export class NouveauParrainage extends OperationUI {
@@ -1078,9 +1090,7 @@ export class NouveauParrainage extends OperationUI {
     super('Parrainage d\'un nouveau compte', OUI, SELONMODE)
   }
 
-  excAffichages () { return [this.excAffichage1, this.excAffichage2, this.excAffichage1f] }
-
-  // excActions(), défaut de Operation
+  excAffichages () { return [this.excAffichage1, this.excAffichage2, this.excAffichage5] }
 
   async run (arg) {
     /*
@@ -1170,6 +1180,8 @@ export class NouveauParrainage extends OperationUI {
 Suppression / prolongation d'un parrainage : args de m1/supprParrainage
 args : sessionId, pph, dlv: 0 (suppr) 999 (prolongation)
 Retour : dh
+X_SRV, '15-Phrase de parrainage inconnue'
+X_SRV, '16-Ce parrainage a déjà fait l\'objet ' + (p.st !== 1 ? 'd\'une acceptation.' : 'd\'un refus'
 */
 
 export class SupprParrainage extends OperationUI {
@@ -1177,7 +1189,7 @@ export class SupprParrainage extends OperationUI {
     super('Suppression / prolongation d\'un parrainage', OUI, SELONMODE)
   }
 
-  excAffichages () { return [this.excAffichage1, this.excAffichage2, this.excAffichage1f] }
+  excAffichages () { return [this.excAffichage1, this.excAffichage2, this.excAffichage5] }
 
   async run (arg) {
     try {
@@ -1204,6 +1216,12 @@ export class SupprParrainage extends OperationUI {
  * - rowCompte, rowCompta, rowAvatar, rowPrefs, rowContactF ("MOI" le filleul), rowContactP (du parrain)
  *  : v attribuées par le serveur
  * Retour : sessionId, dh
+A_SRV, '17-Compte parrain : données de comptabilité absentes'
+X_SRV, '18-Réserves de volume insuffisantes du parrain pour attribuer ces forfaits'
+X_SRV, '03-Phrase secrète probablement déjà utilisée. Vérifier que le compte n\'existe pas déjà en essayant de s\'y connecter avec la phrase secrète'
+X_SRV, '04-Une phrase secrète semblable est déjà utilisée. Changer a minima la première ligne de la phrase secrète pour ce nouveau compte'
+X_SRV, '15-Phrase de parrainage inconnue'
+X_SRV, '16-Ce parrainage a déjà fait l\'objet ' + (p.st !== 1 ? 'd\'une acceptation.' : 'd\'un refus'
  */
 
 export class AcceptationParrainage extends OperationUI {
@@ -1325,6 +1343,10 @@ export class AcceptationParrainage extends OperationUI {
   }
 }
 
+/*
+X_SRV, '15-Phrase de parrainage inconnue'
+X_SRV, '16-Ce parrainage a déjà fait l\'objet ' + (p.st !== 1 ? 'd\'une acceptation.' : 'd\'un refus'
+*/
 export class RefusParrainage extends OperationUI {
   constructor () {
     super('Refus de parrainage d\'un nouveau compte', OUI, SELONMODE)
@@ -1332,7 +1354,7 @@ export class RefusParrainage extends OperationUI {
 
   excAffichages () { return [this.excAffichage1, this.excAffichage2] }
 
-  // excActions(), défaut de Operation
+  excActions () { return { d: deconnexion, c: this.excActionx, default: null } }
 
   /* arg :
   - ard : réponse du filleul
@@ -1363,9 +1385,7 @@ export class MajContact extends OperationUI {
     super('Mise à jour d\'un contact', OUI, SELONMODE)
   }
 
-  excAffichages () { return [this.excAffichage1, this.excAffichage2, this.excAffichage1f] }
-
-  // excActions(), défaut de Operation
+  excAffichages () { return [this.excAffichage1, this.excAffichage2, this.excAffichage5] }
 
   /* arg :
   - aps : accepte le partage de secret
@@ -1398,3 +1418,7 @@ export class MajContact extends OperationUI {
     }
   }
 }
+
+/* Creation nouvel avatar
+A_SRV, '06-Compte non trouvé'
+*/

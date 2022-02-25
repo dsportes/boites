@@ -46,14 +46,15 @@ export default ({
 
   setup () {
     /*
-    exports.E_BRK = -1 // Interruption volontaire de l'opération
-    exports.E_WS = -2 // Toutes erreurs de réseau
-    exports.E_DB = -3 // Toutes erreurs d'accès à la base locale
-    exports.E_BRO = -4 // Erreur inattendue trappée sur le browser
-    exports.E_SRV = -5 // Erreur inattendue trappée sur le serveur
-    exports.X_SRV = -6 // Erreur fonctionnelle trappée sur le serveur transmise en exception
-    exports.F_BRO = 1 // Erreur fonctionnelle trappée sur le browser
-    exports.F_SRV = 2 // Erreur fonctionnelle trappée sur le serveur transmise en résultat
+    export const E_BRK = -1 // Interruption volontaire de l'opération
+    export const E_WS = -2 // Toutes erreurs de réseau
+    export const E_DB = -3 // Toutes erreurs d'accès à la base locale
+    export const E_BRO = -4 // Erreur inattendue trappée sur le browser
+    export const E_SRV = -5 // Erreur inattendue trappée sur le serveur
+    export const X_SRV = -6 // Erreur fonctionnelle trappée sur le serveur transmise en exception
+    export const F_BRO = -7 // Erreur fonctionnelle trappée sur le browser
+    export const F_SRV = -8 // Erreur fonctionnelle trappée sur le serveur transmise en résultat
+    export const A_SRV = -9 // Situation inattendue : assertion trappée sur le serveur
     */
     const labels = {
       'x-1': 'Interruption volontaire (appui sur le bouton rouge)',
@@ -62,6 +63,9 @@ export default ({
       'x-4': 'Erreur inattendue survenue dans l\'exécution sur le poste',
       'x-5': 'Erreur inattendue survenue dans le traitement sur le serveur',
       'x-6': 'Données transmises au serveur non conformes',
+      'x-7': 'Données saisies non conformes (traitemeny local)',
+      'x-8': 'Données transmises au serveur non conformes',
+      'x-9': 'Erreur inattendue : données absentes ou corrompues, opération impossible',
       x1: 'Données saisies non conformes',
       x2: 'Données transmises au serveur non conformes'
     }
