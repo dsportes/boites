@@ -31,6 +31,7 @@ export class Invitgr {
     this.ni = row.ni
     const cpriv = data.avc(row.id).cpriv
     const x = deserial(await crypt.decrypterRSA(cpriv, row.datap))
+    this.idg = new NomAvatar(x[0], x[1]).id
     this.datak = await crypt.crypter(data.clek, x)
     return this
   }
