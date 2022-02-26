@@ -27,6 +27,38 @@ export function reconnexion () {
     new ConnexionCompte().run(ps)
   }
 }
+const options0 = [
+  { code: 'd', label: 'Retourner au login', color: 'primary' },
+  { code: 'r', label: 'Essayer de  reconnecter le compte', color: 'primary' }
+]
+const options11 = [
+  { code: 'c', label: 'Continuer malgré la dégradation du mode', color: 'warning' },
+  { code: 'd', label: 'Se déconnecter, retourner au login', color: 'primary' },
+  { code: 'r', label: 'Essayer de se reconnecter', color: 'primary' }
+]
+const options12 = [
+  { code: 'c', label: 'Continuer malgré l\'erreur', color: 'warning' },
+  { code: 'd', label: 'Se déconnecter, retourner au login', color: 'primary' },
+  { code: 'r', label: 'Essayer de se reconnecter', color: 'primary' }
+]
+const options21 = [
+  { code: 'c', label: 'Corriger les données saisies', color: 'primary' },
+  { code: 'd', label: 'Se déconnecter, retourner au login', color: 'primary' }
+]
+const options22 = [
+  { code: 'c', label: 'Continuer bien que l\'opération ait échoué', color: 'primary' },
+  { code: 'd', label: 'Se déconnecter, retourner au login', color: 'primary' }
+]
+const options3 = [
+  { code: 'd', label: 'Retourner au login', color: 'primary' }
+]
+const options6 = [
+  { code: 'x', label: 'Corriger la phrase secrète saisie', color: 'primary' },
+  { code: 'd', label: 'Retourner au login', color: 'primary' }
+]
+const options7 = [
+  { code: 'c', label: 'Corriger les données saisies', color: 'primary' }
+]
 
 export class Operation {
   constructor (nomop, net, idb) {
@@ -48,93 +80,48 @@ export class Operation {
 
   majsynclec (obj) { store().commit('ui/majsynclec', obj) }
 
+  // Par défaut pour toutes les opérations UI classiques
+  excAffichages () { return [this.excAffichage1, this.excAffichage2, this.excAffichage0] }
+
+  // Par défaut pour toutes les opérations UI classiques
   excActions () { return { d: deconnexion, r: reconnexion, default: null } }
 
-  excAffichage1 () {
-    const options1 = [
-      { code: 'c', label: 'Continuer malgré la dégradation du mode', color: 'warning' },
-      { code: 'd', label: 'Se déconnecter, retourner au login', color: 'primary' },
-      { code: 'r', label: 'Essayer de se reconnecter', color: 'primary' }
-    ]
-    const options2 = [
-      { code: 'c', label: 'Continuer malgré l\'erreur', color: 'warning' },
-      { code: 'd', label: 'Se déconnecter, retourner au login', color: 'primary' },
-      { code: 'r', label: 'Essayer de se reconnecter', color: 'primary' }
-    ]
+  excAffichage0 () { return [options0, null] }
+
+  excAffichage1 () { // exceptions réseau / idb / break
     if (this.appexc.idb || this.appexc.net || this.appexc === EXBRK) {
       const conseil = data.degraderMode()
-      const options = conseil ? options1 : options2
-      return [options, conseil]
+      return [conseil ? options11 : options12, conseil]
     }
   }
 
   excAffichage2 () {
-    const options = [
-      { code: 'c', label: 'Corriger les données saisies', color: 'primary' },
-      { code: 'd', label: 'Se déconnecter, retourner au login', color: 'primary' }
-    ]
-    if (this.appexc.code === X_SRV) {
-      return [options, null]
-    }
+    return [this.appexc.code === X_SRV ? options21 : options22, null]
   }
 
   excAffichage3 () {
-    const options = [
-      { code: 'd', label: 'Retourner au login', color: 'primary' }
-    ]
-    return [options, null]
+    return [options3, null]
   }
 
   excAffichage4 () {
-    const options = [
-      { code: 'c', label: 'Continuer malgré la dégradation du mode', color: 'warning' },
-      { code: 'd', label: 'Se déconnecter et retourner au login', color: 'primary' },
-      { code: 'r', label: 'Essayer de se reconnecter', color: 'primary' }
-    ]
     if (this.appexc.idb || this.appexc.net || this.appexc === EXBRK) {
-      const conseil = data.degraderMode()
-      return [options, conseil]
+      return [options11, data.degraderMode()]
     }
-  }
-
-  excAffichage5 () {
-    const options = [
-      { code: 'd', label: 'Retourner au login', color: 'primary' },
-      { code: 'r', label: 'Essayer de  reconnecter le compte', color: 'primary' }
-    ]
-    return [options, null]
   }
 
   excAffichage6 () {
-    const options = [
-      { code: 'x', label: 'Corriger la phrase secrète saisie', color: 'primary' },
-      { code: 'd', label: 'Retourner au login', color: 'primary' }
-    ]
-    if (this.appexc.code === X_SRV) {
-      return [options, null]
-    }
+    if (this.appexc.code === X_SRV) return [options6, null]
   }
 
   excAffichage7 () {
-    const options = [
-      { code: 'x', label: 'Corriger la phrase secrète saisie', color: 'primary' },
-      { code: 'd', label: 'Retourner au login', color: 'primary' }
-    ]
-    if (this.appexc.code === F_BRO) {
-      return [options, null]
-    }
+    return [this.appexc.code === X_SRV ? options7 : options3, null]
   }
 
-  excActionc () {
+  /*
+  excActionc () { // Inutilisé pour l'instant : action retour à l'accueil "compte"
     remplacePage('Compte')
   }
-
-  excActionx () {
-    deconnexion()
-    setTimeout(() => {
-      this.ouvrircreationcompte()
-    }, 100)
-  }
+  */
 
   messageOK () { affichermessage('Succès de l\'opération "' + this.nom + '"') }
 
@@ -629,7 +616,7 @@ export class OperationWS extends Operation {
     data.opWS = this
   }
 
-  excAffichages () { return [this.excAffichage1, this.excAffichage5] }
+  excAffichages () { return [this.excAffichage1, this.excAffichage0] }
 
   excActions () { return { d: deconnexion, r: reconnexion, default: null } }
 }
@@ -677,9 +664,16 @@ export class CreationCompte extends OperationUI {
     this.opsync = true
   }
 
-  excAffichages () { return [this.excAffichage1, this.excAffichage2, this.excAffichage3] }
+  ouvrircreation () {
+    deconnexion()
+    setTimeout(() => {
+      this.ouvrircreationcompte()
+    }, 100)
+  }
 
-  excActions () { return { d: deconnexion, c: this.excActionx, default: null } }
+  excAffichages () { return [this.excAffichage7] }
+
+  excActions () { return { d: deconnexion, c: this.ouvrircreation, default: null } }
 
   async run (ps, nom, forfaits) {
     try {
@@ -705,7 +699,7 @@ export class CreationCompte extends OperationUI {
       compta.compteurs.setF2(forfaits[1])
       const rowCompta = await compta.toRow()
 
-      const avatar = await new Avatar().nouveau(nomAvatar.id)
+      const avatar = new Avatar().nouveau(nomAvatar.id)
       const rowAvatar = await avatar.toRow()
 
       const args = { sessionId: data.sessionId, clePubAv: kpav.publicKey, clePubC: kpc.publicKey, rowCompte, rowCompta, rowAvatar, rowPrefs }
@@ -735,9 +729,9 @@ export class ConnexionCompteAvion extends OperationUI {
     this.opsync = true
   }
 
-  excAffichages () { return [this.excAffichage4, this.excAffichage5, this.excAffichage7] }
+  excAffichages () { return [this.excAffichage4, this.excAffichage6, this.excAffichage0] }
 
-  excActions () { return { d: deconnexion, x: this.excActionx, r: reconnexion, default: null } }
+  excActions () { return { d: deconnexion, x: deconnexion, r: reconnexion, default: null } }
 
   async run (ps) {
     try {
@@ -783,9 +777,9 @@ export class ConnexionCompte extends OperationUI {
     this.opsync = true
   }
 
-  excAffichages () { return [this.excAffichage4, this.excAffichage5, this.excAffichage6] }
+  excAffichages () { return [this.excAffichage4, this.excAffichage0, this.excAffichage6] }
 
-  excActions () { return { d: deconnexion, x: this.excActionx, r: reconnexion, default: null } }
+  excActions () { return { d: deconnexion, x: deconnexion, r: reconnexion, default: null } }
 
   async lectureCompte () {
     // obtention du compte depuis le serveur
@@ -960,8 +954,6 @@ export class PrefCompte extends OperationUI {
     super('Mise à jour d\'une préférence du compte', OUI, SELONMODE)
   }
 
-  excAffichages () { return [this.excAffichage1, this.excAffichage2, this.excAffichage5] }
-
   async run (code, datak) {
     try {
       this.BRK()
@@ -984,8 +976,6 @@ export class CvAvatar extends OperationUI {
     super('Mise à jour de la carte de visite d\'un avatar', OUI, SELONMODE)
   }
 
-  excAffichages () { return [this.excAffichage1, this.excAffichage2, this.excAffichage5] }
-
   async run (id, phinfo) {
     try {
       const args = { sessionId: data.sessionId, id: id, phinfo: phinfo }
@@ -1006,8 +996,6 @@ export class NouveauSecret extends OperationUI {
   constructor () {
     super('Création d\'un nouveau secret', OUI, SELONMODE)
   }
-
-  excAffichages () { return [this.excAffichage1, this.excAffichage2, this.excAffichage5] }
 
   // arg = { ts, id, ns, ic, st, ora, v1, mcg, mc, im, txts, dups, refs, id2, ns2, ic2, dups2 }
   async run (arg) {
@@ -1032,8 +1020,6 @@ export class Maj1Secret extends OperationUI {
     super('Mise à jour d\'un secret', OUI, SELONMODE)
   }
 
-  excAffichages () { return [this.excAffichage1, this.excAffichage2, this.excAffichage5] }
-
   async run (arg) { // arg = ts, id, ns, v1, mc, im, mcg, txts, ora, temp, id2, ns2
     try {
       const args = { sessionId: data.sessionId, ...arg }
@@ -1055,8 +1041,6 @@ export class PjSecret extends OperationUI {
   constructor () {
     super('Mise à jour d\'une pièce jointe d\'un secret', OUI, SELONMODE)
   }
-
-  excAffichages () { return [this.excAffichage1, this.excAffichage2, this.excAffichage5] }
 
   async run (arg) {
     /* { ts, id: s.id, ns: s.ns, cle, idc, buf, lg, id2, ns2}
@@ -1082,15 +1066,12 @@ Parrainage : args de m1/nouveauParrainage
   rowParrain: serial(rowParrain)
 Retour : dh
 X_SRV, '14-Cette phrase de parrainage est trop proche d\'une déjà enregistrée' + x
-
 */
 
 export class NouveauParrainage extends OperationUI {
   constructor () {
     super('Parrainage d\'un nouveau compte', OUI, SELONMODE)
   }
-
-  excAffichages () { return [this.excAffichage1, this.excAffichage2, this.excAffichage5] }
 
   async run (arg) {
     /*
@@ -1189,8 +1170,6 @@ export class SupprParrainage extends OperationUI {
     super('Suppression / prolongation d\'un parrainage', OUI, SELONMODE)
   }
 
-  excAffichages () { return [this.excAffichage1, this.excAffichage2, this.excAffichage5] }
-
   async run (arg) {
     try {
       const args = { sessionId: data.sessionId, pph: arg.pph, dlv: arg.dlv }
@@ -1230,19 +1209,9 @@ export class AcceptationParrainage extends OperationUI {
     this.opsync = true
   }
 
-  excAffichage2 () {
-    const options = [
-      { code: 'c', label: 'Corriger les données saisies', color: 'primary' },
-      { code: 'd', label: 'Abandonner la création, retourner au login', color: 'primary' }
-    ]
-    if (this.appexc.code === X_SRV) {
-      return [options, null]
-    }
-  }
+  excAffichages () { return [this.excAffichage1, this.excAffichage3] }
 
-  excAffichages () { return [this.excAffichage1, this.excAffichage2, this.excAffichage3] }
-
-  excActions () { return { d: deconnexion, c: this.excActionx, default: null } }
+  excActions () { return { d: deconnexion, default: null } }
 
   /* arg :
   - ps : phrase secrète
@@ -1269,7 +1238,7 @@ export class AcceptationParrainage extends OperationUI {
       data.setPrefs(prefs)
       const rowPrefs = await prefs.toRow()
 
-      const avatar = await new Avatar().nouveau(parrain.naf.id)
+      const avatar = new Avatar().nouveau(parrain.naf.id)
       const rowAvatar = await avatar.toRow()
 
       const compta = new Compta().nouveau(compte.id, estpar ? null : parrain.data.idcp) // du "filleul / introduit"
@@ -1352,9 +1321,9 @@ export class RefusParrainage extends OperationUI {
     super('Refus de parrainage d\'un nouveau compte', OUI, SELONMODE)
   }
 
-  excAffichages () { return [this.excAffichage1, this.excAffichage2] }
+  excAffichages () { return [this.excAffichage3] }
 
-  excActions () { return { d: deconnexion, c: this.excActionx, default: null } }
+  excActions () { return { d: deconnexion, default: null } }
 
   /* arg :
   - ard : réponse du filleul
@@ -1385,8 +1354,6 @@ export class MajContact extends OperationUI {
     super('Mise à jour d\'un contact', OUI, SELONMODE)
   }
 
-  excAffichages () { return [this.excAffichage1, this.excAffichage2, this.excAffichage5] }
-
   /* arg :
   - aps : accepte le partage de secret
   - ard : ardoise
@@ -1411,7 +1378,8 @@ export class MajContact extends OperationUI {
         infok: arg.info === contact.info ? null : await crypt.crypter(data.clek, arg.info),
         mc: equ8(arg.mc, contact.mc) ? null : arg.mc
       }
-      await post(this, 'm1', 'majContact', args)
+      const ret = await post(this, 'm1', 'majContact', args)
+      if (data.dh < ret.dh) data.dh = ret.dh
       this.finOK()
     } catch (e) {
       await this.finKO(e)
@@ -1419,6 +1387,45 @@ export class MajContact extends OperationUI {
   }
 }
 
-/* Creation nouvel avatar
+/* Creation nouvel avatar ****************************************
+- sessionId, clePub, idc (numéro du compte), vcav, mack, rowAvatar
+Retour :
+- sessionId
+- dh
+- statut : 0:OK, 1:retry (version compte ayant évolué)
 A_SRV, '06-Compte non trouvé'
 */
+export class CreationAvatar extends OperationUI {
+  constructor () {
+    super('Création d\'un nouvel avatar', OUI, SELONMODE)
+  }
+
+  async run (nom) { // argument : nom du nouvel avatar
+    let n = 1
+    try {
+      while (true) {
+        const nomAvatar = new NomAvatar(nom) // nouveau
+        const kpav = await crypt.genKeyPair()
+
+        const compte = data.getCompte()
+        const mack = await compte.ajoutAvatar(nomAvatar, kpav)
+
+        const avatar = new Avatar().nouveau(nomAvatar.id)
+        const rowAvatar = await avatar.toRow()
+
+        const args = { sessionId: data.sessionId, idc: compte.id, vcav: compte.v, clePub: kpav.publicKey, mack, rowAvatar }
+        const ret = await post(this, 'm1', 'creationAvatar', args)
+        if (ret.statut === 1) {
+          affichermessage('(' + n++ + ')-Petit incident, nouvel essai en cours, merci d\'attendre', true)
+          await sleep(2000)
+        } else {
+          if (data.dh < ret.dh) data.dh = ret.dh
+          break
+        }
+      }
+      this.finOK()
+    } catch (e) {
+      await this.finKO(e)
+    }
+  }
+}

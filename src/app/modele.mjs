@@ -765,6 +765,17 @@ export class Compte {
     return schemas.serialize('rowcompte', r)
   }
 
+  async ajoutAvatar (na, kpav) {
+    const m = {}
+    for (const sid in this.mac) {
+      const x = this.mac[sid]
+      m[sid] = [x.na.nom, x.na.rnd, x.cpriv]
+    }
+    m[na.sid] = [na.nom, na.rnd, kpav.privateKey]
+    data.setNa(na.nom, na.rnd)
+    return await crypt.crypter(data.clek, serial(m))
+  }
+
   get toIdb () { return schemas.serialize('idbCompte', this) }
 
   fromIdb (idb) {
@@ -1084,7 +1095,7 @@ export class Avatar {
     return s
   }
 
-  async nouveau (id) {
+  nouveau (id) {
     this.id = id
     this.v = 0
     this.st = 0

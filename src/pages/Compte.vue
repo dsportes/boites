@@ -3,6 +3,7 @@
   <div v-if="compte" class="col-12 col-md-7 q-pa-xs">
     <q-expansion-item label="Sélectionner un des avatars du compte" default-opened
         header-class="expansion-header-class-1 titre-lg bg-primary text-white">
+      <q-btn class="q-my-sm" size="md" icon="add" label="Nouvel avatar" color="primary" dense @click="nvav=true"/>
       <div v-for="e in compte.mac" :key="e.na.id" class="full-width">
         <apercu-avatar page editer selectionner :avatar-id="e.na.id"/>
       </div>
@@ -22,11 +23,17 @@
       <div class="fake"><mots-cles class="petitelargeur maauto" :motscles="motscles"></mots-cles></div>
     </q-expansion-item>
   </div>
+
+  <q-dialog v-model="nvav" persistent>
+    <q-card class="shadow-8 petitelargeur">
+      <nom-avatar label-valider="Créer l\'avatar" icon-valider="add" verif @ok-nom="nvAvatar" />
+    </q-card>
+  </q-dialog>
 </q-page>
 </template>
 
 <script>
-import { PrefCompte } from '../app/operations.mjs'
+import { PrefCompte, CreationAvatar } from '../app/operations.mjs'
 import { computed, ref, reactive, /* onMounted, */ watch } from 'vue'
 import { useStore } from 'vuex'
 import { onBoot } from '../app/page.mjs'
@@ -34,17 +41,19 @@ import EditeurMd from '../components/EditeurMd.vue'
 import BoutonHelp from '../components/BoutonHelp.vue'
 import MotsCles from '../components/MotsCles.vue'
 import ApercuAvatar from '../components/ApercuAvatar.vue'
+import NomAvatar from '../components/NomAvatar.vue'
 import { Motscles, serial } from '../app/util.mjs'
 import { crypt } from '../app/crypto.mjs'
 import { data } from '../app/modele.mjs'
 
 export default ({
   name: 'Compte',
-  components: { EditeurMd, BoutonHelp, MotsCles, ApercuAvatar },
+  components: { EditeurMd, BoutonHelp, MotsCles, ApercuAvatar, NomAvatar },
   data () {
     return {
       u8mc: new Uint8Array([200, 202, 1, 203, 2]),
       court: false,
+      nvav: false,
       selecteur: false
     }
   },
@@ -64,6 +73,10 @@ export default ({
     },
     selection (u8) {
       this.u8mc = u8
+    },
+    async nvAvatar (nom) {
+      if (nom) await new CreationAvatar().run(nom)
+      this.nvav = false
     }
   },
 
