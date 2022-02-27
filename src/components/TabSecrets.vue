@@ -331,10 +331,11 @@ export default ({
     watch(() => evtfiltresecrets2.value, (ap) => {
       const c = ap.arg
       const cmd = ap.cmd
-      if (cmd === 'fs') filtreVisible(true)
+      if (cmd === 'fs' || cmd === 'fsg') filtreVisible(true)
       setTimeout(() => {
         const f = new Filtre()
-        f.contactId = c.id
+        if (cmd === 'fs') { f.contactId = c.id; f.groupeId = null }
+        if (cmd === 'fsg') { f.contactId = null; f.groupeId = c.id }
         f.perso = false
         recherche.a = f.etat() // pour que le panel de filtre affiche le filtre choisi
         recherche.p = deserial(serial(recherche.a))
@@ -345,6 +346,14 @@ export default ({
             editsec.value = true
           } else {
             this.diagnostic = 'Le contact ' + (c ? c.nom : '?') + ' n\'est pas en état d\'accepter le partage de nouveaux secrets.'
+          }
+        }
+        if (cmd === 'nvg') {
+          if (c.accepteNouveauSecret) {
+            secret.value = new Secret().nouveauG(groupe.value.id, c)
+            editsec.value = true
+          } else {
+            this.diagnostic = 'Le groupe ' + (c ? c.nom : '?') + ' n\'est pas en état d\'accepter le partage de nouveaux secrets.'
           }
         }
       }, 100)

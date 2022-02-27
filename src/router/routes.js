@@ -4,7 +4,6 @@ import Login from 'src/pages/Login.vue'
 import Synchro from 'src/pages/Synchro.vue'
 import Compte from 'src/pages/Compte.vue'
 import Avatar from 'src/pages/Avatar.vue'
-import Groupe from 'src/pages/Groupe.vue'
 
 const routes = [
   {
@@ -15,8 +14,7 @@ const routes = [
       { path: ':org', name: 'Login', component: Login },
       { path: ':org/synchro', name: 'Synchro', component: Synchro },
       { path: ':org/compte', name: 'Compte', component: Compte },
-      { path: ':org/avatar', name: 'Avatar', component: Avatar },
-      { path: ':org/groupe', name: 'Groupe', component: Groupe }
+      { path: ':org/avatar', name: 'Avatar', component: Avatar }
     ]
   },
 

@@ -55,6 +55,12 @@ export function majgroupe (state, val) {
   state.groupe = val
 }
 
+/* Déclaration du groupe plus courant */
+export function majgroupeplus (state, val) {
+  state.groupe = val[0]
+  state.groupeplus = val
+}
+
 /* Déclaration du contact courant */
 export function majcontact (state, val) {
   state.contact = val

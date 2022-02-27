@@ -1085,6 +1085,8 @@ export class Avatar {
 
   get nom () { return nomEd(this.na.nom, this.info) }
 
+  get groupes () { return this.m2gr.keys() }
+
   constructor () {
     this.m1gr = new Map() // clé:ni val: { na du groupe, im de l'avatar dans le groupe }
     this.m2gr = new Map() // clé:idg (id du groupe), val:im
@@ -1212,6 +1214,10 @@ export class Cv {
   get horsLimite () { return false }
 
   get na () { return data.getNa(this.id) }
+
+  get titre () {
+    if (!this.info) return ''
+  }
 
   constructor (fake) {
     this.lctc = []
@@ -1574,6 +1580,17 @@ export class Membre {
 
   get cleg () { return data.getNa(this.id).cle }
 
+  get estAvc () { // true si ce membre est un avatar du compte
+    return data.avc(this.namb.id) !== undefined
+  }
+
+  get titre () {
+    const i = this.info.indexOf('\n')
+    const t1 = i === -1 ? this.info : this.info.substring(0, i)
+    const t = t1.length <= 16 ? t1 : t1.substring(0, 13) + '...'
+    return t ? t + ' [' + this.namb.titre + ']' : this.namb.titre
+  }
+
   get nom () {
     const cv = data.getCv(this.namb.id)
     return nomEd(this.data.nom, cv ? cv.info : '')
@@ -1591,17 +1608,17 @@ export class Membre {
       const [d, t] = row.ardg ? await crypt.decrypterStr(this.cleg, row.ardg) : [0, '']
       this.ard = t
       this.dh = d
-      this.info = row.infok ? deserial(await crypt.decrypter(data.clek, row.infok)) : ''
+      this.info = row.infok && this.estAvc ? deserial(await crypt.decrypter(data.clek, row.infok)) : ''
       this.mc = row.mc
     }
     return this
   }
 
-  async toRow () {
+  async toRow () { // ne devrait pas servir !!!
     const r = { ...this }
     r.datag = await crypt.crypter(this.cleg, serial(this.data))
     r.ardg = await crypt.crypter(this.cleg, serial([this.dh, this.ard]))
-    r.infok = await crypt.crypter(data.clek, this.info)
+    r.infok = this.estAvc ? await crypt.crypter(data.clek, this.info) : null
     return schemas.serialize('rowmembre', r)
   }
 

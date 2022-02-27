@@ -258,16 +258,6 @@ export default {
       }
     },
 
-    togroupe () {
-      if (this.page === 'Synchro' || !this.compte) return
-      if (this.groupe) {
-        remplacePage('Groupe')
-        return
-      }
-      this.tabcompte = 'groupes'
-      remplacePage('Compte')
-    },
-
     deconnexion () { deconnexion() },
 
     reconnexion () { reconnexion() },
@@ -338,7 +328,6 @@ export default {
     const compte = computed(() => $store.state.db.compte)
     const prefs = computed(() => $store.state.db.prefs)
     const avatar = computed(() => $store.state.db.avatar)
-    const groupe = computed(() => $store.state.db.groupe)
     const contact = computed(() => $store.state.db.contact) // contact courant
     const mode = computed(() => $store.state.ui.mode)
     const modeInitial = computed(() => $store.state.ui.modeinitial)
@@ -379,7 +368,6 @@ export default {
       compte,
       prefs,
       avatar,
-      groupe,
       contact,
       mode,
       modeInitial,

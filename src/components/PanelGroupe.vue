@@ -59,7 +59,7 @@ import ApercuMotscles from './ApercuMotscles.vue'
 import SelectMotscles from './SelectMotscles.vue'
 
 export default ({
-  name: 'PanelContact',
+  name: 'PanelGroupe',
 
   components: { ShowHtml, EditeurMd, ApercuMotscles, SelectMotscles },
 

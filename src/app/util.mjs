@@ -700,23 +700,6 @@ export class MdpAdmin {
   }
 }
 
-export class Quotas {
-  constructor (src) {
-    this.q1 = src ? src.q1 : 0
-    this.q2 = src ? src.q2 : 0
-    this.qm1 = src ? src.qm1 : 0
-    this.qm2 = src ? src.qm2 : 0
-  }
-
-  raz () {
-    this.q1 = 0
-    this.q2 = 0
-    this.qm1 = 0
-    this.qm2 = 0
-    return this
-  }
-}
-
 /** NomAvatar **********************************/
 export class NomAvatar {
   constructor (nom, rnd) {
@@ -735,6 +718,17 @@ export class NomAvatar {
     const i = this.nom.indexOf('\n')
     const t = this.nom.substring(0, (i === -1 ? 16 : (i < 16 ? i : 16)))
     return normpath(t) + '@' + this.sid
+  }
+
+  get titre () {
+    const info = data.getCv(this.id) || ''
+    const i = info.indexOf('\n')
+    const t1 = i === -1 ? info : info.substring(0, i)
+    const t = t1.length <= 16 ? t1 : t1.substring(0, 13) + '...'
+    const j = this.nom.indexOf('\n')
+    const n1 = j === -1 ? this.nom : this.nom.substring(0, j)
+    const n = n1.length <= 16 ? n1 : n1.substring(0, 13) + '...'
+    return t ? t + ' (' + n + ')' : n
   }
 }
 
@@ -957,6 +951,89 @@ export class Filtre {
     if (this.perso !== f.perso || this.contactId !== f.contactId || this.groupeId !== f.groupeId) return 3
     if (!equ8(this.m1, f.m1) || !equ8(this.m2, f.m2) || this.perm !== f.perm ||
       this.temp !== f.temp || this.modif !== f.modif || this.texte !== f.texte || this.corps !== f.corps) return 2
+    if (this.tri !== f.tri || this.asc !== f.asc) return 1
+    return 0
+  }
+}
+
+/** Filtre des groupes *************************************/
+export class FiltreGrp {
+  constructor () {
+    this.m1 = new Uint8Array([])
+    this.m2 = new Uint8Array([])
+    this.texte = '' // contacts dont le nom / carte de visite contient ce texte
+    this.info = false // true: rechercher le texte aussi dans l'ardoise et le commentaire personnel
+    /*
+    2 : par date de dernière modification de l'ardoise de l'avatar membre
+    1 : par ordre alphabétique du nom
+    */
+    this.tri = 1
+    this.asc = true // ascendant, descendant
+  }
+
+  etat () {
+    const f = this
+    const a = {
+      mc1: f.m1,
+      mc2: f.m2,
+      texte: f.texte,
+      info: f.info,
+      tri: f.asc ? f.tri : -f.tri
+    }
+    return a
+  }
+
+  depuisEtat (a) {
+    const f = this
+    f.m1 = a.mc1
+    f.m2 = a.mc2
+    f.texte = a.texte
+    f.info = a.info
+    f.asc = a.tri >= 0
+    f.tri = a.tri >= 0 ? a.tri : -a.tri
+    return f
+  }
+
+  equal (f) {
+    return this.changement(f) === 0
+  }
+
+  debutFiltre () {
+    this.f1 = new Set(this.m1)
+    this.f2 = new Set(this.m2)
+  }
+
+  filtre (g, m) {
+    const sx = new Set(m.mc)
+    if (difference(this.f1, sx).size) return false
+    if (intersection(this.f2, sx).size) return false
+
+    if (this.texte && g.nom.indexOf(this.texte) === -1) {
+      if (!this.info) return false
+      if (m.ard.indexOf(this.texte) === -1 && m.info.indexOf(this.texte) === -1) return false
+    }
+    return true
+  }
+
+  tri1 (a, b) {
+    if (this.asc) {
+      return a.g.nom < b.g.nom ? -1 : (a.g.nom > b.g.nom ? 1 : 0)
+    } else {
+      return a.g.nom < b.g.nom ? 1 : (a.g.nom > b.g.nom ? -1 : 0)
+    }
+  }
+
+  tri2 (a, b) { return this.asc ? (a.m.dh < b.m.dh ? -1 : (a.m.dh > b.m.dh ? 1 : 0)) : (a.m.dh < b.m.dh ? 1 : (a.m.dh > b.m.dh ? -1 : 0)) }
+
+  fntri (a, b) {
+    return this.tri === 1 ? this.tri1(a, b) : this.tri2(a, b)
+  }
+
+  changement (f) {
+    // niveau de changement avec le filtre précédemment employé.
+    // 0: aucun, 1:tri seulement, 2:filtre
+    if (!f) return 2
+    if (!equ8(this.m1, f.m1) || !equ8(this.m2, f.m2) || this.aps !== f.aps || this.texte !== f.texte || this.corps !== f.corps) return 2
     if (this.tri !== f.tri || this.asc !== f.asc) return 1
     return 0
   }

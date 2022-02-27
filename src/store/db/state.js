@@ -6,6 +6,7 @@ export default function () {
     ardoise: null,
     avatar: null, // avatar courant
     groupe: null, // groupe courant
+    groupeplus: null, // couple courant [groupe, membre] ou membre est celui de l'avatar courant
     contact: null, // contact courant
     secret: null, // secret courant
     avatars: {}, // Tous les avatars (liste sur le compte)
@@ -18,7 +19,7 @@ export default function () {
     pjidx: {} // index des pièces jointes disponibles en mode avion
 
     /*
-    Groupés par sid d'avatar : contacts_sid invitcts_sid
+    Groupés par sid d'avatar : contacts_sid
     Groupés par sid de groupe : membres_sid
     Groupés par sid d'avatar ou de groupe : secrets_sid
     */

@@ -47,7 +47,7 @@ export default function () {
     evtavatar: null,
     evtavatarct: null,
     evtfiltresecrets: null,
-    evtfiltresecrets2: null
-
+    evtfiltresecrets2: null,
+    evtavatargr: null
   }
 }

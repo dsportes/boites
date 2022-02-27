@@ -13,7 +13,6 @@ export function onBoot () {
     const org = $store.state.ui.org
     const compte = $store.state.db.compte
     const avatar = $store.state.db.avatar
-    const groupe = $store.state.db.groupe
     const neworg = to.params.org
 
     if (!neworg) {
@@ -74,19 +73,12 @@ export function onBoot () {
       }
       return false
     }
-    if (to.name === 'Groupe') {
-      if (groupe) {
-        $store.commit('ui/majpage', 'Groupe')
-        return true
-      }
-      return false
-    }
     return false
   })
   // Traitement de la route au boot
   const $route = useRoute()
   const urlorg = $route.params.org
-  console.log('URL org : ' + urlorg + ' Boot page : ' + $route.name)
+  // console.log('URL org : ' + urlorg + ' Boot page : ' + $route.name)
   store().commit('ui/majorg', (urlorg && cfg().orgs[urlorg]) ? urlorg : null)
   const org = store().state.ui.org
   if (!org && $route.name === 'Org') {
