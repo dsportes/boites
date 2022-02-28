@@ -4,7 +4,7 @@ import { openIDB, closeIDB, putPj, getPjdata } from './db.mjs'
 import { openWS, closeWS } from './ws.mjs'
 import {
   store, appexc, serial, deserial, dlvDepassee, NomAvatar, gzip, ungzip, dhstring,
-  getJourJ, cfg, ungzipT, normpath, getpj, nomEd, titreEd, post, mcsToU8, u8ToMcs
+  getJourJ, cfg, ungzipT, normpath, getpj, titreEd, post, mcsToU8, u8ToMcs
 } from './util.mjs'
 import { remplacePage } from './page.mjs'
 import { SIZEAV, SIZEGR, EXPS, Compteurs } from './api.mjs'
@@ -803,6 +803,15 @@ export class Compte {
 - `v` :
 - `mapk` {} : map des préférences.
 - `vsh`
+- chaque type de données porte un code court :
+  - `mp` : mémo personnel du titulaire du compte.
+  - `mc` : mots clés du compte.
+  - `fs` : filtres des secrets.
+- le row est juste un couple `[id, map]` où map est la sérialisation d'une map ayant :
+  - une entrée pour chacun des codes courts ci-dessus : la map est donc extensible sans modification du serveur.
+  - pour valeur la sérialisation cryptée par la clé K du compte de l'objet Javascript en donnant le contenu.
+- le row est chargé lors de l'identification du compte, conjointement avec le row compte.
+- une mise à jour ne correspond qu'à un seul code court afin de réduire le risque d'écrasements entre sessions parallèles.
 */
 
 schemas.forSchema({
@@ -1083,7 +1092,7 @@ export class Avatar {
 
   get na () { return data.getNa(this.id) }
 
-  get nom () { return nomEd(this.na.nom, this.info) }
+  get nom () { return titreEd(this.na.nom, this.info, true) }
 
   get groupes () { return this.m2gr.keys() }
 
@@ -1358,7 +1367,7 @@ export class Contact {
 
   get ph () { const cv = this.cv; return cv.photo ? cv.photo : cfg().personne.default }
 
-  get nom () { return nomEd(this.data.nom, this.cv ? this.cv.info : '') }
+  get nom () { return this.na.titre }
 
   get stx () { return this.st > 0 ? Math.floor(this.st / 10) : 0 }
 
@@ -1474,7 +1483,7 @@ export class Groupe {
 
   get sty () { return this.st < 0 ? -1 : this.st % 10 }
 
-  get nom () { return nomEd(this.na.nom, this.cv.info) }
+  get nom () { return titreEd(this.na.nom, this.cv.info) }
 
   imDeId (id) {
     const i = this.lmb.indexOf(id)
@@ -1539,9 +1548,8 @@ export class Groupe {
 - `v` :
 - `st` : statut. `xp` : < 0 signifie supprimé.
   - `x` : 0:pressenti, 1:invité, 2:actif (invitation acceptée), 3: inactif (invitation refusée), 4: inactif (résilié), 5: inactif (disparu).
-  - `p` : 0:lecteur, 1:auteur, 2:administrateur.
+  - `p` : 0:lecteur, 1:auteur, 2:animateur.
 - `vote` : vote de réouverture.
-- `q1 q2` : balance des quotas donnés / reçus par le membre au groupe.
 - `mc` : mots clés du membre à propos du groupe.
 - `infok` : commentaire du membre à propos du groupe crypté par la clé K du membre.
 - `datag` : données cryptées par la clé du groupe. (immuable)
@@ -1591,10 +1599,7 @@ export class Membre {
     return t ? t + ' [' + this.namb.titre + ']' : this.namb.titre
   }
 
-  get nom () {
-    const cv = data.getCv(this.namb.id)
-    return nomEd(this.data.nom, cv ? cv.info : '')
-  }
+  get nom () { return this.namb.titre }
 
   async fromRow (row) {
     this.vsh = row.vsh || 0

@@ -126,29 +126,6 @@ export async function idToIc (id) {
 
 let lgnom, lgtitre
 
-export function nomEd (nom, info) {
-  if (!lgnom) lgnom = cfg().lgnom || 20
-  if (info) {
-    const i = info.indexOf('\n')
-    const inf = info.substring(0, (i === -1 ? lgnom : (i > lgnom ? lgnom : i)))
-    return nom + ' [' + inf + ']'
-  }
-  return nom
-}
-
-export function titreEd (sid, txt) {
-  if (!lgtitre) lgtitre = cfg().lgtitre || 50
-  let t = ''
-  if (txt) {
-    const i = txt.indexOf('\n')
-    t = txt.substring(0, (i === -1 ? lgtitre : (i < lgtitre ? i : lgtitre)))
-  }
-  if (sid && t) return sid + ' [' + t + ']'
-  if (!sid && t) return t
-  if (sid && !t) return sid
-  return '?'
-}
-
 export function store () { return $store }
 
 export function cfg () { return $cfg }
@@ -699,6 +676,23 @@ export class MdpAdmin {
     this.mdph = crypt.hashBin(this.mdpb)
   }
 }
+/************************************************
+ * Employé directement seulement pour le nom d'un compte et le titre d'un secret
+*/
+export function titreEd (nom, info, court) {
+  if (!lgtitre) lgtitre = cfg().lgtitre || 50
+  if (!lgnom) lgnom = cfg().lgnom || 16
+  const lg = !court ? lgtitre : lgnom
+  if (!info) info = ''
+  const i = info.indexOf('\n')
+  const t1 = i === -1 ? info : info.substring(0, i)
+  const t = t1.length <= lg ? t1 : t1.substring(0, lg - 3) + '...'
+  if (!nom) return t
+  const j = nom.indexOf('\n')
+  const n1 = j === -1 ? nom : nom.substring(0, j)
+  const n = n1.length <= lgnom ? n1 : n1.substring(0, lgnom - 3) + '...'
+  return t ? t + ' (' + n + ')' : n
+}
 
 /** NomAvatar **********************************/
 export class NomAvatar {
@@ -720,16 +714,7 @@ export class NomAvatar {
     return normpath(t) + '@' + this.sid
   }
 
-  get titre () {
-    const info = data.getCv(this.id) || ''
-    const i = info.indexOf('\n')
-    const t1 = i === -1 ? info : info.substring(0, i)
-    const t = t1.length <= 16 ? t1 : t1.substring(0, 13) + '...'
-    const j = this.nom.indexOf('\n')
-    const n1 = j === -1 ? this.nom : this.nom.substring(0, j)
-    const n = n1.length <= 16 ? n1 : n1.substring(0, 13) + '...'
-    return t ? t + ' (' + n + ')' : n
-  }
+  get titre () { return titreEd(this.nom, data.getCv(this.id) || '', true) }
 }
 
 /** Filtre des contacts *************************************/

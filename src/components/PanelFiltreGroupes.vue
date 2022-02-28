@@ -1,6 +1,7 @@
 <template>
   <q-scroll-area style="height:80vh;width:22rem">
   <q-card class="shadow-8">
+    <q-btn class="q-ma-sm" dense icon="add" label="Créer un nouveau groupe" color="primary" @click="action(1)"/>
     <q-card-actions align="between">
       <q-btn v-if="$q.screen.lt.md" size="md" flat dense color="negative" icon="close" @click="fermeture" />
       <q-btn :disable="!modifie" size="md" flat dense color="primary" icon="undo" label="Annuler" @click="annuler" />
@@ -22,20 +23,8 @@
     <q-separator/>
     <div class="q-pa-sm column justify-start">
       <q-input v-model="state.a.texte" dense label="Dont le nom contient :" style="width:10rem"></q-input>
-      <q-checkbox v-model="state.a.corps" dense size="md" label="Chercher aussi dans les ardoises et notes personnelles"/>
-    </div>
-    <q-separator/>
-    <div class="q-pa-sm colmun justify-start">
-      <div class="row">
-        <q-btn-dropdown size="md" dense color="primary" label="acceptant le partage de secrets ..." v-model="menudd1">
-          <div class="clair1 column">
-            <q-btn flat dense no-caps :label="labelaps['0']" @click="menudd1=false;state.a.aps=0"/>
-            <q-btn flat dense no-caps :label="labelaps['1']" @click="menudd1=false;state.a.aps=1"/>
-            <q-btn flat dense no-caps :label="labelaps['2']" @click="menudd1=false;state.a.aps=2"/>
-          </div>
-        </q-btn-dropdown>
-        <div class="q-pl-md">{{labelaps['' + state.a.aps]}}</div>
-      </div>
+      <q-checkbox v-model="state.a.info" dense size="md"
+        label="Chercher aussi dans les ardoises et notes personnelles"/>
     </div>
     <q-separator/>
     <div class="q-pa-sm row">
@@ -55,7 +44,7 @@
 
 <script>
 import { toRef } from 'vue'
-import { FiltreCtc, serial, deserial } from '../app/util.mjs'
+import { FiltreGrp, serial, deserial } from '../app/util.mjs'
 import ApercuMotscles from './ApercuMotscles.vue'
 import SelectMotscles from './SelectMotscles.vue'
 
@@ -91,7 +80,7 @@ export default ({
     changermc1 (mc) { this.state.a.mc1 = mc },
     changermc2 (mc) { this.state.a.mc2 = mc },
     ok () {
-      const f = new FiltreCtc().depuisEtat(this.state.a)
+      const f = new FiltreGrp().depuisEtat(this.state.a)
       this.state.p = deserial(serial(this.state.a))
       this.$emit('ok', f)
       if (this.fermer) this.fermer()
@@ -102,6 +91,10 @@ export default ({
     },
     fermeture () {
       if (this.fermer) this.fermer()
+    },
+    action (n) {
+      this.$emit('action', n)
+      this.fermeture()
     }
   },
 
@@ -109,13 +102,8 @@ export default ({
     const state = toRef(props, 'etatInterne')
     toRef(props, 'motscles')
 
-    const labelaps = {
-      0: 'Indifférent',
-      1: 'Acceptant le partage',
-      2: 'N\'acceptant PAS le partage'
-    }
     const labeltri = {
-      p0: 'Ne pas trier les contacts',
+      p0: 'Ne pas trier les groupes',
       p1: 'Ordre alphabétique du nom',
       m1: 'Ordre alphabétique inverse du nom',
       p2: 'Dates de modification croissantes de l\'ardoise',
@@ -123,7 +111,6 @@ export default ({
     }
 
     return {
-      labelaps,
       labeltri,
       state
     }

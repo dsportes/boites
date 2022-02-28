@@ -86,6 +86,7 @@
             <q-tab name="secrets" label="Secrets" />
             <q-btn v-if="tabavatar==='contacts' && $q.screen.lt.md" size="md" dense icon="search" color="secondary" @click="optAvatarCt('recherche')"/>
             <q-tab name="contacts" label="Contacts" />
+            <q-btn v-if="tabavatar==='groupes' && $q.screen.lt.md" size="md" dense icon="search" color="secondary" @click="optAvatarGr('recherche')"/>
             <q-tab name="groupes" label="Groupes" />
             <q-tab name="etc" label="Etc." />
           </q-tabs>
@@ -235,6 +236,10 @@ export default {
 
     optAvatarCt (opt) {
       this.$store.commit('ui/majevtavatarct', opt)
+    },
+
+    optAvatarGr (opt) {
+      this.$store.commit('ui/majevtavatargr', opt)
     },
 
     tocompte () {

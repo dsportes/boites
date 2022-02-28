@@ -27,7 +27,7 @@
     </q-card-section>
 
     <q-card-section>
-      <div class="titre-md">Ardoise commune avec le contact</div>
+      <div class="titre-md">Ardoise commune avec le groupe</div>
       <editeur-md class="height-8" v-model="state.ard" :texte="contact ? contact.ard : ''" editable/>
     </q-card-section>
 
@@ -96,7 +96,7 @@ export default ({
       get: () => $store.state.ui.diagnostic,
       set: (val) => $store.commit('ui/majdiagnostic', val)
     })
-    const contact = computed(() => { return $store.state.db.contact })
+    const groupeplus = computed(() => { return $store.state.db.groupeplus })
     const mode = computed(() => $store.state.ui.mode)
     const prefs = computed(() => { return data.getPrefs() })
 
@@ -117,7 +117,7 @@ export default ({
     }
 
     function initState () {
-      const c = contact.value
+      const c = groupeplus.value
       state.aps = c ? c.stx === 1 : false
       state.apsb = c ? c.sty === 1 : false
       state.info = c ? c.info : ''
@@ -132,7 +132,7 @@ export default ({
       chargerMc()
     })
 
-    watch(() => contact.value, (ap, av) => {
+    watch(() => groupeplus.value, (ap, av) => {
       initState()
     })
 
@@ -140,7 +140,6 @@ export default ({
       initState,
       state,
       diagnostic,
-      contact,
       mode
     }
   }

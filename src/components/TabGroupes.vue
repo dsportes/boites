@@ -1,34 +1,52 @@
 <template>
 
   <div :class="$q.screen.gt.sm ? 'ml20' : 'q-pa-xs full-width'">
-    <div v-if="state.lst && state.lst.length" class="col">
-    <div v-for="(x, idx) in state.lst" :key="x.k"
-      :class="dkli(idx) + ' groupecourant full-width row items-start q-py-xs cursor-pointer'">
-      <q-icon class="col-auto q-pr-xs" size="sm" :color="c.stx<2?'primary':'warning'"
-      :name="['o_thumb_up','thumb_up','o_hourglass_empty','hourglass_empty','hourglass_empty','','','','','thumb_down'][c.stx]"/>
-      <img class="col-auto photomax" :src="x.g.ph"/>
-      <div class="col-3 q-px-xs">{{g.nom}}</div>
-      <div class="col-4 q-pr-xs">{{x.m.ard.substring(0,40)}}</div>
-      <div class="col-auto fs-sm">{{c.dhed}}</div>
-      <q-menu touch-position transition-show="scale" transition-hide="scale">
-        <q-list dense style="min-width: 10rem">
-          <q-item clickable v-close-popup @click="afficher(x)">
-            <q-item-section>Afficher / éditer le groupe</q-item-section>
-          </q-item>
-          <q-separator />
-          <q-item clickable v-close-popup @click="voirsecrets(x)">
-            <q-item-section>Voir les secrets du groupe</q-item-section>
-          </q-item>
-          <q-separator />
-          <q-item clickable v-close-popup @click="nouveausecret(x)">
-            <q-item-section>Nouveau secret de groupe</q-item-section>
-          </q-item>
-        </q-list>
-      </q-menu>
-    </div>
+    <div v-if="state.lst && state.lst.length" class="col fs-md">
+      <div v-for="(x, idx) in state.lst" :key="x.k"
+        :class="dkli(idx) + ' groupecourant full-width row items-start q-py-xs cursor-pointer'">
+        <q-card class="shadow-8">
+          <img class="col-auto photomax" :src="x.g.ph"/>
+          <div class="col q-px-sm">
+            <div class="titre-md text-bold">{{g.nom}}</div>
+            <div v-if="x.g.st === 1" class="text-italic text-bold" color="negative">Plusieurs mois sans connexion !</div>
+            <div v-if="x.g.stx > 1" class="text-italic text-bold" color="warning">
+              <span>Invitation bloquées</span>
+              <span v-if="x.g.stx == 3"> - Vote pour le déblocage en cours</span>
+            </div>
+            <div v-if="x.g.sty === 1" class="text-italic text-bold" color="warning">Création et mises à jour de secrets bloquées</div>
+            <div>
+              <q-icon size="sm" :color="x.m.stx < 2 ?'primary':'warning'" :name="x.m.st === 1 ? 'hourglass_empty' : 'thumb_up'"/>
+              <span class="q-px-sm">{{x.m.st === 1 ? '- invité -' : '- actif -'}}</span>
+              <span class="q-px-sm" :color="x.m.stp < 2 ?'primary':'warning'">{{['Simple lecteur','Auteur','Animateur'][x.m.stp]}}</span>
+            </div>
+            <div v-if="x.m.ard.length !== 0" class="row justify-between">
+              <show-html class="col height-2" :texte="x.m.ard" :idx="idx"/>
+              <div class="col-auto q-pl-sm fs-sm">{{x.m.dhed}}</div>
+            </div>
+            <show-html v-if="x.m.info.length !== 0" class="height-2" :texte="x.m.info" :idx="idx"/>
+            <apercu-motscles :motscles="motscles" :src="x.m.mc"/>
+            <q-menu touch-position transition-show="scale" transition-hide="scale">
+              <q-list dense style="min-width: 10rem">
+                <q-item clickable v-close-popup @click="afficher(x)">
+                  <q-item-section>Afficher / éditer le groupe</q-item-section>
+                </q-item>
+                <q-separator />
+                <q-item clickable v-close-popup @click="voirsecrets(x)">
+                  <q-item-section>Voir les secrets du groupe</q-item-section>
+                </q-item>
+                <q-separator />
+                <q-item clickable v-close-popup @click="nouveausecret(x)">
+                  <q-item-section>Nouveau secret de groupe</q-item-section>
+                </q-item>
+              </q-list>
+            </q-menu>
+          </div>
+        </q-card>
+      </div>
+    <div v-if="!state.lst || !state.lst.length" class="titre-lg">L'avatar n'est memebre d'auncun groupe</div>
   </div>
 
-  <q-dialog v-model="editct" class="moyennelargeur">
+  <q-dialog v-model="editgr" class="moyennelargeur">
     <panel-groupe :close="fermeredit"/>
   </q-dialog>
 
@@ -37,7 +55,7 @@
   </q-dialog>
 
   <q-page-sticky v-if="$q.screen.gt.sm" position="top-left" expand :offset="[5,5]">
-    <panel-filtre-groupes @ok="rechercher" :motscles="motscles" :etat-interne="recherche" :fermer="fermerfiltre"></panel-filtre-groupes>
+    <panel-filtre-groupes @ok="rechercher" :motscles="motscles" :etat-interne="recherche" :fermer="fermerfiltre" @action="nouveauGroupe"/>
   </q-page-sticky>
 </div>
 </template>
@@ -47,28 +65,26 @@ import { useStore } from 'vuex'
 import { Motscles, FiltreGrp } from '../app/util.mjs'
 import PanelFiltreGroupes from './PanelFiltreGroupes.vue'
 import PanelGroupe from './PanelGroupe.vue'
+import ShowHtml from './ShowHtml.vue'
+import ApercuMotscles from './ApercuMotscles.vue'
 import { data } from '../app/modele.mjs'
 import { crypt } from '../app/crypto.mjs'
 
 export default ({
   name: 'TabGroupes',
 
-  components: { PanelFiltreGroupes, PanelGroupe },
+  components: { PanelFiltreGroupes, PanelGroupe, ApercuMotscles, ShowHtml },
 
   computed: {
   },
 
   data () {
     return {
-      editct: false
+      editgr: false
     }
   },
 
   methods: {
-    nomaff (x) {
-
-    },
-
     voirsecrets (x) {
       this.groupepluscourant(x)
       this.evtfiltresecrets = { cmd: 'fsg', arg: x.g }
@@ -97,6 +113,10 @@ export default ({
 
     rechercher (f) {
       this.state.filtre = f
+    },
+
+    nouveauGroupe () {
+
     },
 
     dkli (idx) { return this.$q.dark.isActive ? (idx ? 'sombre' + (idx % 2) : 'sombre0') : (idx ? 'clair' + (idx % 2) : 'clair0') }

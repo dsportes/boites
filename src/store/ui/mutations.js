@@ -164,6 +164,10 @@ export function majevtavatarct (state, val) {
   state.evtavatarct = { evt: val }
 }
 
+export function majevtavatargr (state, val) {
+  state.evtavatargr = { evt: val }
+}
+
 export function majidblec (state, { table, st, vol, nbl }) {
   const x = state.idblec
   x[table] = { st, vol, nbl }

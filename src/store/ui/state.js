@@ -46,8 +46,8 @@ export default function () {
     tabavatar: 'secrets',
     evtavatar: null,
     evtavatarct: null,
+    evtavatargr: null,
     evtfiltresecrets: null,
-    evtfiltresecrets2: null,
-    evtavatargr: null
+    evtfiltresecrets2: null
   }
 }
