@@ -5,7 +5,7 @@
         header-class="expansion-header-class-1 titre-lg bg-primary text-white">
       <q-btn class="q-my-sm" size="md" icon="add" label="Nouvel avatar" color="primary" dense @click="nvav=true"/>
       <div v-for="e in compte.mac" :key="e.na.id" class="full-width">
-        <apercu-avatar page editer selectionner :avatar-id="e.na.id"/>
+        <apercu-avatar editer selectionner :avatar-id="e.na.id"/>
       </div>
     </q-expansion-item>
   </div>
@@ -20,7 +20,7 @@
     <q-separator/>
     <q-expansion-item class="q-mt-xs" label="Mots clés" group="groupeetc"
       header-class="expansion-header-class-1 titre-lg bg-secondary text-white">
-      <div class="fake"><mots-cles class="petitelargeur maauto" :motscles="motscles"></mots-cles></div>
+      <div class="fake"><mots-cles class="petitelargeur maauto" :motscles="motscles" @ok="okmc"></mots-cles></div>
     </q-expansion-item>
   </div>
 
@@ -51,7 +51,7 @@ export default ({
   components: { EditeurMd, BoutonHelp, MotsCles, ApercuAvatar, NomAvatar },
   data () {
     return {
-      u8mc: new Uint8Array([200, 202, 1, 203, 2]),
+      u8mc: new Uint8Array([]),
       court: false,
       nvav: false,
       selecteur: false
@@ -59,6 +59,10 @@ export default ({
   },
 
   methods: {
+    async okmc (mmc) {
+      const datak = await crypt.crypter(data.clek, serial(mmc))
+      await new PrefCompte().run('mc', datak)
+    },
     closeSel () {
       this.selecteur = false
     },

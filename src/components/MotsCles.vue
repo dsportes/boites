@@ -1,13 +1,13 @@
 <template>
 <q-card class="colomn shadow-8 petitelargeur maauto">
-  <div class="q-pa-md">
+  <div v-if="!lecture" class="q-pa-md">
     <bouton-help page="page1"/>
     <q-btn v-if="!motscles.mc.st.enedition" flat dense size="md" color="warning" label="Editer" @click="startEdit"/>
     <q-btn v-if="motscles.mc.st.enedition" dense size="md" color="primary" label="Ajouter un mot clé" @click="ajoutermc"/>
     <q-btn v-if="motscles.mc.st.enedition" flat dense size="md" color="primary" label="Annuler" @click="cancelEdit"/>
     <q-btn v-if="motscles.mc.st.enedition" :disable="!motscles.mc.st.modifie" flat dense size="md" color="warning" label="Valider" @click="okEdit"/>
   </div>
-  <div ref="root">
+  <div v-if="!lecture" ref="root">
     <div v-if="ajouter" class="column q-px-sm q-pb-md" style="width:100%">
       <div class="row justify-end">
         <q-btn size="sm" icon="close" dense color="primary" label="Renoncer" @click="undo"></q-btn>
@@ -50,19 +50,16 @@
 </q-card>
 </template>
 <script>
-import { PrefCompte } from '../app/operations'
 import { useStore } from 'vuex'
 import { computed, ref, toRef, watch } from 'vue'
-import { afficherdiagnostic, serial } from '../app/util.mjs'
-import { data } from '../app/modele.mjs'
-import { crypt } from '../app/crypto.mjs'
+import { afficherdiagnostic } from '../app/util.mjs'
 import { VuemojiPicker } from 'vuemoji-picker'
 import BoutonHelp from './BoutonHelp.vue'
 
 export default ({
   name: 'MotsCles',
 
-  props: { motscles: Object },
+  props: { motscles: Object, lecture: Boolean },
 
   components: { VuemojiPicker, BoutonHelp },
 
@@ -133,10 +130,9 @@ export default ({
       this.nom = inp.value.substring(0, inp.selectionStart) + code + inp.value.substring(inp.selectionEnd, inp.value.length)
       this.emoji = false
     },
-    async okEdit () {
+    okEdit () {
       const mmc = this.motscles.finEdition()
-      const datak = await crypt.crypter(data.clek, serial(mmc))
-      await new PrefCompte().run('mc', datak)
+      this.$emit('ok', mmc)
     }
   },
 

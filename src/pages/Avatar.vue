@@ -16,7 +16,7 @@
 
     <q-expansion-item label="Mots clés du compte" group="groupeetc"
       header-class="expansion-header-class-1 titre-lg bg-secondary text-white">
-      <mots-cles :motscles="motscles"></mots-cles>
+      <mots-cles :motscles="motscles" @ok="okmc"></mots-cles>
     </q-expansion-item>
     <q-separator/>
 
@@ -54,15 +54,16 @@
 import { computed, reactive, watch } from 'vue'
 import { useStore } from 'vuex'
 import { onBoot } from '../app/page.mjs'
-import { Motscles, getJourJ } from '../app/util.mjs'
+import { Motscles, getJourJ, serial } from '../app/util.mjs'
 import MotsCles from '../components/MotsCles.vue'
 import ApercuAvatar from '../components/ApercuAvatar.vue'
 import NouveauParrainage from '../components/NouveauParrainage.vue'
 import InfoParrainage from '../components/InfoParrainage.vue'
-import { CvAvatar } from '../app/operations.mjs'
+import { CvAvatar, PrefCompte } from '../app/operations.mjs'
 import TabSecrets from '../components/TabSecrets.vue'
 import TabContacts from '../components/TabContacts.vue'
 import { data } from '../app/modele.mjs'
+import { crypt } from '../app/crypto.mjs'
 
 export default ({
   name: 'Avatar',
@@ -81,6 +82,10 @@ export default ({
   },
 
   methods: {
+    async okmc (mmc) {
+      const datak = await crypt.crypter(data.clek, serial(mmc))
+      await new PrefCompte().run('mc', datak)
+    },
     fermerinfo () { this.detailpar = false },
     selecpar (p) { this.parcour = p; this.detailpar = true },
     fermerParrain () { this.nvpar = false },

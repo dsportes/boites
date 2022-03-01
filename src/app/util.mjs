@@ -1018,7 +1018,84 @@ export class FiltreGrp {
     // niveau de changement avec le filtre précédemment employé.
     // 0: aucun, 1:tri seulement, 2:filtre
     if (!f) return 2
-    if (!equ8(this.m1, f.m1) || !equ8(this.m2, f.m2) || this.aps !== f.aps || this.texte !== f.texte || this.corps !== f.corps) return 2
+    if (!equ8(this.m1, f.m1) || !equ8(this.m2, f.m2) || this.texte !== f.texte || this.info !== f.info) return 2
+    if (this.tri !== f.tri || this.asc !== f.asc) return 1
+    return 0
+  }
+}
+
+/** Filtre des membres *************************************/
+const etats = ['Tous', 'Pressentis', 'Invités', 'Actifs', 'Inactivés', 'Refusés', 'Résiliés', 'Disparus']
+// stx : 0:pressenti, 1:invité, 2:actif (invitation acceptée), 3: inactif (invitation refusée), 4: inactif (résilié), 5: inactif (disparu).
+const istx = [1, 2, 3, 5, 6, 7]
+export class FiltreMbr {
+  constructor () {
+    this.lstEtats = [etats[0]]
+    /*
+    2 : par date de dernière modification de l'ardoise
+    1 : par ordre alphabétique du nom
+    */
+    this.tri = 1
+    this.asc = true // ascendant, descendant
+  }
+
+  etats () { return etats }
+
+  etat () {
+    const f = this
+    const a = {
+      lstEtats: f.lstEtats,
+      tri: f.asc ? f.tri : -f.tri
+    }
+    return a
+  }
+
+  depuisEtat (a) {
+    const f = this
+    f.lstEtats = a.lstEtats
+    f.asc = a.tri >= 0
+    f.tri = a.tri >= 0 ? a.tri : -a.tri
+    return f
+  }
+
+  equal (f) {
+    return this.changement(f) === 0
+  }
+
+  debutFiltre () {
+  }
+
+  filtre (m) {
+    if (m.estAvc) return true
+    if (this.lstEtats.indexOf(etats[0]) !== -1) return true
+    if (this.lstEtats.indexOf(etats[4]) !== -1 && m.stp > 2) return true
+    if (this.lstEtats.indexOf(etats[istx[m.stx]]) !== -1) return true
+    return false
+  }
+
+  tri1 (a, b) {
+    if (this.asc) {
+      return a.nom < b.nom ? -1 : (a.nom > b.nom ? 1 : 0)
+    } else {
+      return a.nom < b.nom ? 1 : (a.nom > b.nom ? -1 : 0)
+    }
+  }
+
+  tri2 (a, b) { return this.asc ? (a.dh < b.dh ? -1 : (a.dh > b.dh ? 1 : 0)) : (a.dh < b.dh ? 1 : (a.dh > b.dh ? -1 : 0)) }
+
+  fntri (a, b) {
+    if (a.estAvc) return 1
+    if (b.estAvc) return 1
+    return this.tri === 1 ? this.tri1(a, b) : this.tri2(a, b)
+  }
+
+  changement (f) {
+    // niveau de changement avec le filtre précédemment employé.
+    // 0: aucun, 1:tri seulement, 2:filtre
+    if (!f) return 2
+    const l1 = []; this.lstEtats.forEach(x => { l1.push(x) }); l1.sort()
+    const l2 = []; f.forEach(x => { l2.push(x) }); l2.sort()
+    if (l2.join('/') !== l1.join('/')) return 2
     if (this.tri !== f.tri || this.asc !== f.asc) return 1
     return 0
   }

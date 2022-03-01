@@ -8,15 +8,11 @@
           <img class="col-auto photomax" :src="x.g.ph"/>
           <div class="col q-px-sm">
             <div class="titre-md text-bold">{{g.nom}}</div>
-            <div v-if="x.g.st === 1" class="text-italic text-bold" color="negative">Plusieurs mois sans connexion !</div>
-            <div v-if="x.g.stx > 1" class="text-italic text-bold" color="warning">
-              <span>Invitation bloquées</span>
-              <span v-if="x.g.stx == 3"> - Vote pour le déblocage en cours</span>
-            </div>
+            <div v-if="x.g.stx === 2" class="text-italic text-bold" color="warning">Invitation bloquées - Vote pour le déblocage en cours</div>
             <div v-if="x.g.sty === 1" class="text-italic text-bold" color="warning">Création et mises à jour de secrets bloquées</div>
             <div>
-              <q-icon size="sm" :color="x.m.stx < 2 ?'primary':'warning'" :name="x.m.st === 1 ? 'hourglass_empty' : 'thumb_up'"/>
-              <span class="q-px-sm">{{x.m.st === 1 ? '- invité -' : '- actif -'}}</span>
+              <q-icon size="sm" :color="x.m.stx < 2 ?'primary':'warning'" :name="x.m.stx === 1 ? 'hourglass_empty' : 'thumb_up'"/>
+              <span class="q-px-sm">{{x.m.stx === 1 ? '- invité -' : '- actif -'}}</span>
               <span class="q-px-sm" :color="x.m.stp < 2 ?'primary':'warning'">{{['Simple lecteur','Auteur','Animateur'][x.m.stp]}}</span>
             </div>
             <div v-if="x.m.ard.length !== 0" class="row justify-between">

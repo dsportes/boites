@@ -1446,7 +1446,7 @@ export class Contact {
     - 1 : détecté par le GC, _le groupe_ est resté plusieurs mois sans connexion.
     - J : auto-détruit le jour J: c'est un délai de remord. Quand un compte détruit un groupe, il a N jours depuis la date courante pour se rétracter et le réactiver.
 - `stxy` : Deux chiffres `x y`
-  - `x` : 1-ouvert, 2-fermé, 3-ré-ouverture en vote
+  - `x` : 1-ouvert, 2-fermé,ré-ouverture en vote
   - `y` : 0-en écriture, 1-archivé
 - `cvg` : carte de visite du groupe `[photo, info]` cryptée par la clé G du groupe.
 - `mcg` : liste des mots clés définis pour le groupe cryptée par la clé du groupe cryptée par la clé G du groupe.
@@ -1574,6 +1574,8 @@ export class Membre {
 
   get pk () { return this.sid + '/' + this.sid2 }
 
+  get pkv () { return this.sid + '/' + this.sid2 + '/' + this.v }
+
   get suppr () { return this.st < 0 }
 
   get horsLimite () { return false }
@@ -1588,6 +1590,12 @@ export class Membre {
 
   get cleg () { return data.getNa(this.id).cle }
 
+  get cv () { return data.repertoire.getCv(this.namb.id) } // cv du membre
+
+  get ph () { const cv = this.cv; return cv.photo ? cv.photo : '' }
+
+  get nom () { return this.namb.titre }
+
   get estAvc () { // true si ce membre est un avatar du compte
     return data.avc(this.namb.id) !== undefined
   }
@@ -1598,8 +1606,6 @@ export class Membre {
     const t = t1.length <= 16 ? t1 : t1.substring(0, 13) + '...'
     return t ? t + ' [' + this.namb.titre + ']' : this.namb.titre
   }
-
-  get nom () { return this.namb.titre }
 
   async fromRow (row) {
     this.vsh = row.vsh || 0

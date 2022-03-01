@@ -1429,3 +1429,132 @@ export class CreationAvatar extends OperationUI {
     }
   }
 }
+
+/* Mise à jour des mots clés d'un groupe ****************************************
+- sessionId
+Retour :
+- sessionId
+- dh
+*/
+export class MajMcGroupe extends OperationUI {
+  constructor () {
+    super('Mise à jour des mots clés d\'un groupe', OUI, SELONMODE)
+  }
+
+  async run (groupe, mmc) { // arguments : groupe, map des mots clés
+    try {
+      // TODO
+      const args = { sessionId: data.sessionId }
+      const ret = await post(this, 'm1', 'majmcGroupe', args)
+      if (data.dh < ret.dh) data.dh = ret.dh
+      this.finOK()
+    } catch (e) {
+      await this.finKO(e)
+    }
+  }
+}
+
+/* Mise à jour de la carte de visite d'un groupe ****************************************
+- sessionId
+Retour :
+- sessionId
+- dh
+*/
+export class MajCvGroupe extends OperationUI {
+  constructor () {
+    super('Mise à jour des mots clés d\'un groupe', OUI, SELONMODE)
+  }
+
+  // arguments : groupe, carte de visite {ph: , info: }
+  async run (groupe, ph, info) {
+    try {
+      // TODO
+      const args = { sessionId: data.sessionId }
+      const ret = await post(this, 'm1', 'majcvGroupe', args)
+      if (data.dh < ret.dh) data.dh = ret.dh
+      this.finOK()
+    } catch (e) {
+      await this.finKO(e)
+    }
+  }
+}
+
+/* Mise à jour du statut d'archivage d'un groupe ****************************************
+- sessionId
+Retour :
+- sessionId
+- dh
+*/
+export class MajArchGroupe extends OperationUI {
+  constructor () {
+    super('Mise à jour des mots clés d\'un groupe', OUI, SELONMODE)
+  }
+
+  // arguments : groupe, arch
+  async run (groupe, arch) {
+    try {
+      // TODO
+      const args = { sessionId: data.sessionId }
+      const ret = await post(this, 'm1', 'majarchGroupe', args)
+      if (data.dh < ret.dh) data.dh = ret.dh
+      this.finOK()
+    } catch (e) {
+      await this.finKO(e)
+    }
+  }
+}
+
+/* Mise à jour du statut de blocage d'invitations d'un groupe ****************************************
+- sessionId
+Retour :
+- sessionId
+- dh
+*/
+export class MajBIGroupe extends OperationUI {
+  constructor () {
+    super('Mise à jour des mots clés d\'un groupe', OUI, SELONMODE)
+  }
+
+  // arguments : groupe, blocage (true / false)
+  async run (groupe, blocage) {
+    try {
+      // TODO
+      const args = { sessionId: data.sessionId }
+      const ret = await post(this, 'm1', 'majarchGroupe', args)
+      if (data.dh < ret.dh) data.dh = ret.dh
+      this.finOK()
+    } catch (e) {
+      await this.finKO(e)
+    }
+  }
+}
+
+/* Création d'un nouveau groupe ****************************************
+args :
+- sessionId
+- ida : id de l'avatar créateur
+- ni : numéro d'inscription
+- datak : [] du terme de lgrk
+- rowGroupe
+- rowMembre
+Retour :
+- sessionId
+- dh
+*/
+export class CreationGroupe extends OperationUI {
+  constructor () {
+    super('Création d\'un nouveau groupe', OUI, SELONMODE)
+  }
+
+  async run (groupe, mmc) { // arguments : groupe, map des mots clés
+    try {
+      // TODO
+      const args = { sessionId: data.sessionId }
+      const ret = await post(this, 'm1', 'creationGroupe', args)
+      if (data.dh < ret.dh) data.dh = ret.dh
+      this.finOK()
+    } catch (e) {
+      await this.finKO(e)
+    }
+  }
+}

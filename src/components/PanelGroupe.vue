@@ -2,30 +2,63 @@
   <q-card class="full-height moyennelargeur fs-md column">
     <q-toolbar class="col-auto bg-primary text-white maToolBar">
       <q-btn flat round dense icon="close" size="md" class="q-mr-sm" @click="fermer" />
-      <q-toolbar-title><div class="titre-md tit text-center">{{contact ? contact.nom : ''}}</div></q-toolbar-title>
-      <q-btn v-if="mode <= 2" :disable="!modif" class="q-ml-sm" flat dense color="white" icon="undo" @click="initState"/>
-      <q-btn v-if="mode <= 2" :disable="!modif || erreur !== ''" class="q-my-sm"
-        flat dense color="white" :label="'Valider'" icon="check" @click="valider"/>
+      <q-toolbar-title><div class="titre-md tit text-center">{{state.g ? state.g.nom : ''}}</div></q-toolbar-title>
     </q-toolbar>
 
-    <q-card-section>
-      <div class="q-my-sm row">
-        <img class="col-auto photomax" :src="contact ? contact.ph : ''"/>
-        <show-html class="col q-ml-md bord1 height-6" :texte="contact ? contact.cv.info : ''"/>
-      </div>
-    </q-card-section>
-
-    <q-card-section>
+    <q-expansion-item v-if="state.g" label="Carte de visite du groupe" default-opened
+        header-class="expansion-header-class-1 titre-lg bg-primary text-white">
+      <apercu-groupe :groupe="state.g" :editer="anim"/>
       <div style="margin-left:-0.8rem" class="text-primary">
-        <q-toggle v-model="state.aps" size="md" :color="state.aps ? 'green' : 'grey'"
-          :label="'' + (!state.aps ? 'Je n\'accepte pas' : 'J\'accepte') + ' le partage de secrets avec ce contact'"/>
+        <q-toggle v-model="state.arch" :disable="!anim" size="md" :color="arch ? 'warning' : 'green'"
+          :label="arch ? 'Création de secrets et mises à jour bloquées' : 'Création de secrets et mises à jour libres'"/>
       </div>
-      <div style="margin-left:-0.8rem" class="text-primary">
-        <q-toggle v-model="state.apsb" size="md" disable :color="state.apsb ? 'green' : 'grey'"
-          :label="(!state.apsb ? 'Le contact n\'accepte pas' : 'Le contact accepte') + ' le partage de secrets avec moi'"/>
+      <div v-if="state.g.stx === 2">
+        <div class="text-italic text-bold" color="warning">Invitation bloquées - {{state.nbvote}} vote(s) pour le déblocage sur {{state.nbanim}}</div>
+        <q-btn v-if="anim" class="q-ma-xs" size="md" dense icon="unlock" label="Débloquer les invitations" @click="debloquer" />
       </div>
-    </q-card-section>
+      <div v-if="state.g.stx === 1">
+        <div class="text-italic">Les invitations sont libres</div>
+        <q-btn v-if="anim" class="q-ma-xs" size="md" dense icon="lock" label="Bloquer les invitations" @click="bloquer" />
+      </div>
+    </q-expansion-item>
 
+    <q-expansion-item v-if="state.g" label="Mots clés spécifiques du groupe" color="secondary"
+        header-class="expansion-header-class-1 titre-lg bg-primary text-white">
+      <mots-cles :motscles="state.motsclesGr" :lecture="!anim" @ok="changermcl"/>
+    </q-expansion-item>
+
+    <q-expansion-item v-if="state.g" label="Liste des membres du groupe" color="secondary"
+        header-class="expansion-header-class-1 titre-lg bg-primary text-white">
+      <div v-for="(m, idx) in state.lst" :key="m.pkv"
+        :class="dkli(idx) + ' membrecourant full-width row items-start q-py-xs cursor-pointer'">
+        <q-card class="shadow-8">
+          <img class="col-auto photomax" :src="m.ph || personne"/>
+          <div class="col q-px-sm">
+            <div class="titre-md text-bold">{{m.nom}}</div>
+            <div>
+              <q-icon v-if="m.estAvc" class="q-mr-xs" size="sm" color="warning" name="stars"/>
+              <span v-if="m.estAvc" class="q-mr-sm text-bold text-warning">MOI</span>
+              <q-icon size="sm" :color="m.stx === 2 ?'primary':'warning'"
+                :name="m.stx < 2 ? 'hourglass_empty' : (m.stx === 2 ? 'thumb_up' : 'thumb_down')"/>
+              <span class="q-px-sm">{{statuts[m.stx]}}</span>
+              <span class="q-px-sm" :color="m.stp < 2 ?'primary':'warning'">{{['Simple lecteur','Auteur','Animateur'][m.stp]}}</span>
+            </div>
+            <div class="row justify-between cursor-pointer">
+              <div class="col-auto q-pr-sm">Ardoise :</div>
+              <show-html class="col height-2" :texte="m.ard" :idx="idx"/>
+              <div class="col-auto q-pl-sm fs-sm">{{m.dhed}}</div>
+            </div>
+            <div v-if="estAvc" class="cursor-pointer">
+              <div>Titre et commentaires personnels à propos du groupe</div>
+              <show-html class="height-2" :texte="m.info" :idx="idx"/>
+            </div>
+            <apercu-motscles v-if="m.estAvc" :motscles="motscles" :src="m.mc"/>
+          </div>
+        </q-card>
+      </div>
+    </q-expansion-item>
+
+<!--
     <q-card-section>
       <div class="titre-md">Ardoise commune avec le groupe</div>
       <editeur-md class="height-8" v-model="state.ard" :texte="contact ? contact.ard : ''" editable/>
@@ -36,36 +69,32 @@
       <editeur-md class="height-8" v-model="state.info" :texte="contact ? contact.info : ''" editable/>
     </q-card-section>
 
-    <q-card-section>
-      <div class="titre-md">Mots clés qualifiant le contact</div>
-      <apercu-motscles :motscles="state.motscles" :src="state.mc" :args-click="{}" @click-mc="mcledit=true"/>
-    </q-card-section>
-
     <q-dialog v-model="mcledit">
       <select-motscles :motscles="state.motscles" :src="state.mc" @ok="changermcl" :close="fermermcl"></select-motscles>
     </q-dialog>
-
+-->
   </q-card>
 </template>
 <script>
 import { computed, reactive, watch } from 'vue'
 import { useStore } from 'vuex'
-import { Motscles, equ8 } from '../app/util.mjs'
+import { Motscles, equ8, cfg, FiltreMbr } from '../app/util.mjs'
 import { data } from '../app/modele.mjs'
-import { MajContact } from '../app/operations.mjs'
+import { MajMcGroupe, MajArchGroupe, MajBIGroupe } from '../app/operations.mjs'
 import ShowHtml from './ShowHtml.vue'
-import EditeurMd from './EditeurMd.vue'
 import ApercuMotscles from './ApercuMotscles.vue'
-import SelectMotscles from './SelectMotscles.vue'
+// import EditeurMd from './EditeurMd.vue'
+// import SelectMotscles from './SelectMotscles.vue'
 
 export default ({
   name: 'PanelGroupe',
 
-  components: { ShowHtml, EditeurMd, ApercuMotscles, SelectMotscles },
+  components: { ShowHtml, ApercuMotscles /* EditeurMd, SelectMotscles */ },
 
   props: { close: Function },
 
   computed: {
+    anim () { return this.state.maxstp === 2 },
     modif () {
       const c = this.contact
       if (!c) return false
@@ -83,15 +112,23 @@ export default ({
 
   methods: {
     fermermcl () { this.mcledit = false },
-    changermcl (mc) { this.state.mc = mc },
-    async valider () {
-      await new MajContact().run(this.contact, this.state)
+    async changermcl (mmc) {
+      new MajMcGroupe().run(this.state.g, mmc)
     },
-    fermer () { if (this.close) this.close() }
+    async bloquer () {
+      await new MajBIGroupe().run(this.state.g, true)
+    },
+    async debloquer () {
+      await new MajBIGroupe().run(this.state.g, false)
+    },
+    fermer () { if (this.close) this.close() },
+    dkli (idx) { return this.$q.dark.isActive ? (idx ? 'sombre' + (idx % 2) : 'sombre0') : (idx ? 'clair' + (idx % 2) : 'clair0') }
   },
 
   setup () {
     const $store = useStore()
+    const personnes = cfg().personnes.default
+    const personne = cfg().personne.default
     const diagnostic = computed({
       get: () => $store.state.ui.diagnostic,
       set: (val) => $store.commit('ui/majdiagnostic', val)
@@ -99,34 +136,97 @@ export default ({
     const groupeplus = computed(() => { return $store.state.db.groupeplus })
     const mode = computed(() => $store.state.ui.mode)
     const prefs = computed(() => { return data.getPrefs() })
+    // const avatar = computed(() => { return $store.state.db.avatar })
+    const membres = computed(() => { return groupeplus.value ? data.getMembre(groupeplus.value.g.id) : {} })
+    const repertoire = computed(() => { return $store.state.db.repertoire })
 
     const state = reactive({
+      filtre: { p: true, i: true, a: true, n: true, dh: false, asc: true },
       motcles: null,
-      mc: null,
-      aps: false,
-      apsb: false,
-      info: '',
-      ard: ''
+      g: null,
+      arch: false,
+      m: null,
+      lst: [], // liste des membres
+      lstAc: [], // parmi les membres celui / ceux avatar du compte
+      nbanim: 0,
+      nbvote: 0,
+      maxstp: 0, // statut lecteur / auteur / animateur max des avaters du compte membres du groupe
+      motclesGr: null
     })
 
     const mc = reactive({ categs: new Map(), lcategs: [], st: { enedition: false, modifie: false } })
 
     function chargerMc () {
-      state.motscles = new Motscles(mc, 1, 0)
+      state.motscles = new Motscles(mc, 3, groupeplus.value ? groupeplus.value.g.id : 0)
       state.motscles.recharger()
     }
 
+    const mcGr = reactive({ categs: new Map(), lcategs: [], st: { enedition: false, modifie: false } })
+
+    function chargerMcGr () {
+      state.motsclesGr = new Motscles(mcGr, 2, groupeplus.value ? groupeplus.value.g.id : 0)
+      state.motsclesGr.recharger()
+    }
+
+    const recherche = reactive({ // doit correspondre au Filtre par défaut
+      a: new FiltreMbr().etat(),
+      p: new FiltreMbr().etat()
+    })
+
     function initState () {
-      const c = groupeplus.value
-      state.aps = c ? c.stx === 1 : false
-      state.apsb = c ? c.sty === 1 : false
-      state.info = c ? c.info : ''
-      state.ard = c ? c.ard : ''
-      state.mc = c ? c.mc : new Uint8Array([])
+      const x = groupeplus.value
+      state.g = x.g
+      state.m = x.m
+      state.arch = x.g ? x.g.sty === 1 : false
+      chargerMcGr()
+    }
+
+    watch(state.arch, async (ap, av) => {
+      const avant = state.g.sty === 1
+      if (ap !== avant) {
+        await new MajArchGroupe().run(state.g, ap)
+      }
+    })
+
+    function getMembres () {
+      const f = state.filtre
+      f.debutFiltre()
+      const lst = []
+      const lstAc = []
+      let maxstp = 0
+      let nbanim = 0
+      let nbvote = 0
+      for (const im in membres.value) {
+        const m = membres.value[im]
+        if (f.filtre(m)) lst.push(m)
+        if (m.estAvc) {
+          lstAc.push(m)
+          if (m.stp > maxstp) maxstp = m.stp
+          if (m.stp === 2) nbanim++
+          if (m.stp === 2 && m.vote) nbvote++
+        }
+      }
+      state.lst = lst
+      state.lstAc = lstAc
+      state.maxstp = maxstp
+      state.nbanim = nbanim
+      state.nbvote = nbvote
+    }
+
+    function trier () {
+      const l = []; state.lst.forEach(x => l.push(x))
+      l.sort((a, b) => state.filtre.fntri(a, b))
+      state.lst = l
+    }
+
+    function latotale () {
+      getMembres()
+      trier()
     }
 
     initState()
     chargerMc()
+    latotale()
 
     watch(() => prefs.value, (ap, av) => {
       chargerMc()
@@ -134,13 +234,25 @@ export default ({
 
     watch(() => groupeplus.value, (ap, av) => {
       initState()
+      chargerMcGr()
+      chargerMc()
+      latotale()
+    })
+
+    watch(() => repertoire.value, (ap, av) => {
+      latotale()
     })
 
     return {
       initState,
+      personnes,
+      personne,
+      recherche,
       state,
       diagnostic,
-      mode
+      mode,
+      options: ['Tous', 'Pressentis', 'Invités', 'Actifs', 'Inactivés', 'Refusés', 'Résiliés', 'Disparus'],
+      statuts: ['pressenti', 'invité', 'actif', 'refusé', 'résilié', 'disparu']
     }
   }
 })
@@ -149,4 +261,12 @@ export default ({
 @import '../css/app.sass'
 .bord1
   border:  1px solid $grey-5
+.photomax
+  position: relative
+  top: -5px
+.ml20
+  width: 100%
+  padding: 0.2rem 0.2rem 0.2rem 23rem
+.membrecourant:hover
+  background-color: rgba(130, 130, 130, 0.5)
 </style>
