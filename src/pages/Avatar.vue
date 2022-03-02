@@ -2,10 +2,7 @@
 <q-page class="fs-md q-pa-xs">
   <tab-secrets v-if="tabavatar === 'secrets'"></tab-secrets>
   <tab-contacts v-if="tabavatar === 'contacts'"></tab-contacts>
-
-  <div v-if="tabavatar === 'groupes'" class="full-width">
-    <div class="titre-lg">Groupes auxquels l'avatar participe</div>
-  </div>
+  <tab-groupes v-if="tabavatar === 'groupes'"></tab-groupes>
 
   <div v-if="tabavatar === 'etc' && avatar">
     <q-expansion-item label="Carte de visite de l'avatar" group="groupeetc"
@@ -62,13 +59,14 @@ import InfoParrainage from '../components/InfoParrainage.vue'
 import { CvAvatar, PrefCompte } from '../app/operations.mjs'
 import TabSecrets from '../components/TabSecrets.vue'
 import TabContacts from '../components/TabContacts.vue'
+import TabGroupes from '../components/TabGroupes.vue'
 import { data } from '../app/modele.mjs'
 import { crypt } from '../app/crypto.mjs'
 
 export default ({
   name: 'Avatar',
 
-  components: { ApercuAvatar, MotsCles, TabSecrets, NouveauParrainage, TabContacts, InfoParrainage },
+  components: { ApercuAvatar, MotsCles, TabSecrets, NouveauParrainage, TabContacts, TabGroupes, InfoParrainage },
 
   computed: {
   },

@@ -46,8 +46,27 @@
     <panel-groupe :close="fermeredit"/>
   </q-dialog>
 
+  <q-dialog v-model="nouvgr" class="petitelargeur">
+    <q-card class="petitelargeur shadow-8">
+      <q-card-section>
+        <div class="titre-lg">Création d'un nouveau groupe</div>
+        <div class="titre-md">Nom du groupe</div>
+        <nom-avatar icon-valider="check" verif groupe label-valider="Valider" @ok-nom="oknom" />
+        <q-separator/>
+        <div v-if="nomgr">
+          <div class="titre-md">Forfaits attribués</div>
+          <choix-forfaits v-model="forfaits" />
+        </div>
+      </q-card-section>
+      <q-card-actions>
+        <q-btn flat dense color="primary" icon="close" label="renoncer" @click="nouvgr=false" />
+        <q-btn flat dense color="warning" :disable="!nomgr" icon="check" label="Créer le groupe" @click="creergroupe"/>
+      </q-card-actions>
+    </q-card>
+  </q-dialog>
+
   <q-dialog v-model="panelfiltre" position="left">
-    <panel-filtre-groupes @ok="rechercher" :motscles="motscles" :etat-interne="recherche" :fermer="fermerfiltre"></panel-filtre-groupes>
+    <panel-filtre-groupes @ok="rechercher" :motscles="motscles" :etat-interne="recherche" :fermer="fermerfiltre" @action="nouveauGroupe"></panel-filtre-groupes>
   </q-dialog>
 
   <q-page-sticky v-if="$q.screen.gt.sm" position="top-left" expand :offset="[5,5]">
@@ -62,21 +81,27 @@ import { Motscles, FiltreGrp } from '../app/util.mjs'
 import PanelFiltreGroupes from './PanelFiltreGroupes.vue'
 import PanelGroupe from './PanelGroupe.vue'
 import ShowHtml from './ShowHtml.vue'
+import ChoixForfaits from './ChoixForfaits.vue'
+import NomAvatar from './NomAvatar.vue'
 import ApercuMotscles from './ApercuMotscles.vue'
 import { data } from '../app/modele.mjs'
 import { crypt } from '../app/crypto.mjs'
+import { CreationGroupe } from '../app/operations.mjs'
 
 export default ({
   name: 'TabGroupes',
 
-  components: { PanelFiltreGroupes, PanelGroupe, ApercuMotscles, ShowHtml },
+  components: { PanelFiltreGroupes, PanelGroupe, ApercuMotscles, ShowHtml, ChoixForfaits, NomAvatar },
 
   computed: {
   },
 
   data () {
     return {
-      editgr: false
+      editgr: false,
+      nouvgr: false,
+      forfaits: [1, 1],
+      nomgr: ''
     }
   },
 
@@ -111,8 +136,12 @@ export default ({
       this.state.filtre = f
     },
 
-    nouveauGroupe () {
+    nouveauGroupe () { this.nouvgr = true },
 
+    oknom (nom) { this.nomgr = nom },
+
+    async creergroupe () {
+      await new CreationGroupe().run(this.avatar, this.nomgr, this.forfaits)
     },
 
     dkli (idx) { return this.$q.dark.isActive ? (idx ? 'sombre' + (idx % 2) : 'sombre0') : (idx ? 'clair' + (idx % 2) : 'clair0') }

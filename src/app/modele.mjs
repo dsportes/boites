@@ -1446,16 +1446,20 @@ export class Contact {
     - 1 : détecté par le GC, _le groupe_ est resté plusieurs mois sans connexion.
     - J : auto-détruit le jour J: c'est un délai de remord. Quand un compte détruit un groupe, il a N jours depuis la date courante pour se rétracter et le réactiver.
 - `stxy` : Deux chiffres `x y`
-  - `x` : 1-ouvert, 2-fermé,ré-ouverture en vote
+  - `x` : 1-ouvert, 2-fermé, 3-ré-ouverture en vote
   - `y` : 0-en écriture, 1-archivé
 - `cvg` : carte de visite du groupe `[photo, info]` cryptée par la clé G du groupe.
+- `idhg` : id du compte hébergeur crypté par la clé G du groupe.
+- `imhg` : indice im du membre dont le compte est hébergeur.
+- `v1 v2` : volumes courants des secrets du groupe.
+- `f1 f2` : forfaits v1 v2 attribués par le compte hébergeur.
 - `mcg` : liste des mots clés définis pour le groupe cryptée par la clé du groupe cryptée par la clé G du groupe.
 - `vsh`
 */
 
 schemas.forSchema({
   name: 'idbGroupe',
-  cols: ['id', 'v', 'dds', 'st', 'stxy', 'cv', 'mc', 'vsh']
+  cols: ['id', 'v', 'dds', 'st', 'stxy', 'cv', 'idh', 'imh', 'v1', 'v2', 'f1', 'f2', 'mc', 'vsh']
 })
 
 export class Groupe {
@@ -1508,6 +1512,26 @@ export class Groupe {
     return stp
   }
 
+  nouveau (nom, imh, forfaits) {
+    const na = data.setNa(nom)
+    this.id = na.id
+    this.v = 0
+    this.dds = 0
+    this.st = 0
+    this.stxy = 10
+    this.idh = data.getCompte().id
+    this.imh = imh
+    this.photo = ''
+    this.info = ''
+    this.v1 = 0
+    this.v2 = 0
+    this.f1 = forfaits[0]
+    this.f2 = forfaits[1]
+    this.mc = {}
+    this.vsh = 0
+    return this
+  }
+
   async fromRow (row) {
     this.vsh = row.vsh || 0
     this.id = row.id
@@ -1520,6 +1544,12 @@ export class Groupe {
       this.photo = cv[0]
       this.info = cv[1]
       this.mc = row.mcg ? deserial(await crypt.decrypter(this.cleg, row.mcg)) : {}
+      this.idh = parseInt(await crypt.decrypter(this.cleg, row.idhg))
+      this.imh = row.imh
+      this.v1 = row.v1
+      this.v2 = row.v2
+      this.f1 = row.f1
+      this.f2 = row.f2
     }
     return this
   }
@@ -1527,7 +1557,8 @@ export class Groupe {
   async toRow () {
     const r = { ...this }
     r.cvg = await crypt.crypter(this.cleg, serial([this.photo, this.info]))
-    r.mcg = r.mc.length ? await crypt.crypter(this.cleg, serial(this.mc)) : null
+    r.mcg = Object.keys(r.mc).length ? await crypt.crypter(this.cleg, serial(this.mc)) : null
+    r.idhg = await crypt.crypter(this.cleg, '' + this.idh)
     return schemas.serialize('rowgroupe', r)
   }
 
@@ -1562,7 +1593,7 @@ export class Groupe {
 
 schemas.forSchema({
   name: 'idbMembre',
-  cols: ['id', 'im', 'v', 'st', 'vote', 'q1', 'q2', 'mc', 'info', 'data', 'ard', 'vsh']
+  cols: ['id', 'im', 'v', 'st', 'vote', 'mc', 'info', 'data', 'ard', 'vsh']
 })
 
 export class Membre {
@@ -1605,6 +1636,26 @@ export class Membre {
     const t1 = i === -1 ? this.info : this.info.substring(0, i)
     const t = t1.length <= 16 ? t1 : t1.substring(0, 13) + '...'
     return t ? t + ' [' + this.namb.titre + ']' : this.namb.titre
+  }
+
+  nouveau (id, im, na) {
+    this.id = id
+    this.im = im
+    this.v = 0
+    this.st = 22
+    this.vote = null
+    this.mc = new Uint8Array([])
+    this.info = ''
+    this.ard = ''
+    this.data = {
+      nom: na.nom,
+      rnd: na.rnd,
+      ni: crypt.rnd6(),
+      idi: na.id
+    }
+    data.setNa(this.data.nom, this.data.rnd, this.id, this.im)
+    this.vsh = 0
+    return this
   }
 
   async fromRow (row) {

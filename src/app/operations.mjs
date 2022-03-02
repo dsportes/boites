@@ -5,7 +5,7 @@ import {
   getGroupes, getMembres, getParrains, getRencontres, getSecrets,
   purgeAvatars, purgeCvs, purgeGroupes, openIDB, enregLScompte, setEtat, getEtat, getPjidx, putPj
 } from './db.mjs'
-import { Compte, Avatar, rowItemsToMapObjets, commitMapObjets, data, Prefs, Contact, Invitgr, Compta, Ardoise } from './modele.mjs'
+import { Compte, Avatar, rowItemsToMapObjets, commitMapObjets, data, Prefs, Contact, Invitgr, Compta, Ardoise, Groupe, Membre } from './modele.mjs'
 import { AppExc, EXBRK, EXPS, F_BRO, INDEXT, X_SRV, E_WS, SIZEAV, SIZEGR, MC } from './api.mjs'
 
 import { crypt } from './crypto.mjs'
@@ -1546,10 +1546,28 @@ export class CreationGroupe extends OperationUI {
     super('Création d\'un nouveau groupe', OUI, SELONMODE)
   }
 
-  async run (groupe, mmc) { // arguments : groupe, map des mots clés
+  async run (avatar, nom, forfaits) { // arguments : nom (string), forfaits [f1, f2]
     try {
-      // TODO
-      const args = { sessionId: data.sessionId }
+      const im = crypt.rnd4()
+      const groupe = new Groupe().nouveau(nom, im, forfaits)
+      const na = groupe.na
+      const rowGroupe = await groupe.toRow()
+
+      const membre = new Membre().nouveau(groupe.id, im, avatar.na)
+      const rowMembre = await membre.toRow()
+      const ni = membre.data.ni
+
+      const lgr = [na.nom, na.rnd, im]
+      const datak = await crypt.crypter(data.clek, serial(lgr))
+
+      const args = {
+        sessionId: data.sessionId,
+        ida: avatar.id,
+        ni,
+        datak,
+        rowGroupe,
+        rowMembre
+      }
       const ret = await post(this, 'm1', 'creationGroupe', args)
       if (data.dh < ret.dh) data.dh = ret.dh
       this.finOK()
