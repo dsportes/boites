@@ -115,7 +115,8 @@ export default ({
     undogen () {
       this.undoph()
       this.md.undo()
-      this.valider()
+      this.$emit('ok', false)
+      if (this.close) this.close()
     },
     valider () {
       this.$emit('ok', !this.modif ? false : this.resultat)

@@ -264,7 +264,7 @@ export class Operation {
   /* Recharge depuis le serveur les groupes et les tables associées (membres, secrets) */
   async chargerGr (id, tous) { // lgr : set des groupes utiles
     const sid = crypt.idToSid(id)
-    const lv = tous ? new Array(SIZEGR).fill(0) : data.getVerGr(sid)
+    const lv = tous ? new Array(SIZEGR).fill(0) : data.vag.getVerGr(sid)
     const ret = await post(this, 'm1', 'syncGr', { sessionId: data.sessionId, avgr: id, lv })
     if (data.dh < ret.dh) data.dh = ret.dh
     const objets = []

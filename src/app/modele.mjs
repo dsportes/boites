@@ -1487,7 +1487,7 @@ export class Groupe {
 
   get sty () { return this.st < 0 ? -1 : this.st % 10 }
 
-  get nom () { return titreEd(this.na.nom, this.cv.info) }
+  get nom () { return titreEd(this.na.nom, this.info) }
 
   imDeId (id) {
     const i = this.lmb.indexOf(id)
@@ -1638,15 +1638,18 @@ export class Membre {
     return t ? t + ' [' + this.namb.titre + ']' : this.namb.titre
   }
 
+  get dhed () { return dhstring(this.dh) }
+
   nouveau (id, im, na) {
     this.id = id
     this.im = im
     this.v = 0
     this.st = 22
-    this.vote = null
+    this.vote = 0
     this.mc = new Uint8Array([])
     this.info = ''
     this.ard = ''
+    this.dh = 0
     this.data = {
       nom: na.nom,
       rnd: na.rnd,
@@ -1665,22 +1668,23 @@ export class Membre {
     this.v = row.v
     this.st = row.st
     if (!this.suppr) {
+      this.vote = row.vote
       this.data = deserial(await crypt.decrypter(this.cleg, row.datag))
       data.setNa(this.data.nom, this.data.rnd, this.id, this.im)
       const [d, t] = row.ardg ? await crypt.decrypterStr(this.cleg, row.ardg) : [0, '']
       this.ard = t
       this.dh = d
-      this.info = row.infok && this.estAvc ? deserial(await crypt.decrypter(data.clek, row.infok)) : ''
+      this.info = row.infok && this.estAvc ? await crypt.decrypterStr(data.clek, row.infok) : ''
       this.mc = row.mc
     }
     return this
   }
 
-  async toRow () { // ne devrait pas servir !!!
+  async toRow () {
     const r = { ...this }
     r.datag = await crypt.crypter(this.cleg, serial(this.data))
-    r.ardg = await crypt.crypter(this.cleg, serial([this.dh, this.ard]))
-    r.infok = this.estAvc ? await crypt.crypter(data.clek, this.info) : null
+    r.ardg = this.ard ? await crypt.crypter(this.cleg, serial([this.dh, this.ard])) : null
+    r.infok = this.estAvc && this.info ? await crypt.crypter(data.clek, this.info) : null
     return schemas.serialize('rowmembre', r)
   }
 

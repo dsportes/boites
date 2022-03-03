@@ -4,14 +4,13 @@
       <q-btn flat round dense icon="close" size="md" class="q-mr-sm" @click="fermer" />
       <q-toolbar-title><div class="titre-md tit text-center">{{state.g ? state.g.nom : ''}}</div></q-toolbar-title>
     </q-toolbar>
+    <q-separator/>
 
-    <q-expansion-item v-if="state.g" label="Carte de visite du groupe" default-opened
+    <q-expansion-item v-if="state.g" group="etc" label="Carte de visite du groupe" default-opened
         header-class="expansion-header-class-1 titre-lg bg-primary text-white">
       <apercu-groupe :groupe="state.g" :editer="anim"/>
-      <div style="margin-left:-0.8rem" class="text-primary">
-        <q-toggle v-model="state.arch" :disable="!anim" size="md" :color="arch ? 'warning' : 'green'"
-          :label="arch ? 'Création de secrets et mises à jour bloquées' : 'Création de secrets et mises à jour libres'"/>
-      </div>
+      <q-toggle v-model="state.arch" :disable="!anim" size="md" :color="state.arch ? 'warning' : 'green'"
+          :label="state.arch ? 'Création de secrets et mises à jour bloquées' : 'Création de secrets et mises à jour libres'"/>
       <div v-if="state.g.stx === 2">
         <div class="text-italic text-bold" color="warning">Invitation bloquées - {{state.nbvote}} vote(s) pour le déblocage sur {{state.nbanim}}</div>
         <q-btn v-if="anim" class="q-ma-xs" size="md" dense icon="unlock" label="Débloquer les invitations" @click="debloquer" />
@@ -21,42 +20,51 @@
         <q-btn v-if="anim" class="q-ma-xs" size="md" dense icon="lock" label="Bloquer les invitations" @click="bloquer" />
       </div>
     </q-expansion-item>
+    <q-separator/>
 
-    <q-expansion-item v-if="state.g" label="Mots clés spécifiques du groupe" color="secondary"
+    <q-expansion-item v-if="state.g" group="etc" label="Mots clés spécifiques du groupe" color="secondary"
         header-class="expansion-header-class-1 titre-lg bg-primary text-white">
       <mots-cles :motscles="state.motsclesGr" :lecture="!anim" @ok="changermcl"/>
     </q-expansion-item>
+    <q-separator/>
 
-    <q-expansion-item v-if="state.g" label="Liste des membres du groupe" color="secondary"
+    <q-expansion-item v-if="state.g" group="etc" label="Liste des membres du groupe" color="secondary"
         header-class="expansion-header-class-1 titre-lg bg-primary text-white">
-      <div v-for="(m, idx) in state.lst" :key="m.pkv"
-        :class="dkli(idx) + ' membrecourant full-width row items-start q-py-xs cursor-pointer'">
+      <div v-for="(m, idx) in state.lst" :key="m.pkv">
         <q-card class="shadow-8">
-          <img class="col-auto photomax" :src="m.ph || personne"/>
-          <div class="col q-px-sm">
-            <div class="titre-md text-bold">{{m.nom}}</div>
-            <div>
-              <q-icon v-if="m.estAvc" class="q-mr-xs" size="sm" color="warning" name="stars"/>
-              <span v-if="m.estAvc" class="q-mr-sm text-bold text-warning">MOI</span>
-              <q-icon size="sm" :color="m.stx === 2 ?'primary':'warning'"
-                :name="m.stx < 2 ? 'hourglass_empty' : (m.stx === 2 ? 'thumb_up' : 'thumb_down')"/>
-              <span class="q-px-sm">{{statuts[m.stx]}}</span>
-              <span class="q-px-sm" :color="m.stp < 2 ?'primary':'warning'">{{['Simple lecteur','Auteur','Animateur'][m.stp]}}</span>
+          <div :class="dkli(idx) + ' membrecourant q-px-xs full-width row items-start cursor-pointer'">
+            <img class="col-auto photomax" :src="m.ph || personne"/>
+            <div class="col q-px-sm">
+              <div class="titre-md text-bold">{{m.nom}}</div>
+              <div>
+                <q-icon v-if="m.estAvc" class="q-mr-xs" size="sm" color="warning" name="stars"/>
+                <span v-if="m.estAvc" class="q-mr-sm text-bold text-warning">MOI</span>
+                <q-icon size="sm" :color="m.stx === 2 ?'primary':'warning'"
+                  :name="m.stx < 2 ? 'hourglass_empty' : (m.stx === 2 ? 'thumb_up' : 'thumb_down')"/>
+                <span class="q-px-sm">{{statuts[m.stx]}}</span>
+                <span class="q-px-sm" :color="m.stp < 2 ?'primary':'warning'">{{['Simple lecteur','Auteur','Animateur'][m.stp]}}</span>
+                <span v-if="state.g.imh === m.im" class="q-px-xs text-bold text-italic text-warning">Hébergeur du groupe</span>
+              </div>
+              <div v-if="m.ard" class="row justify-between cursor-pointer">
+                <div class="col-auto q-pr-sm">Ardoise :</div>
+                <show-html class="col height-2" :texte="m.ard" :idx="idx"/>
+                <div class="col-auto q-pl-sm fs-sm">{{m.dhed}}</div>
+              </div>
+              <div v-else class="text-italic">(ardoise partagée avec le groupe vide)</div>
+              <div v-if="m.estAvc" class="cursor-pointer">
+                <div v-if="m.info">
+                  <div>Titre et commentaires personnels à propos du groupe</div>
+                  <show-html class="height-2" :texte="m.info" :idx="idx"/>
+                </div>
+                <div v-else class="text-italic">(pas de commentaires personnels à propos du groupe)</div>
+              </div>
+              <apercu-motscles v-if="m.estAvc" :motscles="state.motsclesGr" :src="m.mc"/>
             </div>
-            <div class="row justify-between cursor-pointer">
-              <div class="col-auto q-pr-sm">Ardoise :</div>
-              <show-html class="col height-2" :texte="m.ard" :idx="idx"/>
-              <div class="col-auto q-pl-sm fs-sm">{{m.dhed}}</div>
-            </div>
-            <div v-if="estAvc" class="cursor-pointer">
-              <div>Titre et commentaires personnels à propos du groupe</div>
-              <show-html class="height-2" :texte="m.info" :idx="idx"/>
-            </div>
-            <apercu-motscles v-if="m.estAvc" :motscles="motscles" :src="m.mc"/>
           </div>
         </q-card>
       </div>
     </q-expansion-item>
+    <q-separator/>
 
 <!--
     <q-card-section>
@@ -83,13 +91,16 @@ import { data } from '../app/modele.mjs'
 import { MajMcGroupe, MajArchGroupe, MajBIGroupe } from '../app/operations.mjs'
 import ShowHtml from './ShowHtml.vue'
 import ApercuMotscles from './ApercuMotscles.vue'
+import ApercuGroupe from './ApercuGroupe.vue'
+import MotsCles from './MotsCles.vue'
+
 // import EditeurMd from './EditeurMd.vue'
 // import SelectMotscles from './SelectMotscles.vue'
 
 export default ({
   name: 'PanelGroupe',
 
-  components: { ShowHtml, ApercuMotscles /* EditeurMd, SelectMotscles */ },
+  components: { ShowHtml, ApercuMotscles, MotsCles, ApercuGroupe /* EditeurMd, SelectMotscles */ },
 
   props: { close: Function },
 
@@ -174,6 +185,7 @@ export default ({
     })
 
     function initState () {
+      state.filtre = new FiltreMbr()
       const x = groupeplus.value
       state.g = x.g
       state.m = x.m
@@ -181,9 +193,8 @@ export default ({
       chargerMcGr()
     }
 
-    watch(state.arch, async (ap, av) => {
-      const avant = state.g.sty === 1
-      if (ap !== avant) {
+    watch(state, async (ap, av) => {
+      if (state.gr && ap.arch !== state.g.sty === 1) {
         await new MajArchGroupe().run(state.g, ap)
       }
     })
@@ -199,12 +210,9 @@ export default ({
       for (const im in membres.value) {
         const m = membres.value[im]
         if (f.filtre(m)) lst.push(m)
-        if (m.estAvc) {
-          lstAc.push(m)
-          if (m.stp > maxstp) maxstp = m.stp
-          if (m.stp === 2) nbanim++
-          if (m.stp === 2 && m.vote) nbvote++
-        }
+        if (m.estAvc) { lstAc.push(m); if (m.stp > maxstp) maxstp = m.stp }
+        if (m.stp === 2) nbanim++
+        if (m.stp === 2 && m.vote) nbvote++
       }
       state.lst = lst
       state.lstAc = lstAc
@@ -263,7 +271,7 @@ export default ({
   border:  1px solid $grey-5
 .photomax
   position: relative
-  top: -5px
+  top: 5px
 .ml20
   width: 100%
   padding: 0.2rem 0.2rem 0.2rem 23rem

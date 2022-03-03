@@ -2,40 +2,44 @@
 
   <div :class="$q.screen.gt.sm ? 'ml20' : 'q-pa-xs full-width'">
     <div v-if="state.lst && state.lst.length" class="col fs-md">
-      <div v-for="(x, idx) in state.lst" :key="x.k"
-        :class="dkli(idx) + ' groupecourant full-width row items-start q-py-xs cursor-pointer'">
+      <div v-for="(x, idx) in state.lst" :key="x.k">
         <q-card class="shadow-8">
-          <img class="col-auto photomax" :src="x.g.ph"/>
-          <div class="col q-px-sm">
-            <div class="titre-md text-bold">{{g.nom}}</div>
-            <div v-if="x.g.stx === 2" class="text-italic text-bold" color="warning">Invitation bloquées - Vote pour le déblocage en cours</div>
-            <div v-if="x.g.sty === 1" class="text-italic text-bold" color="warning">Création et mises à jour de secrets bloquées</div>
-            <div>
-              <q-icon size="sm" :color="x.m.stx < 2 ?'primary':'warning'" :name="x.m.stx === 1 ? 'hourglass_empty' : 'thumb_up'"/>
-              <span class="q-px-sm">{{x.m.stx === 1 ? '- invité -' : '- actif -'}}</span>
-              <span class="q-px-sm" :color="x.m.stp < 2 ?'primary':'warning'">{{['Simple lecteur','Auteur','Animateur'][x.m.stp]}}</span>
+          <div :class="dkli(idx) + ' groupecourant full-width row items-start q-py-xs cursor-pointer'">
+            <img class="col-auto photomax" :src="x.g.photo || personnes"/>
+            <div class="col q-px-sm">
+              <div class="titre-md text-bold">{{x.g.nom}}</div>
+              <div v-if="x.g.stx === 2" class="text-italic text-bold" color="warning">Invitation bloquées - Vote pour le déblocage en cours</div>
+              <div v-if="x.g.sty === 1" class="text-italic text-bold" color="warning">Création et mises à jour de secrets bloquées</div>
+              <div>
+                <q-icon size="sm" :color="x.m.stx < 2 ?'primary':'warning'" :name="x.m.stx === 1 ? 'hourglass_empty' : 'thumb_up'"/>
+                <span class="q-px-xs">{{x.m.stx === 1 ? 'invité,' : 'actif,'}}</span>
+                <span class="q-px-xs" :color="x.m.stp < 2 ?'primary':'warning'">{{['Simple lecteur','Auteur','Animateur'][x.m.stp]}}</span>
+                <span v-if="x.g.imh === x.m.im" class="q-px-xs text-bold text-italic text-warning">Hébergeur du groupe</span>
+              </div>
+              <div v-if="x.m.ard.length !== 0" class="row justify-between">
+                <show-html class="col height-2" :texte="x.m.ard" :idx="idx"/>
+                <div class="col-auto q-pl-sm fs-sm">{{x.m.dhed}}</div>
+              </div>
+              <div v-else class="text-italic">(ardoise partagée avec le groupe vide)</div>
+              <show-html v-if="x.m.info.length !== 0" class="height-2" :texte="x.m.info" :idx="idx"/>
+              <div v-else class="text-italic">(pas de commentaires personnels à propos du groupe)</div>
+              <apercu-motscles :motscles="motscles" :src="x.m.mc"/>
+              <q-menu touch-position transition-show="scale" transition-hide="scale">
+                <q-list dense style="min-width: 10rem">
+                  <q-item clickable v-close-popup @click="afficher(x)">
+                    <q-item-section>Afficher / éditer le groupe</q-item-section>
+                  </q-item>
+                  <q-separator />
+                  <q-item clickable v-close-popup @click="voirsecrets(x)">
+                    <q-item-section>Voir les secrets du groupe</q-item-section>
+                  </q-item>
+                  <q-separator />
+                  <q-item clickable v-close-popup @click="nouveausecret(x)">
+                    <q-item-section>Nouveau secret de groupe</q-item-section>
+                  </q-item>
+                </q-list>
+              </q-menu>
             </div>
-            <div v-if="x.m.ard.length !== 0" class="row justify-between">
-              <show-html class="col height-2" :texte="x.m.ard" :idx="idx"/>
-              <div class="col-auto q-pl-sm fs-sm">{{x.m.dhed}}</div>
-            </div>
-            <show-html v-if="x.m.info.length !== 0" class="height-2" :texte="x.m.info" :idx="idx"/>
-            <apercu-motscles :motscles="motscles" :src="x.m.mc"/>
-            <q-menu touch-position transition-show="scale" transition-hide="scale">
-              <q-list dense style="min-width: 10rem">
-                <q-item clickable v-close-popup @click="afficher(x)">
-                  <q-item-section>Afficher / éditer le groupe</q-item-section>
-                </q-item>
-                <q-separator />
-                <q-item clickable v-close-popup @click="voirsecrets(x)">
-                  <q-item-section>Voir les secrets du groupe</q-item-section>
-                </q-item>
-                <q-separator />
-                <q-item clickable v-close-popup @click="nouveausecret(x)">
-                  <q-item-section>Nouveau secret de groupe</q-item-section>
-                </q-item>
-              </q-list>
-            </q-menu>
           </div>
         </q-card>
       </div>
@@ -77,7 +81,7 @@
 <script>
 import { computed, reactive, watch, ref } from 'vue'
 import { useStore } from 'vuex'
-import { Motscles, FiltreGrp } from '../app/util.mjs'
+import { Motscles, FiltreGrp, cfg } from '../app/util.mjs'
 import PanelFiltreGroupes from './PanelFiltreGroupes.vue'
 import PanelGroupe from './PanelGroupe.vue'
 import ShowHtml from './ShowHtml.vue'
@@ -149,6 +153,7 @@ export default ({
 
   setup () {
     const $store = useStore()
+    const personnes = cfg().personnes.default
 
     /* La liste des groupes relatives à l'avatar courant
     est en fait la liste des objets Membre de l'avatar courant
@@ -283,6 +288,7 @@ export default ({
     })
 
     return {
+      personnes,
       compte,
       avatar,
       groupeplus,
@@ -302,7 +308,7 @@ export default ({
 @import '../css/app.sass'
 .photomax
   position: relative
-  top: -5px
+  top: 5px
 .ml20
   width: 100%
   padding: 0.2rem 0.2rem 0.2rem 23rem
