@@ -8,8 +8,8 @@
             <img class="col-auto photomax" :src="x.g.photo || personnes"/>
             <div class="col q-px-sm">
               <div class="titre-md text-bold">{{x.g.nom}}</div>
-              <div v-if="x.g.stx === 2" class="text-italic text-bold" color="warning">Invitation bloquées - Vote pour le déblocage en cours</div>
-              <div v-if="x.g.sty === 1" class="text-italic text-bold" color="warning">Création et mises à jour de secrets bloquées</div>
+              <div v-if="x.g.stx === 2" class="text-italic text-bold text-negative">Invitation bloquées - Vote pour le déblocage en cours</div>
+              <div v-if="x.g.sty === 1" class="text-italic text-bold text-negative">Création et mises à jour de secrets bloquées</div>
               <div>
                 <q-icon size="sm" :color="x.m.stx < 2 ?'primary':'warning'" :name="x.m.stx === 1 ? 'hourglass_empty' : 'thumb_up'"/>
                 <span class="q-px-xs">{{x.m.stx === 1 ? 'invité,' : 'actif,'}}</span>
@@ -206,6 +206,7 @@ export default ({
     const compte = computed(() => { return $store.state.db.compte })
     const prefs = computed(() => { return $store.state.db.prefs })
     const avatar = computed(() => { return $store.state.db.avatar })
+    const groupes = computed(() => { return $store.state.db.groupes })
     const mode = computed(() => $store.state.ui.mode)
     const groupeplus = computed({ // groupe courant
       get: () => $store.state.db.groupeplus,
@@ -280,6 +281,10 @@ export default ({
     })
 
     watch(() => avatar.value, (ap, av) => {
+      latotale()
+    })
+
+    watch(() => groupes.value, (ap, av) => {
       latotale()
     })
 

@@ -8,12 +8,12 @@
 
     <q-expansion-item v-if="state.g" group="etc" label="Carte de visite du groupe" default-opened
         header-class="expansion-header-class-1 titre-lg bg-primary text-white">
-      <apercu-groupe :groupe="state.g" :editer="anim"/>
+      <apercu-groupe :editer="anim"/>
       <q-toggle v-model="state.arch" :disable="!anim" size="md" :color="state.arch ? 'warning' : 'green'"
           :label="state.arch ? 'Création de secrets et mises à jour bloquées' : 'Création de secrets et mises à jour libres'"/>
       <div v-if="state.g.stx === 2">
         <div class="text-italic text-bold" color="warning">Invitation bloquées - {{state.nbvote}} vote(s) pour le déblocage sur {{state.nbanim}}</div>
-        <q-btn v-if="anim" class="q-ma-xs" size="md" dense icon="unlock" label="Débloquer les invitations" @click="debloquer" />
+        <q-btn v-if="anim" class="q-ma-xs" size="md" dense icon="lock_open" label="Débloquer les invitations" @click="debloquer" />
       </div>
       <div v-if="state.g.stx === 1">
         <div class="text-italic">Les invitations sont libres</div>
@@ -86,6 +86,7 @@
 <script>
 import { computed, reactive, watch } from 'vue'
 import { useStore } from 'vuex'
+import { useQuasar } from 'quasar'
 import { Motscles, equ8, cfg, FiltreMbr } from '../app/util.mjs'
 import { data } from '../app/modele.mjs'
 import { MajMcGroupe, MajArchGroupe, MajBIGroupe } from '../app/operations.mjs'
@@ -137,6 +138,7 @@ export default ({
   },
 
   setup () {
+    const $q = useQuasar()
     const $store = useStore()
     const personnes = cfg().personnes.default
     const personne = cfg().personne.default
@@ -175,7 +177,6 @@ export default ({
     const mcGr = reactive({ categs: new Map(), lcategs: [], st: { enedition: false, modifie: false } })
 
     function chargerMcGr () {
-      state.motsclesGr = new Motscles(mcGr, 2, groupeplus.value ? groupeplus.value.g.id : 0)
       state.motsclesGr.recharger()
     }
 
@@ -186,6 +187,7 @@ export default ({
 
     function initState () {
       state.filtre = new FiltreMbr()
+      state.motsclesGr = new Motscles(mcGr, 2, groupeplus.value ? groupeplus.value.g.id : 0)
       const x = groupeplus.value
       state.g = x.g
       state.m = x.m
@@ -194,8 +196,11 @@ export default ({
     }
 
     watch(state, async (ap, av) => {
-      if (state.gr && ap.arch !== state.g.sty === 1) {
-        await new MajArchGroupe().run(state.g, ap)
+      if (state.g) {
+        const avant = state.g.sty === 1
+        if (ap.arch !== avant) {
+          confirmer()
+        }
       }
     })
 
@@ -233,6 +238,7 @@ export default ({
     }
 
     initState()
+    chargerMcGr()
     chargerMc()
     latotale()
 
@@ -251,8 +257,25 @@ export default ({
       latotale()
     })
 
+    function confirmer () {
+      $q.dialog({
+        dark: true,
+        title: 'Confirmer',
+        message: state.arch ? 'Voulez-vous vraiement INTERDIRE la mise à jour et la création de secrets ?'
+          : 'Voulez-vous vraiement AUTORISER A NOUVEAU la mise à jour et la création de secrets ?',
+        cancel: { label: 'Je Renonce', color: 'primary' },
+        ok: { color: 'warning', label: state.arch ? 'Je veux interdire' : 'Je veux autoriser' },
+        persistent: true
+      }).onOk(async () => {
+        await new MajArchGroupe().run(state.g, state.arch)
+      }).onCancel(() => {
+        state.arch = !state.arch
+      }).onDismiss(() => {
+        // console.log('I am triggered on both OK and Cancel')
+      })
+    }
+
     return {
-      initState,
       personnes,
       personne,
       recherche,

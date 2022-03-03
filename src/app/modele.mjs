@@ -1459,7 +1459,7 @@ export class Contact {
 
 schemas.forSchema({
   name: 'idbGroupe',
-  cols: ['id', 'v', 'dds', 'st', 'stxy', 'cv', 'idh', 'imh', 'v1', 'v2', 'f1', 'f2', 'mc', 'vsh']
+  cols: ['id', 'v', 'dds', 'st', 'stxy', 'photo', 'info', 'idh', 'imh', 'v1', 'v2', 'f1', 'f2', 'mc', 'vsh']
 })
 
 export class Groupe {
@@ -1483,9 +1483,9 @@ export class Groupe {
 
   get na () { return data.getNa(this.id) }
 
-  get stx () { return this.st < 0 ? -1 : Math.floor(this.st / 10) }
+  get stx () { return Math.floor(this.stxy / 10) }
 
-  get sty () { return this.st < 0 ? -1 : this.st % 10 }
+  get sty () { return this.stxy % 10 }
 
   get nom () { return titreEd(this.na.nom, this.info) }
 
@@ -1499,17 +1499,6 @@ export class Groupe {
     if (!s) return ''
     const i = s.indexOf('/')
     return i === -1 ? s : s.substring(i + 1)
-  }
-
-  maxStp () {
-    // plus haut statut lecteur / auteur / animateur pour tous les avatars du compte: -1 si non accédant
-    let stp = -1
-    for (const idm in data.getCompte().allAvId()) {
-      const m = data.getMembreParId(this.id, idm)
-      if (m.stp > stp) stp = m.stp
-      if (stp === 2) break
-    }
-    return stp
   }
 
   nouveau (nom, imh, forfaits) {
@@ -1560,6 +1549,14 @@ export class Groupe {
     r.mcg = Object.keys(r.mc).length ? await crypt.crypter(this.cleg, serial(this.mc)) : null
     r.idhg = await crypt.crypter(this.cleg, '' + this.idh)
     return schemas.serialize('rowgroupe', r)
+  }
+
+  async toCvg (cv) {
+    return await crypt.crypter(this.cleg, serial([cv.ph, cv.info]))
+  }
+
+  async toMcg (mc) {
+    return Object.keys(mc).length ? await crypt.crypter(this.cleg, serial(mc)) : null
   }
 
   get toIdb () {

@@ -17,19 +17,17 @@
 </template>
 
 <script>
-import { watch, toRef, reactive } from 'vue'
+import { watch, computed, reactive } from 'vue'
 import ShowHtml from './ShowHtml.vue'
 import CarteVisite from './CarteVisite.vue'
 import { cfg } from '../app/util.mjs'
 import { MajCvGroupe } from '../app/operations.mjs'
+import { useStore } from 'vuex'
 
 export default ({
   name: 'ApercuGroupe',
 
-  props: {
-    groupe: Object,
-    editer: Boolean
-  },
+  props: { editer: Boolean },
 
   components: {
     ShowHtml, CarteVisite
@@ -59,8 +57,9 @@ export default ({
   },
 
   setup (props) {
+    const $store = useStore()
     const personnes = cfg().personnes.default
-    const groupe = toRef(props, 'groupe')
+    const groupe = computed(() => { return $store.state.db.groupe })
     const state = reactive({
       g: groupe.value
     })

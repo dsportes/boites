@@ -53,11 +53,13 @@ export function majavatar (state, val) {
 /* Déclaration du groupe courant */
 export function majgroupe (state, val) {
   state.groupe = val
+  const x = state.groupeplus
+  if (x && x.g && x.g.id === val.id) state.groupeplus = { g: val, m: x.m }
 }
 
 /* Déclaration du groupe plus courant */
 export function majgroupeplus (state, val) {
-  state.groupe = val[0]
+  state.groupe = val.g
   state.groupeplus = val
 }
 

@@ -1443,8 +1443,7 @@ export class MajMcGroupe extends OperationUI {
 
   async run (groupe, mmc) { // arguments : groupe, map des mots clés
     try {
-      // TODO
-      const args = { sessionId: data.sessionId }
+      const args = { sessionId: data.sessionId, idg: groupe.id, mcg: await groupe.toMcg(mmc) }
       const ret = await post(this, 'm1', 'majmcGroupe', args)
       if (data.dh < ret.dh) data.dh = ret.dh
       this.finOK()
@@ -1465,11 +1464,10 @@ export class MajCvGroupe extends OperationUI {
     super('Mise à jour des mots clés d\'un groupe', OUI, SELONMODE)
   }
 
-  // arguments : groupe, carte de visite {ph: , info: }
-  async run (groupe, ph, info) {
+  // arguments : groupe, cv {ph: , info: }
+  async run (groupe, cv) {
     try {
-      // TODO
-      const args = { sessionId: data.sessionId }
+      const args = { sessionId: data.sessionId, idg: groupe.id, cvg: await groupe.toCvg(cv) }
       const ret = await post(this, 'm1', 'majcvGroupe', args)
       if (data.dh < ret.dh) data.dh = ret.dh
       this.finOK()
@@ -1493,8 +1491,7 @@ export class MajArchGroupe extends OperationUI {
   // arguments : groupe, arch
   async run (groupe, arch) {
     try {
-      // TODO
-      const args = { sessionId: data.sessionId }
+      const args = { sessionId: data.sessionId, idg: groupe.id, arch }
       const ret = await post(this, 'm1', 'majarchGroupe', args)
       if (data.dh < ret.dh) data.dh = ret.dh
       this.finOK()
@@ -1518,9 +1515,8 @@ export class MajBIGroupe extends OperationUI {
   // arguments : groupe, blocage (true / false)
   async run (groupe, blocage) {
     try {
-      // TODO
-      const args = { sessionId: data.sessionId }
-      const ret = await post(this, 'm1', 'majarchGroupe', args)
+      const args = { sessionId: data.sessionId, idg: groupe.id, blocage }
+      const ret = await post(this, 'm1', 'majBIGroupe', args)
       if (data.dh < ret.dh) data.dh = ret.dh
       this.finOK()
     } catch (e) {

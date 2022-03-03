@@ -1,13 +1,13 @@
 <template>
 <q-card class="colomn shadow-8 petitelargeur maauto">
-  <div v-if="!lecture" class="q-pa-md">
+  <div class="q-pa-md">
     <bouton-help page="page1"/>
     <q-btn v-if="!motscles.mc.st.enedition" flat dense size="md" color="warning" label="Editer" @click="startEdit"/>
     <q-btn v-if="motscles.mc.st.enedition" dense size="md" color="primary" label="Ajouter un mot clé" @click="ajoutermc"/>
     <q-btn v-if="motscles.mc.st.enedition" flat dense size="md" color="primary" label="Annuler" @click="cancelEdit"/>
     <q-btn v-if="motscles.mc.st.enedition" :disable="!motscles.mc.st.modifie" flat dense size="md" color="warning" label="Valider" @click="okEdit"/>
   </div>
-  <div v-if="!lecture" ref="root">
+  <div ref="root">
     <div v-if="ajouter" class="column q-px-sm q-pb-md" style="width:100%">
       <div class="row justify-end">
         <q-btn size="sm" icon="close" dense color="primary" label="Renoncer" @click="undo"></q-btn>
