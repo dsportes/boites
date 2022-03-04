@@ -805,9 +805,15 @@ export class ConnexionCompte extends OperationUI {
     return [c, p, compta, ardoise]
   }
 
-  async run (ps) {
+  async run (ps, razdb) {
     try {
       data.ps = ps
+
+      if (razdb) {
+        await deleteIDB()
+        await sleep(100)
+        console.log('RAZ db')
+      }
       await data.connexion()
       this.BRK()
 
@@ -1150,9 +1156,9 @@ export class NouveauParrainage extends OperationUI {
       const args = { sessionId: data.sessionId, rowParrain: serial(rowParrain) }
       const ret = await post(this, 'm1', 'nouveauParrainage', args)
       if (data.dh < ret.dh) data.dh = ret.dh
-      this.finOK()
+      return this.finOK()
     } catch (e) {
-      await this.finKO(e)
+      return await this.finKO(e)
     }
   }
 }

@@ -18,14 +18,14 @@
         <q-spinner color="primary" size="2rem" :thickness="3" />
       </div>
       <div v-else class="row justify-between items-center no-wrap">
-          <div v-if="isDev">
-            <span class="text-primary cursor-pointer q-px-xs" v-for="(p, idx) in phrases" :key="idx" @click="selph(p)">{{idx}}</span>
-          </div>
-          <div>
-            <q-btn color="primary" flat label="Renoncer" size="md" @click="ko" />
-            <q-btn color="warning" glossy :label="labelVal()" size="md" :icon-right="iconValider"
+        <div v-if="isDev">
+          <span class="text-primary cursor-pointer q-px-xs" v-for="(p, idx) in phrases" :key="idx" @click="selph(p)">{{idx}}</span>
+        </div>
+        <div>
+          <q-btn color="primary" flat label="Renoncer" size="md" @click="ko" />
+          <q-btn color="warning" glossy :label="labelVal()" size="md" :icon-right="iconValider"
             :disable="!ligne1 || !ligne2 || ligne1.length < 16 || ligne2.length < 16" @click="ok" />
-          </div>
+        </div>
       </div>
     </div>
   </q-card-section>

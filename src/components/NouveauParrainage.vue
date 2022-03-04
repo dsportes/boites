@@ -163,15 +163,19 @@ export default ({
         nomf: this.nom, // nom du filleul (string)
         mot: this.mot
       }
-      await new NouveauParrainage().run(arg)
-      this.mot = ''
-      this.nom = ''
-      this.forfaits = [1, 1]
-      this.pp = ''
-      this.clex = null
-      this.pph = 0
-      this.aps = false
-      if (this.close) this.close()
+      const [st, ex] = await new NouveauParrainage().run(arg)
+      if (st) {
+        this.mot = ''
+        this.nom = ''
+        this.forfaits = [1, 1]
+        this.pp = ''
+        this.clex = null
+        this.pph = 0
+        this.aps = false
+        if (this.close) this.close()
+      } else {
+        console.log(ex.message)
+      }
     },
     corriger () {
       this.step = 1

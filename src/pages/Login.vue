@@ -17,6 +17,8 @@
 
     <q-card flat v-if="mode > 0 && mode < 4" class="q-mt-lg petitelargeur">
       <phrase-secrete label-valider="Se connecter" icon-valider="send" v-on:ok-ps="connecter"></phrase-secrete>
+      <q-checkbox v-if="mode === 1" v-model="razdb" dense size="xs" color="grey-5"
+        class="text-italic text-grey-5 q-ml-sm q-mb-sm" label="Ré-initialiser complètement la base locale"/>
     </q-card>
 
     <div v-if="mode === 1 || mode === 2" class="q-mt-lg petitelargeur column items-start">
@@ -44,7 +46,7 @@
 </template>
 
 <script>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useStore } from 'vuex'
 import { ConnexionCompte, ConnexionCompteAvion } from '../app/operations'
 import PhraseSecrete from '../components/PhraseSecrete.vue'
@@ -78,10 +80,11 @@ export default ({
     },
     connecter (ps) {
       if (ps) {
-        if (this.$store.state.ui.mode === 3) {
+        if (this.mode === 3) {
           new ConnexionCompteAvion().run(ps)
         } else {
-          new ConnexionCompte().run(ps)
+          new ConnexionCompte().run(ps, this.razdb)
+          this.razdb = false
         }
       }
     },
@@ -116,6 +119,7 @@ export default ({
   setup () {
     const $store = useStore()
     onBoot()
+    const razdb = ref(false)
     const mode = computed({
       get: () => $store.state.ui.mode,
       set: (val) => $store.commit('ui/majmode', val)
@@ -133,6 +137,7 @@ export default ({
       set: (val) => $store.commit('ui/majdiagnostic', val)
     })
     return {
+      razdb,
       diagnostic,
       mode,
       infomode,
