@@ -45,20 +45,20 @@
                 <span class="q-px-sm" :color="m.stp < 2 ?'primary':'warning'">{{['Simple lecteur','Auteur','Animateur'][m.stp]}}</span>
                 <span v-if="state.g.imh === m.im" class="q-px-xs text-bold text-italic text-warning">Hébergeur du groupe</span>
               </div>
-              <div v-if="m.ard" class="row justify-between cursor-pointer">
-                <div class="col-auto q-pr-sm">Ardoise :</div>
+              <div v-if="m.ard" class="row justify-between cursor-pointer itemcourant" @click="ouvmajard(m)">
+                <div class="col-auto q-pr-sm titre-md text-italic">Ardoise :</div>
                 <show-html class="col height-2" :texte="m.ard" :idx="idx"/>
                 <div class="col-auto q-pl-sm fs-sm">{{m.dhed}}</div>
               </div>
-              <div v-else class="text-italic">(ardoise partagée avec le groupe vide)</div>
-              <div v-if="m.estAvc" class="cursor-pointer">
-                <div v-if="m.info">
-                  <div>Titre et commentaires personnels à propos du groupe</div>
+              <div v-else class="text-italic cursor-pointer itemcourant" @click="ouvmajard(m)">(rien sur l'ardoise partagée avec le groupe)</div>
+              <div v-if="m.estAvc">
+                <div v-if="m.info" class="itemcourant cursor-pointer" @click="ouvmajinfo(m)">
+                  <div class="titre-md text-italic">Titre et commentaires personnels à propos du groupe</div>
                   <show-html class="height-2" :texte="m.info" :idx="idx"/>
                 </div>
-                <div v-else class="text-italic">(pas de commentaires personnels à propos du groupe)</div>
+                <div v-else class="text-italic cursor-pointer itemcourant" @click="ouvmajinfo(m)">(pas de commentaires personnels à propos du groupe)</div>
+                <apercu-motscles class="itemcourant cursor-pointer" :motscles="state.motsclesGr" :src="m.mc" :groupe-id="state.g.id" :args-click="m" @click-mc="ouvrirmc"/>
               </div>
-              <apercu-motscles v-if="m.estAvc" :motscles="state.motsclesGr" :src="m.mc"/>
             </div>
           </div>
         </q-card>
@@ -66,21 +66,27 @@
     </q-expansion-item>
     <q-separator/>
 
-<!--
-    <q-card-section>
-      <div class="titre-md">Ardoise commune avec le groupe</div>
-      <editeur-md class="height-8" v-model="state.ard" :texte="contact ? contact.ard : ''" editable/>
-    </q-card-section>
+    <q-dialog v-model="ardedit">
+      <q-card-section class="petitelargeur shadow-8">
+        <div class="titre-md">Ardoise commune avec le groupe</div>
+        <editeur-md class="height-8" v-model="mbcard" :texte="mbc.ard" editable @ok="changerardmbc" label-ok="OK" :close="fermermajard"/>
+      </q-card-section>
+    </q-dialog>
 
-    <q-card-section>
-      <div class="titre-md">Commentaires personnels</div>
-      <editeur-md class="height-8" v-model="state.info" :texte="contact ? contact.info : ''" editable/>
-    </q-card-section>
+    <q-dialog v-model="infoedit">
+      <q-card-section class="petitelargeur shadow-8">
+        <div class="row justify-between align-start">
+          <div class="col titre-md">Commentaires personnels à propos du groupe</div>
+          <q-btn class="col-auto q-ml-sm" flat round dense icon="close" color="negative" size="md" @click="infoedit = false" />
+        </div>
+        <editeur-md class="height-8" v-model="mbcinfo" :texte="mbc.info" editable @ok="changerinfombc" label-ok="OK" :close="fermermajinfo"/>
+      </q-card-section>
+    </q-dialog>
 
     <q-dialog v-model="mcledit">
-      <select-motscles :motscles="state.motscles" :src="state.mc" @ok="changermcl" :close="fermermcl"></select-motscles>
+      <select-motscles :motscles="state.motsclesGr" :src="mbc.mc" @ok="changermcmbc" :close="fermermcl"></select-motscles>
     </q-dialog>
--->
+
   </q-card>
 </template>
 <script>
@@ -89,19 +95,18 @@ import { useStore } from 'vuex'
 import { useQuasar } from 'quasar'
 import { Motscles, equ8, cfg, FiltreMbr } from '../app/util.mjs'
 import { data } from '../app/modele.mjs'
-import { MajMcGroupe, MajArchGroupe, MajBIGroupe } from '../app/operations.mjs'
+import { MajMcGroupe, MajArchGroupe, MajBIGroupe, MajMcMembre, MajArdMembre, MajInfoMembre } from '../app/operations.mjs'
 import ShowHtml from './ShowHtml.vue'
 import ApercuMotscles from './ApercuMotscles.vue'
 import ApercuGroupe from './ApercuGroupe.vue'
 import MotsCles from './MotsCles.vue'
-
-// import EditeurMd from './EditeurMd.vue'
-// import SelectMotscles from './SelectMotscles.vue'
+import EditeurMd from './EditeurMd.vue'
+import SelectMotscles from './SelectMotscles.vue'
 
 export default ({
   name: 'PanelGroupe',
 
-  components: { ShowHtml, ApercuMotscles, MotsCles, ApercuGroupe /* EditeurMd, SelectMotscles */ },
+  components: { ShowHtml, ApercuMotscles, MotsCles, ApercuGroupe, SelectMotscles, EditeurMd },
 
   props: { close: Function },
 
@@ -118,11 +123,21 @@ export default ({
   data () {
     return {
       erreur: '',
-      mcledit: false
+      mcledit: false,
+      ardedit: false,
+      infoedit: false,
+      mbcard: '',
+      mbcinfo: '',
+      mbc: null // membre courant
     }
   },
 
   methods: {
+    fermermajard () { this.ardedit = false },
+    fermermajinfo () { this.infoedit = false },
+    ouvmajinfo (m) { this.infoedit = true; this.mbc = m; this.mbcinfo = m.info },
+    ouvmajard (m) { this.ardedit = true; this.mbc = m; this.mbcard = m.ard },
+    ouvrirmc (m) { this.mcledit = true; this.mbc = m },
     fermermcl () { this.mcledit = false },
     async changermcl (mmc) {
       new MajMcGroupe().run(this.state.g, mmc)
@@ -132,6 +147,17 @@ export default ({
     },
     async debloquer () {
       await new MajBIGroupe().run(this.state.g, false)
+    },
+    async changermcmbc (mc) {
+      await new MajMcMembre().run(this.mbc, mc)
+    },
+    async changerardmbc (texte) {
+      await new MajArdMembre().run(this.mbc, texte)
+      this.ardedit = false
+    },
+    async changerinfombc (texte) {
+      await new MajInfoMembre().run(this.mbc, texte)
+      this.infoedit = false
     },
     fermer () { if (this.close) this.close() },
     dkli (idx) { return this.$q.dark.isActive ? (idx ? 'sombre' + (idx % 2) : 'sombre0') : (idx ? 'clair' + (idx % 2) : 'clair0') }
@@ -189,9 +215,10 @@ export default ({
       state.filtre = new FiltreMbr()
       state.motsclesGr = new Motscles(mcGr, 2, groupeplus.value ? groupeplus.value.g.id : 0)
       const x = groupeplus.value
-      state.g = x.g
-      state.m = x.m
-      state.arch = x.g ? x.g.sty === 1 : false
+      if (x) {
+        state.g = x.g
+        state.arch = x.g ? x.g.sty === 1 : false
+      }
       chargerMcGr()
     }
 
@@ -244,6 +271,10 @@ export default ({
 
     watch(() => prefs.value, (ap, av) => {
       chargerMc()
+    })
+
+    watch(() => membres.value, (ap, av) => {
+      latotale()
     })
 
     watch(() => groupeplus.value, (ap, av) => {
@@ -300,4 +331,8 @@ export default ({
   padding: 0.2rem 0.2rem 0.2rem 23rem
 .membrecourant:hover
   background-color: rgba(130, 130, 130, 0.5)
+.itemcourant:hover
+  border: 1px solid $warning
+.itemcourant
+  border: 1px solid transparent
 </style>

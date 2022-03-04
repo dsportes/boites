@@ -20,10 +20,10 @@
                 <show-html class="col height-2" :texte="x.m.ard" :idx="idx"/>
                 <div class="col-auto q-pl-sm fs-sm">{{x.m.dhed}}</div>
               </div>
-              <div v-else class="text-italic">(ardoise partagée avec le groupe vide)</div>
+              <div v-else class="text-italic">(rien sur l'ardoise partagée avec le groupe)</div>
               <show-html v-if="x.m.info.length !== 0" class="height-2" :texte="x.m.info" :idx="idx"/>
               <div v-else class="text-italic">(pas de commentaires personnels à propos du groupe)</div>
-              <apercu-motscles :motscles="motscles" :src="x.m.mc"/>
+              <apercu-motscles :motscles="motscles" :src="x.m.mc" :groupe-id="x.m.id"/>
               <q-menu touch-position transition-show="scale" transition-hide="scale">
                 <q-list dense style="min-width: 10rem">
                   <q-item clickable v-close-popup @click="afficher(x)">

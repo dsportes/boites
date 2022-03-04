@@ -1440,13 +1440,13 @@ export class Contact {
 - `v` :
 - `dds` :
 - `st` : statut
-  - négatif : l'avatar est supprimé / disparu (les autres colonnes sont à null).
+  - négatif : le groupe est supprimé / disparu (les autres colonnes sont à null).
   - 0 : OK
   - N : alerte.
     - 1 : détecté par le GC, _le groupe_ est resté plusieurs mois sans connexion.
     - J : auto-détruit le jour J: c'est un délai de remord. Quand un compte détruit un groupe, il a N jours depuis la date courante pour se rétracter et le réactiver.
 - `stxy` : Deux chiffres `x y`
-  - `x` : 1-ouvert, 2-fermé, 3-ré-ouverture en vote
+  - `x` : 1-ouvert, 2-fermé (ré-ouverture en vote)
   - `y` : 0-en écriture, 1-archivé
 - `cvg` : carte de visite du groupe `[photo, info]` cryptée par la clé G du groupe.
 - `idhg` : id du compte hébergeur crypté par la clé G du groupe.
@@ -1494,11 +1494,20 @@ export class Groupe {
     return i !== -1 ? i : 0
   }
 
-  motcle (n) {
+  maxStp () {
+    let mx = 0
+    for (const im of data.getMembre(this.id)) {
+      const m = data.getMembre(this.id, im)
+      if (m.estAvc && m.stp > mx) mx = m.stp
+    }
+    return mx
+  }
+
+  motcle (n) { // utilisé par util / Motscles
     const s = this.mc[n]
     if (!s) return ''
     const i = s.indexOf('/')
-    return i === -1 ? s : s.substring(i + 1)
+    return i === -1 ? { c: '', n: s } : { c: s.substring(0, i), n: s.substring(i + 1) }
   }
 
   nouveau (nom, imh, forfaits) {
@@ -1668,13 +1677,17 @@ export class Membre {
       this.vote = row.vote
       this.data = deserial(await crypt.decrypter(this.cleg, row.datag))
       data.setNa(this.data.nom, this.data.rnd, this.id, this.im)
-      const [d, t] = row.ardg ? await crypt.decrypterStr(this.cleg, row.ardg) : [0, '']
+      const [d, t] = row.ardg ? deserial(await crypt.decrypter(this.cleg, row.ardg)) : [0, '']
       this.ard = t
       this.dh = d
       this.info = row.infok && this.estAvc ? await crypt.decrypterStr(data.clek, row.infok) : ''
       this.mc = row.mc
     }
     return this
+  }
+
+  async toArdg (ard) {
+    return ard ? await crypt.crypter(this.cleg, serial([Math.floor(new Date().getTime() / 1000), ard])) : null
   }
 
   async toRow () {

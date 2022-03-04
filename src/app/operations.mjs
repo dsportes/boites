@@ -1572,3 +1572,71 @@ export class CreationGroupe extends OperationUI {
     }
   }
 }
+
+/* Mise à jour des mots clés d'un membre d'un groupe ****************************************
+- sessionId, id, im, mc
+Retour :
+- sessionId, dh
+*/
+export class MajMcMembre extends OperationUI {
+  constructor () {
+    super('Mise à jour des mots clés d\'un membre d\'un groupe', OUI, SELONMODE)
+  }
+
+  async run (m, mc) {
+    try {
+      const args = { sessionId: data.sessionId, id: m.id, im: m.im, mc }
+      const ret = await post(this, 'm1', 'majmcMembre', args)
+      if (data.dh < ret.dh) data.dh = ret.dh
+      this.finOK()
+    } catch (e) {
+      await this.finKO(e)
+    }
+  }
+}
+
+/* Mise à jour de l'ardoise d'un membre d'un groupe ****************************************
+- sessionId, id, im, texte
+Retour :
+- sessionId, dh
+*/
+export class MajArdMembre extends OperationUI {
+  constructor () {
+    super('Mise à jour de l\'ardoise d\'un membre d\'un groupe', OUI, SELONMODE)
+  }
+
+  async run (m, texte) {
+    try {
+      const ardg = await m.toArdg(texte)
+      const args = { sessionId: data.sessionId, id: m.id, im: m.im, ardg }
+      const ret = await post(this, 'm1', 'majardMembre', args)
+      if (data.dh < ret.dh) data.dh = ret.dh
+      this.finOK()
+    } catch (e) {
+      await this.finKO(e)
+    }
+  }
+}
+
+/* Mise à jour du commentaire d'un membre d'un groupe ****************************************
+- sessionId, id, im, infok
+Retour :
+- sessionId, dh
+*/
+export class MajInfoMembre extends OperationUI {
+  constructor () {
+    super('Mise à jour de l\'ardoise d\'un membre d\'un groupe', OUI, SELONMODE)
+  }
+
+  async run (m, texte) {
+    try {
+      const infok = await crypt.crypter(data.clek, texte)
+      const args = { sessionId: data.sessionId, id: m.id, im: m.im, infok }
+      const ret = await post(this, 'm1', 'majinfoMembre', args)
+      if (data.dh < ret.dh) data.dh = ret.dh
+      this.finOK()
+    } catch (e) {
+      await this.finKO(e)
+    }
+  }
+}
