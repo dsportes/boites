@@ -2,10 +2,13 @@
 <div :class="$q.screen.gt.sm ? 'ml20' : 'q-pa-xs full-width'">
   <div v-if="state.lst && state.lst.length" class="col">
     <div v-for="(c, idx) in state.lst" :key="c.pkv"
-      :class="dkli(idx) + ' contactcourant full-width row items-start q-py-xs cursor-pointer'">
+      :class="dkli(idx) + ' zone full-width row items-start q-py-xs cursor-pointer'">
+      <div class="col-auto column q-px-xs">
+        <img class="photomax" :src="c.ph"/>
+        <q-btn size="md" color="primary" icon="menu" flat dense style="margin-top:-5px"/>
+      </div>
       <q-icon class="col-auto q-pr-xs" size="sm" :color="c.stx<2?'primary':'warning'"
       :name="['o_thumb_up','thumb_up','o_hourglass_empty','hourglass_empty','hourglass_empty','','','','','thumb_down'][c.stx]"/>
-      <img class="col-auto photomax" :src="c.ph"/>
       <div class="col-3 q-px-xs">{{c.nom}}</div>
       <div class="col-4 q-pr-xs">{{c.ard.substring(0,40)}}</div>
       <div class="col-auto fs-sm">{{c.dhed}}</div>
@@ -210,6 +213,4 @@ export default ({
 .ml20
   width: 100%
   padding: 0.2rem 0.2rem 0.2rem 23rem
-.contactcourant:hover
-  background-color: rgba(130, 130, 130, 0.5)
 </style>

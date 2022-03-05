@@ -32,8 +32,11 @@
         header-class="expansion-header-class-1 titre-lg bg-primary text-white">
       <div v-for="(m, idx) in state.lst" :key="m.pkv">
         <q-card class="shadow-8">
-          <div :class="dkli(idx) + ' membrecourant q-px-xs full-width row items-start cursor-pointer'">
-            <img class="col-auto photomax" :src="m.ph || personne"/>
+          <div :class="dkli(idx) + ' zone q-px-xs full-width row items-start cursor-pointer'">
+            <div class="col-auto column justify-center q-px-xs">
+              <img class="col-auto photomax" :src="m.ph || personne"/>
+              <q-btn size="md" color="primary" icon="menu" flat dense class="q-mt-sm"/>
+            </div>
             <div class="col q-px-sm">
               <div class="titre-md text-bold">{{m.nom}}</div>
               <div>
@@ -45,19 +48,23 @@
                 <span class="q-px-sm" :color="m.stp < 2 ?'primary':'warning'">{{['Simple lecteur','Auteur','Animateur'][m.stp]}}</span>
                 <span v-if="state.g.imh === m.im" class="q-px-xs text-bold text-italic text-warning">Hébergeur du groupe</span>
               </div>
-              <div v-if="m.ard" class="row justify-between cursor-pointer itemcourant" @click="ouvmajard(m)">
+              <div v-if="m.ard" class="row justify-between cursor-pointer zone" @click="ouvmajard(m)">
                 <div class="col-auto q-pr-sm titre-md text-italic">Ardoise :</div>
                 <show-html class="col height-2" :texte="m.ard" :idx="idx"/>
                 <div class="col-auto q-pl-sm fs-sm">{{m.dhed}}</div>
               </div>
-              <div v-else class="text-italic cursor-pointer itemcourant" @click="ouvmajard(m)">(rien sur l'ardoise partagée avec le groupe)</div>
+              <div v-else class="text-italic cursor-pointer zone" @click="ouvmajard(m)">(rien sur l'ardoise partagée avec le groupe)</div>
               <div v-if="m.estAvc">
-                <div v-if="m.info" class="itemcourant cursor-pointer" @click="ouvmajinfo(m)">
+                <div v-if="m.info" class="zone cursor-pointer" @click="ouvmajinfo(m)">
                   <div class="titre-md text-italic">Titre et commentaires personnels à propos du groupe</div>
                   <show-html class="height-2" :texte="m.info" :idx="idx"/>
                 </div>
-                <div v-else class="text-italic cursor-pointer itemcourant" @click="ouvmajinfo(m)">(pas de commentaires personnels à propos du groupe)</div>
-                <apercu-motscles class="itemcourant cursor-pointer" :motscles="state.motsclesGr" :src="m.mc" :groupe-id="state.g.id" :args-click="m" @click-mc="ouvrirmc"/>
+                <div v-else class="text-italic cursor-pointer zone" @click="ouvmajinfo(m)">(pas de commentaires personnels à propos du groupe)</div>
+                <div class="zone cursor-pointer" @click="ouvrirmc(m)">
+                  <span class="titre-md text-italic q-pr-sm">Mots clés :</span>
+                  <apercu-motscles :motscles="state.motsclesGr"
+                    :src="m.mc" :groupe-id="state.g.id" :args-click="m" @click-mc="ouvrirmc"/>
+                </div>
               </div>
             </div>
           </div>
@@ -329,8 +336,6 @@ export default ({
 .ml20
   width: 100%
   padding: 0.2rem 0.2rem 0.2rem 23rem
-.membrecourant:hover
-  background-color: rgba(130, 130, 130, 0.5)
 .itemcourant:hover
   border: 1px solid $warning
 .itemcourant

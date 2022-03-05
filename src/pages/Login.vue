@@ -17,8 +17,12 @@
 
     <q-card flat v-if="mode > 0 && mode < 4" class="q-mt-lg petitelargeur">
       <phrase-secrete label-valider="Se connecter" icon-valider="send" v-on:ok-ps="connecter"></phrase-secrete>
-      <q-checkbox v-if="mode === 1" v-model="razdb" dense size="xs" color="grey-5"
-        class="text-italic text-grey-5 q-ml-sm q-mb-sm" label="Ré-initialiser complètement la base locale"/>
+      <div v-if="mode === 1">
+        <q-checkbox v-if="$q.dark.isActive" v-model="razdb" dense size="xs" color="grey-8"
+          class="bg1 text-italic text-grey-8 q-ml-sm q-mb-sm" label="Ré-initialiser complètement la base locale"/>
+        <q-checkbox v-else v-model="razdb" dense size="xs" color="grey-5"
+          class="bg1 text-italic text-grey-7 q-ml-sm q-mb-sm" label="Ré-initialiser complètement la base locale"/>
+      </div>
     </q-card>
 
     <div v-if="mode === 1 || mode === 2" class="q-mt-lg petitelargeur column items-start">
@@ -46,14 +50,14 @@
 </template>
 
 <script>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useStore } from 'vuex'
 import { ConnexionCompte, ConnexionCompteAvion } from '../app/operations'
 import PhraseSecrete from '../components/PhraseSecrete.vue'
 import AcceptParrain from '../components/AcceptParrain.vue'
 import { onBoot } from '../app/page.mjs'
 import { crypt } from '../app/crypto.mjs'
-import { get, deserial } from '../app/util.mjs'
+import { get, deserial, afficherdiagnostic } from '../app/util.mjs'
 import { Parrain } from '../app/modele.mjs'
 
 export default ({
@@ -136,6 +140,12 @@ export default ({
       get: () => $store.state.ui.diagnostic,
       set: (val) => $store.commit('ui/majdiagnostic', val)
     })
+    watch(razdb, (ap, av) => {
+      if (ap === true && ap !== av) {
+        afficherdiagnostic('<b>Attention:</b> la base locale sera effacée et rechargée totalement.' +
+        '<BR>Ceci peut alonger <b>significativement</b> la durée d\'initialisation (comme le mode <i>incognito</i>).')
+      }
+    })
     return {
       razdb,
       diagnostic,
@@ -150,5 +160,4 @@ export default ({
 
 <style lang="sass" scoped>
 @import '../css/app.sass'
-
 </style>

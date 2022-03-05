@@ -4,8 +4,11 @@
     <div v-if="state.lst && state.lst.length" class="col fs-md">
       <div v-for="(x, idx) in state.lst" :key="x.k">
         <q-card class="shadow-8">
-          <div :class="dkli(idx) + ' groupecourant full-width row items-start q-py-xs cursor-pointer'">
-            <img class="col-auto photomax" :src="x.g.photo || personnes"/>
+          <div :class="dkli(idx) + ' zone full-width row items-start q-py-xs cursor-pointer'">
+            <div class="col-auto column justify-center q-px-xs">
+              <img class="photomax" :src="x.g.photo || personnes"/>
+              <q-btn size="md" color="primary" icon="menu" flat dense class="q-mt-sm"/>
+            </div>
             <div class="col q-px-sm">
               <div class="titre-md text-bold">{{x.g.nom}}</div>
               <div v-if="x.g.stx === 2" class="text-italic text-bold text-negative">Invitation bloquées - Vote pour le déblocage en cours</div>
@@ -24,22 +27,22 @@
               <show-html v-if="x.m.info.length !== 0" class="height-2" :texte="x.m.info" :idx="idx"/>
               <div v-else class="text-italic">(pas de commentaires personnels à propos du groupe)</div>
               <apercu-motscles :motscles="motscles" :src="x.m.mc" :groupe-id="x.m.id"/>
-              <q-menu touch-position transition-show="scale" transition-hide="scale">
-                <q-list dense style="min-width: 10rem">
-                  <q-item clickable v-close-popup @click="afficher(x)">
-                    <q-item-section>Afficher / éditer le groupe</q-item-section>
-                  </q-item>
-                  <q-separator />
-                  <q-item clickable v-close-popup @click="voirsecrets(x)">
-                    <q-item-section>Voir les secrets du groupe</q-item-section>
-                  </q-item>
-                  <q-separator />
-                  <q-item clickable v-close-popup @click="nouveausecret(x)">
-                    <q-item-section>Nouveau secret de groupe</q-item-section>
-                  </q-item>
-                </q-list>
-              </q-menu>
             </div>
+            <q-menu touch-position transition-show="scale" transition-hide="scale">
+              <q-list dense style="min-width: 10rem">
+                <q-item clickable v-close-popup @click="afficher(x)">
+                  <q-item-section>Afficher / éditer le groupe</q-item-section>
+                </q-item>
+                <q-separator />
+                <q-item clickable v-close-popup @click="voirsecrets(x)">
+                  <q-item-section>Voir les secrets du groupe</q-item-section>
+                </q-item>
+                <q-separator />
+                <q-item clickable v-close-popup @click="nouveausecret(x)">
+                  <q-item-section>Nouveau secret de groupe</q-item-section>
+                </q-item>
+              </q-list>
+            </q-menu>
           </div>
         </q-card>
       </div>
@@ -317,6 +320,4 @@ export default ({
 .ml20
   width: 100%
   padding: 0.2rem 0.2rem 0.2rem 23rem
-.groupecourant:hover
-  background-color: rgba(130, 130, 130, 0.5)
 </style>

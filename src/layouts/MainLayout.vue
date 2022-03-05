@@ -59,20 +59,10 @@
           <div v-if="page==='Synchro'" class="tbpage">Synchronisation des données</div>
           <div v-if="page==='Compte' && compte != null && !compte.ko" class="tbpage">Compte : {{ compte.titre }}</div>
 
-          <div v-if="page==='Avatar'" class="row">
-            <div class="col-xs-12 col-sm-6 col-md-6 tbpage">
-              <div class="row justify-center no-wrap">
-                <img class="photo" :src="avatar && avatar.photo ? avatar.photo : personne"/>
-                <span class="q-px-sm">{{avatar && avatar.na ? (avatar.na.nom + (avatar.info ? ' [' + avatar.info + ']' : '')): ''}}</span>
-              </div>
-            </div>
-            <div v-if="contact!=null" class="col-xs-6 col-sm-3 col-md-3 fs-sm tbpage">
-              <q-icon size="sm" name="person"/>
-              <span class="q-px-sm">{{contact.nom}}</span>
-            </div>
-            <div class="col-xs-6 col-sm-3 col-md-3 fs-sm tbpage">
-              <q-icon size="sm" name="people"/>
-              <span class="q-px-sm">Duke Orchestra</span>
+          <div v-if="page==='Avatar'" class="tbpage titre-lg">
+            <div class="row justify-center no-wrap">
+              <img class="photo" :src="avatar && avatar.photo ? avatar.photo : personne"/>
+              <span class="q-px-sm">{{avatar ? avatar.nom : ''}}</span>
             </div>
           </div>
 
@@ -411,7 +401,6 @@ export default {
 .tbpage
   height: 1.7rem
   overflow: hidden
-  font-family: Comfortaa
 
 .msgimp
   background-color: $grey-2
