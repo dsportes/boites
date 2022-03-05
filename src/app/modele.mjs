@@ -81,6 +81,29 @@ function newObjet (table) {
   }
 }
 
+/* Traitement des groupes supprimés
+Il faut les effacer des map lgrk des avatars qui les référencent
+*/
+async function traitGrSuppr (lst) {
+  const mapav = {} // Une entrée par id d'avatar, array des im
+  let ok = false
+  for (let i = 0; i < lst.length; i++) {
+    const idg = lst[i].id
+    data.getCompte().allAvId().forEach(avid => {
+      const x = data.getAvatar(avid).m2gr[idg]
+      if (x) {
+        let t = mapav[avid]; if (!t) { t = []; mapav[avid] = t }
+        t.push(x[1])
+        ok = true
+      }
+    })
+  }
+  if (ok) {
+    const ret = await post(this, 'm1', 'regulAv', { sessionId: data.sessionId, mapav })
+    if (data.dh < ret.dh) data.dh = ret.dh
+  }
+}
+
 /* mapObj : clé par table, valeur : array des objets **************************************/
 /*
 - ne traite ni les singletons ('compte compta prefs ardoise'), ni 'invitgr'
@@ -99,7 +122,9 @@ export async function commitMapObjets (objets, mapObj) { // SAUF mapObj.compte e
   }
 
   if (mapObj.groupe) {
-    data.setGroupes(mapObj.groupe)
+    const grSuppr = [] // liste des groupes supprimés
+    data.setGroupes(mapObj.groupe, grSuppr)
+    if (grSuppr.length) traitGrSuppr(grSuppr)
     push('groupe')
   }
 
@@ -1098,7 +1123,7 @@ export class Avatar {
 
   constructor () {
     this.m1gr = new Map() // clé:ni val: { na du groupe, im de l'avatar dans le groupe }
-    this.m2gr = new Map() // clé:idg (id du groupe), val:im
+    this.m2gr = new Map() // clé:idg (id du groupe), val:[im, ni]
   }
 
   allGrId (s) {
@@ -1127,7 +1152,7 @@ export class Avatar {
         const x = deserial(brut ? y : await crypt.decrypter(data.clek, y))
         const na = data.setNa(x[0], x[1])
         this.m1gr.set(ni, { na: na, im: x[2] })
-        this.m2gr.set(na.id, x[2])
+        this.m2gr.set(na.id, [x[2], ni])
       }
     }
   }
@@ -1439,15 +1464,12 @@ export class Contact {
 - `id` : id du groupe.
 - `v` :
 - `dds` :
+- `dfh` : date (jour) de fin d'hébergement du groupe par son hébergeur
 - `st` : statut
   - négatif : le groupe est supprimé / disparu (les autres colonnes sont à null).
-  - 0 : OK
-  - N : alerte.
-    - 1 : détecté par le GC, _le groupe_ est resté plusieurs mois sans connexion.
-    - J : auto-détruit le jour J: c'est un délai de remord. Quand un compte détruit un groupe, il a N jours depuis la date courante pour se rétracter et le réactiver.
-- `stxy` : Deux chiffres `x y`
-  - `x` : 1-ouvert, 2-fermé (ré-ouverture en vote)
-  - `y` : 0-en écriture, 1-archivé
+  - Deux chiffres `x y`
+    - `x` : 1-ouvert, 2-fermé (ré-ouverture en vote)
+    - `y` : 0-en écriture, 1-archivé
 - `cvg` : carte de visite du groupe `[photo, info]` cryptée par la clé G du groupe.
 - `idhg` : id du compte hébergeur crypté par la clé G du groupe.
 - `imhg` : indice im du membre dont le compte est hébergeur.
@@ -1459,7 +1481,7 @@ export class Contact {
 
 schemas.forSchema({
   name: 'idbGroupe',
-  cols: ['id', 'v', 'dds', 'st', 'stxy', 'photo', 'info', 'idh', 'imh', 'v1', 'v2', 'f1', 'f2', 'mc', 'vsh']
+  cols: ['id', 'v', 'dds', 'dfh', 'st', 'photo', 'info', 'idh', 'imh', 'v1', 'v2', 'f1', 'f2', 'mc', 'vsh']
 })
 
 export class Groupe {
@@ -1483,9 +1505,9 @@ export class Groupe {
 
   get na () { return data.getNa(this.id) }
 
-  get stx () { return Math.floor(this.stxy / 10) }
+  get stx () { return Math.floor(this.st / 10) }
 
-  get sty () { return this.stxy % 10 }
+  get sty () { return this.st % 10 }
 
   get nom () { return titreEd(this.na.nom, this.info) }
 
@@ -1515,8 +1537,8 @@ export class Groupe {
     this.id = na.id
     this.v = 0
     this.dds = 0
-    this.st = 0
-    this.stxy = 10
+    this.dfh = 0
+    this.st = 10
     this.idh = data.getCompte().id
     this.imh = imh
     this.photo = ''
@@ -1535,9 +1557,9 @@ export class Groupe {
     this.id = row.id
     this.v = row.v
     this.dds = row.dds
+    this.dfh = row.dfh
     this.st = row.st
     if (!this.suppr) {
-      this.stxy = row.stxy
       const cv = row.cvg ? deserial(await crypt.decrypter(this.cleg, row.cvg)) : ['', '']
       this.photo = cv[0]
       this.info = cv[1]

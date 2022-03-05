@@ -210,7 +210,8 @@ export class Operation {
   async traitInvitGr (lstInvitGr) {
     for (let i = 0; i < lstInvitGr.length; i++) {
       const iv = lstInvitGr[i]
-      const ret = await post(this, 'm1', 'regulGr', { sessionId: data.sessionId, id: iv.id, idg: iv.idg, ni: iv.ni, datak: iv.datak })
+      const args = { sessionId: data.sessionId, id: iv.id, idg: iv.idg, ni: iv.ni, nomck: iv.nomck }
+      const ret = await post(this, 'm1', 'regulGr', args)
       if (data.dh < ret.dh) data.dh = ret.dh
     }
   }
@@ -882,7 +883,9 @@ export class ConnexionCompte extends OperationUI {
 
       await this.chargerAvatars(avUtiles, !data.db)
 
-      // On a maintenant la liste des groupes utiles (lisibles dans les avatars chargés)
+      /* On a maintenant la liste des groupes utiles (lisibles dans les avatars chargés)
+      MAIS dans ces groupes certains peuvent avoir été supprimés (leur row Groupe a suppr)
+      */
       const grUtiles = data.setIdsGroupesUtiles
       const grAPurger = difference(data.setIdsGroupesStore, grUtiles)
       if (grAPurger.size) {
