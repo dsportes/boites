@@ -14,7 +14,7 @@
       header-class="expansion-header-class-1 titre-lg bg-secondary text-white">
       <div class="q-pa-sm column justify-center petitelargeur maauto">
         <div class="row justify-between items-center q-my-md"><span class="titre-md ">Code du compte : {{compte.sid}}</span><bouton-help page="page1"/></div>
-        <editeur-md ref="memoed" style="height:10rem" :texte="prefs.memo" editable label-ok="OK" v-on:ok="memook"></editeur-md>
+        <editeur-md ref="memoed" style="height:10rem" :texte="prefs.memo" editable modetxt label-ok="OK" v-on:ok="memook"></editeur-md>
       </div>
     </q-expansion-item>
     <q-separator/>

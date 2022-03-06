@@ -1511,6 +1511,12 @@ export class Groupe {
 
   get nom () { return titreEd(this.na.nom, this.info) }
 
+  get pc1 () { return Math.round(this.v1 / 1000000 / this.f1) }
+
+  get pc2 () { return Math.round(this.v2 / 100000000 / this.f2) }
+
+  get estHeb () { return this.idh && !this.dfh && this.idh === data.getCompte().id }
+
   imDeId (id) {
     const i = this.lmb.indexOf(id)
     return i !== -1 ? i : 0
@@ -1564,7 +1570,7 @@ export class Groupe {
       this.photo = cv[0]
       this.info = cv[1]
       this.mc = row.mcg ? deserial(await crypt.decrypter(this.cleg, row.mcg)) : {}
-      this.idh = parseInt(await crypt.decrypter(this.cleg, row.idhg))
+      this.idh = parseInt(await crypt.decrypterStr(this.cleg, row.idhg))
       this.imh = row.imh
       this.v1 = row.v1
       this.v2 = row.v2

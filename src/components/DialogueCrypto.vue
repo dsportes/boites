@@ -7,7 +7,7 @@
           <q-btn flat label="Test msg" color="primary" @click="testm"/>
           <q-btn flat label="CV" color="primary" @click="cvloc=true"/>
           <bouton-help page="page1"/>
-          <choix-forfaits v-model="forfaits"/>
+          <choix-forfaits v-model="forfaits" :f1="1" :f2="1"/>
         </q-card-section>
         <q-card-section class="q-ma-xs">
           <phrase-secrete v-on:ok-ps="okps" icon-valider="check" verif label-ok="OK"></phrase-secrete>

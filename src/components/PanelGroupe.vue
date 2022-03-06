@@ -1,6 +1,6 @@
 <template>
   <q-card class="full-height moyennelargeur fs-md column">
-    <q-toolbar class="col-auto bg-primary text-white maToolBar">
+    <q-toolbar class="col-auto bg-secondary text-white maToolBar">
       <q-btn flat round dense icon="close" size="md" class="q-mr-sm" @click="fermer" />
       <q-toolbar-title><div class="titre-md tit text-center">{{state.g ? state.g.nom : ''}}</div></q-toolbar-title>
     </q-toolbar>
@@ -19,6 +19,37 @@
         <div class="text-italic">Les invitations sont libres</div>
         <q-btn v-if="anim" class="q-ma-xs" size="md" dense icon="lock" label="Bloquer les invitations" @click="bloquer" />
       </div>
+    </q-expansion-item>
+    <q-separator/>
+
+    <q-expansion-item v-if="state.g" group="etc" label="Mots clés spécifiques du groupe" color="secondary"
+        header-class="expansion-header-class-1 bg-primary text-white">
+      <template v-slot:header>
+        <q-item-section>
+        <div class="titre-lg text-white">
+          <span :class="state.g.pc1 > 80 || state.g.pc2 > 80 ? 'text-warning bg-yellow-4' : ''">Taux d'occupation {{state.g.pc1}}% / {{state.g.pc2}}%</span>
+          <span v-if="state.g.dfh" class="text-negative bg-yellow-4 text-bold q-ml-sm q-px-xs">PAS D'HEBERGEMENT</span>
+        </div>
+        </q-item-section>
+      </template>
+      <q-card class="shadow-8 q-ma-sm">
+        <div v-if="state.g.dfh" class="text-negative bg-yellow-4 text-bold q-mx-xs q-pa-xs">
+          Le groupe n'a pas de compte qui l'héberge. Mises à jour et créations de secrets bloquées.
+          S'auto-détruira dans {{nbj(state.g.dfh)}} jour(s).
+          <q-btn dense color="primary" label="Héberger le groupe" @click="debheb"/>
+        </div>
+        <q-btn v-if="state.g.estHeb" dense color="secondary" class="q-ma-xs" label="Fin d'hébergement du groupe" @click="finheb"/>
+        <div>Volumes occupés (arrondis en Mo): {{Math.round(state.g.v1 / 1000000)}}Mo / {{Math.round(state.g.v2 / 1000000)}}Mo</div>
+        <div v-if="state.g.pc1 > 80 || state.g.pc2 > 80" class="q-ma-xs">
+          <q-icon name="warning" size="md" color="warning"/>
+          <span class="text-warning q-px-sm text-bold">Alerte sur les volumes - v1: {{state.g.pc1}}% / v2: {{state.g.pc2}}%</span>
+        </div>
+        <div>
+          <div class="titre-md">Forfaits attribués</div>
+          <choix-forfaits v-model="state.forfaits" :lecture="!state.g.estHeb" :f1="9" :f2="state.g.f2" :v1="12000000" :v2="state.g.v2"
+            label-valider="Changer les volumes maximum autorisés" @valider="chgvolmax"/>
+        </div>
+      </q-card>
     </q-expansion-item>
     <q-separator/>
 
@@ -100,7 +131,7 @@
 import { computed, reactive, watch } from 'vue'
 import { useStore } from 'vuex'
 import { useQuasar } from 'quasar'
-import { Motscles, equ8, cfg, FiltreMbr } from '../app/util.mjs'
+import { Motscles, equ8, cfg, FiltreMbr, getJourJ } from '../app/util.mjs'
 import { data } from '../app/modele.mjs'
 import { MajMcGroupe, MajArchGroupe, MajBIGroupe, MajMcMembre, MajArdMembre, MajInfoMembre } from '../app/operations.mjs'
 import ShowHtml from './ShowHtml.vue'
@@ -109,11 +140,12 @@ import ApercuGroupe from './ApercuGroupe.vue'
 import MotsCles from './MotsCles.vue'
 import EditeurMd from './EditeurMd.vue'
 import SelectMotscles from './SelectMotscles.vue'
+import ChoixForfaits from './ChoixForfaits.vue'
 
 export default ({
   name: 'PanelGroupe',
 
-  components: { ShowHtml, ApercuMotscles, MotsCles, ApercuGroupe, SelectMotscles, EditeurMd },
+  components: { ShowHtml, ApercuMotscles, MotsCles, ApercuGroupe, SelectMotscles, EditeurMd, ChoixForfaits },
 
   props: { close: Function },
 
@@ -140,6 +172,8 @@ export default ({
   },
 
   methods: {
+    dkli (idx) { return this.$q.dark.isActive ? (idx ? 'sombre' + (idx % 2) : 'sombre0') : (idx ? 'clair' + (idx % 2) : 'clair0') },
+    nbj (j) { return j - getJourJ() },
     fermermajard () { this.ardedit = false },
     fermermajinfo () { this.infoedit = false },
     ouvmajinfo (m) { this.infoedit = true; this.mbc = m; this.mbcinfo = m.info },
@@ -167,7 +201,11 @@ export default ({
       this.infoedit = false
     },
     fermer () { if (this.close) this.close() },
-    dkli (idx) { return this.$q.dark.isActive ? (idx ? 'sombre' + (idx % 2) : 'sombre0') : (idx ? 'clair' + (idx % 2) : 'clair0') }
+    debheb () { },
+    finheb () { },
+    chgvolmax (f) {
+      console.log(f.join('/'))
+    }
   },
 
   setup () {
@@ -188,6 +226,7 @@ export default ({
 
     const state = reactive({
       filtre: { p: true, i: true, a: true, n: true, dh: false, asc: true },
+      forfaits: [0, 0],
       motcles: null,
       g: null,
       arch: false,
@@ -225,6 +264,7 @@ export default ({
       if (x) {
         state.g = x.g
         state.arch = x.g ? x.g.sty === 1 : false
+        state.forfaits = [x.g.f1, x.g.f2]
       }
       chargerMcGr()
     }

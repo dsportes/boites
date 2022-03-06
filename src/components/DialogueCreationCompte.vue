@@ -22,7 +22,7 @@
         </q-step>
 
         <q-step :name="3" title="Forfaits auto-attribués" icon="settings" :done="step > 4" >
-          <choix-forfaits v-model="forfaits"/>
+          <choix-forfaits v-model="forfaits" :f1="1" :f2="1"/>
           <q-stepper-navigation>
             <q-btn flat @click="step = 2" color="primary" label="Précédent" class="q-ml-sm" />
             <q-btn flat @click="step = 4" color="primary" label="Suivant" class="q-ml-sm" />

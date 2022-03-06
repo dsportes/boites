@@ -11,6 +11,14 @@
             </div>
             <div class="col q-px-sm">
               <div class="titre-md text-bold">{{x.g.nom}}</div>
+              <div v-if="x.g.dfh" class="text-negative bg-yellow-4 text-bold q-pa-xs">
+                Le groupe n'a pas de compte qui l'héberge. Mises à jour et créations de secrets bloquées.
+                S'auto-détruira dans {{nbj(x.g.dfh)}} jour(s).
+              </div>
+              <div v-if="x.g.pc1 > 80 || x.g.pc2 > 80">
+                <q-icon name="warning" size="md" color="warning"/>
+                <span class="text-warning q-px-sm text-bold">Alerte sur les volumes - v1: {{x.g.pc1}}% / v2: {{x.g.pc2}}%</span>
+              </div>
               <div v-if="x.g.stx === 2" class="text-italic text-bold text-negative">Invitation bloquées - Vote pour le déblocage en cours</div>
               <div v-if="x.g.sty === 1" class="text-italic text-bold text-negative">Création et mises à jour de secrets bloquées</div>
               <div>
@@ -62,7 +70,7 @@
         <q-separator/>
         <div v-if="nomgr">
           <div class="titre-md">Forfaits attribués</div>
-          <choix-forfaits v-model="forfaits" />
+          <choix-forfaits v-model="forfaits" :f1="1" :f2="1"/>
         </div>
       </q-card-section>
       <q-card-actions>
@@ -84,7 +92,7 @@
 <script>
 import { computed, reactive, watch, ref } from 'vue'
 import { useStore } from 'vuex'
-import { Motscles, FiltreGrp, cfg } from '../app/util.mjs'
+import { Motscles, FiltreGrp, cfg, getJourJ } from '../app/util.mjs'
 import PanelFiltreGroupes from './PanelFiltreGroupes.vue'
 import PanelGroupe from './PanelGroupe.vue'
 import ShowHtml from './ShowHtml.vue'
@@ -113,6 +121,7 @@ export default ({
   },
 
   methods: {
+    nbj (j) { return j - getJourJ() },
     voirsecrets (x) {
       this.groupepluscourant(x)
       this.evtfiltresecrets = { cmd: 'fsg', arg: x.g }

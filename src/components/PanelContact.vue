@@ -28,12 +28,12 @@
 
     <q-card-section>
       <div class="titre-md">Ardoise commune avec le contact</div>
-      <editeur-md class="height-8" v-model="state.ard" :texte="contact ? contact.ard : ''" editable/>
+      <editeur-md class="height-8" v-model="state.ard" :texte="contact ? contact.ard : ''" editable modetxt/>
     </q-card-section>
 
     <q-card-section>
       <div class="titre-md">Commentaires personnels</div>
-      <editeur-md class="height-8" v-model="state.info" :texte="contact ? contact.info : ''" editable/>
+      <editeur-md class="height-8" v-model="state.info" :texte="contact ? contact.info : ''" editable modetxt/>
     </q-card-section>
 
     <q-card-section>

@@ -39,14 +39,14 @@
         </q-step>
 
         <q-step :name="4" title="Forfaits attribués" icon="settings" :done="step > 4" >
-          <choix-forfaits v-model="forfaits" class="q-ma-xs"/>
+          <choix-forfaits v-model="forfaits" class="q-ma-xs" :f1="1" :f2="2"/>
           <div v-if="compte.estComptable">
             <div style="margin-left:-0.8rem" class="text-primary">
               <q-toggle v-model="estParrain" size="md" color="primary" :label="estParrain ? 'Compte parrain lui-même' : 'Compte filleul standard'"/>
             </div>
             <div v-if="estParrain">
               <div>Ressources maximales attribuables aux filleuls</div>
-              <choix-forfaits v-model="ressources" class="q-ma-xs"/>
+              <choix-forfaits v-model="ressources" class="q-ma-xs" :f1="1" :f2="2"/>
             </div>
           </div>
           <q-stepper-navigation>
