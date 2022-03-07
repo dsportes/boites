@@ -94,6 +94,9 @@
           <component :is="Component" />
         </transition>
       </router-view>
+      <q-page-sticky v-if="invitationattente" position="bottom-right" :offset="[2, 2]">
+        <q-btn label="Invitation en attente" color="accent" icon-right="arrow_forward" @click="toInvit"/>
+      </q-page-sticky>
     </q-page-container>
 
     <q-dialog v-model="confirmerdrc">
@@ -187,7 +190,7 @@ import RapportSynchro from 'components/RapportSynchro.vue'
 import DialogueHelp from 'components/DialogueHelp.vue'
 import { data, MODES } from '../app/modele.mjs'
 import { cfg } from '../app/util.mjs'
-import { remplacePage, onBoot } from '../app/page.mjs'
+import { remplacePage, onBoot, retourInvitation } from '../app/page.mjs'
 import { deconnexion, reconnexion } from '../app/operations.mjs'
 
 export default {
@@ -253,6 +256,8 @@ export default {
       }
     },
 
+    toInvit () { retourInvitation() },
+
     deconnexion () { deconnexion() },
 
     reconnexion () { reconnexion() },
@@ -271,6 +276,10 @@ export default {
     const personnes = cfg().personnes.default
 
     const $store = useStore()
+    const invitationattente = computed({
+      get: () => $store.state.ui.invitationattente,
+      set: (val) => $store.commit('ui/majinvitationattente', val)
+    })
     const menuouvert = computed({
       get: () => $store.state.ui.menuouvert,
       set: (val) => $store.commit('ui/majmenuouvert', val)
@@ -377,7 +386,8 @@ export default {
       sessionId,
       msgdegrade,
       statut,
-      tabavatar
+      tabavatar,
+      invitationattente
     }
   }
 }

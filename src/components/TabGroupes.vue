@@ -58,6 +58,7 @@
   </div>
 
   <q-dialog v-model="editgr" class="moyennelargeur">
+    <div>Bonjour</div>
     <panel-groupe :close="fermeredit"/>
   </q-dialog>
 
@@ -113,7 +114,6 @@ export default ({
 
   data () {
     return {
-      editgr: false,
       nouvgr: false,
       forfaits: [1, 1],
       nomgr: ''
@@ -220,6 +220,11 @@ export default ({
     const avatar = computed(() => { return $store.state.db.avatar })
     const groupes = computed(() => { return $store.state.db.groupes })
     const mode = computed(() => $store.state.ui.mode)
+    const editgr = computed({
+      get: () => $store.state.ui.editgr,
+      set: (val) => $store.commit('ui/majeditgr', val)
+    })
+
     const groupeplus = computed({ // groupe courant
       get: () => $store.state.db.groupeplus,
       set: (val) => $store.commit('db/majgroupeplus', val)
@@ -314,7 +319,8 @@ export default ({
       panelfiltre,
       recherche,
       mode,
-      evtfiltresecrets
+      evtfiltresecrets,
+      editgr
     }
   }
 

@@ -61,12 +61,45 @@
 
     <q-expansion-item v-if="state.g" group="etc" label="Liste des membres du groupe" color="secondary"
         header-class="expansion-header-class-1 titre-lg bg-primary text-white">
+      <div class="row justify-around q-ma-xs">
+        <div v-if="state.g.maxStp() >= 1" class="font-md text-italic text-primary text bold">Nouveau membre ...</div>
+        <q-btn flat dense color="primary" icon="grade" label="Proposer" @click="proposer(state.g)"/>
+        <q-btn v-if="state.g.maxStp() === 2" flat dense color="warning" icon="mediation" label="Inviter" @click="panelinvit=true"/>
+      </div>
       <div v-for="(m, idx) in state.lst" :key="m.pkv">
         <q-card class="shadow-8">
           <div :class="dkli(idx) + ' zone q-px-xs full-width row items-start cursor-pointer'">
             <div class="col-auto column justify-center q-px-xs">
               <img class="col-auto photomax" :src="m.ph || personne"/>
               <q-btn size="md" color="primary" icon="menu" flat dense class="q-mt-sm"/>
+              <q-menu touch-position transition-show="scale" transition-hide="scale">
+                <q-list dense style="min-width: 10rem">
+                  <q-item v-if="invitationattente" clickable v-ripple v-close-popup @click="copier(m)">
+                    <q-item-section class="text-bold text-secondary">Mon invité !</q-item-section>
+                  </q-item>
+                  <q-separator v-if="m.stx === 1"/>
+                  <q-item v-if="m.stx === 1" clickable v-ripple v-close-popup @click="accepterinvit(m)">
+                    <q-item-section avatar>
+                      <q-icon dense name="check" color="primary" size="md"/>
+                    </q-item-section>
+                    <q-item-section>Accepter / Refuser l'invitation</q-item-section>
+                  </q-item>
+                  <q-separator v-if="!m.estAvec && m.stp === 2" />
+                  <q-item v-if="!m.estAvec && m.stp === 2" clickable v-ripple v-close-popup @click="resilier(m)">
+                    <q-item-section avatar>
+                      <q-icon dense name="close" color="warning" size="sm"/>
+                    </q-item-section>
+                    <q-item-section>Résilier du groupe</q-item-section>
+                  </q-item>
+                  <q-separator v-if="m.estAvec"/>
+                  <q-item v-if="m.estAvec" clickable v-ripple v-close-popup @click="autoresilier(m)">
+                    <q-item-section avatar>
+                      <q-icon dense name="close" color="warning" size="sm"/>
+                    </q-item-section>
+                    <q-item-section>S'auto-résilier du groupe</q-item-section>
+                  </q-item>
+                </q-list>
+              </q-menu>
             </div>
             <div class="col q-px-sm">
               <div class="titre-md text-bold">{{m.nom}}</div>
@@ -125,6 +158,33 @@
       <select-motscles :motscles="state.motsclesGr" :src="mbc.mc" @ok="changermcmbc" :close="fermermcl"></select-motscles>
     </q-dialog>
 
+    <q-dialog v-model="panelinvit">
+      <q-card class="petitelargeur shadow-8">
+      <q-card-section>
+        <div class="titre-lg">Invitation d'un nouveau membre</div>
+      </q-card-section>
+      <q-separator/>
+      <q-card-section>
+        <div v-if="clipboard === null" class="text-italic titre-lg">Sélectionner dans les listes de contacts ou des membres des groupes l'avatar à inviter au groupe.
+          L'action de "sélection" ramènera à ce dialogue pour poursuivre l'invitation.
+        </div>
+      </q-card-section>
+      <q-card-section v-if="state.diagInvit !== null">
+        <div :class="state.diagInvit[0] === 2 ? 'negative text-bold':''">{{state.diagInvit[1]}}</div>
+      </q-card-section>
+      <q-card-section v-if="clipboard !== null">
+        <div>Super ! {{clipboard.nom}}
+        </div>
+      </q-card-section>
+      <q-card-actions align="center" vertical>
+        <q-btn flat dense color="primary" label="Renoncer"/>
+        <q-btn v-if="clipboard !== null" flat dense color="warning" icon="undo" label="Je veux rechercher un autre invité" @click="inviterAtt"/>
+        <q-btn v-if="clipboard !== null" :disable="state.diagInvit && state.diagInvit[1] === 2" dense color="warning" icon="check" label="Valider" @click="validerInvit"/>
+        <q-btn v-if="clipboard === null" dense color="warning" label="J'ai compris, je vais chercher mon invité" @click="inviterAtt"/>
+      </q-card-actions>
+      </q-card>
+    </q-dialog>
+
   </q-card>
 </template>
 <script>
@@ -141,11 +201,12 @@ import MotsCles from './MotsCles.vue'
 import EditeurMd from './EditeurMd.vue'
 import SelectMotscles from './SelectMotscles.vue'
 import ChoixForfaits from './ChoixForfaits.vue'
+import { retourInvitation } from '../app/page.mjs'
 
 export default ({
   name: 'PanelGroupe',
 
-  components: { ShowHtml, ApercuMotscles, MotsCles, ApercuGroupe, SelectMotscles, EditeurMd, ChoixForfaits },
+  components: { ShowHtml, ApercuMotscles, MotsCles, ChoixForfaits, ApercuGroupe, SelectMotscles, EditeurMd },
 
   props: { close: Function },
 
@@ -205,6 +266,31 @@ export default ({
     finheb () { },
     chgvolmax (f) {
       console.log(f.join('/'))
+    },
+    autoresilier (m) {
+    },
+    resilier (m) {
+    },
+    accepterinvit (m) {
+    },
+    copier (m) {
+      retourInvitation(m)
+    },
+    proposer (g) {
+    },
+    inviterAtt () {
+      this.clipboard = null
+      this.panelinvit = false
+      this.editgr = false
+      this.invitationattente = {
+        avid: this.$store.state.db.avatar.id,
+        grid: this.state.g.id,
+        im: this.$store.state.db.groupeplus.m.im
+      }
+    },
+    validerInvit () {
+      this.clipboard = null
+      this.invitationattente = null
     }
   },
 
@@ -216,6 +302,22 @@ export default ({
     const diagnostic = computed({
       get: () => $store.state.ui.diagnostic,
       set: (val) => $store.commit('ui/majdiagnostic', val)
+    })
+    const panelinvit = computed({
+      get: () => $store.state.ui.panelinvit,
+      set: (val) => $store.commit('ui/majpanelinvit', val)
+    })
+    const editgr = computed({
+      get: () => $store.state.ui.editgr,
+      set: (val) => $store.commit('ui/majeditgr', val)
+    })
+    const clipboard = computed({
+      get: () => $store.state.ui.clipboard,
+      set: (val) => $store.commit('ui/majclipboard', val)
+    })
+    const invitationattente = computed({
+      get: () => $store.state.ui.invitationattente,
+      set: (val) => $store.commit('ui/majinvitationattente', val)
     })
     const groupeplus = computed(() => { return $store.state.db.groupeplus })
     const mode = computed(() => $store.state.ui.mode)
@@ -236,7 +338,8 @@ export default ({
       nbanim: 0,
       nbvote: 0,
       maxstp: 0, // statut lecteur / auteur / animateur max des avaters du compte membres du groupe
-      motclesGr: null
+      motclesGr: null,
+      diagInvit: ''
     })
 
     const mc = reactive({ categs: new Map(), lcategs: [], st: { enedition: false, modifie: false } })
@@ -335,6 +438,42 @@ export default ({
       latotale()
     })
 
+    watch(() => clipboard.value, (ap, av) => {
+      let na
+      if (ap.table === 'contact') {
+        na = ap.na
+      } else if (ap.table === 'membre') {
+        na = ap.namb
+      } else if (ap.table === 'avatar') {
+        na = ap.na
+      } else {
+        state.diagInvit = [2, 'Sélectionner un contact, un membre d\'un groupe ou un avatar du compte']
+        return
+      }
+      for (const im in membres.value) {
+        const m = membres.value[im]
+        if (na.id === m.namb.id) {
+          if (m.stx === 2) {
+            state.diagInvit = [2, 'L\'invité est déjà un membre actif du groupe']
+            return
+          }
+          if (m.stx === 0) {
+            state.diagInvit = [1, 'L\'invité est un membre du groupe qui avait été pressenti']
+            return
+          }
+          if (m.stx === 3) {
+            state.diagInvit = [1, 'L\'invité avait déjà été invité et avait décliné l\'invitation']
+            return
+          }
+          if (m.stx === 4) {
+            state.diagInvit = [1, 'L\'invité avait été membre actif puis a été résilié']
+            return
+          }
+        }
+      }
+      state.diagInvit = null
+    })
+
     function confirmer () {
       $q.dialog({
         dark: true,
@@ -361,7 +500,11 @@ export default ({
       diagnostic,
       mode,
       options: ['Tous', 'Pressentis', 'Invités', 'Actifs', 'Inactivés', 'Refusés', 'Résiliés', 'Disparus'],
-      statuts: ['pressenti', 'invité', 'actif', 'refusé', 'résilié', 'disparu']
+      statuts: ['pressenti', 'invité', 'actif', 'refusé', 'résilié', 'disparu'],
+      invitationattente,
+      panelinvit,
+      clipboard,
+      editgr
     }
   }
 })

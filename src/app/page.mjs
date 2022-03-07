@@ -1,5 +1,6 @@
 import { useRouter, useRoute } from 'vue-router'
 import { cfg, store } from './util.mjs'
+import { data } from './modele.mjs'
 
 let bootfait = false
 let $router
@@ -100,4 +101,19 @@ export async function remplacePage (page) {
   const x = { name: page }
   if (page !== 'Org') x.params = { org: store().state.ui.org }
   await $router.replace(x)
+}
+
+export function retourInvitation (clipboard) {
+  const $store = store()
+  const ctx = $store.state.ui.invitationattente
+  $store.commit('db/majavatar', data.getAvatar(ctx.avid))
+  remplacePage('Avatar')
+  $store.commit('ui/majtabavatar', 'groupes')
+  const g = data.getGroupe(ctx.grid)
+  const m = data.getMembre(ctx.grid, ctx.im)
+  $store.commit('db/majgroupeplus', { g, m })
+  $store.commit('ui/majeditgr', true)
+  $store.commit('ui/majpanelinvit', true)
+  $store.commit('ui/majinvitationattente', null)
+  $store.commit('ui/majclipboard', clipboard)
 }

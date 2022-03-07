@@ -1524,7 +1524,7 @@ export class Groupe {
 
   maxStp () {
     let mx = 0
-    for (const im of data.getMembre(this.id)) {
+    for (const im in data.getMembre(this.id)) {
       const m = data.getMembre(this.id, im)
       if (m.estAvc && m.stp > mx) mx = m.stp
     }

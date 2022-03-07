@@ -168,6 +168,14 @@ export function majevtavatargr (state, val) {
   state.evtavatargr = { evt: val }
 }
 
+export function majinvitationattente (state, val) {
+  state.invitationattente = val
+}
+
+export function majeditgr (state, val) {
+  state.editgr = val
+}
+
 export function majidblec (state, { table, st, vol, nbl }) {
   const x = state.idblec
   x[table] = { st, vol, nbl }
@@ -198,4 +206,12 @@ export function majsynclec (state, { st, sid, nom, nbl }) {
 
 export function razsynclec (state) {
   state.synclec = { }
+}
+
+export function majclipboard (state, val) {
+  state.clipboard = val
+}
+
+export function majpanelinvit (state, val) {
+  state.panelinvit = val
 }

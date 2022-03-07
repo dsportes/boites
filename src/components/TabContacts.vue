@@ -14,6 +14,9 @@
       <div class="col-auto fs-sm">{{c.dhed}}</div>
       <q-menu touch-position transition-show="scale" transition-hide="scale">
         <q-list dense style="min-width: 10rem">
+          <q-item v-if="invitationattente" clickable v-close-popup @click="copier(c)">
+            <q-item-section class="text-bold text-secondary">Mon invité !</q-item-section>
+          </q-item>
           <q-item clickable v-close-popup @click="afficher(c)">
             <q-item-section>Afficher / éditer le contact</q-item-section>
           </q-item>
@@ -51,6 +54,7 @@ import { Motscles, FiltreCtc } from '../app/util.mjs'
 import PanelFiltreContacts from './PanelFiltreContacts.vue'
 import PanelContact from './PanelContact.vue'
 import { data } from '../app/modele.mjs'
+import { retourInvitation } from '../app/page.mjs'
 
 export default ({
   name: 'TabContacts',
@@ -82,6 +86,10 @@ export default ({
       this.editct = true
     },
 
+    copier (c) {
+      retourInvitation(c)
+    },
+
     contactcourant (c) {
       console.log(c.nom)
       this.contact = c
@@ -110,6 +118,14 @@ export default ({
     const contact = computed({ // contact courant
       get: () => $store.state.db.contact,
       set: (val) => $store.commit('db/majcontact', val)
+    })
+    const clipboard = computed({
+      get: () => $store.state.ui.clipboard,
+      set: (val) => $store.commit('ui/majclipboard', val)
+    })
+    const invitationattente = computed({
+      get: () => $store.state.ui.invitationattente,
+      set: (val) => $store.commit('ui/majinvitationattente', val)
     })
     const contacts = computed(() => { return avatar.value ? data.getContact(avatar.value.id) : [] })
     const repertoire = computed(() => { return $store.state.db.repertoire })
@@ -191,6 +207,7 @@ export default ({
 
     return {
       compte,
+      clipboard,
       avatar,
       contact,
       motscles,
@@ -198,7 +215,8 @@ export default ({
       panelfiltre,
       recherche,
       mode,
-      evtfiltresecrets
+      evtfiltresecrets,
+      invitationattente
     }
   }
 

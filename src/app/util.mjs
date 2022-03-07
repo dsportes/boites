@@ -5,7 +5,6 @@ import { u8ToB64, crypt } from './crypto.mjs'
 import { encode, decode } from '@msgpack/msgpack'
 
 const headers = { 'x-api-version': version }
-// const u8vide = new Uint8Array([])
 
 const decoder = new TextDecoder('utf-8')
 const encoder = new TextEncoder('utf-8')

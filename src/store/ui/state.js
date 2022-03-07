@@ -48,6 +48,10 @@ export default function () {
     evtavatarct: null,
     evtavatargr: null,
     evtfiltresecrets: null,
-    evtfiltresecrets2: null
+    evtfiltresecrets2: null,
+    invitationattente: null,
+    editgr: false,
+    clipboard: null,
+    panelinvit: false
   }
 }
