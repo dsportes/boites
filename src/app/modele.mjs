@@ -1121,6 +1121,10 @@ export class Avatar {
 
   get groupes () { return this.m2gr.keys() }
 
+  get cv () { return this }
+
+  get ph () { return this.photo }
+
   constructor () {
     this.m1gr = new Map() // clé:ni val: { na du groupe, im de l'avatar dans le groupe }
     this.m2gr = new Map() // clé:idg (id du groupe), val:[im, ni]

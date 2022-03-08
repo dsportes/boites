@@ -13,6 +13,7 @@
         <img class="col-auto photomax" :src="contact ? contact.ph : ''"/>
         <show-html class="col q-ml-md bord1 height-6" :texte="contact ? contact.cv.info : ''"/>
       </div>
+      <q-btn v-if="invitationattente" class="titre-lg text-bold text-grey-8 bg-yellow-4 q-mx-sm" label="[Contact !]" dense flat @click="copier(contact)"/>
     </q-card-section>
 
     <q-card-section>
@@ -57,6 +58,7 @@ import ShowHtml from './ShowHtml.vue'
 import EditeurMd from './EditeurMd.vue'
 import ApercuMotscles from './ApercuMotscles.vue'
 import SelectMotscles from './SelectMotscles.vue'
+import { retourInvitation } from '../app/page.mjs'
 
 export default ({
   name: 'PanelContact',
@@ -87,7 +89,10 @@ export default ({
     async valider () {
       await new MajContact().run(this.contact, this.state)
     },
-    fermer () { if (this.close) this.close() }
+    fermer () { if (this.close) this.close() },
+    copier (c) {
+      retourInvitation(c)
+    }
   },
 
   setup () {
@@ -99,6 +104,10 @@ export default ({
     const contact = computed(() => { return $store.state.db.contact })
     const mode = computed(() => $store.state.ui.mode)
     const prefs = computed(() => { return data.getPrefs() })
+    const invitationattente = computed({
+      get: () => $store.state.ui.invitationattente,
+      set: (val) => $store.commit('ui/majinvitationattente', val)
+    })
 
     const state = reactive({
       motcles: null,
@@ -141,7 +150,8 @@ export default ({
       state,
       diagnostic,
       contact,
-      mode
+      mode,
+      invitationattente
     }
   }
 })

@@ -15,7 +15,7 @@
       <q-menu touch-position transition-show="scale" transition-hide="scale">
         <q-list dense style="min-width: 10rem">
           <q-item v-if="invitationattente" clickable v-close-popup @click="copier(c)">
-            <q-item-section class="text-bold text-secondary">Mon invité !</q-item-section>
+            <q-item-section class="titre-lg text-bold text-grey-8 bg-yellow-4 q-mx-sm text-center">[Contact !]</q-item-section>
           </q-item>
           <q-item clickable v-close-popup @click="afficher(c)">
             <q-item-section>Afficher / éditer le contact</q-item-section>
@@ -119,10 +119,6 @@ export default ({
       get: () => $store.state.db.contact,
       set: (val) => $store.commit('db/majcontact', val)
     })
-    const clipboard = computed({
-      get: () => $store.state.ui.clipboard,
-      set: (val) => $store.commit('ui/majclipboard', val)
-    })
     const invitationattente = computed({
       get: () => $store.state.ui.invitationattente,
       set: (val) => $store.commit('ui/majinvitationattente', val)
@@ -207,7 +203,6 @@ export default ({
 
     return {
       compte,
-      clipboard,
       avatar,
       contact,
       motscles,

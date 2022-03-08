@@ -5,7 +5,9 @@
       <q-toolbar-title><div class="titre-md tit text-center">{{state.g ? state.g.nom : ''}}</div></q-toolbar-title>
     </q-toolbar>
     <q-separator/>
-
+    <q-btn v-if="state.g && state.g.maxStp() >= 1" class="q-ma-xs" flat dense color="primary" icon="add"
+        label="Ajouter un nouveau contact" @click="panelinvit=true"/>
+    <q-separator/>
     <q-expansion-item v-if="state.g" group="etc" label="Carte de visite du groupe" default-opened
         header-class="expansion-header-class-1 titre-lg bg-primary text-white">
       <apercu-groupe :editer="anim"/>
@@ -61,11 +63,6 @@
 
     <q-expansion-item v-if="state.g" group="etc" label="Liste des membres du groupe" color="secondary"
         header-class="expansion-header-class-1 titre-lg bg-primary text-white">
-      <div class="row justify-around q-ma-xs">
-        <div v-if="state.g.maxStp() >= 1" class="font-md text-italic text-primary text bold">Nouveau membre ...</div>
-        <q-btn flat dense color="primary" icon="grade" label="Proposer" @click="proposer(state.g)"/>
-        <q-btn v-if="state.g.maxStp() === 2" flat dense color="warning" icon="mediation" label="Inviter" @click="panelinvit=true"/>
-      </div>
       <div v-for="(m, idx) in state.lst" :key="m.pkv">
         <q-card class="shadow-8">
           <div :class="dkli(idx) + ' zone q-px-xs full-width row items-start cursor-pointer'">
@@ -75,9 +72,15 @@
               <q-menu touch-position transition-show="scale" transition-hide="scale">
                 <q-list dense style="min-width: 10rem">
                   <q-item v-if="invitationattente" clickable v-ripple v-close-popup @click="copier(m)">
-                    <q-item-section class="text-bold text-secondary">Mon invité !</q-item-section>
+                    <q-item-section class="titre-lg text-bold text-grey-8 bg-yellow-4 q-mx-sm text-center">[Contact !]</q-item-section>
                   </q-item>
                   <q-separator v-if="m.stx === 1"/>
+                  <q-item v-if="m.stx === 0 && state.g.maxStp === 2" clickable v-ripple v-close-popup @click="inviter(m)">
+                    <q-item-section avatar>
+                      <q-icon dense name="check" color="primary" size="md"/>
+                    </q-item-section>
+                    <q-item-section>Inviter ce contact</q-item-section>
+                  </q-item>
                   <q-item v-if="m.stx === 1" clickable v-ripple v-close-popup @click="accepterinvit(m)">
                     <q-item-section avatar>
                       <q-icon dense name="check" color="primary" size="md"/>
@@ -109,7 +112,7 @@
                 <q-icon size="sm" :color="m.stx === 2 ?'primary':'warning'"
                   :name="m.stx < 2 ? 'hourglass_empty' : (m.stx === 2 ? 'thumb_up' : 'thumb_down')"/>
                 <span class="q-px-sm">{{statuts[m.stx]}}</span>
-                <span class="q-px-sm" :color="m.stp < 2 ?'primary':'warning'">{{['Simple lecteur','Auteur','Animateur'][m.stp]}}</span>
+                <span class="q-px-sm" :color="m.stp < 2 ?'primary':'warning'">{{['Lecteur','Auteur','Animateur'][m.stp]}}</span>
                 <span v-if="state.g.imh === m.im" class="q-px-xs text-bold text-italic text-warning">Hébergeur du groupe</span>
               </div>
               <div v-if="m.ard" class="row justify-between cursor-pointer zone" @click="ouvmajard(m)">
@@ -161,26 +164,31 @@
     <q-dialog v-model="panelinvit">
       <q-card class="petitelargeur shadow-8">
       <q-card-section>
-        <div class="titre-lg">Invitation d'un nouveau membre</div>
+        <div class="titre-lg">Enregistrement d'un nouveau contact</div>
       </q-card-section>
       <q-separator/>
       <q-card-section>
-        <div v-if="clipboard === null" class="text-italic titre-lg">Sélectionner dans les listes de contacts ou des membres des groupes l'avatar à inviter au groupe.
-          L'action de "sélection" ramènera à ce dialogue pour poursuivre l'invitation.
+        <div v-if="clipboard === null">
+          <div class="text-italic titre-md">Sélectionner dans les listes de contacts ou des membres des groupes l'avatar à enregistrer comme simple contact du groupe.</div>
+          <div class="titre-md">L'option de menu <span class="titre-lg text-bold text-grey-8 bg-yellow-4 q-mx-sm">[Contact !]</span> ramènera à ce dialogue pour valider (ou non) l'inscription du contact.</div>
         </div>
       </q-card-section>
       <q-card-section v-if="state.diagInvit !== null">
-        <div :class="state.diagInvit[0] === 2 ? 'negative text-bold':''">{{state.diagInvit[1]}}</div>
+        <div :class="state.diagInvit[0] === 2 ? 'text-negative text-bold fs-lg':''">{{state.diagInvit[1]}}</div>
       </q-card-section>
       <q-card-section v-if="clipboard !== null">
-        <div>Super ! {{clipboard.nom}}
+        <div class="titre-lg">Avatar sélectionné : {{clipboard.nom}}</div>
+        <div class="q-my-sm row">
+          <img class="col-auto photomax" :src="clipboard.ph || personne"/>
+          <show-html class="col q-ml-md bord1 height-6" :texte="clipboard.cv.info || ''"/>
         </div>
       </q-card-section>
       <q-card-actions align="center" vertical>
-        <q-btn flat dense color="primary" label="Renoncer"/>
-        <q-btn v-if="clipboard !== null" flat dense color="warning" icon="undo" label="Je veux rechercher un autre invité" @click="inviterAtt"/>
-        <q-btn v-if="clipboard !== null" :disable="state.diagInvit && state.diagInvit[1] === 2" dense color="warning" icon="check" label="Valider" @click="validerInvit"/>
-        <q-btn v-if="clipboard === null" dense color="warning" label="J'ai compris, je vais chercher mon invité" @click="inviterAtt"/>
+        <q-btn flat dense color="primary" icon="close" label="Renoncer" @click="fermerPanelInvit"/>
+        <q-btn v-if="clipboard !== null" flat dense color="warning" icon="undo" label="Je veux rechercher un autre contact" @click="inviterAtt"/>
+        <q-btn v-if="clipboard !== null" :disable="state.diagInvit && state.diagInvit[0] === 2" dense color="warning"
+          icon="check" label="Je valide ce nouveau contact" @click="validerContact"/>
+        <q-btn v-if="clipboard === null" dense color="warning" label="J'ai compris, je vais chercher mon contact" @click="inviterAtt"/>
       </q-card-actions>
       </q-card>
     </q-dialog>
@@ -188,7 +196,7 @@
   </q-card>
 </template>
 <script>
-import { computed, reactive, watch } from 'vue'
+import { computed, reactive, watch, onMounted } from 'vue'
 import { useStore } from 'vuex'
 import { useQuasar } from 'quasar'
 import { Motscles, equ8, cfg, FiltreMbr, getJourJ } from '../app/util.mjs'
@@ -262,22 +270,7 @@ export default ({
       this.infoedit = false
     },
     fermer () { if (this.close) this.close() },
-    debheb () { },
-    finheb () { },
-    chgvolmax (f) {
-      console.log(f.join('/'))
-    },
-    autoresilier (m) {
-    },
-    resilier (m) {
-    },
-    accepterinvit (m) {
-    },
-    copier (m) {
-      retourInvitation(m)
-    },
-    proposer (g) {
-    },
+
     inviterAtt () {
       this.clipboard = null
       this.panelinvit = false
@@ -288,9 +281,33 @@ export default ({
         im: this.$store.state.db.groupeplus.m.im
       }
     },
-    validerInvit () {
+    fermerPanelInvit () {
+      this.clipboard = null
+      this.panelinvit = false
+    },
+    copier (m) {
+      retourInvitation(m)
+    },
+
+    // TODO
+    debheb () {
+    },
+    finheb () {
+    },
+    chgvolmax (f) {
+      console.log(f.join('/'))
+    },
+    validerContact () {
       this.clipboard = null
       this.invitationattente = null
+    },
+    autoresilier (m) {
+    },
+    resilier (m) {
+    },
+    accepterinvit (m) {
+    },
+    inviter (g) {
     }
   },
 
@@ -369,17 +386,7 @@ export default ({
         state.arch = x.g ? x.g.sty === 1 : false
         state.forfaits = [x.g.f1, x.g.f2]
       }
-      chargerMcGr()
     }
-
-    watch(state, async (ap, av) => {
-      if (state.g) {
-        const avant = state.g.sty === 1
-        if (ap.arch !== avant) {
-          confirmer()
-        }
-      }
-    })
 
     function getMembres () {
       const f = state.filtre
@@ -409,36 +416,9 @@ export default ({
       state.lst = l
     }
 
-    function latotale () {
-      getMembres()
-      trier()
-    }
-
-    initState()
-    chargerMcGr()
-    chargerMc()
-    latotale()
-
-    watch(() => prefs.value, (ap, av) => {
-      chargerMc()
-    })
-
-    watch(() => membres.value, (ap, av) => {
-      latotale()
-    })
-
-    watch(() => groupeplus.value, (ap, av) => {
-      initState()
-      chargerMcGr()
-      chargerMc()
-      latotale()
-    })
-
-    watch(() => repertoire.value, (ap, av) => {
-      latotale()
-    })
-
-    watch(() => clipboard.value, (ap, av) => {
+    function checkcb () {
+      const ap = clipboard.value
+      if (!ap) return
       let na
       if (ap.table === 'contact') {
         na = ap.na
@@ -472,7 +452,7 @@ export default ({
         }
       }
       state.diagInvit = null
-    })
+    }
 
     function confirmer () {
       $q.dialog({
@@ -492,6 +472,54 @@ export default ({
       })
     }
 
+    function tousLesWatch () {
+      watch(state, async (ap, av) => {
+        if (state.g) {
+          const avant = state.g.sty === 1
+          if (ap.arch !== avant) {
+            confirmer()
+          }
+        }
+      })
+
+      watch(() => prefs.value, (ap, av) => {
+        chargerMc()
+      })
+
+      watch(() => membres.value, (ap, av) => {
+        getMembres()
+        trier()
+      })
+
+      watch(() => groupeplus.value, (ap, av) => {
+        initState()
+        chargerMcGr()
+        chargerMc()
+        getMembres()
+        trier()
+      })
+
+      watch(() => repertoire.value, (ap, av) => {
+        getMembres()
+        trier()
+      })
+
+      watch(() => clipboard.value, (ap, av) => {
+        checkcb(ap)
+      })
+    }
+
+    onMounted(() => {
+      console.log('onMounted PanelGroupe')
+      initState()
+      chargerMcGr()
+      chargerMc()
+      getMembres()
+      trier()
+      checkcb()
+      tousLesWatch()
+    })
+
     return {
       personnes,
       personne,
@@ -500,7 +528,7 @@ export default ({
       diagnostic,
       mode,
       options: ['Tous', 'Pressentis', 'Invités', 'Actifs', 'Inactivés', 'Refusés', 'Résiliés', 'Disparus'],
-      statuts: ['pressenti', 'invité', 'actif', 'refusé', 'résilié', 'disparu'],
+      statuts: ['simple contact', 'invité', 'actif', 'refusé', 'résilié', 'disparu'],
       invitationattente,
       panelinvit,
       clipboard,

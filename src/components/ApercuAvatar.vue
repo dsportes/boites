@@ -10,6 +10,8 @@
     <q-btn class="col-auto" v-if="editer" flat dense size="md" color="primary" icon="edit" @click="cvloc=true"/>
   </div>
   <div v-if="info" class="full-width overflow-y-auto height-4 shadow-8"><show-html :texte="info"/></div>
+  <q-btn v-if="invitationattente" class="titre-lg text-bold text-grey-8 bg-yellow-4 q-mx-sm" label="[Contact !]" dense flat @click="copier"/>
+
   <q-dialog v-model="cvloc">
     <carte-visite :nomc="nomc" :close="closedialog" :photo-init="photo" :info-init="info" @ok="validercv"/>
   </q-dialog>
@@ -23,7 +25,7 @@ import ShowHtml from './ShowHtml.vue'
 import CarteVisite from './CarteVisite.vue'
 import { cfg } from '../app/util.mjs'
 import { data } from '../app/modele.mjs'
-import { remplacePage } from '../app/page.mjs'
+import { remplacePage, retourInvitation } from '../app/page.mjs'
 import { CvAvatar } from '../app/operations.mjs'
 
 export default ({
@@ -66,6 +68,9 @@ export default ({
         const cvinfo = await this.a.av.cvToRow(resultat.ph, resultat.info)
         await new CvAvatar().run(this.a.av.id, cvinfo)
       }
+    },
+    copier () {
+      retourInvitation(this.a.av)
     }
   },
 
@@ -75,6 +80,10 @@ export default ({
     const personne = cfg().personne.default
     const a = reactive({ av: null })
     const avatarId = toRef(props, 'avatarId')
+    const invitationattente = computed({
+      get: () => $store.state.ui.invitationattente,
+      set: (val) => $store.commit('ui/majinvitationattente', val)
+    })
 
     // Pour tracker les retours mettant à jour l'avatar
     const avatars = computed(() => { return $store.state.db.avatars })
@@ -91,7 +100,8 @@ export default ({
 
     return {
       a,
-      personne
+      personne,
+      invitationattente
     }
   }
 })

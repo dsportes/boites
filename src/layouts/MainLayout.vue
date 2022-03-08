@@ -256,7 +256,7 @@ export default {
       }
     },
 
-    toInvit () { retourInvitation() },
+    toInvit () { retourInvitation(null) },
 
     deconnexion () { deconnexion() },
 
