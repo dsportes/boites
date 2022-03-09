@@ -1,4 +1,4 @@
-import { NomAvatar, store, post, affichermessage, cfg, sleep, affichererreur, appexc, idToIc, difference, getpj, getJourJ, serial, edvol, equ8 } from './util.mjs'
+import { NomAvatar, store, post, get, affichermessage, cfg, sleep, affichererreur, appexc, idToIc, difference, getpj, getJourJ, serial, edvol, equ8 } from './util.mjs'
 import { remplacePage } from './page.mjs'
 import {
   deleteIDB, idbSidCompte, commitRows, getCompte, getCompta, getArdoise, getPrefs, getAvatars, getContacts, getCvs,
@@ -6,7 +6,7 @@ import {
   purgeAvatars, purgeCvs, purgeGroupes, openIDB, enregLScompte, setEtat, getEtat, getPjidx, putPj
 } from './db.mjs'
 import { Compte, Avatar, rowItemsToMapObjets, commitMapObjets, data, Prefs, Contact, Invitgr, Compta, Ardoise, Groupe, Membre } from './modele.mjs'
-import { AppExc, EXBRK, EXPS, F_BRO, INDEXT, X_SRV, E_WS, SIZEAV, SIZEGR, MC } from './api.mjs'
+import { AppExc, EXBRK, EXPS, F_BRO, E_BRO, INDEXT, X_SRV, E_WS, SIZEAV, SIZEGR, MC } from './api.mjs'
 
 import { crypt } from './crypto.mjs'
 import { schemas } from './schemas.mjs'
@@ -210,7 +210,7 @@ export class Operation {
   async traitInvitGr (lstInvitGr) {
     for (let i = 0; i < lstInvitGr.length; i++) {
       const iv = lstInvitGr[i]
-      const args = { sessionId: data.sessionId, id: iv.id, idg: iv.idg, ni: iv.ni, nomck: iv.nomck }
+      const args = { sessionId: data.sessionId, id: iv.id, idg: iv.idg, ni: iv.ni, datak: iv.datak }
       const ret = await post(this, 'm1', 'regulGr', args)
       if (data.dh < ret.dh) data.dh = ret.dh
     }
@@ -1711,10 +1711,11 @@ export class DebHebGroupe extends OperationUI {
 /* Mise à jour des volumes max d'un groupe ****************************************
 args :
 - sessionId
-- idg : id du compte, id = groupe,
+- idg : du groupe,
 - imh : indice de l'avatar membre hébergeur
 - forfaits: [max1, max2]
 Retour: sessionId, dh
+A_SRV, '18-Groupe non trouvé'
 A_SRV, '22-Groupe hébergé par un autre compte'
 X_SRV, '21-Forfaits (' + f + ') insuffisants pour héberger le groupe.'
 */
@@ -1727,6 +1728,72 @@ export class MajvmaxGroupe extends OperationUI {
     try {
       const args = { sessionId: data.sessionId, idg: g.id, imh, forfaits: f }
       const ret = await post(this, 'm1', 'majvmaxGroupe', args)
+      if (data.dh < ret.dh) data.dh = ret.dh
+      this.finOK()
+    } catch (e) {
+      await this.finKO(e)
+    }
+  }
+}
+
+/* Nouveau contact d'un groupe ****************************************
+args :
+- sessionId
+- rowMembre : objet membre
+Retour: sessionId, dh
+A_SRV, '18-Groupe non trouvé'
+*/
+export class ContactGroupe extends OperationUI {
+  constructor () {
+    super('Nouveau contact d\'un groupe', OUI, SELONMODE)
+  }
+
+  async run (g, id, idi) {
+    try {
+      const m = new Membre().nouveau(g.id, crypt.rnd4(), data.getNa(id), idi)
+      m.st = 0
+      const rowMembre = await m.toRow()
+      const args = { sessionId: data.sessionId, rowMembre }
+      const ret = await post(this, 'm1', 'contactGroupe', args)
+      if (data.dh < ret.dh) data.dh = ret.dh
+      this.finOK()
+    } catch (e) {
+      await this.finKO(e)
+    }
+  }
+}
+
+/* Inviter un contact d'un groupe ****************************************
+args :
+- sessionId
+- rowMembre : objet membre
+Retour: sessionId, dh
+A_SRV, '18-Groupe non trouvé'
+*/
+export class InviterGroupe extends OperationUI {
+  constructor () {
+    super('Inviter un contact d\'un groupe', OUI, SELONMODE)
+  }
+
+  async run (g, m, laa) {
+    try {
+      const clepub = await get('m1', 'getclepub', { sessionId: data.sessionId, sid: m.namb.sid })
+      if (!clepub) throw new AppExc(E_BRO, '23-Cle RSA publique d\'avatar non trouvé')
+
+      const invitgr = new Invitgr()
+      /*
+      - `id` : id du membre invité.
+      - `ni` : numéro d'invitation.
+      - `datap` : crypté par la clé publique du membre invité.
+        - `nom rnd im` : nom complet du groupe (donne sa clé).
+      */
+      invitgr.id = m.namb.id
+      invitgr.ni = m.data.ni
+      const na = g.na
+      invitgr.data = { nom: na.nom, rnd: na.rnd, im: m.im }
+      const rowInvitgr = await invitgr.toRow(clepub)
+      const args = { sessionId: data.sessionId, rowInvitgr, id: m.id, im: m.im, st: 10 + laa }
+      const ret = await post(this, 'm1', 'inviterGroupe', args)
       if (data.dh < ret.dh) data.dh = ret.dh
       this.finOK()
     } catch (e) {

@@ -75,13 +75,14 @@
                   <q-item v-if="invitationattente" clickable v-ripple v-close-popup @click="copier(m)">
                     <q-item-section class="titre-lg text-bold text-grey-8 bg-yellow-4 q-mx-sm text-center">[Contact !]</q-item-section>
                   </q-item>
-                  <q-separator v-if="m.stx === 1"/>
-                  <q-item v-if="m.stx === 0 && state.g.maxStp === 2" clickable v-ripple v-close-popup @click="inviter(m)">
+                  <q-separator v-if="m.stx === 0 && state.g.maxStp() === 2"/>
+                  <q-item v-if="m.stx === 0 && state.g.maxStp() === 2" clickable v-ripple v-close-popup @click="ouvririnvitcontact(m)">
                     <q-item-section avatar>
                       <q-icon dense name="check" color="primary" size="md"/>
                     </q-item-section>
                     <q-item-section>Inviter ce contact</q-item-section>
                   </q-item>
+                  <q-separator v-if="m.stx === 1"/>
                   <q-item v-if="m.stx === 1" clickable v-ripple v-close-popup @click="accepterinvit(m)">
                     <q-item-section avatar>
                       <q-icon dense name="check" color="primary" size="md"/>
@@ -194,6 +195,33 @@
       </q-card>
     </q-dialog>
 
+    <q-dialog v-model="invitcontact">
+      <q-card class="petitelargeur shadow-8">
+      <q-card-section>
+        <div class="titre-lg">Invitation d'un contact à être membre du groupe</div>
+      </q-card-section>
+      <q-separator/>
+      <q-card-section>
+        <div class="titre-lg">Contact sélectionné : {{mbc.nom}}</div>
+        <div class="q-my-sm row">
+          <img class="col-auto photomax" :src="mbc.ph || personne"/>
+          <show-html class="col q-ml-md bord1 height-6" :texte="mbc.cv.info || ''"/>
+        </div>
+      </q-card-section>
+      <q-card-section>
+        <div class="q-gutter-md q-ma-sm">
+          <q-radio dense v-model="laa" :val="0" label="Lecteur" />
+          <q-radio dense v-model="laa" :val="1" label="Auteur" />
+          <q-radio dense v-model="laa" :val="2" label="Animateur" />
+        </div>
+      </q-card-section>
+      <q-card-actions align="center" vertical>
+        <q-btn flat dense color="primary" icon="close" label="Annuler" @click="invitcontact=false"/>
+        <q-btn dense color="warning" label="Inviter ce contact" @click="inviter"/>
+      </q-card-actions>
+      </q-card>
+    </q-dialog>
+
   </q-card>
 </template>
 <script>
@@ -202,7 +230,10 @@ import { useStore } from 'vuex'
 import { useQuasar } from 'quasar'
 import { Motscles, equ8, cfg, FiltreMbr, getJourJ } from '../app/util.mjs'
 import { data } from '../app/modele.mjs'
-import { MajMcGroupe, MajArchGroupe, MajBIGroupe, MajMcMembre, MajArdMembre, MajInfoMembre, FinHebGroupe, DebHebGroupe, MajvmaxGroupe } from '../app/operations.mjs'
+import {
+  MajMcGroupe, MajArchGroupe, MajBIGroupe, MajMcMembre, MajArdMembre, MajInfoMembre, FinHebGroupe, DebHebGroupe, MajvmaxGroupe,
+  ContactGroupe, InviterGroupe
+} from '../app/operations.mjs'
 import ShowHtml from './ShowHtml.vue'
 import ApercuMotscles from './ApercuMotscles.vue'
 import ApercuGroupe from './ApercuGroupe.vue'
@@ -234,6 +265,7 @@ export default ({
       erreur: '',
       mbcard: '',
       mbcinfo: '',
+      laa: 0,
       mbc: null // membre courant
     }
   },
@@ -286,6 +318,11 @@ export default ({
     copier (m) {
       retourInvitation(m)
     },
+    ouvririnvitcontact (m) {
+      this.mbc = m
+      this.laa = 0
+      this.invitcontact = true
+    },
 
     async debheb () {
       const imh = this.state.g.imDeId(this.avatar.id)
@@ -299,18 +336,23 @@ export default ({
       const imh = this.state.g.imDeId(this.avatar.id)
       await new MajvmaxGroupe().run(this.state.g, imh, f)
     },
-    // TODO
-    validerContact () {
+    async validerContact () {
+      const id = this.clipboard.id
       this.clipboard = null
       this.invitationattente = null
+      await new ContactGroupe().run(this.state.g, id, this.avatar.id)
+      this.panelinvit = false
     },
+    async inviter () {
+      await new InviterGroupe().run(this.state.g, this.mbc, this.laa)
+      this.invitcontact = false
+    },
+    // TODO
     autoresilier (m) {
     },
     resilier (m) {
     },
     accepterinvit (m) {
-    },
-    inviter (g) {
     }
   },
 
@@ -321,6 +363,7 @@ export default ({
     const mcledit = ref(false)
     const ardedit = ref(false)
     const infoedit = ref(false)
+    const invitcontact = ref(false)
 
     const personnes = cfg().personnes.default
     const personne = cfg().personne.default
@@ -530,6 +573,7 @@ export default ({
         infoedit.value = false
         editgr.value = false
         panelinvit.value = false
+        invitcontact.value = false
       })
     }
 
@@ -561,7 +605,8 @@ export default ({
       editgr,
       mcledit,
       ardedit,
-      infoedit
+      infoedit,
+      invitcontact
     }
   }
 })

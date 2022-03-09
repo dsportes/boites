@@ -11,14 +11,14 @@ import { SIZEAV, SIZEGR, EXPS, Compteurs } from './api.mjs'
 
 export async function traitInvitGr (row) {
   const cpriv = data.avc(row.id).cpriv
-  const nomc = deserial(await crypt.decrypterRSA(cpriv, row.datap))
-  return { id: row.id, ni: row.ni, nomck: crypt.crypter(data.clek, nomc) }
+  const x = deserial(await crypt.decrypterRSA(cpriv, row.datap))
+  return { id: row.id, ni: row.ni, datak: crypt.crypter(data.clek, x) }
 }
 
 /** Invitgr **********************************/
 /*
 - `id` : id du membre invité.
-- `ni` : hash du numéro d'invitation.
+- `ni` : numéro d'invitation.
 - `datap` : crypté par la clé publique du membre invité.
   - `nom rnd im` : nom complet du groupe (donne sa clé).
 Jamais stocké en IDB : dès réception, le row avatar correspondant est "régularisé"
@@ -31,9 +31,15 @@ export class Invitgr {
     this.ni = row.ni
     const cpriv = data.avc(row.id).cpriv
     const x = deserial(await crypt.decrypterRSA(cpriv, row.datap))
-    this.idg = new NomAvatar(x[0], x[1]).id
-    this.datak = await crypt.crypter(data.clek, x)
+    this.idg = new NomAvatar(x.nom, x.rnd).id
+    this.datak = await crypt.crypter(data.clek, serial(x))
     return this
+  }
+
+  async toRow (clepub) {
+    const datap = await crypt.crypterRSA(clepub, serial(this.data))
+    const r = { id: this.id, ni: this.ni, datap }
+    return schemas.serialize('rowinvitgr', r)
   }
 }
 /*
@@ -573,7 +579,10 @@ class Session {
     const avs = this.setIdsAvatarsUtiles
     // un compte peut avoir un avatar référencé dans mac mais qui n'a jamais encore été chargé en IDB
     // à ce stade ses groupes sont donc inconnus
-    avs.forEach(id => { const a = this.getAvatar(id); if (a) a.allGrId(s) })
+    avs.forEach(id => {
+      const a = this.getAvatar(id)
+      if (a) a.allGrId(s)
+    })
     return s
   }
 
@@ -1155,9 +1164,9 @@ export class Avatar {
       for (const ni in lgr) {
         const y = lgr[ni]
         const x = deserial(brut ? y : await crypt.decrypter(data.clek, y))
-        const na = data.setNa(x[0], x[1])
-        this.m1gr.set(ni, { na: na, im: x[2] })
-        this.m2gr.set(na.id, [x[2], ni])
+        const na = data.setNa(x.nom, x.rnd)
+        this.m1gr.set(ni, { na: na, im: x.im })
+        this.m2gr.set(na.id, [x.im, ni])
       }
     }
   }
@@ -1165,14 +1174,14 @@ export class Avatar {
   async decompileLists () {
     const lgr = {}
     for (const [ni, x] of this.m1gr) {
-      lgr[ni] = await crypt.crypter(data.clek, serial([x.na.nom, x.na.rnd, x.im]))
+      lgr[ni] = await crypt.crypter(data.clek, serial({ nom: x.na.nom, rnd: x.na.rnd, im: x.im }))
     }
     return lgr
   }
 
   decompileListsBrut () {
     const lgr = {}
-    for (const [ni, x] of this.m1gr) lgr[ni] = serial([x.na.nom, x.na.rnd, x.im])
+    for (const [ni, x] of this.m1gr) lgr[ni] = serial({ nom: x.na.nom, rnd: x.na.rnd, im: x.im })
     return lgr
   }
 
@@ -1685,7 +1694,7 @@ export class Membre {
 
   get dhed () { return dhstring(this.dh) }
 
-  nouveau (id, im, na) {
+  nouveau (id, im, na, idi) {
     this.id = id
     this.im = im
     this.v = 0
@@ -1699,7 +1708,7 @@ export class Membre {
       nom: na.nom,
       rnd: na.rnd,
       ni: crypt.rnd6(),
-      idi: na.id
+      idi: idi || na.id
     }
     data.setNa(this.data.nom, this.data.rnd, this.id, this.im)
     this.vsh = 0
