@@ -16,12 +16,15 @@ export function razdialogues (state) {
   majinfoidb(state, false)
   majconfirmstopop(state, false)
   state.dialoguecreationcompte = false
-  state.erreur = { code: -4, message: 'néant', conseil: 'néant', stack: null }
 }
 
-export function deconnexion (state) {
-  razdialogues(state)
-  state.idblec = IDBLEC_RAZ
+export function majconnexionencours (state, val) {
+  if (val === false) {
+    state.erreur = { code: -4, message: 'néant', conseil: 'néant', stack: null }
+    razdialogues(state)
+    state.idblec = IDBLEC_RAZ
+  }
+  state.connexionencours = val
 }
 
 export function majopencours (state, val) {

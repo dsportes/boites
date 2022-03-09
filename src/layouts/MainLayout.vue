@@ -191,7 +191,7 @@ import DialogueHelp from 'components/DialogueHelp.vue'
 import { data, MODES } from '../app/modele.mjs'
 import { cfg } from '../app/util.mjs'
 import { remplacePage, onBoot, retourInvitation } from '../app/page.mjs'
-import { deconnexion, reconnexion } from '../app/operations.mjs'
+import { reconnexion } from '../app/operations.mjs'
 
 export default {
   name: 'MainLayout',
@@ -258,9 +258,9 @@ export default {
 
     toInvit () { retourInvitation(null) },
 
-    deconnexion () { deconnexion() },
+    async deconnexion () { await data.deconnexion() },
 
-    reconnexion () { reconnexion() },
+    async reconnexion () { await reconnexion() },
 
     stop () {
       data.stopOp()

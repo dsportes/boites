@@ -54,11 +54,10 @@
           </div>
         </q-card>
       </div>
-    <div v-if="!state.lst || !state.lst.length" class="titre-lg">L'avatar n'est memebre d'auncun groupe</div>
+    <div v-if="!state.lst || !state.lst.length" class="titre-lg">L'avatar n'est membre d'auncun groupe</div>
   </div>
 
   <q-dialog v-model="editgr" class="moyennelargeur">
-    <div>Bonjour</div>
     <panel-groupe :close="fermeredit"/>
   </q-dialog>
 
@@ -121,7 +120,7 @@ export default ({
   },
 
   methods: {
-    nbj (j) { return j - getJourJ() },
+    nbj (j) { return j - getJourJ() + cfg().limitesjour.groupenonheb },
     voirsecrets (x) {
       this.groupepluscourant(x)
       this.evtfiltresecrets = { cmd: 'fsg', arg: x.g }

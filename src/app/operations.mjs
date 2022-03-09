@@ -15,11 +15,11 @@ const OUI = 1
 const NON = 0
 const SELONMODE = 2
 
-export function deconnexion () { data.deconnexion() }
+async function deconnexion () { await data.deconnexion() }
 
-export function reconnexion () {
+export async function reconnexion () {
   const ps = data.ps
-  data.deconnexion(true)
+  await data.deconnexion(true)
   data.mode = data.modeInitial
   if (data.mode === 3) {
     new ConnexionCompteAvion().run(ps)
@@ -1347,7 +1347,7 @@ export class RefusParrainage extends OperationUI {
         ardc: await crypt.crypter(parrain.data.cc, serial([new Date().getTime(), ard]))
       }
       await post(this, 'm1', 'refusParrainage', args)
-      data.deconnexion()
+      await data.deconnexion()
     } catch (e) {
       await this.finKO(e)
     }
@@ -1642,6 +1642,64 @@ export class MajInfoMembre extends OperationUI {
       const infok = await crypt.crypter(data.clek, texte)
       const args = { sessionId: data.sessionId, id: m.id, im: m.im, infok }
       const ret = await post(this, 'm1', 'majinfoMembre', args)
+      if (data.dh < ret.dh) data.dh = ret.dh
+      this.finOK()
+    } catch (e) {
+      await this.finKO(e)
+    }
+  }
+}
+
+/* Fin d'hébergement d'un groupe ****************************************
+args :
+- sessionId
+- idc, idg : id du compte, id = groupe
+- imh : indice de l'avatar membre hébergeur
+Retour: sessionId, dh
+A_SRV, '10-Données de comptabilité absentes'
+A_SRV, '18-Groupe non trouvé'
+X_SRV, '22-Ce compte n\'est pas l\'hébergeur actuel du groupe'
+*/
+export class FinHebGroupe extends OperationUI {
+  constructor () {
+    super('Fin d\'hébergement d\'un groupe', OUI, SELONMODE)
+  }
+
+  async run (g) {
+    try {
+      const args = { sessionId: data.sessionId, idc: data.getCompte().id, idg: g.id, imh: g.imh }
+      const ret = await post(this, 'm1', 'finhebGroupe', args)
+      if (data.dh < ret.dh) data.dh = ret.dh
+      this.finOK()
+    } catch (e) {
+      await this.finKO(e)
+    }
+  }
+}
+
+/* Début d'hébergement d'un groupe ****************************************
+args :
+- sessionId
+- idc, idg : id du compte, id = groupe,
+- idhg : idg crypté par la clé G du groupe
+- imh : indice de l'avatar membre hébergeur
+Retour: sessionId, dh
+A_SRV, '10-Données de comptabilité absentes'
+A_SRV, '18-Groupe non trouvé'
+X_SRV, '20-Groupe encore hébergé : un nouvel hébergeur ne peut se proposer que si le groupe n\'a plus de compte hébergeur'
+X_SRV, '21-Forfaits (' + f + ') insuffisants pour héberger le groupe.'
+*/
+export class DebHebGroupe extends OperationUI {
+  constructor () {
+    super('Début d\'hébergement d\'un groupe', OUI, SELONMODE)
+  }
+
+  async run (g, imh) {
+    try {
+      const idc = data.getCompte().id
+      const idhg = await g.toIdhg(idc)
+      const args = { sessionId: data.sessionId, idc, idg: g.id, idhg, imh }
+      const ret = await post(this, 'm1', 'debhebGroupe', args)
       if (data.dh < ret.dh) data.dh = ret.dh
       this.finOK()
     } catch (e) {

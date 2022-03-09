@@ -409,6 +409,7 @@ class Session {
   set sessionId (val) { store().commit('ui/majsessionid', val) }
 
   async connexion (sansidb) { // Depuis l'opération de connexion
+    store().commit('ui/majconnexionencours', true)
     this.raz()
     store().commit('db/raz')
     remplacePage('Synchro')
@@ -421,17 +422,17 @@ class Session {
     console.log('Ouverture de session : ' + this.sessionId)
   }
 
-  deconnexion (avantreconnexion) { // Depuis un bouton
+  async deconnexion (avantreconnexion) { // Depuis un bouton
+    store().commit('ui/majconnexionencours', false)
+    this.ps = null
     store().commit('db/raz')
-    store().commit('ui/deconnexion')
     closeWS()
     closeIDB()
     this.raz()
     this.statut = 0
     if (!avantreconnexion) {
       this.nbreconnexion = 0
-      this.ps = null
-      remplacePage(store().state.ui.org ? 'Login' : 'Org')
+      await remplacePage(store().state.ui.org ? 'Login' : 'Org')
     } else {
       this.nbreconnexion++
     }
@@ -1513,8 +1514,7 @@ export class Groupe {
 
   get sty () { return this.st % 10 }
 
-  get nom () { return titreEd(this.na.nom, this.info) }
-
+  get nom () { return titreEd(this.na.nom || '', this.info) }
   get pc1 () { return Math.round(this.v1 / 1000000 / this.f1) }
 
   get pc2 () { return Math.round(this.v2 / 100000000 / this.f2) }
@@ -1522,8 +1522,11 @@ export class Groupe {
   get estHeb () { return this.idh && !this.dfh && this.idh === data.getCompte().id }
 
   imDeId (id) {
-    const i = this.lmb.indexOf(id)
-    return i !== -1 ? i : 0
+    for (const im in data.getMembre(this.id)) {
+      const m = data.getMembre(this.id, im)
+      if (m.namb.id === id) return parseInt(im)
+    }
+    return 0
   }
 
   maxStp () {
@@ -1574,7 +1577,7 @@ export class Groupe {
       this.photo = cv[0]
       this.info = cv[1]
       this.mc = row.mcg ? deserial(await crypt.decrypter(this.cleg, row.mcg)) : {}
-      this.idh = parseInt(await crypt.decrypterStr(this.cleg, row.idhg))
+      this.idh = row.idg ? parseInt(await crypt.decrypterStr(this.cleg, row.idhg)) : 0
       this.imh = row.imh
       this.v1 = row.v1
       this.v2 = row.v2
@@ -1588,8 +1591,12 @@ export class Groupe {
     const r = { ...this }
     r.cvg = await crypt.crypter(this.cleg, serial([this.photo, this.info]))
     r.mcg = Object.keys(r.mc).length ? await crypt.crypter(this.cleg, serial(this.mc)) : null
-    r.idhg = await crypt.crypter(this.cleg, '' + this.idh)
+    r.idhg = this.idh ? await crypt.crypter(this.cleg, '' + this.idh) : 0
     return schemas.serialize('rowgroupe', r)
+  }
+
+  async toIdhg (idc) {
+    return await crypt.crypter(this.cleg, '' + idc)
   }
 
   async toCvg (cv) {

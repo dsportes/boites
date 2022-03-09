@@ -1,8 +1,8 @@
 <template>
-  <q-card class="full-height moyennelargeur fs-md column">
-    <q-toolbar class="col-auto bg-secondary text-white maToolBar">
+  <q-card v-if="cnx" class="full-height moyennelargeur fs-md column">
+    <q-toolbar v-if="state.g" class="col-auto bg-secondary text-white maToolBar">
       <q-btn flat round dense icon="close" size="md" class="q-mr-sm" @click="fermer" />
-      <q-toolbar-title><div class="titre-md tit text-center">{{state.g ? state.g.nom : ''}}</div></q-toolbar-title>
+      <q-toolbar-title><div class="titre-md text-center">{{state.g.nom}}</div></q-toolbar-title>
     </q-toolbar>
     <q-separator/>
     <q-btn v-if="state.g && state.g.maxStp() >= 1" class="q-ma-xs" flat dense color="primary" icon="add"
@@ -29,8 +29,9 @@
       <template v-slot:header>
         <q-item-section>
         <div class="titre-lg text-white">
-          <span :class="state.g.pc1 > 80 || state.g.pc2 > 80 ? 'text-warning bg-yellow-4' : ''">Taux d'occupation {{state.g.pc1}}% / {{state.g.pc2}}%</span>
-          <span v-if="state.g.dfh" class="text-negative bg-yellow-4 text-bold q-ml-sm q-px-xs">PAS D'HEBERGEMENT</span>
+          <span v-if="state.g.dfh" class="text-negative bg-yellow-4 text-bold q-ml-sm q-px-xs">PAS D'HEBERGEMENT - </span>
+          <span v-else>Hébergement - </span>
+          <span :class="state.g.pc1 > 80 || state.g.pc2 > 80 ? 'text-warning bg-yellow-4' : ''">Volumes : {{state.g.pc1}}% / {{state.g.pc2}}%</span>
         </div>
         </q-item-section>
       </template>
@@ -196,12 +197,12 @@
   </q-card>
 </template>
 <script>
-import { computed, reactive, watch, onMounted } from 'vue'
+import { computed, reactive, watch, onMounted, ref } from 'vue'
 import { useStore } from 'vuex'
 import { useQuasar } from 'quasar'
 import { Motscles, equ8, cfg, FiltreMbr, getJourJ } from '../app/util.mjs'
 import { data } from '../app/modele.mjs'
-import { MajMcGroupe, MajArchGroupe, MajBIGroupe, MajMcMembre, MajArdMembre, MajInfoMembre } from '../app/operations.mjs'
+import { MajMcGroupe, MajArchGroupe, MajBIGroupe, MajMcMembre, MajArdMembre, MajInfoMembre, FinHebGroupe, DebHebGroupe } from '../app/operations.mjs'
 import ShowHtml from './ShowHtml.vue'
 import ApercuMotscles from './ApercuMotscles.vue'
 import ApercuGroupe from './ApercuGroupe.vue'
@@ -231,9 +232,6 @@ export default ({
   data () {
     return {
       erreur: '',
-      mcledit: false,
-      ardedit: false,
-      infoedit: false,
       mbcard: '',
       mbcinfo: '',
       mbc: null // membre courant
@@ -290,9 +288,13 @@ export default ({
     },
 
     // TODO
-    debheb () {
+    async debheb () {
+      const imh = this.state.g.imDeId(this.avatar.id)
+      await new DebHebGroupe().run(this.state.g, imh)
     },
-    finheb () {
+    async finheb () {
+      const imh = this.state.g.imDeId(this.avatar.id)
+      await new FinHebGroupe().run(this.state.g, imh)
     },
     chgvolmax (f) {
       console.log(f.join('/'))
@@ -314,8 +316,15 @@ export default ({
   setup () {
     const $q = useQuasar()
     const $store = useStore()
+    const cnx = computed(() => { return $store.state.ui.connexionencours })
+    const mcledit = ref(false)
+    const ardedit = ref(false)
+    const infoedit = ref(false)
+
     const personnes = cfg().personnes.default
     const personne = cfg().personne.default
+    const avatar = computed(() => { return $store.state.db.avatar })
+
     const diagnostic = computed({
       get: () => $store.state.ui.diagnostic,
       set: (val) => $store.commit('ui/majdiagnostic', val)
@@ -474,6 +483,7 @@ export default ({
 
     function tousLesWatch () {
       watch(state, async (ap, av) => {
+        if (!cnx.value) return
         if (state.g) {
           const avant = state.g.sty === 1
           if (ap.arch !== avant) {
@@ -483,15 +493,18 @@ export default ({
       })
 
       watch(() => prefs.value, (ap, av) => {
+        if (!cnx.value) return
         chargerMc()
       })
 
       watch(() => membres.value, (ap, av) => {
+        if (!cnx.value) return
         getMembres()
         trier()
       })
 
       watch(() => groupeplus.value, (ap, av) => {
+        if (!cnx.value) return
         initState()
         chargerMcGr()
         chargerMc()
@@ -500,17 +513,27 @@ export default ({
       })
 
       watch(() => repertoire.value, (ap, av) => {
+        if (!cnx.value) return
         getMembres()
         trier()
       })
 
       watch(() => clipboard.value, (ap, av) => {
+        if (!cnx.value) return
         checkcb(ap)
+      })
+
+      watch(() => cnx.value, (ap, av) => {
+        mcledit.value = false
+        ardedit.value = false
+        infoedit.value = false
+        editgr.value = false
+        panelinvit.value = false
       })
     }
 
     onMounted(() => {
-      console.log('onMounted PanelGroupe')
+      // console.log('onMounted PanelGroupe')
       initState()
       chargerMcGr()
       chargerMc()
@@ -521,8 +544,10 @@ export default ({
     })
 
     return {
+      cnx,
       personnes,
       personne,
+      avatar,
       recherche,
       state,
       diagnostic,
@@ -532,7 +557,10 @@ export default ({
       invitationattente,
       panelinvit,
       clipboard,
-      editgr
+      editgr,
+      mcledit,
+      ardedit,
+      infoedit
     }
   }
 })

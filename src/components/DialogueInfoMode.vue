@@ -60,7 +60,7 @@
 import { useStore } from 'vuex'
 import { computed } from 'vue'
 import { MODES, data } from '../app/modele.mjs'
-import { deconnexion, reconnexion } from '../app/operations.mjs'
+import { reconnexion } from '../app/operations.mjs'
 
 export default ({
   name: 'DialogueInfoMode',
@@ -71,8 +71,8 @@ export default ({
   },
 
   methods: {
-    deconnexion () { deconnexion() },
-    reconnexion () { reconnexion() }
+    async deconnexion () { await data.deconnexion() },
+    async reconnexion () { await reconnexion() }
   },
 
   setup () {

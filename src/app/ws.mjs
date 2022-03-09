@@ -2,7 +2,7 @@
 
 import { cfg, store, dhtToString, affichererreur, deserial } from './util.mjs'
 import { data } from './modele.mjs'
-import { ProcessQueue, deconnexion, reconnexion } from './operations.mjs'
+import { ProcessQueue, reconnexion } from './operations.mjs'
 import { setEtat } from './db.mjs'
 import { AppExc, E_WS, PINGTO } from './api.mjs'
 
@@ -120,9 +120,9 @@ function heartBeat (sid) {
       if (!pongrecu) {
         const choix = await excAffichage()
         if (choix === 'r') {
-          reconnexion()
+          await reconnexion()
         } else if (choix === 'd') {
-          deconnexion()
+          await data.deconnexion()
         }
         return
       }

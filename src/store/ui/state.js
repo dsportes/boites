@@ -24,6 +24,8 @@ export default function () {
 
     opencours: null,
 
+    connexionencours: false,
+
     mode: 0, // 0:inconnu, 1:synchronise, 2:incognito, 3:avion, 4:visio
     modeinitial: 0,
     statutsession: 0,
