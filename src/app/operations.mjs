@@ -1707,3 +1707,30 @@ export class DebHebGroupe extends OperationUI {
     }
   }
 }
+
+/* Mise à jour des volumes max d'un groupe ****************************************
+args :
+- sessionId
+- idg : id du compte, id = groupe,
+- imh : indice de l'avatar membre hébergeur
+- forfaits: [max1, max2]
+Retour: sessionId, dh
+A_SRV, '22-Groupe hébergé par un autre compte'
+X_SRV, '21-Forfaits (' + f + ') insuffisants pour héberger le groupe.'
+*/
+export class MajvmaxGroupe extends OperationUI {
+  constructor () {
+    super('Mise à jour des volumes maximaux d\'un groupe', OUI, SELONMODE)
+  }
+
+  async run (g, imh, f) {
+    try {
+      const args = { sessionId: data.sessionId, idg: g.id, imh, forfaits: f }
+      const ret = await post(this, 'm1', 'majvmaxGroupe', args)
+      if (data.dh < ret.dh) data.dh = ret.dh
+      this.finOK()
+    } catch (e) {
+      await this.finKO(e)
+    }
+  }
+}

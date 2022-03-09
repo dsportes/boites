@@ -1577,7 +1577,7 @@ export class Groupe {
       this.photo = cv[0]
       this.info = cv[1]
       this.mc = row.mcg ? deserial(await crypt.decrypter(this.cleg, row.mcg)) : {}
-      this.idh = row.idg ? parseInt(await crypt.decrypterStr(this.cleg, row.idhg)) : 0
+      this.idh = row.idhg ? parseInt(await crypt.decrypterStr(this.cleg, row.idhg)) : 0
       this.imh = row.imh
       this.v1 = row.v1
       this.v2 = row.v2

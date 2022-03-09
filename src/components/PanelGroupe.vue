@@ -49,7 +49,7 @@
         </div>
         <div>
           <div class="titre-md">Forfaits attribués</div>
-          <choix-forfaits v-model="state.forfaits" :lecture="!state.g.estHeb" :f1="9" :f2="state.g.f2" :v1="12000000" :v2="state.g.v2"
+          <choix-forfaits v-model="state.forfaits" :lecture="!state.g.estHeb" :f1="state.g.f1" :f2="state.g.f2" :v1="state.g.v1" :v2="state.g.v2"
             label-valider="Changer les volumes maximum autorisés" @valider="chgvolmax"/>
         </div>
       </q-card>
@@ -202,7 +202,7 @@ import { useStore } from 'vuex'
 import { useQuasar } from 'quasar'
 import { Motscles, equ8, cfg, FiltreMbr, getJourJ } from '../app/util.mjs'
 import { data } from '../app/modele.mjs'
-import { MajMcGroupe, MajArchGroupe, MajBIGroupe, MajMcMembre, MajArdMembre, MajInfoMembre, FinHebGroupe, DebHebGroupe } from '../app/operations.mjs'
+import { MajMcGroupe, MajArchGroupe, MajBIGroupe, MajMcMembre, MajArdMembre, MajInfoMembre, FinHebGroupe, DebHebGroupe, MajvmaxGroupe } from '../app/operations.mjs'
 import ShowHtml from './ShowHtml.vue'
 import ApercuMotscles from './ApercuMotscles.vue'
 import ApercuGroupe from './ApercuGroupe.vue'
@@ -287,7 +287,6 @@ export default ({
       retourInvitation(m)
     },
 
-    // TODO
     async debheb () {
       const imh = this.state.g.imDeId(this.avatar.id)
       await new DebHebGroupe().run(this.state.g, imh)
@@ -296,9 +295,11 @@ export default ({
       const imh = this.state.g.imDeId(this.avatar.id)
       await new FinHebGroupe().run(this.state.g, imh)
     },
-    chgvolmax (f) {
-      console.log(f.join('/'))
+    async chgvolmax (f) {
+      const imh = this.state.g.imDeId(this.avatar.id)
+      await new MajvmaxGroupe().run(this.state.g, imh, f)
     },
+    // TODO
     validerContact () {
       this.clipboard = null
       this.invitationattente = null
