@@ -1785,12 +1785,12 @@ export class InviterGroupe extends OperationUI {
       - `id` : id du membre invité.
       - `ni` : numéro d'invitation.
       - `datap` : crypté par la clé publique du membre invité.
-        - `nom rnd im` : nom complet du groupe (donne sa clé).
+        - `[nom rnd im]` : nom complet du groupe (donne sa clé) + son indice de membre dans le groupe
       */
       invitgr.id = m.namb.id
       invitgr.ni = m.data.ni
       const na = g.na
-      invitgr.data = { nom: na.nom, rnd: na.rnd, im: m.im }
+      invitgr.data = [na.nom, na.rnd, m.im]
       const rowInvitgr = await invitgr.toRow(clepub)
       const args = { sessionId: data.sessionId, rowInvitgr, id: m.id, im: m.im, st: 10 + laa }
       const ret = await post(this, 'm1', 'inviterGroupe', args)

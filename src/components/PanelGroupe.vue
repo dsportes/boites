@@ -337,7 +337,7 @@ export default ({
       await new MajvmaxGroupe().run(this.state.g, imh, f)
     },
     async validerContact () {
-      const id = this.clipboard.id
+      const id = this.clipboard.na.id
       this.clipboard = null
       this.invitationattente = null
       await new ContactGroupe().run(this.state.g, id, this.avatar.id)

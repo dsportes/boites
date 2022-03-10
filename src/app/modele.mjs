@@ -31,7 +31,7 @@ export class Invitgr {
     this.ni = row.ni
     const cpriv = data.avc(row.id).cpriv
     const x = deserial(await crypt.decrypterRSA(cpriv, row.datap))
-    this.idg = new NomAvatar(x.nom, x.rnd).id
+    this.idg = new NomAvatar(x[0], x[1]).id
     this.datak = await crypt.crypter(data.clek, serial(x))
     return this
   }
@@ -739,6 +739,8 @@ export class Compte {
 
   get estComptable () { return data.estComptable }
 
+  get titre () { return data.getPrefs(this.id).titre }
+
   allAvId () {
     const s = new Set()
     for (const sid in this.mac) s.add(this.mac[sid].na.id)
@@ -1164,9 +1166,9 @@ export class Avatar {
       for (const ni in lgr) {
         const y = lgr[ni]
         const x = deserial(brut ? y : await crypt.decrypter(data.clek, y))
-        const na = data.setNa(x.nom, x.rnd)
-        this.m1gr.set(ni, { na: na, im: x.im })
-        this.m2gr.set(na.id, [x.im, ni])
+        const na = data.setNa(x[0], x[1])
+        this.m1gr.set(ni, { na: na, im: x[2] })
+        this.m2gr.set(na.id, [x[2], ni])
       }
     }
   }
@@ -1174,14 +1176,14 @@ export class Avatar {
   async decompileLists () {
     const lgr = {}
     for (const [ni, x] of this.m1gr) {
-      lgr[ni] = await crypt.crypter(data.clek, serial({ nom: x.na.nom, rnd: x.na.rnd, im: x.im }))
+      lgr[ni] = await crypt.crypter(data.clek, serial([x.na.nom, x.na.rnd, x.im]))
     }
     return lgr
   }
 
   decompileListsBrut () {
     const lgr = {}
-    for (const [ni, x] of this.m1gr) lgr[ni] = serial({ nom: x.na.nom, rnd: x.na.rnd, im: x.im })
+    for (const [ni, x] of this.m1gr) lgr[ni] = serial([x.na.nom, x.na.rnd, x.im])
     return lgr
   }
 
@@ -1404,7 +1406,7 @@ export class Contact {
 
   get cv () { return data.repertoire.getCv(this.na.id) } // cv DU CONTACT
 
-  get ph () { const cv = this.cv; return cv.photo ? cv.photo : cfg().personne.default }
+  get ph () { const cv = this.cv; return cv.photo ? cv.photo : '' }
 
   get nom () { return this.na.titre }
 
