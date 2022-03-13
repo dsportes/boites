@@ -1,6 +1,6 @@
 /* eslint-disable func-call-spacing */
 import Dexie from 'dexie'
-import { Avatar, Compte, Prefs, Compta, Couple, Contactstd, Contactphc, Groupe, Membre, Secret, Cv, data, estSingleton } from './modele.mjs'
+import { Avatar, Compte, Prefs, Compta, Couple, Groupe, Membre, Secret, Cv, data, estSingleton } from './modele.mjs'
 import { store, deserial, serial } from './util.mjs'
 import { crypt } from './crypto.mjs'
 import { AppExc, E_DB, INDEXT } from './api.mjs'
@@ -12,9 +12,8 @@ const STORES = {
   prefs: 'id',
   avatar: 'id',
   couple: 'id',
-  contactstd: '[id+ni]',
-  contactphc: 'id', // phch
   groupe: 'id',
+  contact: 'id', // phch
   membre: '[id+id2]', // im
   secret: '[id+id2]', // ns
   cv: 'id',
@@ -196,45 +195,12 @@ export async function getCouples (cpu) { // cpu : set des couples utiles
       if (cpu.has(x.id)) {
         vol += idb.data.length
         r.push(x)
-        data.vag.setVerGr(x.sid, INDEXT.GROUPE, x.v)
+        data.vag.setVerGr(x.sid, INDEXT.COUPLE, x.v)
       } else {
         apurger.add(x.id)
       }
     })
     return { objs: r, vol: vol, apurger }
-  } catch (e) {
-    throw data.setErDB(EX2(e))
-  }
-}
-
-export async function getContactstd () {
-  go()
-  try {
-    let vol = 0
-    const r = []
-    await data.db.parrain.each(async (idb) => {
-      vol += idb.data.length
-      const x = new Contactstd().fromIdb(await crypt.decrypter(data.clek, idb.data))
-      r.push(x)
-      data.vag.setVerAv(x.sidav, INDEXT.INDEXSTD, x.v)
-    })
-    return { objs: r, vol: vol }
-  } catch (e) {
-    throw data.setErDB(EX2(e))
-  }
-}
-
-export async function getContactphc () { // utilité ?
-  go()
-  try {
-    let vol = 0
-    const r = []
-    await data.db.rencontre.each(async (idb) => {
-      vol += idb.data.length
-      const x = new Contactphc().fromIdb(await crypt.decrypter(data.clek, idb.data))
-      r.push(x)
-    })
-    return { objs: r, vol: vol }
   } catch (e) {
     throw data.setErDB(EX2(e))
   }
@@ -330,7 +296,6 @@ export async function purgeAvatars (lav) {
       for (let i = 0; i < idac.length; i++) {
         const id = { id: idac[i] }
         await data.db.avatar.where(id).delete()
-        await data.db.contactstd.where(id).delete()
         await data.db.secret.where(id).delete()
       }
     })
@@ -349,6 +314,7 @@ export async function purgeCouples (lcc) {
     await data.db.transaction('rw', TABLES, async () => {
       for (let i = 0; i < idcc.length; i++) {
         const id = { id: idcc[i] }
+        await data.db.couple.where(id).delete()
         await data.db.secret.where(id).delete()
       }
     })
@@ -435,7 +401,7 @@ export async function getFaidx () {
   go()
   try {
     const r = []
-    await data.db.pjidx.each(async (idb) => {
+    await data.db.faidx.each(async (idb) => {
       const x = deserial(await crypt.decrypter(data.clek, idb.data))
       r.push(x)
     })
@@ -451,7 +417,7 @@ export async function getFadata ({ id, ns, cle }) {
   try {
     const sidpj = crypt.idToSid(id) + '@' + crypt.idToSid(ns) + '@' + cle
     const idk = crypt.u8ToB64((await crypt.crypter(data.clek, sidpj, 1)))
-    const row = await data.db.pjdata.get(idk)
+    const row = await data.db.fadata.get(idk)
     return row ? row.data : null
   } catch (e) {
     throw data.setErDB(EX2(e))
@@ -464,11 +430,11 @@ export async function putFa ({ id, ns, cle, hv }, buf) { // buf est gzippé / cr
   const bufk = buf ? await crypt.crypter(data.clek, serial({ id, ns, cle, hv })) : null
   await data.db.transaction('rw', TABLES, async () => {
     if (buf) {
-      await data.db.pjidx.put({ id: idk, data: bufk })
-      await data.db.pjdata.put({ id: idk, data: buf })
+      await data.db.faidx.put({ id: idk, data: bufk })
+      await data.db.fadata.put({ id: idk, data: buf })
     } else {
-      await data.db.pjidx.delete(idk)
-      await data.db.pjdata.delete(idk)
+      await data.db.faidx.delete(idk)
+      await data.db.fadata.delete(idk)
     }
   })
 }

@@ -374,9 +374,9 @@ export async function get (module, fonction, args) {
   }
 }
 
-export async function getpj (secid, pjid) {
+export async function getfa (secid, faid) {
   try {
-    const u = $cfg.urlserveur + '/www/' + $store.state.ui.org + '/' + secid + '/' + pjid
+    const u = $cfg.urlserveur + '/www/' + $store.state.ui.org + '/' + secid + '/' + faid
     const r = await axios({
       method: 'get',
       url: u,

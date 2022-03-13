@@ -5,7 +5,7 @@ import {
   getGroupes, getMembres, getParrains, getRencontres, getSecrets,
   purgeAvatars, purgeCvs, purgeGroupes, openIDB, enregLScompte, setEtat, getEtat, getPjidx, putPj
 } from './db.mjs'
-import { Compte, Avatar, rowItemsToMapObjets, commitMapObjets, data, Prefs, Contact, Invitgr, Compta, Ardoise, Groupe, Membre } from './modele.mjs'
+import { Compte, Avatar, rowItemsToMapObjets, commitMapObjets, data, Prefs, Contact, Invitgr, Compta, Invitcp, Groupe, Membre } from './modele.mjs'
 import { AppExc, EXBRK, EXPS, F_BRO, E_BRO, INDEXT, X_SRV, E_WS, SIZEAV, SIZEGR, MC } from './api.mjs'
 
 import { crypt } from './crypto.mjs'
@@ -212,6 +212,36 @@ export class Operation {
       const iv = lstInvitGr[i]
       const args = { sessionId: data.sessionId, id: iv.id, idg: iv.idg, ni: iv.ni, datak: iv.datak }
       const ret = await post(this, 'm1', 'regulGr', args)
+      if (data.dh < ret.dh) data.dh = ret.dh
+    }
+  }
+
+  /* Obtention des invitCp et traitement de régularisation ***********************************/
+  async getInvitCps () {
+    const ids = data.getCompte().allAvId()
+    const ret = await post(this, 'm1', 'chargerInvitCp', { sessionId: data.sessionId, ids: Array.from(ids) })
+    if (data.dh < ret.dh) data.dh = ret.dh
+    const lstInvitCp = []
+    if (ret.rowItems.length) {
+      for (let i = 0; i < ret.rowItems.length; i++) {
+        const item = ret.rowItems[i]
+        if (item.table === 'invitcp') {
+          const row = schemas.deserialize('rowinvitcp', item.serial)
+          const obj = new Invitcp()
+          await obj.fromRow(row)
+          lstInvitCp.push(obj)
+        }
+      }
+    }
+    await this.traitInvitCp(lstInvitCp)
+  }
+
+  /* Traitement des invitCp, appel de régularisation ********************************/
+  async traitInvitCp (lstInvitCp) {
+    for (let i = 0; i < lstInvitCp.length; i++) {
+      const iv = lstInvitCp[i]
+      const args = { sessionId: data.sessionId, id: iv.id, idc: iv.idc, ni: iv.ni, cck: iv.cck }
+      const ret = await post(this, 'm1', 'regulCp', args)
       if (data.dh < ret.dh) data.dh = ret.dh
     }
   }
@@ -799,11 +829,8 @@ export class ConnexionCompte extends OperationUI {
     const rowCompta = schemas.deserialize('rowcompta', ret.compta.serial)
     const compta = new Compta()
     await compta.fromRow(rowCompta)
-    const rowArdoise = schemas.deserialize('rowardoise', ret.ardoise.serial)
-    const ardoise = new Ardoise()
-    await ardoise.fromRow(rowArdoise)
     if (ret.estComptable) data.estComptable = true
-    return [c, p, compta, ardoise]
+    return [c, p, compta]
   }
 
   async run (ps, razdb) {

@@ -1,10 +1,10 @@
 import { schemas } from './schemas.mjs'
 import { crypt } from './crypto.mjs'
-import { openIDB, closeIDB, putPj, getFadata } from './db.mjs'
+import { openIDB, closeIDB, putFa, getFadata } from './db.mjs'
 import { openWS, closeWS } from './ws.mjs'
 import {
   store, appexc, serial, deserial, dlvDepassee, NomAvatar, gzip, ungzip, dhstring,
-  getJourJ, cfg, ungzipT, normpath, getpj, titreEd, post
+  getJourJ, cfg, ungzipT, normpath, getfa, titreEd, post
 } from './util.mjs'
 import { remplacePage } from './page.mjs'
 import { SIZEAV, SIZEGR, SIZECP, EXPS, UNITEV1, UNITEV2, Compteurs } from './api.mjs'
@@ -13,6 +13,34 @@ export async function traitInvitGr (row) {
   const cpriv = data.avc(row.id).cpriv
   const x = deserial(await crypt.decrypterRSA(cpriv, row.datap))
   return { id: row.id, ni: row.ni, datak: crypt.crypter(data.clek, x) }
+}
+
+/** invitCp **********************************/
+/*
+- `id` : id de A1
+- `ni` : numéro d'invitation (pseudo aléatoire)
+- `ccp` : clé du couple (donne son id) cryptée par la clé publique de A1
+*/
+
+export class Invitcp {
+  get table () { return 'invitcp' }
+  async fromRow (row) {
+    this.id = row.id
+    this.ni = row.ni
+    const cpriv = data.avc(row.id).cpriv
+    const cc = deserial(await crypt.decrypterRSA(cpriv, row.ccp))
+    this.idc = crypt.hashBin(cc)
+    data.setClec(this.idc, cc)
+    this.cck = await crypt.crypter(data.clek, serial(cc))
+    return this
+  }
+
+  async toRow (clepub, place) { // place : 0 ou 1
+    this.ni = crypt.hash(crypt.u8ToHex(this.cc) + place)
+    const ccp = await crypt.crypterRSA(clepub, serial(this.cc))
+    const r = { id: this.id, ni: this.ni, ccp }
+    return schemas.serialize('rowinvitcp', r)
+  }
 }
 
 /** Invitgr **********************************/
@@ -42,6 +70,7 @@ export class Invitgr {
     return schemas.serialize('rowinvitgr', r)
   }
 }
+
 /*
   Retourne une map avec une entrée pour chaque table et en valeur,
   - pour compte : LE DERNIER objet reçu, pas la liste historique
@@ -77,8 +106,8 @@ function newObjet (table) {
     case 'avatar' : return new Avatar()
     case 'couple' : return new Couple()
     case 'invitgr' : return new Invitgr()
-    case 'contactstd' : return new Contactstd()
-    case 'contactphc' : return new Contactphc()
+    case 'invitcp' : return new Invitcp()
+    case 'contact' : return new Contact()
     case 'groupe' : return new Groupe()
     case 'membre' : return new Membre()
     case 'secret' : return new Secret()
@@ -133,54 +162,56 @@ export async function commitMapObjets (objets, mapObj) { // SAUF mapObj.compte e
     push('groupe')
   }
 
-  if (mapObj.contact) {
-    /* Pour chaque contact, gestion de sa CV dans le répertoire :
+  if (mapObj.couple) {
+    /* Pour chaque couple, gestion au plus d'une CV dans le répertoire :
     - soit création (fake)
     - soit suppression
     - soit mise à jour de la liste des contacts dans la CV
-    Régularisation éventuelle (s'il y avait un datap)
     */
-    for (let i = 0; i < mapObj.contact.length; i++) {
-      const x = mapObj.contact[i]
+    for (let i = 0; i < mapObj.couple.length; i++) {
+      const x = mapObj.couple[i]
       if (x.suppr) {
-        const avant = data.getContact(x.id, x.ic)
+        const avant = data.getCouple(x.id)
         if (avant && !avant.suppr) {
-          data.repertoire.getCv(avant.na.sid).moinsCtc(x.id)
+          if (!avant.avc0 && avant.na0) {
+            // en 0 avait une CV (pas avatar du compte et na connu)
+            data.repertoire.getCv(avant.na0.sid).moinsCtc(x.id)
+          }
+          if (!avant.avc1 && avant.na1) {
+            // en 1 avait une CV (pas avatar du compte et na connu)
+            data.repertoire.getCv(avant.na1.sid).moinsCtc(x.id)
+          }
         }
       } else {
-        data.repertoire.getCv(x.na.sid).plusCtc(x.id)
-        if (x.datap === true) { // regularisation à faire
-          const datak = await crypt.crypter(data.clek, serial(x.data))
-          const ret = await post(this, 'm1', 'regulCt', { sessionId: data.sessionId, id: x.id, ic: x.ic, datak: datak })
-          if (data.dh < ret.dh) data.dh = ret.dh
-          delete x.datap
+        if (!x.avc0 && x.na0) {
+          // en 0 a une CV (pas avatar du compte et na connu)
+          data.repertoire.getCv(x.na0.sid).moinsCtc(x.id)
+        }
+        if (!x.avc1 && x.na1) {
+          // en 1 avait une CV (pas avatar du compte et na connu)
+          data.repertoire.getCv(x.na1.sid).moinsCtc(x.id)
         }
       }
     }
+    data.setCouples(mapObj.couple)
+    push('couple')
+  }
+
+  if (mapObj.contact) {
     data.setContacts(mapObj.contact)
     push('contact')
   }
 
-  if (mapObj.parrain) {
-    data.setParrains(mapObj.parrain)
-    push('parrain')
-  }
-
-  if (mapObj.rencontre) {
-    data.setRencontres(mapObj.rencontre)
-    push('rencontre')
-  }
-
   if (mapObj.membre) {
-    // Gérer la CV comme pour un contact
+    // Gérer la CV
     mapObj.membre.forEach((x) => {
       if (x.suppr) {
         const avant = data.getMembre(x.id, x.im)
-        if (avant && !avant.suppr) {
+        if (avant && !avant.estAvc && !avant.suppr) {
           data.repertoire.getCv(avant.namb.sid).moinsMbr(x.id)
         }
       } else {
-        data.repertoire.getCv(x.namb.sid).plusMbr(x.id)
+        if (!x.estAvc) data.repertoire.getCv(x.namb.sid).plusMbr(x.id)
       }
     })
     data.setMembres(mapObj.membre)
@@ -189,30 +220,30 @@ export async function commitMapObjets (objets, mapObj) { // SAUF mapObj.compte e
 
   if (mapObj.secret) {
     data.setSecrets(mapObj.secret)
-    /* il peut y avoir des secrets ayant un changement de PJ */
+    /* il peut y avoir des secrets ayant un changement de FA */
     const lst = []
-    const st = store().state.db.pjidx
+    const st = store().state.db.faidx
     for (let i = 0; i < mapObj.secret.length; i++) {
       const secret = mapObj.secret[i]
-      for (const cle in secret.mpj) {
-        const pj = secret.mpj[cle]
+      for (const cle in secret.mfa) {
+        const fa = secret.mfa[cle]
         const x = st ? st[secret.sidpj(cle)] : null
-        if (x && pj.hv !== x.hv) { // pj locale pas à jour
+        if (x && fa.hv !== x.hv) { // fa locale pas à jour
           try {
-            const data = await getpj(secret.sid + '@' + secret.sid2, x.cle) // rechargement du contenu du serveur
-            x.hv = pj.hv
-            putPj(x, data) // store en IDB
+            const data = await getfa(secret.sid + '@' + secret.sid2, x.cle) // rechargement du contenu du serveur
+            x.hv = fa.hv
+            putFa(x, data) // store en IDB
             lst.push(x)
           } catch (e) {
             console.log(e.toString())
             x.hv = null
             lst.push(x)
-            data.setPjPerdues(x)
+            data.setFaPerdues(x)
           }
         }
       }
     }
-    if (lst.length) data.setPjidx(lst)
+    if (lst.length) data.setFaidx(lst)
     push('secret')
   }
 
@@ -232,19 +263,19 @@ export async function commitMapObjets (objets, mapObj) { // SAUF mapObj.compte e
     push('cv')
   }
 
-  /* Il peut y avoir des PJ non référencées, avatar / groupe disparu, PJ disparue */
+  /* Il peut y avoir des FA non référencées, avatar / groupe disparu, FA disparue */
   {
     const lst = []
-    const st = store().state.db.pjidx
+    const st = store().state.db.faidx
     for (const k in st) {
       const x = st[k]
       const secret = data.getSecret(x.id, x.ns)
       if (secret && secret.nbpj) {
-        const pj = secret.mpj[x.cle]
-        if (!pj) { x.hv = null; lst.push(x) }
+        const fa = secret.mpj[x.cle]
+        if (!fa) { x.hv = null; lst.push(x) }
       } else { x.hv = null; lst.push(x) }
     }
-    if (lst.length) data.setPjidx(lst)
+    if (lst.length) data.setFaidx(lst)
   }
 
   data.repertoire.commit() // un seul à la fin
@@ -561,14 +592,14 @@ class Session {
     this.vag = new VAG()
   }
 
-  setPjPerdues (x) { this.pjPerdues.push(x) }
+  setFaPerdues (x) { this.pjPerdues.push(x) }
 
   /* Enregistre le nom d'avatar pour :
   - un avatar / groupe / couple
   - un contact d'un couple : idc, ic (0 ou 1)
   - un membre d'un groupe : idg, im
   Ce n'est PAS dans le store, l'information étant immutable
-  Permet aussi d'obtenir l'id d'un contact / memebre depuis leur avatar/ic ou groupe/im
+  Permet aussi d'obtenir l'id d'un contact / membre depuis leur avatar/ic ou groupe/im
   */
   setNa (nom, rnd, id, ix) {
     const na = new NomAvatar(nom, rnd)
@@ -661,21 +692,12 @@ class Session {
     }
   }
 
-  getContactstd (prh) { return store().getters['db/contactstd'](prh) }
+  getContact (phch) { return store().getters['db/contact'](phch) }
 
-  setContactstds (lobj, hls) {
+  setContacts (lobj, hls) {
     if (lobj.length) {
       if (hls) lobj.forEach(obj => { if (obj.suppr || obj.horslimite) hls.push(obj) })
-      store().commit('db/setObjets', ['contactstd', lobj])
-    }
-  }
-
-  getContactphc (phch) { return store().getters['db/contactphc'](phch) }
-
-  setContactphcs (lobj, hls) {
-    if (lobj.length) {
-      if (hls) lobj.forEach(obj => { if (obj.suppr || obj.horslimite) hls.push(obj) })
-      store().commit('db/setObjets', ['contactphc', lobj])
+      store().commit('db/setObjets', ['contact', lobj])
     }
   }
 
@@ -1026,9 +1048,10 @@ export class Compta {
   - _clé_ : `ni`, numéro d'invitation (aléatoire 4 bytes) obtenue sur `invitgr`.
   - _valeur_ : cryptée par la clé K du compte de `[nom, rnd, im]` reçu sur `invitgr`.
   - une entrée est effacée par la résiliation du membre au groupe ou sur refus de l'invitation
-  (ce qui lui empêche de continuer à utiliser la clé du groupe).
-- `lcck` : liste cryptée par la clé K des clés `cc` des couples dont l'avatar fait partie.
-  Le hash d'une clé d'un couple donne son id.
+    (ce qui lui empêche de continuer à utiliser la clé du groupe).
+- `lcck` : map :
+  - _clé_ : `ni`, numéro pseudo aléatoire. Hash de cc en hexa suivi de 0 ou 1.
+  - _valeur_ : clé `cc` cryptée par la clé K de l'avatar cible. Le hash d'une clé d'un couple donne son id.
 - `vsh`
 */
 
@@ -1097,11 +1120,13 @@ export class Avatar {
   async compileLists (lgr, lcc, brut) {
     this.mcc.clear()
     if (lcc) {
-      lcc.forEach(cc => {
-        const id = crypt.hashBin(this.rnd)
+      for (const ni in lcc) {
+        const y = lcc[ni]
+        const cc = brut ? y : await crypt.decrypter(data.clek, y)
+        const id = crypt.hashBin(cc)
         data.setClec(id, cc)
         this.mcc.set(id, cc)
-      })
+      }
     }
     this.m1gr.clear()
     if (lgr) {
@@ -1115,6 +1140,7 @@ export class Avatar {
     }
   }
 
+  /*
   async decompileLists () {
     const lgr = {}
     for (const [ni, x] of this.m1gr) {
@@ -1124,12 +1150,13 @@ export class Avatar {
     if (this.mcc.size) this.mcc.forEach(val => { lcc.push(val) })
     return [lgr, lcc]
   }
+  */
 
   decompileListsBrut () {
     const lgr = {}
     for (const [ni, x] of this.m1gr) lgr[ni] = serial([x.na.nom, x.na.rnd, x.im])
-    const lcc = []
-    if (this.mcc.size) this.mcc.forEach(val => { lcc.push(val) })
+    const lcc = {}
+    for (const [ni, x] of this.mcc) lcc[ni] = x
     return [lgr, lcc]
   }
 
@@ -1143,8 +1170,7 @@ export class Avatar {
     const x = row.cva ? deserial(await crypt.decrypter(this.na.cle, row.cva)) : null
     this.photo = x ? x[0] : ''
     this.info = x ? x[1] : ''
-    const lcc = row.lcck ? deserial(await crypt.decrypter(data.clek, row.lcck)) : null
-    await this.compileLists(row.lgrk ? deserial(row.lgrk) : null, lcc)
+    await this.compileLists(row.lgrk ? deserial(row.lgrk) : null, row.lcck ? deserial(row.lcck) : null)
     return this
   }
 
@@ -1152,12 +1178,11 @@ export class Avatar {
     return await crypt.crypter(this.na.cle, serial([photo, info]))
   }
 
-  async toRow () {
+  async toRow () { // pour un nouvel avatar seulement
     const r = { ...this }
-    const [lgr, lcc] = await this.decompileLists()
-    r.cva = await this.cvToRow(this.photo, this.info)
-    r.lgrk = serial(lgr)
-    r.lcck = lcc && lcc.length ? await crypt.crypter(serial(lcc)) : null
+    r.cva = null
+    r.lgrk = null
+    r.lcck = null
     return schemas.serialize('rowavatar', r)
   }
 
@@ -1362,7 +1387,7 @@ export class Couple {
     this.na0 = x0 ? new NomAvatar(x0[1], x0[2]) : null
     this.na1 = x1 ? new NomAvatar(x0[1], x0[2]) : null
     this.avc0 = x0 && data.avc(this.na0.id)
-    this.avc1 = x0 && data.avc(this.na1.id)
+    this.avc1 = x1 && data.avc(this.na1.id)
   }
 
   // cols: ['id', 'v', 'st', 'dds', 'v1', 'v2', 'mx10', 'mx20', 'mx11', 'mx21', 'dlv', 'data', 'info0', 'info1', 'mc0', 'mc1', 'dh', 'ard', 'vsh']
@@ -1411,64 +1436,7 @@ export class Couple {
   }
 }
 
-/** contactstd **********************************/
-/*
-- `id` : id de A1
-- `ni` : numéro aléatoire en complément de `id`
-- `v` :
-- `dlv`
-- `ccp` : clé du couple (donne son id) cryptée par la clé publique de A1
-- `vsh` :
-*/
-
-schemas.forSchema({
-  name: 'idbContactstd',
-  cols: ['id', 'ni', 'v', 'dlv', 'idc', 'cc', 'vsh'] // idc : id du couple, cc: clé du couple
-})
-
-export class Contactstd {
-  get table () { return 'contactstd' }
-
-  get sid () { return crypt.idToSid(this.id) }
-
-  get sid2 () { return '' + this.ni }
-
-  get pk () { return this.sid + '/' + this.ni }
-
-  get suppr () { return false }
-
-  get horsLimite () { return dlvDepassee(this.dlv) }
-
-  get sidav () { return this.sid }
-
-  async fromRow (row) {
-    this.vsh = row.vsh || 0
-    this.id = row.id
-    this.ni = row.ni
-    this.v = row.v
-    this.dlv = row.dlv
-    const x = data.avc(this.id)
-    this.cc = x ? await crypt.decrypterRSA(x.cpriv, row.ccp) : null
-    this.idc = crypt.hashBin(this.rnd)
-    data.setClec(this.idc, this.cc)
-    return this
-  }
-
-  async toRow (dlv) { // TODO : utilité ???
-  }
-
-  get toIdb () {
-    return schemas.serialize('idbContactstd', this)
-  }
-
-  fromIdb (idb) {
-    schemas.deserialize('idbContactstd', idb, this)
-    data.setClec(this.idc, this.cc)
-    return this
-  }
-}
-
-/** Contactphc **********************************/
+/** Contact **********************************/
 /*
 - `phch` : hash de la phrase de contact convenue entre le parrain A0 et son filleul A1 (s'il accepte)
 - `dlv`
@@ -1477,14 +1445,14 @@ export class Contactstd {
 */
 
 schemas.forSchema({
-  name: 'idbContactphc',
+  name: 'idbContact',
   cols: ['phch', 'dlv', 'ccx', 'vsh']
 })
 
-export class Contactphc {
-  get table () { return 'contactphc' }
+export class Contact {
+  get table () { return 'contact' }
 
-  get sid () { return crypt.idToSid(this.prh) }
+  get sid () { return crypt.idToSid(this.phch) }
 
   get sid2 () { return crypt.idToSid(this.id) }
 
@@ -1516,15 +1484,15 @@ export class Contactphc {
   }
 
   async toRow () {
-    return schemas.serialize('rowcontactphc', this)
+    return schemas.serialize('rowcontact', this)
   }
 
   get toIdb () {
-    return schemas.serialize('idbContactphc', this)
+    return schemas.serialize('idbContact', this)
   }
 
   fromIdb (idb) {
-    schemas.deserialize('idbContactphc', idb, this)
+    schemas.deserialize('idbContact', idb, this)
     return this
   }
 }
@@ -1699,7 +1667,7 @@ export class Groupe {
 - `datag` : données cryptées par la clé du groupe. (immuable)
   - `nom, rnd` : nom complet de l'avatar.
   - `ni` : numéro d'invitation du membre dans `invitgr`. Permet de supprimer l'invitation et d'effacer le groupe dans son avatar (clé de `lgrk`).
-  - `idi` : id du membre qui l'a inscrit en contact.
+  - `idi` : id du membre qui l'a inscrit en envisagé.
 - `ardg` : ardoise du membre vis à vis du groupe. Couple `[dh, texte]` crypté par la clé du groupe. Contient le texte d'invitation puis la réponse de l'invité cryptée par la clé du groupe. Ensuite l'ardoise peut être écrite par le membre (actif) et les animateurs.
 - `vsh`
 */
@@ -2053,7 +2021,7 @@ export class Secret {
     const y = data.getFaidx({ id: this.id, ns: this.ns, cle: fa.cle })
     let buf = null
     if (y.length) buf = await getFadata({ id: this.id, ns: this.ns, cle: fa.cle })
-    if (!buf) buf = await getpj(this.secidpj, fa.cle + '@' + (await this.idc(fa)))
+    if (!buf) buf = await getfa(this.secidpj, fa.cle + '@' + (await this.idc(fa)))
     if (!buf) return null
     if (raw) return buf
     const buf2 = await crypt.decrypter(this.cles, buf)

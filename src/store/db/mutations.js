@@ -4,9 +4,8 @@ import { crypt } from '../../app/crypto.mjs'
 avatars: {}, // Tous les avatars listés sur le compte
 groupes: {}, // Tous les groupes listés sur les avatars
 couples: {}, // Tous les couples listés sur les avatars
-contactphc: {}, // Tous les contactphc (phch)
+contact: {}, // Tous les contact (phch)
 
-Groupés par sid d'avatar : contactstds@sid
 Groupés par sid de groupe : membres@sid
 Groupés par sid d'avatar ou de groupe ou de couple : secrets@sid
 
@@ -32,13 +31,13 @@ Normalement quand une entrée existe il n'y a pas que le secret de référence d
 const l1 = { compte: true, compta: true, prefs: true, avatar: true, groupe: true, couple: true, secret: true }
 
 // objets multiples à un seul niveau représenté par une map
-const l2 = { avatars: true, groupes: true, couples: true, contactphcs: true, repertoire: true, pjidx: true }
+const l2 = { avatars: true, groupes: true, couples: true, repertoire: true, pjidx: true }
 
 // objets de table multiples gérés comme sous groupe d'un avatar / couple / groupe
-const l3 = { contactstd: true, membre: true, secret: true }
+const l3 = { membre: true, secret: true }
 
 // objets de table multiples gérés à un seul niveau (sous ensemble de l2)
-const l4 = { avatar: true, groupe: true, couple: true, contactphc: true }
+const l4 = { avatar: true, groupe: true, couple: true, contact: true }
 
 export function raz (state) {
   for (const e in state) {
@@ -85,20 +84,16 @@ export function purgeAvatars (state, val) { // val : Set des ids des avatars INU
   if (!val || !val.size) return 0
   const xa = state.avatars
   let na = 0
-  const xc = state.contactstds
-  let nc = 0
   const xs = state.secrets
   let ns = 0
   for (const id of val) {
     const sid = crypt.idToSid(id)
     if (xa[sid]) { na++; delete xa[sid] }
-    if (xc[sid]) { nc++; delete xc[sid] }
     if (xs[sid]) { ns++; delete xs[sid] }
   }
   if (na) state.avatars = { ...xa }
-  if (nc) state.contactstds = { ...xc }
   if (ns) state.secrets = { ...xs }
-  return na + nc + ns
+  return na + ns
 }
 
 /* purge des groupes inutiles et membres, secrets associés */
@@ -258,9 +253,9 @@ function majvoisin (state, secret) {
   }
 }
 
-/* Pièces jointes */
+/* Fichiers attachés */
 export function majfaidx (state, lst) { // lst : array de { id, ns, cle, hv }
-  const st = state.pjidx
+  const st = state.faidx
   let b = false
   lst.forEach(x => {
     const k = crypt.idToSid(x.id) + '@' + crypt.idToSid(x.ns) + '@' + x.cle
@@ -271,5 +266,5 @@ export function majfaidx (state, lst) { // lst : array de { id, ns, cle, hv }
     }
     b = true
   })
-  if (b) state.pjidx = { ...st }
+  if (b) state.faidx = { ...st }
 }

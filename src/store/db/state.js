@@ -13,14 +13,13 @@ export default function () {
     avatars: {}, // Tous les avatars listés sur le compte
     groupes: {}, // Tous les groupes listés sur les avatars
     couples: {}, // Tous les couples listés sur les avatars
-    contactphc: {}, // Tous les contactphc (phch)
+    contact: {}, // Tous les contact (phch)
 
     repertoire: {}, // Toutes les cartes de visite : accès par data.repertoire
 
     faidx: {} // index des pièces jointes disponibles en mode avion
 
     /*
-    Groupés par sid d'avatar : contactstds_sid
     Groupés par sid de groupe : membres_sid
     Groupés par sid d'avatar ou de groupe ou de couple : secrets_sid
     */
