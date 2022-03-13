@@ -1,6 +1,6 @@
 /* eslint-disable func-call-spacing */
 import Dexie from 'dexie'
-import { Avatar, Compte, Prefs, Compta, Ardoise, Contact, Parrain, Rencontre, Groupe, Membre, Secret, Cv, data, estSingleton } from './modele.mjs'
+import { Avatar, Compte, Prefs, Compta, Couple, Contactstd, Contactphc, Groupe, Membre, Secret, Cv, data, estSingleton } from './modele.mjs'
 import { store, deserial, serial } from './util.mjs'
 import { crypt } from './crypto.mjs'
 import { AppExc, E_DB, INDEXT } from './api.mjs'
@@ -9,12 +9,11 @@ const STORES = {
   etat: 'id',
   compte: 'id',
   compta: 'id',
-  ardoise: 'id',
   prefs: 'id',
   avatar: 'id',
-  contact: '[id+id2]', // ic
-  parrain: 'id', // pph
-  rencontre: 'id', // prh
+  couple: 'id',
+  contactstd: '[id+ni]',
+  contactphc: 'id', // phch
   groupe: 'id',
   membre: '[id+id2]', // im
   secret: '[id+id2]', // ns
@@ -142,16 +141,6 @@ export async function getCompta () {
   }
 }
 
-export async function getArdoise () {
-  go()
-  try {
-    const idb = await data.db.ardoise.get('1')
-    return idb ? new Ardoise().fromIdb(await crypt.decrypter(data.clek, idb.data)) : null
-  } catch (e) {
-    throw data.setErDB(EX2(e))
-  }
-}
-
 export async function getAvatars (avu) { // avu : set des ids des avatars utiles
   go()
   try {
@@ -196,33 +185,38 @@ export async function getGroupes (gru) { // gru : set des Ids des groupes utiles
   }
 }
 
-export async function getContacts () {
+export async function getCouples (cpu) { // cpu : set des couples utiles
   go()
   try {
     let vol = 0
+    const apurger = new Set()
     const r = []
     await data.db.contact.each(async (idb) => {
-      vol += idb.data.length
-      const x = new Contact().fromIdb(await crypt.decrypter(data.clek, idb.data))
-      r.push(x)
-      data.vag.setVerAv(x.sidav, INDEXT.CONTACT, x.v)
+      const x = new Couple().fromIdb(await crypt.decrypter(data.clek, idb.data))
+      if (cpu.has(x.id)) {
+        vol += idb.data.length
+        r.push(x)
+        data.vag.setVerGr(x.sid, INDEXT.GROUPE, x.v)
+      } else {
+        apurger.add(x.id)
+      }
     })
-    return { objs: r, vol: vol }
+    return { objs: r, vol: vol, apurger }
   } catch (e) {
     throw data.setErDB(EX2(e))
   }
 }
 
-export async function getParrains () {
+export async function getContactstd () {
   go()
   try {
     let vol = 0
     const r = []
     await data.db.parrain.each(async (idb) => {
       vol += idb.data.length
-      const x = new Parrain().fromIdb(await crypt.decrypter(data.clek, idb.data))
+      const x = new Contactstd().fromIdb(await crypt.decrypter(data.clek, idb.data))
       r.push(x)
-      data.vag.setVerAv(x.sidav, INDEXT.PARRAIN, x.v)
+      data.vag.setVerAv(x.sidav, INDEXT.INDEXSTD, x.v)
     })
     return { objs: r, vol: vol }
   } catch (e) {
@@ -230,16 +224,15 @@ export async function getParrains () {
   }
 }
 
-export async function getRencontres () {
+export async function getContactphc () { // utilité ?
   go()
   try {
     let vol = 0
     const r = []
     await data.db.rencontre.each(async (idb) => {
       vol += idb.data.length
-      const x = new Rencontre().fromIdb(await crypt.decrypter(data.clek, idb.data))
+      const x = new Contactphc().fromIdb(await crypt.decrypter(data.clek, idb.data))
       r.push(x)
-      data.vag.setVerAv(x.sidav, INDEXT.RENCONTRE, x.v)
     })
     return { objs: r, vol: vol }
   } catch (e) {
@@ -305,6 +298,7 @@ export async function getCvs () {
 Purge des avatars du compte et des groupes inutiles, dans toutes les tables où ils apparaissent.
 - lav : liste des ids des avatars
 - lgr : liste des ids des groupes
+- lcc : liste des ids des couples
 */
 export async function purgeGroupes (lgr) {
   go()
@@ -336,13 +330,29 @@ export async function purgeAvatars (lav) {
       for (let i = 0; i < idac.length; i++) {
         const id = { id: idac[i] }
         await data.db.avatar.where(id).delete()
-        await data.db.contact.where(id).delete()
+        await data.db.contactstd.where(id).delete()
         await data.db.secret.where(id).delete()
-        await data.db.rencontre.where({ id2: id }).delete()
-        await data.db.parrain.where({ id2: id }).delete()
       }
     })
     return lav.size
+  } catch (e) {
+    throw data.setErDB(EX2(e))
+  }
+}
+
+export async function purgeCouples (lcc) {
+  go()
+  try {
+    if (!lcc || !lcc.size) return 0
+    const idcc = []
+    for (const i of lcc) idcc.push(crypt.u8ToB64(await crypt.crypter(data.clek, crypt.idToSid(i), 1), true))
+    await data.db.transaction('rw', TABLES, async () => {
+      for (let i = 0; i < idcc.length; i++) {
+        const id = { id: idcc[i] }
+        await data.db.secret.where(id).delete()
+      }
+    })
+    return lcc.size
   } catch (e) {
     throw data.setErDB(EX2(e))
   }
@@ -387,7 +397,6 @@ export async function commitRows (lobj) {
         if (obj.table === 'compte') {
           lidb.push({ table: 'prefs', suppr: true, row: { id: '1' } })
           lidb.push({ table: 'compta', suppr: true, row: { id: '1' } })
-          lidb.push({ table: 'ardoise', suppr: true, row: { id: '1' } })
         }
       }
     }
@@ -421,7 +430,7 @@ export async function commitRows (lobj) {
   - data : { id, ns, cle, hv } sérialisé, crypté par la clé k
 */
 
-export async function getPjidx () {
+export async function getFaidx () {
   // retourne une liste de { id, ns, cle, hv }
   go()
   try {
@@ -436,7 +445,7 @@ export async function getPjidx () {
   }
 }
 
-export async function getPjdata ({ id, ns, cle }) {
+export async function getFadata ({ id, ns, cle }) {
   /* retourne le contenu (gzippé crypté) de la pièce jointe clé du secret */
   go()
   try {
@@ -449,7 +458,7 @@ export async function getPjdata ({ id, ns, cle }) {
   }
 }
 
-export async function putPj ({ id, ns, cle, hv }, buf) { // buf est gzippé / crypté. Si null, c'est une suppression
+export async function putFa ({ id, ns, cle, hv }, buf) { // buf est gzippé / crypté. Si null, c'est une suppression
   const sidpj = crypt.idToSid(id) + '@' + crypt.idToSid(ns) + '@' + cle
   const idk = crypt.u8ToB64((await crypt.crypter(data.clek, sidpj, 1)))
   const bufk = buf ? await crypt.crypter(data.clek, serial({ id, ns, cle, hv })) : null
