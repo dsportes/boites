@@ -54,6 +54,10 @@ export async function decryptersoft (u8) {
   return await decrypter(localkey, u8)
 }
 
+export async function decryptersoftStr (u8) {
+  return await decrypterStr(localkey, u8)
+}
+
 export async function crypter (cle, u8, idxIV) {
   if (typeof u8 === 'string') u8 = enc.encode(u8)
   if (!(cle instanceof Uint8Array) || cle.length !== 32) throw new AppExc(E_BRO, 'Crypter : cle incorrecte (pas Uint8Array ou longueur != 32)')

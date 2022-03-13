@@ -46,17 +46,17 @@ export const MC = {
   ATRAITER: 245
 }
 
-export const SIZEAV = 5
+export const SIZEAV = 3
 export const SIZEGR = 3
+export const SIZECP = 2
 
 export const INDEXT = {
   SECRET: 0,
   AVATAR: 1,
-  CONTACT: 2,
-  RENCONTRE: 3,
-  PARRAIN: 4,
+  CONTACTSTD: 2,
   GROUPE: 1,
-  MEMBRE: 2
+  MEMBRE: 2,
+  COUPLE: 1
 }
 
 /*
