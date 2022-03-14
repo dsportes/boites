@@ -1,6 +1,6 @@
 /* eslint-disable func-call-spacing */
 import Dexie from 'dexie'
-import { Avatar, Compte, Prefs, Compta, Couple, Groupe, Membre, Secret, Cv, data, estSingleton } from './modele.mjs'
+import { Avatar, Compte, Prefs, Compta, Couple, Groupe, Membre, Secret, Repertoire, data, estSingleton } from './modele.mjs'
 import { store, deserial, serial } from './util.mjs'
 import { crypt } from './crypto.mjs'
 import { AppExc, E_DB, INDEXT } from './api.mjs'
@@ -16,7 +16,7 @@ const STORES = {
   contact: 'id', // phch
   membre: '[id+id2]', // im
   secret: '[id+id2]', // ns
-  cv: 'id',
+  repertoire: 'id',
   pjidx: 'id',
   pjdata: 'id'
 }
@@ -232,8 +232,10 @@ export async function getSecrets () {
       vol += idb.data.length
       const x = new Secret().fromIdb(await crypt.decrypter(data.clek, idb.data))
       r.push(x)
-      if (x.ts < 2) {
+      if (x.ts === 0) {
         data.vag.setVerAv(x.sidavgr, INDEXT.SECRET, x.v)
+      } if (x.ts === 1) {
+        data.vag.setVerCp(x.sidavgr, INDEXT.SECRET, x.v)
       } else {
         data.vag.setVerGr(x.sidavgr, INDEXT.SECRET, x.v)
       }
@@ -244,14 +246,14 @@ export async function getSecrets () {
   }
 }
 
-export async function getCvs () {
+export async function getRepertoire () {
   go()
   try {
     let vol = 0
     const r = []
-    await data.db.cv.each(async (idb) => {
+    await data.db.repertoire.each(async (idb) => {
       vol += idb.data.length
-      const x = new Cv().fromIdb(await crypt.decrypter(data.clek, idb.data))
+      const x = new Repertoire().fromIdb(await crypt.decrypter(data.clek, idb.data))
       r.push(x)
     })
     return { objs: r, vol: vol }
@@ -324,14 +326,14 @@ export async function purgeCouples (lcc) {
   }
 }
 
-export async function purgeCvs (lcv) {
+export async function purgeRepertoires (lcv) {
   go()
   try {
     if (!lcv || !lcv.size) return 0
     await data.db.transaction('rw', TABLES, async () => {
       for (const i of lcv) {
         const id = { id: i }
-        await data.db.cv.where(id).delete()
+        await data.db.repertoire.where(id).delete()
       }
     })
     return lcv.size
@@ -341,7 +343,7 @@ export async function purgeCvs (lcv) {
 }
 
 /*
-Mise à jour (put ou delete) d'une liste d'objets (compte, avatar, etc.)
+Mise à jour d'une liste d'objets (compte, avatar, etc.)
 */
 export async function commitRows (lobj) {
   go()
@@ -354,31 +356,48 @@ export async function commitRows (lobj) {
       const x = { table: obj.table, row: {} }
       x.row.id = estSingleton(obj.table) ? '1' : crypt.u8ToB64(await crypt.crypter(data.clek, obj.sid, 1), true)
       if (obj.sid2) x.row.id2 = crypt.u8ToB64(await crypt.crypter(data.clek, obj.sid2, 1), true)
-      if (!obj.suppr) {
-        x.row.data = await crypt.crypter(obj.table === 'compte' ? d.ps.pcb : d.clek, obj.toIdb)
-        lidb.push(x)
-      } else {
-        x.suppr = true
-        lidb.push(x)
-        if (obj.table === 'compte') {
-          lidb.push({ table: 'prefs', suppr: true, row: { id: '1' } })
-          lidb.push({ table: 'compta', suppr: true, row: { id: '1' } })
-        }
+      x.row.data = await crypt.crypter(obj.table === 'compte' ? d.ps.pcb : d.clek, obj.toIdb)
+      lidb.push(x)
+    }
+    await d.db.transaction('rw', TABLES, async () => {
+      for (let i = 0; i < lidb.length; i++) {
+        const x = lidb[i]
+        await d.db[x.table].put(x.row)
+      }
+    })
+  } catch (e) {
+    throw data.setErDB(EX2(e))
+  }
+}
+
+/*
+Suppression d'une liste d'objets (compte, avatar, etc.) : { table, sid, sid2 }
+*/
+export async function purgeRows (lobj) {
+  go()
+  try {
+    if (!lobj || !lobj.length) return
+    const d = data
+    const lidb = []
+    for (let i = 0; i < lobj.length; i++) {
+      const obj = lobj[i]
+      const x = { ...obj }
+      x.id = estSingleton(obj.table) ? '1' : crypt.u8ToB64(await crypt.crypter(data.clek, obj.sid, 1), true)
+      if (obj.sid2) x.id2 = crypt.u8ToB64(await crypt.crypter(data.clek, obj.sid2, 1), true)
+      lidb.push(x)
+      if (obj.table === 'compte') {
+        lidb.push({ table: 'prefs', id: '1' })
+        lidb.push({ table: 'compta', id: '1' })
       }
     }
     await d.db.transaction('rw', TABLES, async () => {
       for (let i = 0; i < lidb.length; i++) {
         const x = lidb[i]
-        if (!x.suppr) {
-          await d.db[x.table].put(x.row)
+        if (x.row.id2) {
+          await d.db[x.table].where({ id: x.id, id2: x.id2 }).delete()
         } else {
-          if (x.row.id2) {
-            await d.db[x.table].where({ id: x.row.id, id2: x.row.id2 }).delete()
-          } else {
-            await d.db[x.table].where({ id: x.row.id }).delete()
-          }
+          await d.db[x.table].where({ id: x.id }).delete()
         }
-        // if (cfg().debug) console.log(x.suppr ? 'del ' : 'put ' + x.table + ' - ' + (x.id || x.pk))
       }
     })
   } catch (e) {

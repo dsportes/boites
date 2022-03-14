@@ -15,34 +15,6 @@ export async function traitInvitGr (row) {
   return { id: row.id, ni: row.ni, datak: crypt.crypter(data.clek, x) }
 }
 
-/** invitCp **********************************/
-/*
-- `id` : id de A1
-- `ni` : numéro d'invitation (pseudo aléatoire)
-- `ccp` : clé du couple (donne son id) cryptée par la clé publique de A1
-*/
-
-export class Invitcp {
-  get table () { return 'invitcp' }
-  async fromRow (row) {
-    this.id = row.id
-    this.ni = row.ni
-    const cpriv = data.avc(row.id).cpriv
-    const cc = deserial(await crypt.decrypterRSA(cpriv, row.ccp))
-    this.idc = crypt.hashBin(cc)
-    data.setClec(this.idc, cc)
-    this.cck = await crypt.crypter(data.clek, serial(cc))
-    return this
-  }
-
-  async toRow (clepub, place) { // place : 0 ou 1
-    this.ni = crypt.hash(crypt.u8ToHex(this.cc) + place)
-    const ccp = await crypt.crypterRSA(clepub, serial(this.cc))
-    const r = { id: this.id, ni: this.ni, ccp }
-    return schemas.serialize('rowinvitcp', r)
-  }
-}
-
 /** Invitgr **********************************/
 /*
 - `id` : id du membre invité.
@@ -106,12 +78,11 @@ function newObjet (table) {
     case 'avatar' : return new Avatar()
     case 'couple' : return new Couple()
     case 'invitgr' : return new Invitgr()
-    case 'invitcp' : return new Invitcp()
     case 'contact' : return new Contact()
     case 'groupe' : return new Groupe()
     case 'membre' : return new Membre()
     case 'secret' : return new Secret()
-    case 'cv' : return new Cv()
+    case 'repertoire' : return new Repertoire()
   }
 }
 
@@ -285,7 +256,7 @@ export async function commitMapObjets (objets, mapObj) { // SAUF mapObj.compte e
 export const MODES = ['inconnu', 'synchronisé', 'incognito', 'avion', 'visio']
 
 /* Répertoire des CV **********************************************************/
-class Repertoire {
+class RepertoireLocal {
   constructor () {
     this.rep = {}
     this.modif = false
@@ -307,7 +278,7 @@ class Repertoire {
     const idn = typeof id === 'string' ? crypt.sidToId(id) : id
     let cv = this.rep[sid]
     if (!cv) {
-      cv = new Cv(true)
+      cv = new Repertoire(true)
       cv.id = idn
       this.rep[sid] = cv
       this.modif = true
@@ -558,7 +529,7 @@ class Session {
     this.ws = null // WebSocket quand il est ouvert
     this.erWS = 0 // 0:OK 1:WS en erreur NON traitée 2:WS en erreur traitée
     this.exNET = null // exception sur NET
-    this.repertoire = new Repertoire()
+    this.repertoire = new RepertoireLocal()
 
     if (!init) {
       this.statutnet = 0 // 0: net pas ouvert, 1:net OK, 2: net KO
@@ -1057,7 +1028,7 @@ export class Compta {
 
 schemas.forSchema({
   name: 'idbAvatar',
-  cols: ['id', 'v', 'st', 'vcv', 'dds', 'photo', 'info', 'lgr', 'lcc', 'vsh']
+  cols: ['id', 'v', 'lgr', 'lcc', 'vsh']
 })
 
 export class Avatar {
@@ -1209,8 +1180,8 @@ export class Avatar {
 
 /** Cv ************************************/
 schemas.forSchema({
-  name: 'idbCv',
-  cols: ['id', 'vcv', 'st', 'photo', 'info']
+  name: 'idbRepertoire',
+  cols: ['id', 'v', 'x', 'dds', 'cv', 'vsh']
 })
 /*
   name: 'rowcv',
@@ -1226,7 +1197,7 @@ schemas.forSchema({
   Le store/db conserve l'image de data.repertoire à chaque changement
 */
 
-export class Cv {
+export class Repertoire {
   get table () { return 'cv' }
 
   get sid () { return crypt.idToSid(this.id) }
@@ -1256,7 +1227,7 @@ export class Cv {
   }
 
   clone () {
-    const cl = new Cv()
+    const cl = new Repertoire()
     cl.id = this.id
     cl.vcv = this.vcv
     cl.st = this.st
@@ -1330,7 +1301,7 @@ export class Cv {
 
 schemas.forSchema({
   name: 'idbCouple',
-  cols: ['id', 'v', 'st', 'dds', 'v1', 'v2', 'mx10', 'mx20', 'mx11', 'mx21', 'dlv', 'data', 'info0', 'info1', 'mc0', 'mc1', 'dh', 'ard', 'vsh']
+  cols: ['id', 'v', 'st', 'v1', 'v2', 'mx10', 'mx20', 'mx11', 'mx21', 'dlv', 'data', 'info0', 'info1', 'mc0', 'mc1', 'dh', 'ard', 'vsh']
 })
 /*
 - `id` : id du couple
@@ -1519,7 +1490,7 @@ export class Contact {
 
 schemas.forSchema({
   name: 'idbGroupe',
-  cols: ['id', 'v', 'dds', 'dfh', 'st', 'mxin', 'photo', 'info', 'idh', 'imh', 'v1', 'v2', 'f1', 'f2', 'mc', 'vsh']
+  cols: ['id', 'v', 'dfh', 'st', 'mxin', 'idh', 'imh', 'v1', 'v2', 'f1', 'f2', 'mc', 'vsh']
 })
 
 export class Groupe {
