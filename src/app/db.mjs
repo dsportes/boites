@@ -1,9 +1,10 @@
 /* eslint-disable func-call-spacing */
 import Dexie from 'dexie'
-import { Avatar, Compte, Prefs, Compta, Couple, Groupe, Membre, Secret, Repertoire, data, estSingleton } from './modele.mjs'
-import { store, deserial, serial } from './util.mjs'
+import { Avatar, Compte, Prefs, Compta, Couple, Groupe, Membre, Secret, data, estSingleton } from './modele.mjs'
+import { store, deserial, serial, Sid } from './util.mjs'
 import { crypt } from './crypto.mjs'
-import { AppExc, E_DB, INDEXT } from './api.mjs'
+import { AppExc, E_DB } from './api.mjs'
+import { schemas } from './schemas.mjs'
 
 const STORES = {
   etat: 'id',
@@ -16,7 +17,7 @@ const STORES = {
   contact: 'id', // phch
   membre: '[id+id2]', // im
   secret: '[id+id2]', // ns
-  repertoire: 'id',
+  cv: 'id',
   pjidx: 'id',
   pjdata: 'id'
 }
@@ -140,67 +141,44 @@ export async function getCompta () {
   }
 }
 
-export async function getAvatars (avu) { // avu : set des ids des avatars utiles
+// Retourne une map : clé: id de l'avatar, valeur: son objet Avatar
+export async function getAvatars () {
   go()
   try {
-    let vol = 0
-    const apurger = new Set()
-    const r = []
+    const r = {}
     await data.db.avatar.each(async (idb) => {
       const x = new Avatar().fromIdb(await crypt.decrypter(data.clek, idb.data))
-      if (avu.has(x.id)) {
-        vol += idb.data.length
-        r.push(x)
-        data.vag.setVerAv(x.sid, INDEXT.AVATAR, x.v)
-      } else {
-        apurger.add(x.id)
-      }
+      r[x.id] = x
     })
-    return { objs: r, vol: vol, apurger }
+    return r
   } catch (e) {
     throw data.setErDB(EX2(e))
   }
 }
 
-export async function getGroupes (gru) { // gru : set des Ids des groupes utiles
+export async function getGroupes () {
   go()
   try {
-    let vol = 0
-    const apurger = new Set()
-    const r = []
+    const r = {}
     await data.db.groupe.each(async (idb) => {
       const x = new Groupe().fromIdb(await crypt.decrypter(data.clek, idb.data))
-      if (gru.has(x.id)) {
-        vol += idb.data.length
-        data.vag.setVerGr(x.sid, INDEXT.GROUPE, x.v)
-        r.push(x)
-      } else {
-        apurger.add(x.id)
-      }
+      r[x.id] = x
     })
-    return { objs: r, vol: vol, apurger }
+    return r
   } catch (e) {
     throw data.setErDB(EX2(e))
   }
 }
 
-export async function getCouples (cpu) { // cpu : set des couples utiles
+export async function getCouples () {
   go()
   try {
-    let vol = 0
-    const apurger = new Set()
-    const r = []
+    const r = {}
     await data.db.contact.each(async (idb) => {
       const x = new Couple().fromIdb(await crypt.decrypter(data.clek, idb.data))
-      if (cpu.has(x.id)) {
-        vol += idb.data.length
-        r.push(x)
-        data.vag.setVerGr(x.sid, INDEXT.COUPLE, x.v)
-      } else {
-        apurger.add(x.id)
-      }
+      r[x.id] = x
     })
-    return { objs: r, vol: vol, apurger }
+    return r
   } catch (e) {
     throw data.setErDB(EX2(e))
   }
@@ -215,7 +193,6 @@ export async function getMembres () {
       vol += idb.data.length
       const x = new Membre().fromIdb(await crypt.decrypter(data.clek, idb.data))
       r.push(x)
-      data.vag.setVerGr(x.sidgr, INDEXT.MEMBRE, x.v)
     })
     return { objs: r, vol: vol }
   } catch (e) {
@@ -232,13 +209,6 @@ export async function getSecrets () {
       vol += idb.data.length
       const x = new Secret().fromIdb(await crypt.decrypter(data.clek, idb.data))
       r.push(x)
-      if (x.ts === 0) {
-        data.vag.setVerAv(x.sidavgr, INDEXT.SECRET, x.v)
-      } if (x.ts === 1) {
-        data.vag.setVerCp(x.sidavgr, INDEXT.SECRET, x.v)
-      } else {
-        data.vag.setVerGr(x.sidavgr, INDEXT.SECRET, x.v)
-      }
     })
     return { objs: r, vol: vol }
   } catch (e) {
@@ -246,14 +216,15 @@ export async function getSecrets () {
   }
 }
 
-export async function getRepertoire () {
+export async function getCv () {
   go()
   try {
     let vol = 0
     const r = []
     await data.db.repertoire.each(async (idb) => {
       vol += idb.data.length
-      const x = new Repertoire().fromIdb(await crypt.decrypter(data.clek, idb.data))
+      const x = {}
+      schemas.deserialize('idbCv', await crypt.decrypter(data.clek, idb.data), x)
       r.push(x)
     })
     return { objs: r, vol: vol }
@@ -326,7 +297,7 @@ export async function purgeCouples (lcc) {
   }
 }
 
-export async function purgeRepertoires (lcv) {
+export async function purgeCvs (lcv) {
   go()
   try {
     if (!lcv || !lcv.size) return 0
@@ -343,60 +314,54 @@ export async function purgeRepertoires (lcv) {
 }
 
 /*
-Mise à jour d'une liste d'objets (compte, avatar, etc.)
+Mise à jour / suppression de listes d'objets (compte, avatar, etc.)
 */
-export async function commitRows (lobj) {
+export async function commitRows (lmaj, lsuppr) {
   go()
   try {
-    if (!lobj || !lobj.length) return
-    const d = data
     const lidb = []
-    for (let i = 0; i < lobj.length; i++) {
-      const obj = lobj[i]
-      const x = { table: obj.table, row: {} }
-      x.row.id = estSingleton(obj.table) ? '1' : crypt.u8ToB64(await crypt.crypter(data.clek, obj.sid, 1), true)
-      if (obj.sid2) x.row.id2 = crypt.u8ToB64(await crypt.crypter(data.clek, obj.sid2, 1), true)
-      x.row.data = await crypt.crypter(obj.table === 'compte' ? d.ps.pcb : d.clek, obj.toIdb)
-      lidb.push(x)
-    }
-    await d.db.transaction('rw', TABLES, async () => {
-      for (let i = 0; i < lidb.length; i++) {
-        const x = lidb[i]
-        await d.db[x.table].put(x.row)
-      }
-    })
-  } catch (e) {
-    throw data.setErDB(EX2(e))
-  }
-}
-
-/*
-Suppression d'une liste d'objets (compte, avatar, etc.) : { table, sid, sid2 }
-*/
-export async function purgeRows (lobj) {
-  go()
-  try {
-    if (!lobj || !lobj.length) return
-    const d = data
-    const lidb = []
-    for (let i = 0; i < lobj.length; i++) {
-      const obj = lobj[i]
-      const x = { ...obj }
-      x.id = estSingleton(obj.table) ? '1' : crypt.u8ToB64(await crypt.crypter(data.clek, obj.sid, 1), true)
-      if (obj.sid2) x.id2 = crypt.u8ToB64(await crypt.crypter(data.clek, obj.sid2, 1), true)
-      lidb.push(x)
-      if (obj.table === 'compte') {
-        lidb.push({ table: 'prefs', id: '1' })
-        lidb.push({ table: 'compta', id: '1' })
-      }
-    }
-    await d.db.transaction('rw', TABLES, async () => {
-      for (let i = 0; i < lidb.length; i++) {
-        const x = lidb[i]
-        if (x.row.id2) {
-          await d.db[x.table].where({ id: x.id, id2: x.id2 }).delete()
+    const lidbs = []
+    if (lmaj || !lmaj.length) {
+      for (let i = 0; i < lmaj.length; i++) {
+        const obj = lmaj[i]
+        const x = { table: obj.table, row: {} }
+        x.row.id = estSingleton(obj.table) ? '1' : crypt.u8ToB64(await crypt.crypter(data.clek, Sid(obj.id), 1), true)
+        if (obj.sid2) x.row.id2 = crypt.u8ToB64(await crypt.crypter(data.clek, obj.sid2, 1), true)
+        if (obj.table === 'compte') {
+          x.row.data = await crypt.crypter(data.ps.pcb, obj.toIdb)
+        } else if (obj.table === 'cv') {
+          x.row.data = await crypt.crypter(data.clek, schemas.serialize('idbCv', obj))
         } else {
-          await d.db[x.table].where({ id: x.id }).delete()
+          x.row.data = await crypt.crypter(data.clek, obj.toIdb)
+        }
+        lidb.push(x)
+      }
+    }
+
+    if (!lsuppr || !lsuppr.length) return
+    for (let i = 0; i < lsuppr.length; i++) {
+      const obj = lsuppr[i]
+      const x = { ...obj }
+      x.id = estSingleton(obj.table) ? '1' : crypt.u8ToB64(await crypt.crypter(data.clek, Sid(obj.id), 1), true)
+      if (obj.sid2) x.id2 = crypt.u8ToB64(await crypt.crypter(data.clek, obj.sid2, 1), true)
+      lidbs.push(x)
+      if (obj.table === 'compte') {
+        lidbs.push({ table: 'prefs', id: '1' })
+        lidbs.push({ table: 'compta', id: '1' })
+      }
+    }
+
+    await data.db.transaction('rw', TABLES, async () => {
+      for (let i = 0; i < lidb.length; i++) {
+        const x = lidb[i]
+        await data.db[x.table].put(x.row)
+      }
+      for (let i = 0; i < lidbs.length; i++) {
+        const x = lidbs[i]
+        if (x.row.id2) {
+          await data.db[x.table].where({ id: x.id, id2: x.id2 }).delete()
+        } else {
+          await data.db[x.table].where({ id: x.id }).delete()
         }
       }
     })

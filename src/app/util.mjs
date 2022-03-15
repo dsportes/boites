@@ -11,6 +11,7 @@ const encoder = new TextEncoder('utf-8')
 
 export function u8ToString (u8) { return decoder.decode(u8) }
 export function stringToU8 (str) { return encoder.encode(str) }
+export function Sid (id) { return id ? (typeof id === 'string' ? id : crypt.idToSid(id)) : '' }
 
 let $cfg
 let globalProperties
@@ -708,8 +709,9 @@ export class NomAvatar {
   get cle () { return this.rnd }
 
   get nomf () {
+    if (!lgnom) lgnom = cfg().lgnom || 16
     const i = this.nom.indexOf('\n')
-    const t = this.nom.substring(0, (i === -1 ? 16 : (i < 16 ? i : 16)))
+    const t = this.nom.substring(0, (i === -1 ? lgnom : (i < lgnom ? i : lgnom)))
     return normpath(t) + '@' + this.sid
   }
 

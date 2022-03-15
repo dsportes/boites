@@ -1,4 +1,5 @@
 import { crypt } from '../../app/crypto.mjs'
+import { Sid } from '../../app/util.mjs'
 
 /*
 avatars: {}, // Tous les avatars listés sur le compte
@@ -37,7 +38,7 @@ const l2 = { avatars: true, groupes: true, couples: true, repertoire: true, pjid
 const l3 = { membre: true, secret: true }
 
 // objets de table multiples gérés à un seul niveau (sous ensemble de l2)
-const l4 = { avatar: true, groupe: true, couple: true, contact: true }
+const l4 = { avatar: true, groupe: true, couple: true }
 
 export function raz (state) {
   for (const e in state) {
@@ -135,7 +136,7 @@ export function purgeCouples (state, val) { // val : Set des ids des couples INU
 }
 
 /* Mises à jour brutes des objets dans le store */
-export function setEntree (state, [table, sid]) {
+function setEntree (state, [table, sid]) {
   if (!state[table + 's@' + sid]) {
     state[table + 's@' + sid] = {}
   }
@@ -146,15 +147,12 @@ export function setEntree (state, [table, sid]) {
 export function setObjets (state, [table, lobj]) { // lobj : array d'objets
   if (!lobj || !lobj.length) return
   if (l3[table]) {
-    // gérés par sous-groupe
+    // gérés par sous-groupe : membre secret
     const m = {}
     const cs = state.secret
     lobj.forEach(obj => {
-      if (!m[obj.sid]) {
-        m[obj.sid] = [obj]
-      } else {
-        m[obj.sid].push(obj)
-      }
+      const sid = Sid(obj.id)
+      if (!m[sid]) m[sid] = [obj]; else m[sid].push(obj)
       // si le secret qu'on voit passer est le secret courant, il faut mettre à jour aussi le courant
       if (cs && table === 'secret' && cs.id === obj.id && cs.ns === obj.ns) majsecret(state, obj)
       if (table === 'secret') majvoisin(state, obj)
@@ -162,31 +160,23 @@ export function setObjets (state, [table, lobj]) { // lobj : array d'objets
     for (const sid in m) {
       const st = setEntree(state, [table, sid])
       m[sid].forEach(obj => {
-        const av = st[obj.sid2]
-        if (obj.suppr || obj.horsLimite) {
-          if (av) delete st[obj.sid2]
-        } else if (!av || av.v < obj.v) {
-          st[obj.sid2] = obj
-        }
+        if (obj.suppr) delete st[obj.sid2]; else st[obj.sid2] = obj
       })
       state[table + 's@' + sid] = { ...st }
     }
   } else if (l4[table]) {
-    // gérés une seule entrée
+    // gérés une seule entrée : avatar groupe couple
     const st = state[table + 's']
-    const ac = state.avatar
-    const gc = state.groupe
-    const cc = state.couple
+    const c = state[table]
     lobj.forEach(obj => {
-      const av = st[obj.sid]
-      if (obj.suppr || obj.horsLimite) {
-        if (av) delete st[obj.sid]
-      } else if (!av || av.v < obj.v) {
-        st[obj.sid] = obj
+      if (obj.suppr) {
+        delete st[Sid(obj.id)]
         // MAJ aussi des objets courants
-        if (ac && table === 'avatar' && ac.id === obj.id) majavatar(state, obj)
-        if (gc && table === 'groupe' && gc.id === obj.id) majgroupe(state, obj)
-        if (cc && table === 'couple' && cc.id === obj.id) majcouple(state, obj)
+        if (c && c.id === obj.id) state[table] = null
+      } else {
+        st[Sid(obj.id)] = obj
+        // MAJ aussi des objets courants
+        if (c && c.id === obj.id) state[table] = obj
       }
     })
     state[table + 's'] = { ...st }

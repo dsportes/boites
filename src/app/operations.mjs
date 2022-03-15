@@ -1,8 +1,8 @@
-import { NomAvatar, store, post, get, affichermessage, cfg, sleep, affichererreur, appexc, idToIc, difference, getpj, getJourJ, serial, edvol, equ8 } from './util.mjs'
+import { NomAvatar, store, post, get, affichermessage, cfg, sleep, affichererreur, appexc, idToIc, difference, getpj, getJourJ, serial, edvol, equ8, Sid } from './util.mjs'
 import { remplacePage } from './page.mjs'
 import {
-  deleteIDB, idbSidCompte, commitRows, getCompte, getCompta, getArdoise, getPrefs, getAvatars, getContacts, getCvs,
-  getGroupes, getMembres, getParrains, getRencontres, getSecrets,
+  deleteIDB, idbSidCompte, commitRows, getCompte, getCompta, getArdoise, getPrefs, getCvs,
+  getAvatars, getGroupes, getCouples, getMembres, getSecrets,
   purgeAvatars, purgeCvs, purgeGroupes, openIDB, enregLScompte, setEtat, getEtat, getPjidx, putPj
 } from './db.mjs'
 import { Compte, Avatar, rowItemsToMapObjets, commitMapObjets, data, Prefs, Contact, Invitgr, Compta, Groupe, Membre } from './modele.mjs'
@@ -766,6 +766,30 @@ export class ConnexionCompteAvion extends OperationUI {
   }
 }
 
+class OpBuf {
+  constructor () {
+    this.lmaj = []
+    this.lsuppr = []
+    this.state = { avatar: [], groupe: [], couple: [], membre: [], secret: [] }
+  }
+
+  putIDB (obj) { this.lmaj.push(obj) }
+
+  supprIDB (obj) { this.lsuppr.push(obj) } // obj : {table, id, (sid2)}
+
+  putState (obj) { this.state[obj.table].push(obj) }
+
+  async commiIDB () {
+    await commitRows(this.lmaj, this.lsuppr)
+  }
+
+  commitState () {
+    ['avatar', 'groupe', 'couple', 'membre', 'secret'].forEach(t => {
+      if (this.state[t].length) store().commit('db/setObjets', this.state[t])
+    })
+  }
+}
+
 /* Connexion à un compte par sa phrase secrète (synchronisé et incognito)
 X_SRV, '08-Compte non authentifié : aucun compte n\'est déclaré avec cette phrase secrète'
 A_SRV, '09-Données de préférence absentes'
@@ -773,6 +797,240 @@ A_SRV, '10-Données de comptabilité absentes'
 A_SRV, '11-Données des échanges avec parrain / comptable absentes'
 **/
 export class ConnexionCompte extends OperationUI {
+  constructor () {
+    super('Connexion à un compte', OUI, SELONMODE)
+    this.opsync = true
+  }
+
+  excAffichages () { return [this.excAffichage4, this.excAffichage0, this.excAffichage6] }
+
+  excActions () { return { d: deconnexion, x: deconnexion, r: reconnexion, default: null } }
+
+  async lectureCompte () {
+    // obtention du compte depuis le serveur
+    const args = { sessionId: data.sessionId, pcbh: data.ps.pcbh, dpbh: data.ps.dpbh }
+    const ret = await post(this, 'm1', 'connexionCompte', args)
+    if (data.dh < ret.dh) data.dh = ret.dh
+
+    const rowCompte = schemas.deserialize('rowcompte', ret.compte.serial)
+    if (data.ps.pcbh !== rowCompte.pcbh) throw EXPS // changt de phrase secrète
+    const c = new Compte()
+    await c.fromRow(rowCompte)
+    // Bien que l'utilisateur ait saisie la bonne phrase secrète, elle a pu changer : celle du serveur est installée
+    if (data.db) enregLScompte(c.sid)
+    this.buf.compte = c
+
+    const rowPrefs = schemas.deserialize('rowprefs', ret.prefs.serial)
+    const p = new Prefs()
+    await p.fromRow(rowPrefs)
+    this.buf.prefs = p
+
+    const rowCompta = schemas.deserialize('rowcompta', ret.compta.serial)
+    const compta = new Compta()
+    await compta.fromRow(rowCompta)
+    this.buf.compta = compta
+    if (ret.estComptable) data.estComptable = true
+  }
+
+  /* Recharge depuis le serveur les avatars du compte ************************/
+  async chargerAvatars (idsVers) {
+    const args = { sessionId: data.sessionId, idsVers, vc: this.buf.compte.v, idc: this.buf.compte.id }
+    const ret = await post(this, 'm1', 'chargerAv', args)
+    if (data.dh < ret.dh) data.dh = ret.dh
+    return ret.ok ? await rowItemsToMapObjets(ret.rowItems).avatar : false
+  }
+
+  /* Recharge depuis le serveur les groupes du compte ************************/
+  async chargerGroupes (idsVers) {
+    const args = { sessionId: data.sessionId, idsVers, vc: this.buf.compte.v, idc: this.buf.compte.id }
+    const ret = await post(this, 'm1', 'chargerGr', args)
+    if (data.dh < ret.dh) data.dh = ret.dh
+    return ret.ok ? await rowItemsToMapObjets(ret.rowItems).groupe : false
+  }
+
+  /* Recharge depuis le serveur les groupes du compte ************************/
+  async chargerCouples (idsVers) {
+    const args = { sessionId: data.sessionId, idsVers, vc: this.buf.compte.v, idc: this.buf.compte.id }
+    const ret = await post(this, 'm1', 'chargerCp', args)
+    if (data.dh < ret.dh) data.dh = ret.dh
+    return ret.ok ? await rowItemsToMapObjets(ret.rowItems).couple : false
+  }
+
+  /* Récupération de tous les avatars, les couples et les groupes requis
+  Si la version v du compte n'est pas celle initilae de buf.compte.v
+  this.buf.ok reste à false. Ne passe à true qua quand on a réussi.
+  */
+  async getACG () {
+    // Récupération des avatars cités dans le compte
+    // depuis IDB : il peut y en avoir trop et certains peuvent manquer et d'autres avoir une version dépassée
+    const avatars = data.db ? await getAvatars() : {}
+    const setidbav = new Set(); for (const id of avatars) setidbav.add(id)
+    const avrequis = this.buf.compte.allAvId()
+    const aventrop = difference(setidbav, avrequis) // avatars en IDB NON requis (à supprimer de IDB)
+    aventrop.forEach(id => {
+      this.buf.supprIDB({ table: 'avatar', id: id })
+      delete avatars[id]
+    })
+    const avidsVers = {}
+    const m = this.buf.compte.mac
+    avrequis.forEach(id => {
+      const av = avatars[id]
+      avidsVers[id] = av ? av.v : 0
+      const na = m[Sid(id)].na // sa clé est dans mack du compte
+      data.repertoire.setAv(na.nom, na.rnd, true) // l'avatar est stocké en répertoire
+    })
+    const avnouveaux = await this.chargerAvatars(avidsVers)
+    if (avnouveaux === false) return // le compte a changé de version, reboucler
+    // nouveaux contient tous les avatars ayant une version plus récente que celle (éventuellement) obtenue de IDB
+    avnouveaux.forEach(av => { this.buf.putIDB(av); avatars[av.id] = av })
+    // avatars contient la version au top des objets avatars du compte requis et seulement eux
+    for (const id in avatars) this.buf.putState(avatars[id]) // prêts à être mis en state.db
+
+    // Récupération des groupes de tous les avatars
+    const grrequis = new Set()
+    const cprequis = new Set()
+    for (const id in avatars) {
+      const av = avatars[id]
+      // this.m1gr = new Map() // clé:ni val: { na du groupe, im de l'avatar dans le groupe }
+      av.m1gr.forEach(val => {
+        data.repertoire.setGr(val.na.nom, val.na.rnd) // les cles des groupes sont désormais accessibles
+        grrequis.add(val.na.id)
+      })
+      // this.mcc = new Map() // clé: id du couple, val: clé cc
+      av.mcc.forEach((cc, id) => {
+        data.repertoire.setCp(cc) // les cles des couples sont désormais accessibles
+        cprequis.add(id)
+      })
+    }
+    const groupes = data.db ? await getGroupes() : {}
+    const setidbgr = new Set(); for (const id of groupes) setidbgr.add(id)
+    const couples = data.db ? await getCouples() : {}
+    const setidbcp = new Set(); for (const id of groupes) setidbgr.add(id)
+    const grentrop = difference(setidbgr, grrequis) // groupes en IDB NON requis (à supprimer de IDB)
+    grentrop.forEach(id => {
+      this.buf.supprIDB({ table: 'couple', id: id })
+      delete groupes[id]
+    })
+    const cpentrop = difference(setidbcp, cprequis) // couples en IDB NON requis (à supprimer de IDB)
+    cpentrop.forEach(id => {
+      this.buf.supprIDB({ table: 'couple', id: id })
+      delete couples[id]
+    })
+    const gridsVers = {}
+    grrequis.forEach(id => { const obj = groupes[id]; gridsVers[id] = obj ? obj.v : 0 })
+    const grnouveaux = await this.chargerGroupes(gridsVers)
+    if (grnouveaux === false) return // le compte a changé de version, reboucler
+    // nouveaux contient tous les avatars ayant une version plus récente que celle (éventuellement) obtenue de IDB
+    grnouveaux.forEach(gr => { this.buf.putIDB(gr); groupes[gr.id] = gr })
+    // groupes contient la version au top des objets groupes du compte requis par ses avatars et seulement eux
+    for (const id in groupes) {
+      this.buf.putState(groupes[id]) // prêts à être mis en state.db
+    }
+    const cpidsVers = {}
+    cprequis.forEach(id => { const obj = couples[id]; cpidsVers[id] = obj ? obj.v : 0 })
+    const cpnouveaux = await this.chargerCouples(cpidsVers)
+    if (cpnouveaux === false) return // le compte a changé de version, reboucler
+    // nouveaux contient tous les avatars ayant une version plus récente que celle (éventuellement) obtenue de IDB
+    cpnouveaux.forEach(cp => { this.buf.putIDB(cp); couples[cp.id] = cp })
+    // couples contient la version au top des objets couples du compte requis par ses avatars et seulement eux
+    for (const id in couples) this.buf.putState(couples[id]) // prêts à être mis en state.db
+    this.buf.ok = true
+  }
+
+  async run (ps, razdb) {
+    try {
+      const buf = new OpBuf()
+      data.ps = ps
+
+      if (razdb) {
+        await deleteIDB()
+        await sleep(100)
+        console.log('RAZ db')
+      }
+      await data.connexion()
+      this.BRK()
+
+      while (!buf.ok) {
+        // obtention du compte / prefs / compta depuis le serveur et commit
+        data.repertoire.raz()
+        await this.lectureCompte(buf)
+        await this.getACG(buf)
+      }
+
+      /* YES ! on a tous les objets maîtres : abonnement
+      et signature du compte, ses avatars, ses couples et ses groupes SI PAS EN SURSIS
+      */
+      if (!compta.st) await this.abonnements(avUtiles, grUtiles)
+
+      // TODO : charger les secrets pour chaque avatar
+      // TODO : charger les membres et secrets pour chaque groupe
+      // TODO : charger les secrets pour chaque couple
+
+      /* État chargé correspondant à l'état local :
+      - presque vide le cas échéant - incognito ou première synchro
+      - a minima compte et avatars présents
+      - signature et abonnements enregistrés
+      - compte OK */
+      data.statut = 1
+      data.dhsync = data.dh
+      if (data.db) {
+        const etat = await getEtat()
+        data.vsv = etat.vsv
+        setEtat()
+      }
+
+      // Chargement depuis le serveur des avatars non obtenus de IDB (sync), tous (incognito)
+      for (const idav of avUtiles) {
+        const n = await this.chargerAv(idav, !data.db) // tous en incognito
+        const av = data.getAvatar(idav)
+        this.majsynclec({ st: 1, sid: av.sid, nom: 'Avatar ' + av.na.nom, nbl: n })
+      }
+
+      // Chargement depuis le serveur des groupes non obtenus de IDB (sync), tous (incognito)
+      for (const idgr of grUtiles) {
+        const n = await this.chargerGr(idgr, !data.db) // tous en incognito)
+        const gr = data.getGroupe(idgr)
+        this.majsynclec({ st: 1, sid: gr.sid, nom: 'Groupe ' + gr.na.nom, nbl: n })
+      }
+
+      // Synchroniser les CVs (et s'abonner)
+      const [nvvcv, nbcv] = await this.syncCVs(data.vcv)
+      this.majsynclec({ st: 1, sid: '$CV', nom: 'Cartes de visite', nbl: nbcv })
+      if (data.vcv < nvvcv) data.vcv = nvvcv
+
+      // Recharger les pièces jointes manquantes
+      const [nbp, vol] = await this.syncPjs()
+      this.majsynclec({ st: 1, sid: '$PJ', nom: 'Pièces jointes "avion" : ' + edvol(vol), nbl: nbp })
+
+      // Traiter les notifications éventuellement arrivées
+      while (data.syncqueue.length) {
+        const q = data.syncqueue
+        data.syncqueue = []
+        await this.traiteQueue(q)
+      }
+
+      // Enregistrer l'état de synchro
+      data.statut = 2
+      if (data.dhsync < data.dh) data.dhsync = data.dh
+      if (data.db) {
+        await setEtat()
+      }
+
+      this.finOK()
+      remplacePage('Compte')
+    } catch (e) {
+      await this.finKO(e)
+    }
+  }
+}
+
+/* Connexion à un compte par sa phrase secrète (synchronisé et incognito)
+X_SRV, '08-Compte non authentifié : aucun compte n\'est déclaré avec cette phrase secrète'
+A_SRV, '09-Données de préférence absentes'
+A_SRV, '10-Données de comptabilité absentes'
+A_SRV, '11-Données des échanges avec parrain / comptable absentes'
+**/
+export class ConnexionCompte2 extends OperationUI {
   constructor () {
     super('Connexion à un compte', OUI, SELONMODE)
     this.opsync = true

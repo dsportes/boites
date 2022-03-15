@@ -1,6 +1,5 @@
 import { crypt } from '../../app/crypto.mjs'
-
-function Sid (id) { return typeof id === 'string' ? id : crypt.idToSid(id) }
+import { Sid } from '../../app/util.mjs'
 
 export const avatar = (state) => (id) => {
   return id ? state.avatars[Sid(id)] : state.avatars
