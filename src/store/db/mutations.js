@@ -1,20 +1,18 @@
 import { crypt } from '../../app/crypto.mjs'
-import { Sid } from '../../app/util.mjs'
+import { t1n, t2n } from '../../app/api.mjs'
 
 /*
 avatars: {}, // Tous les avatars listés sur le compte
 groupes: {}, // Tous les groupes listés sur les avatars
 couples: {}, // Tous les couples listés sur les avatars
-contact: {}, // Tous les contact (phch)
 
-Groupés par sid de groupe : membres@sid
-Groupés par sid d'avatar ou de groupe ou de couple : secrets@sid
+Groupés par id de groupe : membres@id
+Groupés par id d'avatar ou de groupe ou de couple : secrets@id
 
-repertoire: {} // Toutes les CVs (enrichies des propriétés lctc et lmbr)
-Les objets CV sont conservés dans la map data.repertoire
+repertoire: {} // Les objets CV sont conservés dans la map data.repertoire
 Le store/db conserve l'image de data.repertoire à chaque changement
 
-Voisins : un ensemble de voisins est matérialisé par une entrée voisins_sid/sns
+Voisins : un ensemble de voisins est matérialisé par une entrée voisins@sid/sns
 ou sid/sns est la pk du secret de référence de l'ensemnle des voisins
 Chaque entrée est une map :
 - clé : pk du secret, soit du secret voisin, soit du secret de référence (comme s'il était son propre voisin)
@@ -34,12 +32,6 @@ const l1 = { compte: true, compta: true, prefs: true, avatar: true, groupe: true
 // objets multiples à un seul niveau représenté par une map
 const l2 = { avatars: true, groupes: true, couples: true, repertoire: true, pjidx: true }
 
-// objets de table multiples gérés comme sous groupe d'un avatar / couple / groupe
-const l3 = { membre: true, secret: true }
-
-// objets de table multiples gérés à un seul niveau (sous ensemble de l2)
-const l4 = { avatar: true, groupe: true, couple: true }
-
 export function raz (state) {
   for (const e in state) {
     if (l1[e]) {
@@ -53,14 +45,10 @@ export function raz (state) {
 }
 
 /* Déclaration de l'avatar courant */
-export function majavatar (state, val) {
-  state.avatar = val
-}
+export function majavatar (state, val) { state.avatar = val }
 
 /* Déclaration du couple courant */
-export function majcouple (state, val) {
-  state.couple = val
-}
+export function majcouple (state, val) { state.couple = val }
 
 /* Déclaration du groupe courant */
 export function majgroupe (state, val) {
@@ -76,9 +64,7 @@ export function majgroupeplus (state, val) {
 }
 
 /* Déclaration du secret courant */
-export function majsecret (state, val) {
-  state.secret = val
-}
+export function majsecret (state, val) { state.secret = val }
 
 /* Purges des avatars inutiles et tables associées */
 export function purgeAvatars (state, val) { // val : Set des ids des avatars INUTILES
@@ -88,9 +74,8 @@ export function purgeAvatars (state, val) { // val : Set des ids des avatars INU
   const xs = state.secrets
   let ns = 0
   for (const id of val) {
-    const sid = crypt.idToSid(id)
-    if (xa[sid]) { na++; delete xa[sid] }
-    if (xs[sid]) { ns++; delete xs[sid] }
+    if (xa[id]) { na++; delete xa[id] }
+    if (xs[id]) { ns++; delete xs[id] }
   }
   if (na) state.avatars = { ...xa }
   if (ns) state.secrets = { ...xs }
@@ -107,10 +92,9 @@ export function purgeGroupes (state, val) { // val : Set des ids des groupes INU
   const xs = state.secrets
   let ns = 0
   for (const id of val) {
-    const sid = crypt.idToSid(id)
-    if (xg[sid]) { ng++; delete xg[sid] }
-    if (xm[sid]) { nm++; delete xm[sid] }
-    if (xs[sid]) { ns++; delete xs[sid] }
+    if (xg[id]) { ng++; delete xg[id] }
+    if (xm[id]) { nm++; delete xm[id] }
+    if (xs[id]) { ns++; delete xs[id] }
   }
   if (ng) state.groupes = { ...xg }
   if (nm) state.membres = { ...xm }
@@ -126,9 +110,8 @@ export function purgeCouples (state, val) { // val : Set des ids des couples INU
   const xs = state.secrets
   let ns = 0
   for (const id of val) {
-    const sid = crypt.idToSid(id)
-    if (xg[sid]) { ng++; delete xg[sid] }
-    if (xs[sid]) { ns++; delete xs[sid] }
+    if (xg[id]) { ng++; delete xg[id] }
+    if (xs[id]) { ns++; delete xs[id] }
   }
   if (ng) state.groupes = { ...xg }
   if (ns) state.secrets = { ...xs }
@@ -136,50 +119,42 @@ export function purgeCouples (state, val) { // val : Set des ids des couples INU
 }
 
 /* Mises à jour brutes des objets dans le store */
-function setEntree (state, [table, sid]) {
-  if (!state[table + 's@' + sid]) {
-    state[table + 's@' + sid] = {}
-  }
-  return state[table + 's@' + sid]
+function setEntree (state, table, id) {
+  let e = state[table + 's@' + id]
+  if (!e) { e = {}; state[table + 's@' + id] = e }
+  return e
 }
 
-/* Stockage (et suppression) d'une liste d'objets de la MEME table, SAUF cvs fait par commitRepertoire */
-export function setObjets (state, [table, lobj]) { // lobj : array d'objets
+/* Stockage (et suppression) d'une liste d'objets "multiples", SAUF cvs fait par commitRepertoire */
+export function setObjets (state, lobj) { // lobj : array d'objets
   if (!lobj || !lobj.length) return
-  if (l3[table]) { // gérés par sous-groupe : membre secret
-    const cs = state.secret
-    lobj.forEach(obj => {
-      const st = setEntree(state, [table, obj.id])
-      if (obj.suppr) delete st[obj.id2]; else st[obj.id2] = obj
-      st[obj.id2] = obj
-      // si le secret qu'on voit passer est le secret courant, il faut mettre à jour aussi le courant
-      if (cs && table === 'secret' && cs.id === obj.id && cs.ns === obj.ns) majsecret(state, obj)
-      if (table === 'secret') majvoisin(state, obj)
-    })
-    for (const sid in m) {
-      const st = setEntree(state, [table, sid])
-      m[sid].forEach(obj => {
-        if (obj.suppr) delete st[obj.sid2]; else st[obj.sid2] = obj
-      })
-      state[table + 's@' + sid] = { ...st }
-    }
-  } else if (l4[table]) {
-    // gérés une seule entrée : avatar groupe couple
-    const st = state[table + 's']
-    const c = state[table]
-    lobj.forEach(obj => {
+  const cs = state.secret
+  lobj.forEach(obj => {
+    if (t2n.has(obj.table)) {
+      const st = setEntree(state, obj.table, obj.id)
+      const oc = cs && obj.table === 'secret' && cs.id === obj.id && cs.ns === obj.ns // c'est le secret courant
       if (obj.suppr) {
-        delete st[Sid(obj.id)]
-        // MAJ aussi des objets courants
-        if (c && c.id === obj.id) state[table] = null
+        delete st[obj.id2]
+        if (oc) state.secret = null
       } else {
-        st[Sid(obj.id)] = obj
-        // MAJ aussi des objets courants
-        if (c && c.id === obj.id) state[table] = obj
+        st[obj.id2] = obj
+        if (oc) state.secret = obj
+        if (obj.table === 'secret') majvoisin(state, obj)
       }
-    })
-    state[table + 's'] = { ...st }
-  }
+      state[obj.table + 's@' + obj.id] = { ...st }
+    } else if (t1n.has.has(obj.table)) {
+      const st = state[obj.table + 's']
+      const oc = state[obj.table].id === obj.id
+      if (obj.suppr) {
+        delete st[obj.id]
+        if (oc) state[obj.table] = null
+      } else {
+        st[obj.id] = obj
+        if (oc) state[obj.table] = obj
+      }
+      state[obj.table + 's'] = { ...st }
+    }
+  })
 }
 
 export function setCompte (state, obj) { state.compte = obj }
@@ -192,16 +167,14 @@ export function commitRepertoire (state, repertoire) { state.repertoire = { ...r
 /* Force à créer une entrée de voisinage pour un secret de référence
 AVANT insertion (éventuelle) d'un voisin en création et qui POURRAIT être validée */
 export function setRefVoisin (state, secret) {
-  // setEntree (state, [table, sid])
   const pk = secret.pk
-  const st = setEntree(state, ['voisin', pk])
+  const st = setEntree(state, 'voisin', pk)
   st[pk] = secret
   state['voisins@' + pk] = { ...st }
 }
 
 /* Supprime une entrée voisin à condition qu'elle soit vide ou ne contienne que lui */
 export function unsetRefVoisin (state, pkref) {
-  // setEntree (state, [table, sid])
   const st = state['voisins@' + pkref]
   if (st) {
     const l = Object.keys(st).length
@@ -228,15 +201,13 @@ function majvoisin (state, secret) {
   } else {
     const pkref = secret.pkref
     // enregistrement du secret voisin
-    const st = setEntree(state, ['voisin', pkref])
+    const st = setEntree(state, 'voisin', pkref)
     st[pk] = secret
     // recherche du secret de référence
-    const st2 = state['secrets@' + crypt.idToSid(secret.ref[0])]
+    const st2 = state['secrets@' + secret.ref[0]]
     if (st2) {
-      const secref = st2[crypt.idToSid(secret.ref[1])]
-      if (secref) {
-        st[secref.pk] = secref
-      }
+      const secref = st2[secret.ref[1]]
+      if (secref) st[secref.pk] = secref
     } // sinon le secret de référence est inconnu dans la session
     state['voisins@' + pkref] = { ...st }
   }
@@ -248,11 +219,7 @@ export function majfaidx (state, lst) { // lst : array de { id, ns, cle, hv }
   let b = false
   lst.forEach(x => {
     const k = crypt.idToSid(x.id) + '@' + crypt.idToSid(x.ns) + '@' + x.cle
-    if (x.hv) {
-      st[k] = x
-    } else {
-      delete st[k]
-    }
+    if (x.hv) st[k] = x; else delete st[k]
     b = true
   })
   if (b) state.faidx = { ...st }

@@ -502,11 +502,10 @@ class Session {
     this.ps = null
   }
 
-  /* statut de la session
+  /* statut de la session : permet de bloquer la synchro jusqu'à ce que la connexion ait été complète
     0: fantôme : la session n'a pas encore été ouverte par une opération de login / création compte
-    ou cette opération s'est interrompue. En attente de décision déconnexion / reconnexion OU opération en cours
-    1: session en partie chargée, utilisable en mode visio
-    2: session totalement chargée / synchronisée et cohérente
+      ou cette opération s'est interrompue. En attente de décision déconnexion / reconnexion OU opération en cours
+    1: session totalement chargée / synchronisée et cohérente
   */
   get statut () { return store().state.ui.statutsession }
 

@@ -58,6 +58,9 @@ export const INDEXT = {
   COUPLE: 1
 }
 
+export const t1n = new Set(['avatar', 'couple', 'groupe'])
+export const t2n = new Set(['membre', 'secret'])
+
 /*
 - `versions` (id) : table des prochains numéros de versions (actuel et dernière sauvegarde) et autres singletons clé / valeur
 - `avrsa` (id) : clé publique d'un avatar

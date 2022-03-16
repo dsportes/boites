@@ -14,12 +14,11 @@ const STORES = {
   avatar: 'id',
   couple: 'id',
   groupe: 'id',
-  contact: 'id', // phch
   membre: '[id+id2]', // im
   secret: '[id+id2]', // ns
   cv: 'id',
-  pjidx: 'id',
-  pjdata: 'id'
+  faidx: 'id',
+  fadata: 'id'
 }
 
 const TABLES = []
@@ -326,7 +325,7 @@ export async function commitRows (lmaj, lsuppr) {
         const obj = lmaj[i]
         const x = { table: obj.table, row: {} }
         x.row.id = estSingleton(obj.table) ? '1' : crypt.u8ToB64(await crypt.crypter(data.clek, Sid(obj.id), 1), true)
-        if (obj.sid2) x.row.id2 = crypt.u8ToB64(await crypt.crypter(data.clek, obj.sid2, 1), true)
+        if (obj.id2) x.row.id2 = crypt.u8ToB64(await crypt.crypter(data.clek, Sid(obj.id2), 1), true)
         if (obj.table === 'compte') {
           x.row.data = await crypt.crypter(data.ps.pcb, obj.toIdb)
         } else if (obj.table === 'cv') {
@@ -343,7 +342,7 @@ export async function commitRows (lmaj, lsuppr) {
       const obj = lsuppr[i]
       const x = { ...obj }
       x.id = estSingleton(obj.table) ? '1' : crypt.u8ToB64(await crypt.crypter(data.clek, Sid(obj.id), 1), true)
-      if (obj.sid2) x.id2 = crypt.u8ToB64(await crypt.crypter(data.clek, obj.sid2, 1), true)
+      if (obj.id2) x.id2 = crypt.u8ToB64(await crypt.crypter(data.clek, Sid(obj.id2), 1), true)
       lidbs.push(x)
       if (obj.table === 'compte') {
         lidbs.push({ table: 'prefs', id: '1' })
@@ -372,11 +371,11 @@ export async function commitRows (lmaj, lsuppr) {
 
 /*
   Gestion des pièces jointes
-  Table pjdata : id, data
+  Table fadata : id, data
   - id : identifiant b64 crypté par la clé K de la pièce jointe. sid@sid2@cle
   - data : contenu (éventuellement gzippé) crypté par la clé K de la pièce jointe. Comme en stockage serveur.
-  Table pjidx : id, hv
-  - id : le même que pjdata
+  Table faidx : id, hv
+  - id : le même que fadata
   - data : { id, ns, cle, hv } sérialisé, crypté par la clé k
 */
 
