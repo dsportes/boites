@@ -146,13 +146,12 @@ function setEntree (state, [table, sid]) {
 /* Stockage (et suppression) d'une liste d'objets de la MEME table, SAUF cvs fait par commitRepertoire */
 export function setObjets (state, [table, lobj]) { // lobj : array d'objets
   if (!lobj || !lobj.length) return
-  if (l3[table]) {
-    // gérés par sous-groupe : membre secret
-    const m = {}
+  if (l3[table]) { // gérés par sous-groupe : membre secret
     const cs = state.secret
     lobj.forEach(obj => {
-      const sid = Sid(obj.id)
-      if (!m[sid]) m[sid] = [obj]; else m[sid].push(obj)
+      const st = setEntree(state, [table, obj.id])
+      if (obj.suppr) delete st[obj.id2]; else st[obj.id2] = obj
+      st[obj.id2] = obj
       // si le secret qu'on voit passer est le secret courant, il faut mettre à jour aussi le courant
       if (cs && table === 'secret' && cs.id === obj.id && cs.ns === obj.ns) majsecret(state, obj)
       if (table === 'secret') majvoisin(state, obj)
@@ -183,9 +182,9 @@ export function setObjets (state, [table, lobj]) { // lobj : array d'objets
   }
 }
 
-export function setCompte (state, obj) { if (!state.compte || state.compte.v < obj.v) state.compte = obj }
-export function setCompta (state, obj) { if (!state.compta || state.compta.v < obj.v) state.compta = obj }
-export function setPrefs (state, obj) { if (!state.prefs || state.prefs.v < obj.v) state.prefs = obj }
+export function setCompte (state, obj) { state.compte = obj }
+export function setCompta (state, obj) { state.compta = obj }
+export function setPrefs (state, obj) { state.prefs = obj }
 
 /* Enregistrement de toutes les cv d'un coup */
 export function commitRepertoire (state, repertoire) { state.repertoire = { ...repertoire } }

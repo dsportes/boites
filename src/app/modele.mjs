@@ -7,7 +7,7 @@ import {
   getJourJ, cfg, ungzipT, normpath, getfa, titreEd, post, Sid
 } from './util.mjs'
 import { remplacePage } from './page.mjs'
-import { SIZEAV, SIZEGR, SIZECP, EXPS, UNITEV1, UNITEV2, Compteurs } from './api.mjs'
+import { EXPS, UNITEV1, UNITEV2, Compteurs } from './api.mjs'
 
 export async function traitInvitGr (row) {
   const cpriv = data.avc(row.id).cpriv
@@ -492,137 +492,6 @@ class Repertoire {
     }
     return s
   }
-
-  /******************************************************/
-  /*
-  setCv (cv) {
-    if (cv.suppr || (cv.fake && !cv.lctc.length && !cv.lmbr.length)) {
-      // cv inutile : on l'efface du répertoire
-      delete this.rep[cv.sid]
-    } else {
-      // On clone Cv pour que le store détecte un changement d'objet
-      this.rep[cv.sid] = cv.clone()
-    }
-    this.modif = true
-  }
-  */
-
-  getCv (id) {
-    const sid = typeof id === 'string' ? id : crypt.idToSid(id)
-    const idn = typeof id === 'string' ? crypt.sidToId(id) : id
-    let cv = this.rep[sid]
-    if (!cv) {
-      cv = new Cv(true)
-      cv.id = idn
-      this.rep[sid] = cv
-      this.modif = true
-    }
-    return cv
-  }
-
-  purge (cvi) {
-    if (!cvi) cvi = this.setCvsInutiles
-    if (cvi.size) {
-      cvi.forEach((sid) => { delete this.rep[sid] })
-      this.modif = true
-    }
-  }
-
-  get setCvsUtiles () {
-    const s = new Set()
-    for (const sid in this.rep) {
-      const cv = this.rep[sid]
-      if (cv.lctc.length || cv.lmbr.length) s.add(crypt.sidToId(sid))
-    }
-    return s
-  }
-
-  get setCvsManquantes () {
-    const s = new Set()
-    for (const sid in this.rep) {
-      const cv = this.rep[sid]
-      if (cv.fake && (cv.lctc.length || cv.lmbr.length)) s.add(crypt.sidToId(sid))
-    }
-    return s
-  }
-
-  get setCvsInutiles () {
-    const s = new Set()
-    for (const sid in this.rep) {
-      const cv = this.rep[sid]
-      if (!cv.lctc.length && !cv.lmbr.length) s.add(sid)
-    }
-    return s
-  }
-}
-
-/* Versions AvGr **************************************************************/
-class VAG {
-  constructor () {
-    this.verAv = new Map()
-    this.verGr = new Map()
-    this.verCp = new Map()
-  }
-
-  setVerAv (id, idt, v) { // idt : Index de la table
-    const sid = typeof id === 'string' ? id : crypt.idToSid(id)
-    let t
-    if (!this.verAv.has(sid)) {
-      t = new Array(SIZEAV).fill(0)
-      this.verAv.set(sid, t)
-    } else t = this.verAv.get(sid)
-    if (v > t[idt]) t[idt] = v
-  }
-
-  delVerAv (id) {
-    const sid = typeof id === 'string' ? id : crypt.idToSid(id)
-    if (this.verAv.has(sid)) this.verAv.set(sid, new Array(SIZEAV).fill(0))
-  }
-
-  getVerAv (id) {
-    const sid = typeof id === 'string' ? id : crypt.idToSid(id)
-    return this.verAv.has(sid) ? this.verAv.get(sid) : new Array(SIZEAV).fill(0)
-  }
-
-  setVerGr (id, idt, v) { // idt : Index de la table
-    const sid = typeof id === 'string' ? id : crypt.idToSid(id)
-    let t
-    if (!this.verGr.has(sid)) {
-      t = new Array(SIZEGR).fill(0)
-      this.verGr.set(sid, t)
-    } else t = this.verGr.get(sid)
-    if (v > t[idt]) t[idt] = v
-  }
-
-  getVerGr (id) {
-    const sid = typeof id === 'string' ? id : crypt.idToSid(id)
-    return this.verGr.has(sid) ? this.verGr.get(sid) : new Array(SIZEGR).fill(0)
-  }
-
-  delVerGr (id) {
-    const sid = typeof id === 'string' ? id : crypt.idToSid(id)
-    if (this.verGr.has(sid)) this.verGr(sid, new Array(SIZEGR).fill(0))
-  }
-
-  setVerCp (id, idt, v) { // idt : Index de la table
-    const sid = typeof id === 'string' ? id : crypt.idToSid(id)
-    let t
-    if (!this.verCp.has(sid)) {
-      t = new Array(SIZECP).fill(0)
-      this.verCp.set(sid, t)
-    } else t = this.verCp.get(sid)
-    if (v > t[idt]) t[idt] = v
-  }
-
-  getVerCp (id) {
-    const sid = typeof id === 'string' ? id : crypt.idToSid(id)
-    return this.verCp.has(sid) ? this.verCp.get(sid) : new Array(SIZECP).fill(0)
-  }
-
-  delVerCp (id) {
-    const sid = typeof id === 'string' ? id : crypt.idToSid(id)
-    if (this.verCp.has(sid)) this.verCp(sid, new Array(SIZECP).fill(0))
-  }
 }
 
 /* état de session ************************************************************/
@@ -644,6 +513,8 @@ class Session {
   set statut (val) { store().commit('ui/majstatutsession', val) }
 
   get mode () { return store().state.ui.mode }
+
+  get net () { return store().state.ui.mode <= 2 }
 
   set mode (val) { store().commit('ui/majmode', val) }
 
@@ -786,8 +657,6 @@ class Session {
     this.opUI = null // opération UI en cours
 
     this.syncqueue = [] // notifications reçues sur WS et en attente de traitement
-
-    this.vag = new VAG()
   }
 
   setFaPerdues (x) { this.pjPerdues.push(x) }

@@ -768,24 +768,52 @@ export class ConnexionCompteAvion extends OperationUI {
 
 class OpBuf {
   constructor () {
+    this.compte = null
+    this.prefs = null
+    this.compta = null
     this.lmaj = []
     this.lsuppr = []
-    this.state = { avatar: [], groupe: [], couple: [], membre: [], secret: [] }
+    // db state
+    this.avatar = {}
+    this.groupe = {}
+    this.couple = {}
+    this.membre = {}
+    this.secret = {}
   }
 
   putIDB (obj) { this.lmaj.push(obj) }
 
   supprIDB (obj) { this.lsuppr.push(obj) } // obj : {table, id, (sid2)}
 
-  putState (obj) { this.state[obj.table].push(obj) }
+  putState (obj) {
+    const s = this[obj.table]
+    if (obj.table === 'avatar' || obj.table === 'couple' || obj.table === 'groupe') {
+      s[obj.id] = obj
+    } else {
+      let e = s[obj.id]; if (!e) { e = {}; s[obj.id] = e }
+      e[obj.id2] = obj
+    }
+  }
 
   async commiIDB () {
     await commitRows(this.lmaj, this.lsuppr)
   }
 
   commitState () {
-    ['avatar', 'groupe', 'couple', 'membre', 'secret'].forEach(t => {
-      if (this.state[t].length) store().commit('db/setObjets', this.state[t])
+    ['avatar', 'groupe', 'couple'].forEach(t => {
+      const s = this[t]
+      for (const id in s) store().commit('db/setObjets', s[id])
+    })
+    if (this.compte) { store().commit('db/setCompte', this.compte) }
+    if (this.prefs) { store().commit('db/setPrefs', this.prefs) }
+    if (this.compta) { store().commit('db/setCompte', this.compta) }
+    ['membre', 'secret'].forEach(t => {
+      const s = this[t]
+      for (const id in s) {
+        s[id].forEach(obj => {
+          store().commit('db/setObjets', this.state[t])
+        })
+      }
     })
   }
 }
@@ -806,30 +834,40 @@ export class ConnexionCompte extends OperationUI {
 
   excActions () { return { d: deconnexion, x: deconnexion, r: reconnexion, default: null } }
 
-  async lectureCompte () {
-    // obtention du compte depuis le serveur
-    const args = { sessionId: data.sessionId, pcbh: data.ps.pcbh, dpbh: data.ps.dpbh }
+  /* Obtention de compte / prefs / compta depuis le serveur (si plus récents que ceux connus localement)
+  RAZ des abonnements et abonnement au compte
+  */
+  async chargerCPC (vcompte, vprefs, vcompta) {
+    const args = { sessionId: data.sessionId, pcbh: data.ps.pcbh, dpbh: data.ps.dpbh, vcompte, vprefs, vcompta }
     const ret = await post(this, 'm1', 'connexionCompte', args)
     if (data.dh < ret.dh) data.dh = ret.dh
+    const compte = ret.rowCompte ? new Compte() : null
+    const prefs = ret.rowPrefs ? new Prefs() : null
+    const compta = ret.rowCompta ? new Compta() : null
+    if (compte) await compte.fromRow(schemas.deserialize('rowcompte', ret.rowCompte.serial))
+    if (prefs) await prefs.fromRow(schemas.deserialize('rowprefs', ret.rowPrefs.serial))
+    if (compta) await compta.fromRow(schemas.deserialize('rowcompta', ret.rowCompta.serial))
+    return [compte, prefs, compta, ret.estComptable]
+  }
 
-    const rowCompte = schemas.deserialize('rowcompte', ret.compte.serial)
-    if (data.ps.pcbh !== rowCompte.pcbh) throw EXPS // changt de phrase secrète
-    const c = new Compte()
-    await c.fromRow(rowCompte)
+  async phase0 () { // compte / prefs / compta : abonnement à compte
+    const compteIdb = !data.db ? null : await getCompte()
+    if (!data.net && (!compteIdb || compteIdb.pcbh !== data.ps.pcbh)) {
+      throw new AppExc(F_BRO, 'Compte non enregistré localement : aucune session synchronisée ne s\'est préalablement exécutée sur ce poste avec cette phrase secrète. Erreur dans la saisie de la ligne 2 de la phrase ?')
+    }
+    const prefsIdb = !data.db ? null : await getPrefs()
+    const comptaIdb = !data.db ? null : await getCompta()
+    const [compteSrv, prefsSrv, comptaSrv, estComptable] = !data.net ? [null, null, null, false]
+      : await this.chargerCPC(compteIdb ? compteIdb.v : 0, prefsIdb ? prefsIdb.v : 0, comptaIdb ? comptaIdb.v : 0)
+    this.buf.compte = compteSrv || compteIdb
+    this.buf.prefs = prefsSrv || prefsIdb
+    this.buf.compta = comptaSrv || comptaIdb
+    this.estComptable = estComptable
+
+    // Changement de phrase secrète
+    if (data.ps.pcbh !== this.buf.compte.pcbh) throw EXPS
     // Bien que l'utilisateur ait saisie la bonne phrase secrète, elle a pu changer : celle du serveur est installée
-    if (data.db) enregLScompte(c.sid)
-    this.buf.compte = c
-
-    const rowPrefs = schemas.deserialize('rowprefs', ret.prefs.serial)
-    const p = new Prefs()
-    await p.fromRow(rowPrefs)
-    this.buf.prefs = p
-
-    const rowCompta = schemas.deserialize('rowcompta', ret.compta.serial)
-    const compta = new Compta()
-    await compta.fromRow(rowCompta)
-    this.buf.compta = compta
-    if (ret.estComptable) data.estComptable = true
+    if (data.db) enregLScompte(this.buf.compte.sid)
   }
 
   /* Recharge depuis le serveur les avatars du compte ************************/
@@ -860,7 +898,7 @@ export class ConnexionCompte extends OperationUI {
   Si la version v du compte n'est pas celle initilae de buf.compte.v
   this.buf.ok reste à false. Ne passe à true qua quand on a réussi.
   */
-  async getACG () {
+  async phase1 () {
     // Récupération des avatars cités dans le compte
     // depuis IDB : il peut y en avoir trop et certains peuvent manquer et d'autres avoir une version dépassée
     const avatars = data.db ? await getAvatars() : {}
@@ -885,8 +923,11 @@ export class ConnexionCompte extends OperationUI {
     avnouveaux.forEach(av => { this.buf.putIDB(av); avatars[av.id] = av })
     // avatars contient la version au top des objets avatars du compte requis et seulement eux
     for (const id in avatars) this.buf.putState(avatars[id]) // prêts à être mis en state.db
+  }
 
-    // Récupération des groupes de tous les avatars
+  async phase2 () {
+
+    // Récupération des groupes et couples de tous les avatars
     const grrequis = new Set()
     const cprequis = new Set()
     for (const id in avatars) {
@@ -942,10 +983,13 @@ export class ConnexionCompte extends OperationUI {
       const buf = new OpBuf()
       data.ps = ps
 
-      if (razdb) {
+      if (data.net && razdb) {
         await deleteIDB()
         await sleep(100)
         console.log('RAZ db')
+      }
+      if (!data.net && !idbSidCompte()) {
+        throw new AppExc(F_BRO, 'Compte non enregistré localement : aucune session synchronisée ne s\'est préalablement exécutée sur ce poste avec cette phrase secrète. Erreur dans la saisie de la ligne 1 de la phrase ?')
       }
       await data.connexion()
       this.BRK()
