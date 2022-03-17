@@ -186,14 +186,16 @@ export async function getCouples () {
 export async function getMembres () {
   go()
   try {
-    let vol = 0
-    const r = []
+    const r = {}
+    const v = {}
     await data.db.membre.each(async (idb) => {
-      vol += idb.data.length
       const x = new Membre().fromIdb(await crypt.decrypter(data.clek, idb.data))
-      r.push(x)
+      let e = r[x.id]; if (!e) { e = {}; r[x.id] = e }
+      e[x.ns] = x
+      const v1 = v[x.id]
+      if (!v1 || v1 < x.v) v[x.id] = x.v
     })
-    return { objs: r, vol: vol }
+    return [r, v]
   } catch (e) {
     throw data.setErDB(EX2(e))
   }
@@ -202,31 +204,37 @@ export async function getMembres () {
 export async function getSecrets () {
   go()
   try {
-    let vol = 0
-    const r = []
+    const r = {}
+    const v = {}
     await data.db.secret.each(async (idb) => {
-      vol += idb.data.length
       const x = new Secret().fromIdb(await crypt.decrypter(data.clek, idb.data))
-      r.push(x)
+      let e = r[x.id]; if (!e) { e = {}; r[x.id] = e }
+      e[x.ns] = x
+      const v1 = v[x.id]
+      if (!v1 || v1 < x.v) v[x.id] = x.v
     })
-    return { objs: r, vol: vol }
+    return [r, v]
   } catch (e) {
     throw data.setErDB(EX2(e))
   }
 }
 
-export async function getCv () {
+export async function getCvs (utiles, buf) {
   go()
   try {
-    let vol = 0
-    const r = []
-    await data.db.repertoire.each(async (idb) => {
-      vol += idb.data.length
-      const x = {}
-      schemas.deserialize('idbCv', await crypt.decrypter(data.clek, idb.data), x)
-      r.push(x)
+    const r = {}
+    let maxv = 0
+    await data.db.cv.each(async (idb) => {
+      const cv = {}
+      schemas.deserialize('idbCv', await crypt.decrypter(data.clek, idb.data), cv)
+      if (utiles.has(cv.id)) {
+        r[cv.id] = cv
+        if (cv.v > maxv) maxv = cv.v
+      } else {
+        buf.supprIDB({ table: 'cv', id: cv.id })
+      }
     })
-    return { objs: r, vol: vol }
+    return [r, maxv]
   } catch (e) {
     throw data.setErDB(EX2(e))
   }

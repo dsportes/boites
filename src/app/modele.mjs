@@ -445,10 +445,11 @@ class Repertoire {
   /* Ajout / détection d'un nouveau membre d'un groupe (on n'en supprime jamais tant que le groupe existe)
   Gestion des x-ref mutuelles lmb (dans l'entrée groupe) et lgr (dans l'entrée avatar)
   */
-  setMembre (ida, idg) {
-    const xa = this.get(ida)
+  setMembre (nom, rnd, idg) {
     const xg = this.get(idg)
-    if (!xa || !xg) return
+    if (!xg) return
+    const xa = this.setAv(nom, rnd)
+    const ida = xa.id
     let i = xa.lgr.indexOf(idg)
     if (i === -1) {
       this.modif = true
@@ -464,8 +465,8 @@ class Repertoire {
   }
 
   // MAJ de la carte de visite
-  setCv (id, cv) {
-    const sid = Sid(id)
+  setCv (cv) {
+    const sid = Sid(cv.id)
     const y = this.rep[sid]
     if (!y) return
     const x = { ...y }
@@ -504,12 +505,13 @@ class Session {
 
   /* statut de la session : permet de bloquer la synchro jusqu'à ce que la connexion ait été complète
     0: fantôme : la session n'a pas encore été ouverte par une opération de login / création compte
-      ou cette opération s'est interrompue. En attente de décision déconnexion / reconnexion OU opération en cours
+      ou cette opération s'est interrompue.
+    1: opération de connexion / login en cours : ce temps est généralement court et se termine en 0 (échec) ou 2 (succès)
     1: session totalement chargée / synchronisée et cohérente
   */
-  get statut () { return store().state.ui.statutsession }
+  get statutsession () { return store().state.ui.statutsession }
 
-  set statut (val) { store().commit('ui/majstatutsession', val) }
+  set statutsession (val) { store().commit('ui/majstatutsession', val) }
 
   get mode () { return store().state.ui.mode }
 
@@ -1605,8 +1607,6 @@ export class Membre {
 
   get stp () { return this.st < 0 ? -1 : this.st % 10 }
 
-  get namb () { return data.getNa(this.id, this.im) }
-
   get cleg () { return data.getNa(this.id).cle }
 
   get cv () { return data.repertoire.getCv(this.namb.id) } // cv du membre
@@ -1644,7 +1644,7 @@ export class Membre {
       ni: crypt.rnd6(),
       idi: idi || na.id
     }
-    data.setNa(this.data.nom, this.data.rnd, this.id, this.im)
+    this.namb = new NomAvatar(this.data.nom, this.data.rnd)
     this.vsh = 0
     return this
   }
@@ -1655,16 +1655,14 @@ export class Membre {
     this.im = row.im
     this.v = row.v
     this.st = row.st
-    if (!this.suppr) {
-      this.vote = row.vote
-      this.data = deserial(await crypt.decrypter(this.cleg, row.datag))
-      data.setNa(this.data.nom, this.data.rnd, this.id, this.im)
-      const [d, t] = row.ardg ? deserial(await crypt.decrypter(this.cleg, row.ardg)) : [0, '']
-      this.ard = t
-      this.dh = d
-      this.info = row.infok && this.estAvc ? await crypt.decrypterStr(data.clek, row.infok) : ''
-      this.mc = row.mc
-    }
+    this.vote = row.vote
+    this.data = deserial(await crypt.decrypter(this.cleg, row.datag))
+    this.namb = new NomAvatar(this.data.nom, this.data.rnd)
+    const [d, t] = row.ardg ? deserial(await crypt.decrypter(this.cleg, row.ardg)) : [0, '']
+    this.ard = t
+    this.dh = d
+    this.info = row.infok && this.estAvc ? await crypt.decrypterStr(data.clek, row.infok) : ''
+    this.mc = row.mc
     return this
   }
 
@@ -1686,7 +1684,7 @@ export class Membre {
 
   fromIdb (idb) {
     schemas.deserialize('idbMembre', idb, this)
-    data.setNa(this.data.nom, this.data.rnd, this.id, this.im)
+    this.namb = new NomAvatar(this.data.nom, this.data.rnd)
     return this
   }
 }

@@ -28,11 +28,14 @@ export default function () {
 
     mode: 0, // 0:inconnu, 1:synchronise, 2:incognito, 3:avion, 4:visio
     modeinitial: 0,
-    statutsession: 0,
-    /* statut de la session
-    0: fantôme : la session n'a pas encore été ouverte par une opération de login / création compteS
+
+    /* statut de la session : permet de bloquer la synchro jusqu'à ce que la connexion ait été complète
+    0: fantôme : la session n'a pas encore été ouverte par une opération de login / création compte
+      ou cette opération s'est interrompue.
+    1: opération de connexion / login en cours : ce temps est généralement court et se termine en 0 (échec) ou 2 (succès)
     1: session totalement chargée / synchronisée et cohérente
     */
+    statutsession: 0,
 
     message: null,
     messageto: null,

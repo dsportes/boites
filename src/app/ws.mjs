@@ -98,7 +98,7 @@ async function onmessage (m) {
   }
 
   data.syncqueue.push(syncList) // syncList : { sessionId, dh, rowItems }
-  if (data.statut === 2 && data.opWS == null) {
+  if (data.statutsession === 2 && data.opWS == null) {
     setTimeout(async () => {
       while (data.sessionId === sessionId && data.ws && data.syncqueue.length) {
         const q = data.syncqueue

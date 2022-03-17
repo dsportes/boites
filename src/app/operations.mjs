@@ -6,7 +6,7 @@ import {
   purgeAvatars, purgeCvs, purgeGroupes, openIDB, enregLScompte, setEtat, getEtat, getPjidx, putPj
 } from './db.mjs'
 import { Compte, Avatar, rowItemsToMapObjets, commitMapObjets, data, Prefs, Contact, Invitgr, Compta, Groupe, Membre } from './modele.mjs'
-import { AppExc, EXBRK, EXPS, F_BRO, E_BRO, INDEXT, X_SRV, E_WS, SIZEAV, SIZEGR, MC, t1n, t2n } from './api.mjs'
+import { AppExc, EXBRK, EXPS, F_BRO, E_BRO, X_SRV, E_WS, MC, t1n, t2n } from './api.mjs'
 
 import { crypt } from './crypto.mjs'
 import { schemas } from './schemas.mjs'
@@ -212,67 +212,6 @@ export class Operation {
     }
   }
 
-  /* Abonnements aux avatars et groupes utiles ********************************/
-  async abonnements (avUtiles, grUtiles, nosign) {
-    // Abonner / (signer sauf si nosign) la session au compte, avatars et groupes
-    const compte = data.getCompte()
-    const args = {
-      sessionId: data.sessionId,
-      idc: compte.id,
-      lav: Array.from(avUtiles),
-      lgr: Array.from(grUtiles),
-      sign: !nosign
-    }
-    const ret = await post(this, 'm1', 'syncAbo', args)
-    if (data.dh < ret.dh) data.dh = ret.dh
-    this.BRK()
-  }
-
-  /* Recharge depuis le serveur les avatars du compte ************************/
-  async chargerAvatars (avUtiles, tous) {
-    // idsVers : map de clé:id de l'avatar, valeur: version détenue en session
-    const idsVers = { }
-    for (const id of avUtiles) idsVers[id] = tous ? 0 : data.vag.getVerAv(id)[INDEXT.AVATAR]
-    const ret = await post(this, 'm1', 'chargerAv', { sessionId: data.sessionId, idsVers })
-    if (data.dh < ret.dh) data.dh = ret.dh
-    const objets = []
-    for (const id of avUtiles) data.vag.setVerAv(id, INDEXT.AVATAR, -1)
-    await commitMapObjets(objets, await rowItemsToMapObjets(ret.rowItems)) // stockés en modele
-    if (data.db) {
-      await commitRows(objets)
-      this.BRK()
-    }
-  }
-
-  /* Recharge depuis le serveur un avatar et ses rows associées (contact ... secret) */
-  async chargerAv (id, tous) { // lav : set des avatars utiles
-    const lv = tous ? new Array(SIZEAV).fill(0) : data.vag.getVerAv(id)
-    const ret = await post(this, 'm1', 'syncAv', { sessionId: data.sessionId, avgr: id, lv })
-    if (data.dh < ret.dh) data.dh = ret.dh
-    const objets = []
-    await commitMapObjets(objets, await rowItemsToMapObjets(ret.rowItems)) // stockés en modele
-    if (data.db) {
-      await commitRows(objets)
-      this.BRK()
-    }
-    return objets.length
-  }
-
-  /* Recharge depuis le serveur les groupes et les tables associées (membres, secrets) */
-  async chargerGr (id, tous) { // lgr : set des groupes utiles
-    const sid = crypt.idToSid(id)
-    const lv = tous ? new Array(SIZEGR).fill(0) : data.vag.getVerGr(sid)
-    const ret = await post(this, 'm1', 'syncGr', { sessionId: data.sessionId, avgr: id, lv })
-    if (data.dh < ret.dh) data.dh = ret.dh
-    const objets = []
-    await commitMapObjets(objets, await rowItemsToMapObjets(ret.rowItems)) // stockés en modele
-    if (data.db) {
-      await commitRows(objets)
-      this.BRK()
-    }
-    return objets.length
-  }
-
   /* Synchronisation et abonnements des CVs */
   async syncCVs (nvvcv) {
     data.repertoire.purge()
@@ -292,7 +231,7 @@ export class Operation {
     return [nvvcv, objets.length]
   }
 
-  async syncPjs () {
+  async syncPjs () { // A REPRENDRE
     /* Vérification que toutes les PJ accessibles en avion sont, a) encore utiles, b) encore à jour */
     let nbp = 0
     let vol = 0
@@ -600,7 +539,7 @@ export class OperationUI extends Operation {
       await commitRows(objets)
     }
 
-    data.statut = 1
+    data.statutsession = 2
     data.dhsync = data.dh
     if (data.db) {
       await setEtat()
@@ -743,7 +682,7 @@ export class ConnexionCompteAvion extends OperationUI {
 
       const etat = await getEtat()
       data.dhsync = etat.dhsync
-      data.statut = etat.statut
+      data.statutsession = etat.statut
 
       const compte = await getCompte()
       if (!compte || compte.pcbh !== data.ps.pcbh) {
@@ -783,19 +722,16 @@ class OpBuf {
 
   supprIDB (obj) { this.lsuppr.push(obj) } // obj : {table, id, (sid2)}
 
-  putObj (obj) {
-    const s = this[obj.table]
-    if (t1n.has(obj.table)) {
-      s[obj.id] = obj
-    } else {
-      let e = s[obj.id]; if (!e) { e = {}; s[obj.id] = e }
-      e[obj.id2] = obj
-    }
-  }
+  // Pour avatar / couple / groupe
+  putObj (obj) { this[obj.table][obj.id] = obj }
 
-  async commiIDB () {
-    await commitRows(this.lmaj, this.lsuppr)
-  }
+  // Stocke tous les secrets (donnés par maps des secrets par clé ns) d'un objet maître (avatar / couple / groupe) d'id donnée
+  putSecrets (id, map) { this.secret[id] = map }
+
+  // Stocke tous les membres (donnés par maps des membres par clé im) d'un groupe d'id donnée
+  putMembres (id, map) { this.membre[id] = map }
+
+  async commiIDB () { await commitRows(this.lmaj, this.lsuppr) }
 
   commitState () {
     if (this.compte) { store().commit('db/setCompte', this.compte) }
@@ -896,6 +832,7 @@ export class ConnexionCompte extends OperationUI {
     const avatars = data.db ? await getAvatars() : {}
     const setidbav = new Set(); for (const id of avatars) setidbav.add(id)
     const avrequis = compte.allAvId()
+    this.buf.nbAvatars = avrequis.size
     const aventrop = difference(setidbav, avrequis) // avatars en IDB NON requis (à supprimer de IDB)
     aventrop.forEach(id => {
       this.buf.supprIDB({ table: 'avatar', id: id })
@@ -914,7 +851,7 @@ export class ConnexionCompte extends OperationUI {
     // avnouveaux contient tous les avatars ayant une version plus récente que celle (éventuellement) obtenue de IDB
     avnouveaux.forEach(av => { this.buf.putIDB(av); avatars[av.id] = av })
     // avatars contient la version au top des objets avatars du compte requis et seulement eux
-    for (const id in avatars) this.buf.putObj(avatars[id]) // prêts à être mis en state.db
+    for (const id in avatars) this.buf.putObj(avatars[id]) // prêts à être mis en state
     return true
   }
 
@@ -945,6 +882,8 @@ export class ConnexionCompte extends OperationUI {
         cprequis.add(id)
       })
     }
+    this.buf.nbGroupes = grrequis.size
+    this.buf.nbCouples = cprequis.size
     const groupes = data.db ? await getGroupes() : {}
     const setidbgr = new Set(); for (const id of groupes) setidbgr.add(id)
     const couples = data.db ? await getCouples() : {}
@@ -972,17 +911,118 @@ export class ConnexionCompte extends OperationUI {
     // grnouveaux contient tous les groupes ayant une version plus récente que celle (éventuellement) obtenue de IDB
     grnouveaux.forEach(gr => { this.buf.putIDB(gr); groupes[gr.id] = gr })
     // groupes contient la version au top des objets groupes du compte requis par ses avatars et seulement eux
-    for (const id in groupes) this.buf.putState(groupes[id]) // prêts à être mis en state.db
+    for (const id in groupes) this.buf.putObj(groupes[id]) // prêts à être mis en state
 
     // cpnouveaux contient tous les couples ayant une version plus récente que celle (éventuellement) obtenue de IDB
     cpnouveaux.forEach(cp => { this.buf.putIDB(cp); couples[cp.id] = cp })
     // couples contient la version au top des objets couples du compte requis par ses avatars et seulement eux
-    for (const id in couples) this.buf.putState(couples[id]) // prêts à être mis en state.db
+    for (const id in couples) {
+      const c = couples[id]
+      this.buf.putObj(c) // prêts à être mis en state
+      // un couple peut générer une carte de visite sur son conjoint externe
+      data.repertoire.avIECp(id, c.data.x)
+    }
     return true
+  }
+
+  /* Recharge depuis le serveur tous les secrets d'id (avatar / couple / groupe) donnée et de version postérieure à v
+  Remplit aussi la liste des secrets à mettre à jour et à supprimer de IDB
+  Un secret peut être supprimé : s'il figurait dans la source, il y est enlevé
+  */
+  async chargerSc (id, v, src) { // lav : set des avatars utiles
+    const ret = await post(this, 'm1', 'secretsParId', { sessionId: data.sessionId, id, v })
+    if (data.dh < ret.dh) data.dh = ret.dh
+    const x = await rowItemsToMapObjets(ret.rowItems)
+    if (x.secret) {
+      x.secret.forEach(s => {
+        if (s.suppr) {
+          if (src[id] && src[id][s.ns]) delete src[id][s.ns]
+          this.buf.supprIDB({ table: 'secret', id: id, id2: s.ns })
+        } else {
+          let e = src[id]; if (!e) { e = {}; src[id] = e }
+          e[s.ns] = s
+          this.buf.putIDB(s)
+        }
+      })
+    }
+  }
+
+  /* Recharge depuis le serveur tous les membres d'id de groupe donnée et de version postérieure à v
+    Remplit aussi la liste des membres à mettre à jour en IDB
+  */
+  async chargerMb (id, v, src) { // lav : set des avatars utiles
+    const ret = await post(this, 'm1', 'membresParId', { sessionId: data.sessionId, id, v })
+    if (data.dh < ret.dh) data.dh = ret.dh
+    const x = await rowItemsToMapObjets(ret.rowItems)
+    if (x.membre) {
+      x.membre.forEach(m => {
+        let e = src[id]; if (!e) { e = {}; src[id] = e }
+        e[m.ns] = m
+        this.buf.putIDB(m)
+      })
+    }
+  }
+
+  /* Récupération des membres et secrets requis par les avatars / couples / groupes */
+  async phase3 () {
+    /* Récupération depuis IDB (éventuellement) les membres et secrets stockés
+    - groupés par id de l'objet maître
+    - avec la version la plus récente par objet maître
+    */
+    const [membres, vmbIdb] = data.db ? getMembres() : [{}, {}]
+    const [secrets, vscIdb] = data.db ? getSecrets() : [{}, {}]
+
+    /* Récupération depuis le serveur des versions plus récentes des secrets et membres
+    pour chaque objet maître et qu'il y en ait eu ou non trouvée en IDB
+    */
+    if (data.net) {
+      for (const id in this.buf.avatars) await this.chargerSc(id, vscIdb[id] || 0, secrets)
+      for (const id in this.buf.groupes) {
+        await this.chargerSc(id, vmbIdb[id] || 0, membres)
+        await this.chargerSc(id, vscIdb[id] || 0, secrets)
+      }
+      for (const id in this.buf.couples) await this.chargerSc(id, vscIdb[id] || 0, secrets)
+    }
+    /* Préparation pour mise à jour du modèle */
+    for (const id in membres) {
+      const mapm = membres[id]
+      this.buf.putMembres(mapm)
+      // un membre génère une carte de visite
+      for (const im in mapm) {
+        const m = mapm[im]
+        data.repertoire.setMembre(m.data.nom, m.data.rnd, m.id)
+      }
+    }
+    for (const id in secrets) this.buf.putSecrets(secrets[id])
+  }
+
+  /* Recharge depuis le serveur tous les membres d'id de groupe donnée et de version postérieure à v
+  Remplit aussi la liste des membres à mettre à jour en IDB
+  */
+  async chargerCv (utiles, v, src) { // lav : set des avatars utiles
+    const args = { sessionId: data.sessionId, v, lids: Array.from(utiles) }
+    const ret = await post(this, 'm1', 'chargerCVs', args)
+    if (data.dh < ret.dh) data.dh = ret.dh
+    const x = await rowItemsToMapObjets(ret.rowItems)
+    if (x.cv) {
+      x.cv.forEach(c => {
+        src[c.id] = c
+        this.buf.putIDB(c)
+      })
+    }
+  }
+
+  // Récupérer, syynchroniser les CVs et s'y abonner
+  async phase4 () {
+    const utiles = data.repertoire.avUtiles()
+    const [cvs, maxv] = data.db ? getCvs(utiles, this.buf) : [{}, 0]
+    if (data.net && utiles.size) await this.chargerCv(utiles, maxv, cvs)
+    for (const id in cvs) data.repertoire.setCv(cvs[id])
   }
 
   async run (ps, razdb) {
     try {
+      data.statutsession = 1
       this.buf = new OpBuf()
       data.ps = ps
 
@@ -1007,31 +1047,13 @@ export class ConnexionCompte extends OperationUI {
       }
       /* YES ! on a tous les objets maîtres compte / avatar / groupe / couple) à jour, abonnés et signés */
 
-      // TODO : charger les secrets pour chaque avatar
-      // TODO : charger les membres et secrets pour chaque groupe
-      // TODO : charger les secrets pour chaque couple
-      // TODO : charger les CVs
+      // Récupération des membres et secrets
+      await this.phase3()
 
-      // Chargement depuis le serveur des avatars non obtenus de IDB (sync), tous (incognito)
-      for (const idav of avUtiles) {
-        const n = await this.chargerAv(idav, !data.db) // tous en incognito
-        const av = data.getAvatar(idav)
-        this.majsynclec({ st: 1, sid: av.sid, nom: 'Avatar ' + av.na.nom, nbl: n })
-      }
+      // Récupérer, syynchroniser les CVs et s'y abonner
+      await this.phase4()
 
-      // Chargement depuis le serveur des groupes non obtenus de IDB (sync), tous (incognito)
-      for (const idgr of grUtiles) {
-        const n = await this.chargerGr(idgr, !data.db) // tous en incognito)
-        const gr = data.getGroupe(idgr)
-        this.majsynclec({ st: 1, sid: gr.sid, nom: 'Groupe ' + gr.na.nom, nbl: n })
-      }
-
-      // Synchroniser les CVs (et s'abonner)
-      const [nvvcv, nbcv] = await this.syncCVs(data.vcv)
-      this.majsynclec({ st: 1, sid: '$CV', nom: 'Cartes de visite', nbl: nbcv })
-      if (data.vcv < nvvcv) data.vcv = nvvcv
-
-      // Recharger les pièces jointes manquantes
+      // Recharger les pièces jointes manquantes A REPRENDRE
       const [nbp, vol] = await this.syncPjs()
       this.majsynclec({ st: 1, sid: '$PJ', nom: 'Pièces jointes "avion" : ' + edvol(vol), nbl: nbp })
 
@@ -1044,23 +1066,25 @@ export class ConnexionCompte extends OperationUI {
       if (data.db) await this.buf.commiIDB()
       this.buf.commitState()
 
-      // Traiter les notifications éventuellement arrivées
+      /*
+      // Traiter les notifications éventuellement arrivées. DISCUTABLE
       while (data.syncqueue.length) {
         const q = data.syncqueue
         data.syncqueue = []
         await this.traiteQueue(q)
       }
+      */
 
       /*
-      // Enregistrer l'état de synchro. Utilité ???
-      data.statut = 1
+      // Enregistrer l'état de synchro. DISCUTABLE
+      data.statutsession = 2
       if (data.dhsync < data.dh) data.dhsync = data.dh
       if (data.db) {
         await setEtat()
       }
       */
 
-      data.statut = 1
+      data.statutsession = 2
       this.finOK()
       remplacePage('Compte')
     } catch (e) {
