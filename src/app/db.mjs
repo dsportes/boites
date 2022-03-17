@@ -93,17 +93,16 @@ export async function getEtat () {
     try {
       return JSON.parse(obj.data)
     } catch (e) {
-      return { dhsync: 0, statut: 0, vcv: 0 }
+      return { dhsync: 0, vcv: 0 }
     }
   } catch (e) {
     throw data.setErDB(EX2(e))
   }
 }
 
-export async function setEtat () {
+export async function setEtat (etat) {
   go()
   try {
-    const etat = { dhsync: data.dhsync, statut: data.statut, vcv: data.vcv }
     await data.db.etat.put({ id: '1', data: JSON.stringify(etat) })
   } catch (e) {
     throw data.setErDB(EX2(e))
@@ -223,18 +222,16 @@ export async function getCvs (utiles, buf) {
   go()
   try {
     const r = {}
-    let maxv = 0
     await data.db.cv.each(async (idb) => {
       const cv = {}
       schemas.deserialize('idbCv', await crypt.decrypter(data.clek, idb.data), cv)
       if (utiles.has(cv.id)) {
         r[cv.id] = cv
-        if (cv.v > maxv) maxv = cv.v
       } else {
         buf.supprIDB({ table: 'cv', id: cv.id })
       }
     })
-    return [r, maxv]
+    return r
   } catch (e) {
     throw data.setErDB(EX2(e))
   }

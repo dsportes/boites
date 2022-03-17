@@ -4,10 +4,12 @@ import { openIDB, closeIDB, putFa, getFadata } from './db.mjs'
 import { openWS, closeWS } from './ws.mjs'
 import {
   store, appexc, serial, deserial, dlvDepassee, NomAvatar, gzip, ungzip, dhstring,
-  getJourJ, cfg, ungzipT, normpath, getfa, titreEd, post, Sid
+  getJourJ, cfg, ungzipT, normpath, getfa, titreEd, Sid
 } from './util.mjs'
 import { remplacePage } from './page.mjs'
-import { EXPS, UNITEV1, UNITEV2, Compteurs } from './api.mjs'
+import { EXPS, UNITEV1, UNITEV2, Compteurs, t0n, t1n } from './api.mjs'
+
+export const MODES = ['inconnu', 'synchronisé', 'incognito', 'avion', 'visio']
 
 export async function traitInvitGr (row) {
   const cpriv = data.avc(row.id).cpriv
@@ -15,40 +17,13 @@ export async function traitInvitGr (row) {
   return { id: row.id, ni: row.ni, datak: crypt.crypter(data.clek, x) }
 }
 
-/** Invitgr **********************************/
-/*
-- `id` : id du membre invité.
-- `ni` : numéro d'invitation.
-- `datap` : crypté par la clé publique du membre invité.
-  - `nom rnd im` : nom complet du groupe (donne sa clé).
-Jamais stocké en IDB : dès réception, le row avatar correspondant est "régularisé"
-*/
-
-export class Invitgr {
-  get table () { return 'invitgr' }
-  async fromRow (row) {
-    this.id = row.id
-    this.ni = row.ni
-    const cpriv = data.avc(row.id).cpriv
-    const x = deserial(await crypt.decrypterRSA(cpriv, row.datap))
-    this.idg = new NomAvatar(x[0], x[1]).id
-    this.datak = await crypt.crypter(data.clek, serial(x))
-    return this
-  }
-
-  async toRow (clepub) {
-    const datap = await crypt.crypterRSA(clepub, serial(this.data))
-    const r = { id: this.id, ni: this.ni, datap }
-    return schemas.serialize('rowinvitgr', r)
-  }
-}
-
 /*
   Retourne une map avec une entrée pour chaque table et en valeur,
-  - pour compte : LE DERNIER objet reçu, pas la liste historique
-  - pour les autres, l'array des objets
+  - pour les singletons : l'objet le plus récent reçu dans la liste
+  - pour les autres : une map dont,
+    - la clé est l'id / pk de chaque objet
+    - la valeur est l'objet le plus récent reçu dans la liste
 */
-export function estSingleton (t) { return ['compte', 'compta', 'prefs'].indexOf(t) !== -1 }
 
 export async function rowItemsToMapObjets (rowItems) {
   const res = {}
@@ -58,12 +33,13 @@ export async function rowItemsToMapObjets (rowItems) {
     if (item.table === 'compte' && row.pcbh !== data.ps.pcbh) throw EXPS // phrase secrète changée => déconnexion
     const obj = newObjet(item.table)
     await obj.fromRow(row)
-    if (estSingleton(item.table)) {
-      // le dernier quand on en a reçu plusieurs et non la liste
+    if (t0n.has(item.table)) {
       res[item.table] = obj
     } else {
-      if (!res[item.table]) res[item.table] = []
-      res[item.table].push(obj)
+      let e = res[item.table]; if (!e) { e = {}; res[item.table] = e }
+      const k = t1n.has(item.table) ? obj.id : obj.pk
+      const ex = e[k]
+      if (!ex) e[k] = obj; else { if (ex.v < obj.v) e[k] = obj }
     }
   }
   return res
@@ -82,30 +58,7 @@ function newObjet (table) {
     case 'groupe' : return new Groupe()
     case 'membre' : return new Membre()
     case 'secret' : return new Secret()
-    case 'repertoire' : return new Cv()
-  }
-}
-
-/* Traitement des groupes supprimés
-Il faut les effacer des map lgrk des avatars qui les référencent
-*/
-async function traitGrSuppr (lst) {
-  const mapav = {} // Une entrée par id d'avatar, array des im
-  let ok = false
-  for (let i = 0; i < lst.length; i++) {
-    const idg = lst[i].id
-    data.getCompte().allAvId().forEach(avid => {
-      const x = data.getAvatar(avid).m2gr[idg]
-      if (x) {
-        let t = mapav[avid]; if (!t) { t = []; mapav[avid] = t }
-        t.push(x[1])
-        ok = true
-      }
-    })
-  }
-  if (ok) {
-    const ret = await post(this, 'm1', 'regulAv', { sessionId: data.sessionId, mapav })
-    if (data.dh < ret.dh) data.dh = ret.dh
+    case 'cv' : return new Cv()
   }
 }
 
@@ -129,7 +82,7 @@ export async function commitMapObjets (objets, mapObj) { // SAUF mapObj.compte e
   if (mapObj.groupe) {
     const grSuppr = [] // liste des groupes supprimés
     data.setGroupes(mapObj.groupe, grSuppr)
-    if (grSuppr.length) traitGrSuppr(grSuppr)
+    // if (grSuppr.length) traitGrSuppr(grSuppr)
     push('groupe')
   }
 
@@ -252,8 +205,6 @@ export async function commitMapObjets (objets, mapObj) { // SAUF mapObj.compte e
   data.repertoire.commit() // un seul à la fin
   return vcv
 }
-
-export const MODES = ['inconnu', 'synchronisé', 'incognito', 'avion', 'visio']
 
 /* Répertoire des CV *******************************************************
 Il y a une entrée par objet majeur avatar / couple / groupe existant.
@@ -1387,22 +1338,40 @@ export class Contact {
 
   async getCcId (clex) {
     const cc = await crypt.crypter(clex, this.ccx)
-    const id = crypt.hashBin(this.rnd)
-    data.setClec(id, cc)
+    const id = crypt.hashBin(cc)
     return [cc, id]
   }
 
   async toRow () {
     return schemas.serialize('rowcontact', this)
   }
+}
 
-  get toIdb () {
-    return schemas.serialize('idbContact', this)
+/** Invitgr **********************************/
+/*
+- `id` : id du membre invité.
+- `ni` : numéro d'invitation.
+- `datap` : crypté par la clé publique du membre invité.
+  - `nom rnd im` : nom complet du groupe (donne sa clé).
+Jamais stocké en IDB : dès réception, le row avatar correspondant est "régularisé"
+*/
+
+export class Invitgr {
+  get table () { return 'invitgr' }
+  async fromRow (row) {
+    this.id = row.id
+    this.ni = row.ni
+    const cpriv = data.avc(row.id).cpriv
+    const x = deserial(await crypt.decrypterRSA(cpriv, row.datap))
+    this.idg = new NomAvatar(x[0], x[1]).id
+    this.datak = await crypt.crypter(data.clek, serial(x))
+    return this
   }
 
-  fromIdb (idb) {
-    schemas.deserialize('idbContact', idb, this)
-    return this
+  async toRow (clepub) {
+    const datap = await crypt.crypterRSA(clepub, serial(this.data))
+    const r = { id: this.id, ni: this.ni, datap }
+    return schemas.serialize('rowinvitgr', r)
   }
 }
 

@@ -90,6 +90,7 @@ async function onmessage (m) {
 
   if (pong) {
     pongrecu = true
+    // DISCUTABLE
     if (data.dhsync < data.dh) data.dhsync = data.dh
     if (data.db) {
       await setEtat()
@@ -105,10 +106,6 @@ async function onmessage (m) {
         data.syncqueue = []
         const op = new ProcessQueue()
         await op.run(q) // ne sort jamais en exception
-        if (data.dhsync < data.dh) data.dhsync = data.dh
-        if (data.db) {
-          await setEtat()
-        }
       }
     }, 1)
   }
