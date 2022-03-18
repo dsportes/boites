@@ -1,9 +1,9 @@
 import { NomAvatar, store, post, get, affichermessage, cfg, sleep, affichererreur, appexc, idToIc, difference, getpj, getJourJ, serial, edvol, equ8, Sid } from './util.mjs'
 import { remplacePage } from './page.mjs'
 import {
-  deleteIDB, idbSidCompte, commitRows, getCompte, getCompta, getArdoise, getPrefs, getCvs,
+  deleteIDB, idbSidCompte, commitRows, getCompte, getCompta, getPrefs, getCvs,
   getAvatars, getGroupes, getCouples, getMembres, getSecrets,
-  purgeAvatars, purgeCvs, purgeGroupes, openIDB, enregLScompte, setEtat, getEtat, getPjidx, putPj
+  openIDB, enregLScompte, setEtat, getEtat, putPj
 } from './db.mjs'
 import { Compte, Avatar, rowItemsToMapObjets, commitMapObjets, data, Prefs, Contact, Invitgr, Compta, Groupe, Membre, Secret, Cv } from './modele.mjs'
 import { AppExc, EXBRK, EXPS, F_BRO, E_BRO, X_SRV, E_WS, MC, t1n, t2n } from './api.mjs'
@@ -230,7 +230,8 @@ export class Operation {
   }
 
   tr (ret) {
-    if (this.etat && this.etat.dhsync < ret.dh) this.etat.dhsync = ret.dh
+    if (!this.dh) this.dh = 0
+    if (this.dh < ret.dh) this.dh = ret.dh
     return ret
   }
 
@@ -367,7 +368,7 @@ export class Operation {
     /* Mise en store de tous les autres objets */
     const vcv = await commitMapObjets(objets, mapObj)
 
-    if (data.db) {
+    if (data.dbok) {
       await commitRows(objets)
       this.BRK()
     }
@@ -390,7 +391,7 @@ export class Operation {
     const lgrManquants = difference(lgrApres, lgrAvant)
     if (lavAPurger.size) data.purgeAvatars(lavAPurger)
     if (lgrAPurger.size) data.purgeGroupes(lgrAPurger)
-    if (data.db) {
+    if (data.dbok) {
       if (lavAPurger.size) await data.db.purgeAvatars(lavAPurger)
       if (lgrAPurger.size) await data.db.purgeGroupes(lgrAPurger)
       this.BRK()
@@ -470,7 +471,7 @@ export class Operation {
     /* Mise en store de tous les autres objets */
     const vcv = await commitMapObjets(objets, mapObj)
 
-    if (data.db) {
+    if (data.dbok) {
       await commitRows(objets)
       this.BRK()
     }
@@ -493,7 +494,7 @@ export class Operation {
     const lgrManquants = difference(lgrApres, lgrAvant)
     if (lavAPurger.size) data.purgeAvatars(lavAPurger)
     if (lgrAPurger.size) data.purgeGroupes(lgrAPurger)
-    if (data.db) {
+    if (data.dbok) {
       if (lavAPurger.size) await data.db.purgeAvatars(lavAPurger)
       if (lgrAPurger.size) await data.db.purgeGroupes(lgrAPurger)
       this.BRK()
@@ -532,141 +533,7 @@ export class OperationUI extends Operation {
     this.majopencours(this)
   }
 
-  /* Chargement de la totalité de la base en mémoire : **************************************/
-  /*
-  - détermine les avatars et groupes référencés dans les rows de Idb
-  - supprime de la base comme de la mémoire les rows / objets inutiles
-  - puis récupère les CVs et supprime celles non référencées
-  Les items de dlv dépassée sont lus, non stockés et mis à supprimer de IDB
-  */
-  async chargementIdb (id) {
-    const hls = [] // objets hors limite, pour purge de IDB à la fin du chargement
-
-    this.razidblec()
-
-    {
-      let prefs = await getPrefs()
-      if (!prefs) prefs = new Prefs().nouveau(id)
-      data.setPrefs(prefs)
-      const compta = await getCompta()
-      if (compta) data.setCompta(compta)
-      const ardoise = await getArdoise()
-      if (ardoise) data.setArdoise(ardoise)
-    }
-
-    this.BRK()
-    const avUtiles = data.setIdsAvatarsUtiles
-    { /* On ne charge de IDB QUE les avatars référencés dans le compte
-      les inutiles sont directement purgés de IDB */
-      const { objs, vol, apurger } = await getAvatars(avUtiles)
-      data.setAvatars(objs)
-      this.majidblec({ table: 'avatar', st: true, vol: vol, nbl: objs.length })
-      if (apurger.size) {
-        purgeAvatars(apurger) // en IDB pour les contacts, invitct ... secrets
-      }
-      this.majidblec({ table: 'purgeav', st: true, vol: 0, nbl: apurger.size })
-    }
-
-    this.BRK()
-    const grUtiles = data.setIdsGroupesUtiles
-    { /* On ne charge de IDB QUE les groupes référencés dans les avatars du compte
-      les inutiles sont directement purgés de IDB */
-      const { objs, vol, apurger } = await getGroupes(grUtiles)
-      if (objs.length) data.setGroupes(objs)
-      this.majidblec({ table: 'groupe', st: true, vol: vol, nbl: objs.length })
-      if (apurger.size) {
-        purgeGroupes(apurger) // en IDB pour les membres et secrets
-      }
-      this.majidblec({ table: 'purgegr', st: true, vol: 0, nbl: apurger.size })
-    }
-
-    /* chargement des CVs. Au début pour avoir le moins de fake possible dans le répertoire */
-    this.BRK()
-    {
-      const { objs, vol } = await getCvs()
-      if (objs && objs.length) {
-        objs.forEach((cv) => {
-          data.repertoire.setCv(cv)
-        })
-      }
-      this.majidblec({ table: 'cv', st: true, vol: vol, nbl: objs.length })
-    }
-
-    this.BRK()
-    /*
-    this.BRK()
-    {
-      const { objs, vol } = await getContacts()
-      if (objs && objs.length) {
-        objs.forEach((c) => {
-          data.repertoire.getCv(c.na.id).plusCtc(c.id)
-        })
-      }
-      data.setContacts(objs)
-      this.majidblec({ table: 'contact', st: true, vol: vol, nbl: objs.length })
-    }
-
-    {
-      const { objs, vol } = await getParrains()
-      data.setParrains(objs, hls)
-      this.majidblec({ table: 'parrain', st: true, vol: vol, nbl: objs.length })
-    }
-
-    this.BRK()
-    {
-      const { objs, vol } = await getRencontres()
-      data.setRencontres(objs, hls)
-      this.majidblec({ table: 'rencontre', st: true, vol: vol, nbl: objs.length })
-    }
-    */
-
-    this.BRK()
-    {
-      const { objs, vol } = await getMembres()
-      if (objs && objs.length) {
-        objs.forEach((m) => {
-          data.repertoire.getCv(m.namb.id).plusMbr(m.id)
-        })
-      }
-      data.setMembres(objs, hls)
-      this.majidblec({ table: 'membre', st: true, vol: vol, nbl: objs.length })
-    }
-
-    this.BRK()
-    {
-      const { objs, vol } = await getSecrets()
-      data.setSecrets(objs, hls)
-      this.majidblec({ table: 'secret', st: true, vol: vol, nbl: objs.length })
-    }
-
-    // purge des CVs inutiles
-    this.BRK()
-    {
-      const cvi = data.repertoire.setCvsInutiles
-      const nbp = await purgeCvs(cvi)
-      data.repertoire.purge(cvi)
-      data.repertoire.commit()
-      this.majidblec({ table: 'purgecv', st: true, vol: 0, nbl: nbp })
-    }
-
-    if (hls.length) {
-      // Des objets à supprimer de IDB
-      hls.forEach(obj => { obj.st = -1 })
-      commitRows(hls)
-    }
-
-    this.BRK()
-    {
-      const pjs = await getPjidx()
-      store().commit('db/majpjidx', pjs)
-    }
-
-    if (cfg().debug) await sleep(1)
-
-    this.BRK()
-  }
-
-  async postCreation (ret) {
+  async postCreation (ret) { // A REVOIR COMPLETEMENT
     const mapObj = await rowItemsToMapObjets(ret.rowItems)
     const compte2 = mapObj.compte // le DERNIER objet compte quand on en a reçu plusieurs (pas la liste)
     data.setCompte(compte2)
@@ -693,7 +560,7 @@ export class OperationUI extends Operation {
 
     data.statutsession = 2
     data.dhsync = data.dh
-    if (data.db) {
+    if (data.dbok) {
       await setEtat()
     }
   }
@@ -719,12 +586,11 @@ export class ProcessQueue extends OperationWS {
   async run (q) {
     try {
       this.buf = new OpBuf()
-      this.etat = data.etat
+      this.dh = 0
       await this.traiteQueue(q)
-      if (data.db && data.net) await this.buf.commiIDB()
+      if (data.dbok && data.netok) await this.buf.commiIDB()
       this.buf.commitState()
-      if (data.db) await setEtat(this.etat) // Enregistrer l'état de synchro
-      data.etat = this.etat
+      data.setDhSync(this.dh)
       return this.finOK()
     } catch (e) {
       return await this.finKO(e)
@@ -840,13 +706,13 @@ export class ConnexionCompte extends OperationUI {
   }
 
   async phase0 () { // compte / prefs / compta : abonnement à compte
-    const compteIdb = !data.db ? null : await getCompte()
-    if (!data.net && (!compteIdb || compteIdb.pcbh !== data.ps.pcbh)) {
+    const compteIdb = !data.dbok ? null : await getCompte()
+    if (!data.netok && (!compteIdb || compteIdb.pcbh !== data.ps.pcbh)) {
       throw new AppExc(F_BRO, 'Compte non enregistré localement : aucune session synchronisée ne s\'est préalablement exécutée sur ce poste avec cette phrase secrète. Erreur dans la saisie de la ligne 2 de la phrase ?')
     }
-    const prefsIdb = !data.db ? null : await getPrefs()
-    const comptaIdb = !data.db ? null : await getCompta()
-    const [compteSrv, prefsSrv, comptaSrv, estComptable] = !data.net ? [null, null, null, false]
+    const prefsIdb = !data.dbok ? null : await getPrefs()
+    const comptaIdb = !data.dbok ? null : await getCompta()
+    const [compteSrv, prefsSrv, comptaSrv, estComptable] = !data.netok ? [null, null, null, false]
       : await this.chargerCPC(compteIdb ? compteIdb.v : 0, prefsIdb ? prefsIdb.v : 0, comptaIdb ? comptaIdb.v : 0)
     this.buf.compte = compteSrv || compteIdb
     this.buf.prefs = prefsSrv || prefsIdb
@@ -856,7 +722,7 @@ export class ConnexionCompte extends OperationUI {
     // Changement de phrase secrète
     if (data.ps.pcbh !== this.buf.compte.pcbh) throw EXPS
     // Bien que l'utilisateur ait saisie la bonne phrase secrète, elle a pu changer : celle du serveur est installée
-    if (data.db) enregLScompte(this.buf.compte.sid)
+    if (data.dbok) enregLScompte(this.buf.compte.sid)
   }
 
   /* Recharge depuis le serveur les avatars du compte, abonnement aux avatars */
@@ -876,7 +742,7 @@ export class ConnexionCompte extends OperationUI {
   */
   async phase1 () {
     const compte = this.buf.compte
-    const avatars = data.db ? await getAvatars() : {}
+    const avatars = data.dbok ? await getAvatars() : {}
     const setidbav = new Set(); for (const id of avatars) setidbav.add(id)
     const avrequis = compte.allAvId()
     this.buf.nbAvatars = avrequis.size
@@ -893,7 +759,7 @@ export class ConnexionCompte extends OperationUI {
       const na = m[Sid(id)].na // sa clé est dans mack du compte
       data.repertoire.setAv(na.nom, na.rnd, true) // l'avatar est stocké en répertoire
     })
-    const avnouveaux = !data.net ? {} : await this.chargerAvatars(avidsVers, compte.id, compte.v)
+    const avnouveaux = !data.netok ? {} : await this.chargerAvatars(avidsVers, compte.id, compte.v)
     if (avnouveaux === false) return false// le compte a changé de version, reboucler
     // avnouveaux contient tous les avatars ayant une version plus récente que celle (éventuellement) obtenue de IDB
     for (const id of avnouveaux) { const av = avnouveaux[id]; this.buf.putIDB(av); avatars[av.id] = av }
@@ -940,9 +806,9 @@ export class ConnexionCompte extends OperationUI {
     }
     this.buf.nbGroupes = grrequis.size
     this.buf.nbCouples = cprequis.size
-    const groupes = data.db ? await getGroupes() : {}
+    const groupes = data.dbok ? await getGroupes() : {}
     const setidbgr = new Set(); for (const id of groupes) setidbgr.add(id)
-    const couples = data.db ? await getCouples() : {}
+    const couples = data.dbok ? await getCouples() : {}
     const setidbcp = new Set(); for (const id of groupes) setidbgr.add(id)
     const grentrop = difference(setidbgr, grrequis) // groupes en IDB NON requis (à supprimer de IDB)
     grentrop.forEach(id => {
@@ -960,7 +826,7 @@ export class ConnexionCompte extends OperationUI {
     const cpidsVers = {}
     cprequis.forEach(id => { const obj = couples[id]; cpidsVers[id] = obj ? obj.v : 0 })
 
-    const x = !data.net ? {} : await this.chargerGroupesCouples(gridsVers, cpidsVers, avidsVers, compte.id, compte.v)
+    const x = !data.netok ? {} : await this.chargerGroupesCouples(gridsVers, cpidsVers, avidsVers, compte.id, compte.v)
     if (x === false) return false // le compte ou les avatars ont changé de version
 
     const [grnouveaux, cpnouveaux] = x
@@ -1025,13 +891,13 @@ export class ConnexionCompte extends OperationUI {
     - groupés par id de l'objet maître
     - avec la version la plus récente par objet maître
     */
-    const [membres, vmbIdb] = data.db ? getMembres() : [{}, {}]
-    const [secrets, vscIdb] = data.db ? getSecrets() : [{}, {}]
+    const [membres, vmbIdb] = data.dbok ? getMembres() : [{}, {}]
+    const [secrets, vscIdb] = data.dbok ? getSecrets() : [{}, {}]
 
     /* Récupération depuis le serveur des versions plus récentes des secrets et membres
     pour chaque objet maître et qu'il y en ait eu ou non trouvée en IDB
     */
-    if (data.net) {
+    if (data.netok) {
       for (const id in this.buf.avatars) await this.chargerSc(id, vscIdb[id] || 0, secrets)
       for (const id in this.buf.groupes) {
         await this.chargerMb(id, vmbIdb[id] || 0, membres)
@@ -1055,44 +921,44 @@ export class ConnexionCompte extends OperationUI {
   /* Recharge depuis le serveur tous les membres d'id de groupe donnée et de version postérieure à v
   Remplit aussi la liste des membres à mettre à jour en IDB
   */
-  async chargerCv (utiles, v, src) { // utiles : set des avatars utiles
-    const args = { sessionId: data.sessionId, v, lids: Array.from(utiles) }
+  async chargerCv (vp, vz, v, src) { // utiles : set des avatars utiles
+    const args = { sessionId: data.sessionId, v, vp: Array.from(vp), vz: Array.from(vz) }
     const ret = this.tr(await post(this, 'm1', 'chargerCVs', args))
+    let nv = v
     for (const item of ret.rowItems) {
       const row = schemas.deserialize('cv', item.serial)
       const c = new Cv()
       await c.fromRow(row)
       src[c.id] = c
       this.buf.putIDB(c)
+      if (c.v > nv) nv = c.v
     }
+    return nv
   }
 
   // Récupérer, syynchroniser les CVs et s'y abonner
   async phase4 (maxv) {
-    const utiles = data.repertoire.avUtiles()
-    const cvs = data.db ? getCvs(utiles, this.buf) : [{}, 0]
-    if (data.net && utiles.size) await this.chargerCv(utiles, maxv, cvs)
-    let v = 0
-    for (const id in cvs) {
-      const cv = cvs[id]
-      if (cv.v > v) v = cv.v
-      data.repertoire.setCv(cv)
-    }
-    return v
+    const [vp, vz] = data.repertoire.avUtiles() // vp celles avec une version positive, vz celles avec version 0
+    const cvs = data.dbok ? getCvs(vp, vz, this.buf) : [{}, 0]
+    let nv = maxv
+    if (data.netok && (vp.size || vz.size)) nv = await this.chargerCv(vp, vz, maxv, cvs)
+    for (const id in cvs) data.repertoire.setCv(cvs[id])
+    return nv
   }
 
   async run (ps, razdb) {
     try {
-      data.statutsession = 1
+      this.vcv = data.debutConnexion().vcv
       this.buf = new OpBuf()
+      this.dh = 0
       data.ps = ps
 
-      if (data.net && razdb) {
+      if (data.netok && razdb) {
         await deleteIDB()
         await sleep(100)
         console.log('RAZ db')
       }
-      if (!data.net && !idbSidCompte()) {
+      if (!data.netok && !idbSidCompte()) {
         throw new AppExc(F_BRO, 'Compte non enregistré localement : aucune session synchronisée ne s\'est préalablement exécutée sur ce poste avec cette phrase secrète. Erreur dans la saisie de la ligne 1 de la phrase ?')
       }
       await data.connexion()
@@ -1100,7 +966,7 @@ export class ConnexionCompte extends OperationUI {
 
       for (let nb = 0; nb < 10; nb++) {
         if (nb >= 5) throw new AppExc(E_BRO, 'Plus de 5 tentatives de connexions. Bug ou incident temporaire. Ré-essayer un peu plus tard')
-        this.etat = data.db && data.net ? await getEtat() : { dhsync: 0, vcv: 0 }
+        this.etat = data.dbok && data.netok ? await getEtat() : { dhsync: 0, vcv: 0 }
         data.repertoire.raz()
         if (!await this.phase0()) continue // obtention du compte / prefs / compta
         if (!await this.phase1()) continue // obtention des avatars du compte
@@ -1112,7 +978,7 @@ export class ConnexionCompte extends OperationUI {
       await this.phase3()
 
       // Récupération des CVs et s'y abonner
-      this.etat.vcv = await this.phase4(this.etat.vcv)
+      this.nvcv = await this.phase4(this.vcv)
 
       // Recharger les pièces jointes manquantes A REPRENDRE
       const [nbp, vol] = await this.syncPjs()
@@ -1121,7 +987,7 @@ export class ConnexionCompte extends OperationUI {
       /* Récupération des invitations aux groupes
       Elles seront de facto traitées en synchronisation quand un avatar reviendra avec un lgrk étendu
       */
-      if (data.net) await this.getInvitGrs(this.buf.compte)
+      if (data.netok) await this.getInvitGrs(this.buf.compte)
 
       /*
       // Traiter les notifications éventuellement arrivées. DISCUTABLE
@@ -1133,11 +999,9 @@ export class ConnexionCompte extends OperationUI {
       */
 
       // Finalisation en une seule fois: commit en IDB et state/db des données accumulées
-      if (data.db && data.net) await this.buf.commiIDB()
+      if (data.dbok && data.netok) await this.buf.commiIDB()
       this.buf.commitState()
-      if (data.db) await setEtat(this.etat) // Enregistrer l'état de synchro
-      data.etat = this.etat // pour usage dans ProcessQueue
-      data.statutsession = 2
+      data.finConnexion(this.dh, this.nvcv)
       this.finOK()
       remplacePage('Compte')
     } catch (e) {

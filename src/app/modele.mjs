@@ -428,12 +428,15 @@ class Repertoire {
   }
 
   avUtiles () {
-    const s = new Set()
+    const vz = new Set()
+    const vp = new Set()
     for (const sid in this.rep) {
       const x = this.rep[sid]
-      if (x.table === 'avatar' && (x.avc || x.lcp.length || x.lgr.length)) s.add(x.id)
+      if (x.table === 'avatar' && (x.avc || x.lcp.length || x.lgr.length)) {
+        if (x.v === 0) vz.add(x.id); else vp.add(x.id)
+      }
     }
-    return s
+    return [vp, vz]
   }
 
   avInutiles () {
@@ -458,42 +461,53 @@ class Session {
     0: fantôme : la session n'a pas encore été ouverte par une opération de login / création compte
       ou cette opération s'est interrompue.
     1: opération de connexion / login en cours : ce temps est généralement court et se termine en 0 (échec) ou 2 (succès)
-    1: session totalement chargée / synchronisée et cohérente
+    2: session totalement chargée / synchronisée et cohérente : se test / watch par store().state.ui.sessionok
   */
   get statutsession () { return store().state.ui.statutsession }
-
   set statutsession (val) { store().commit('ui/majstatutsession', val) }
+  get sessionsync () { return store().state.ui.sessionsync }
+  async debutSessionSync () { return this.dbok && this.netok ? await this.debutSessionSync() : { vcv: 0 } }
+  async finConnexionSync (dh, vcv) { if (this.dbok && this.netok) await store().state.ui.sessionsync.setConnexion(dh, vcv) }
+  async setDhSync (dh) { if (this.dbok && this.netok) await store().state.ui.sessionsync.setDhSync(dh) }
+  async setDhPong (dh) {
+    if (this.dbok && this.netok) {
+      const x = store().state.ui.sessionsync
+      if (x) await x.setDhPong(dh)
+    }
+  }
 
   get mode () { return store().state.ui.mode }
-
-  get net () { return store().state.ui.mode <= 2 }
-
   set mode (val) { store().commit('ui/majmode', val) }
 
   get modeInitial () { return store().state.ui.modeinitial }
-
   set modeInitial (val) { store().commit('ui/majmodeinitial', val) }
 
+  // 0: net pas ouvert, 1:net OK, 2: net KO
   get statutnet () { return store().state.ui.statutnet }
-
   set statutnet (val) { store().commit('ui/majstatutnet', val) }
+  get netok () { return this.statutnet === 1 }
 
+  ouvertureDB (db) { this.db = db; this.statutidb = 1 }
+  fermetureDB () { this.db = null; this.statutidb = 0 }
+
+  ouvertureWS (ws) { this.ws = ws }
+  fermetureWS () { this.ws = null }
+  get wsok () { return this.ws !== null }
+
+  // 0:inconnu 1:idb accessible 2:idb inaccessible (a rencontré une erreur)
   get statutidb () { return store().state.ui.statutidb }
-
   set statutidb (val) { store().commit('ui/majstatutidb', val) }
+  get dbok () { return this.statutidb === 1 }
 
   get sessionId () { return store().state.ui.sessionid }
-
   set sessionId (val) { store().commit('ui/majsessionid', val) }
 
   async connexion (sansidb) { // Depuis l'opération de connexion
-    store().commit('ui/majconnexionencours', true)
+    this.statutsession = 1
     this.raz()
     store().commit('db/raz')
     remplacePage('Synchro')
-    if (this.nbreconnexion === 0) {
-      this.modeInitial = this.mode
-    }
+    if (this.nbreconnexion === 0) this.modeInitial = this.mode
     this.sessionId = crypt.idToSid(crypt.random(6))
     if (!sansidb && (this.mode === 1 || this.mode === 3)) await openIDB()
     if (this.mode === 1 || this.mode === 2) await openWS()
@@ -501,7 +515,8 @@ class Session {
   }
 
   async deconnexion (avantreconnexion) { // Depuis un bouton
-    store().commit('ui/majconnexionencours', false)
+    this.statutsession = 0
+    store().commit('ui/resetsessionsync')
     this.ps = null
     store().commit('db/raz')
     closeWS()
@@ -514,6 +529,16 @@ class Session {
     } else {
       this.nbreconnexion++
     }
+  }
+
+  async debutConnexion () {
+    this.statutsession = 1
+    return await this.debutConnexionSync()
+  }
+
+  async finConnexion (dh, vcv) {
+    this.statutsession = 2
+    await this.finConnexionSync(dh, vcv)
   }
 
   degraderMode () {
@@ -549,9 +574,7 @@ class Session {
     const ex = appexc(e)
     ex.idb = true
     this.statutidb = 2
-    if (this.db) {
-      this.db.close()
-    }
+    if (this.db) this.db.close()
     return ex
   }
 
@@ -559,17 +582,11 @@ class Session {
     const ex = appexc(e)
     ex.net = true
     this.statutnet = 2
-    if (this.ws) {
-      this.ws.close()
-    }
+    if (this.ws) this.ws.close()
     return ex
   }
 
-  stopOp () {
-    if (this.opUI) {
-      this.opUI.stop()
-    }
-  }
+  stopOp () { if (this.opUI) this.opUI.stop() }
 
   raz (init) { // init : l'objet data (Session) est créé à un moment où le store vuex n'est pas prêt
     this.db = null // IDB quand elle est ouverte
@@ -579,67 +596,27 @@ class Session {
     this.ws = null // WebSocket quand il est ouvert
     this.erWS = 0 // 0:OK 1:WS en erreur NON traitée 2:WS en erreur traitée
     this.exNET = null // exception sur NET
-    this.repertoire = new Repertoire()
 
     if (!init) {
       this.statutnet = 0 // 0: net pas ouvert, 1:net OK, 2: net KO
       this.statutidb = 0 // 0: idb pas ouvert, 1:idb OK, 2: idb KO
-      /* statut de la session
-      0: fantôme : la session n'a pas encore été ouverte par une opération de login / création compte
-      1: session en partie chargée, utilisable en mode visio
-      2: session totalement chargée / synchronisée et cohérente
-      */
-      this.statut = 0
+      this.statutsession = 0
       this.sessionId = null
       store().commit('ui/razidblec')
       store().commit('ui/razsynclec')
     }
 
-    this.dh = 0 // plus haute date-heure retournée par un POST au serveur
-    this.vcv = 0 // version des cartes de visite détenues
-    this.clek = null // clé K du compte authentifié
-    this.estComptable = false
-
-    this.naIdIx = {} // na par id ic/im
-    this.naId = {} // na par id
-    this.clec = {} // clés C des contacts id, ic
-    this.pjPerdues = [] // PJ accessibles en mode avion qui n'ont pas pu être récupérées et NE SONT PLUS ACCESSIBLES en avion
-
+    this.ws = null // websocket de la session
     this.opWS = null // opération WS en cours
     this.opUI = null // opération UI en cours
-
+    this.clek = null // clé K du compte authentifié
+    this.estComptable = false
+    this.pjPerdues = [] // PJ accessibles en mode avion qui n'ont pas pu être récupérées et NE SONT PLUS ACCESSIBLES en avion
     this.syncqueue = [] // notifications reçues sur WS et en attente de traitement
+    this.repertoire = new Repertoire()
   }
 
   setFaPerdues (x) { this.pjPerdues.push(x) }
-
-  /* Enregistre le nom d'avatar pour :
-  - un avatar / groupe / couple
-  - un contact d'un couple : idc, ic (0 ou 1)
-  - un membre d'un groupe : idg, im
-  Ce n'est PAS dans le store, l'information étant immutable
-  Permet aussi d'obtenir l'id d'un contact / membre depuis leur avatar/ic ou groupe/im
-  */
-  setNa (nom, rnd, id, ix) {
-    const na = new NomAvatar(nom, rnd)
-    this.naId[na.sid] = na
-    if (id) this.naIdIx[crypt.idToSid(id) + '/' + ix] = na
-    return na
-  }
-
-  /* retourne le na d'un avatar, groupe, couple OU d'un contact ou membre (icm présent) */
-  getNa (id, ix) {
-    const sid = typeof id === 'string' ? id : crypt.idToSid(id)
-    return !ix ? this.naId[sid] : this.naIdIx[sid + '/' + ix]
-  }
-
-  setClec (id, cc) { // clé d'un couple
-    this.clec[crypt.idToSid(typeof id === 'string' ? id : crypt.idToSid(id))] = cc
-  }
-
-  getClec (id) { // clé d'un couple
-    return this.clec[crypt.idToSid(typeof id === 'string' ? id : crypt.idToSid(id))]
-  }
 
   /* Getters / Setters ****************************************/
   get setIdsAvatarsUtiles () { return this.getCompte().allAvId() }

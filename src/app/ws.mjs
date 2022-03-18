@@ -3,7 +3,6 @@
 import { cfg, store, dhtToString, affichererreur, deserial } from './util.mjs'
 import { data } from './modele.mjs'
 import { ProcessQueue, reconnexion } from './operations.mjs'
-import { setEtat } from './db.mjs'
 import { AppExc, E_WS, PINGTO } from './api.mjs'
 
 let url = ''
@@ -26,7 +25,7 @@ function EX3 () {
 
 let ondeconnexion = false
 export function closeWS () {
-  if (data.ws) {
+  if (data.wsok) {
     ondeconnexion = true
     data.ws.close()
   }
@@ -49,7 +48,7 @@ export async function openWS () {
           try { data.setErWS(EX3()) } catch (e) {}
         }
         ondeconnexion = false
-        data.ws = null
+        data.fermetureWS()
         if (data.to) clearTimeout(data.to)
       }
       ws.onmessage = onmessage
@@ -57,12 +56,12 @@ export async function openWS () {
         try {
           ws.send(data.sessionId)
           heartBeat(data.sessionId)
-          data.ws = ws
+          data.ouvertureWS(ws)
           store().commit('ui/majstatutnet', 1)
           resolve(ws)
         } catch (e) {
           data.setErWS(EX2(e))
-          data.ws = null
+          data.fermetureWS()
           resolve(null)
         }
       }
@@ -77,11 +76,10 @@ export async function openWS () {
 let pongrecu = false
 
 async function onmessage (m) {
-  if (!data.ws) return
+  if (!data.wsok) return
   const ab = await m.data.arrayBuffer()
   const syncList = deserial(new Uint8Array(ab)) // syncList : { sessionId, dh, rowItems }
   if (syncList.sessionId !== data.sessionId) return
-  if (data.dh < syncList.dh) data.dh = syncList.dh
   const pong = !syncList.rowItems
   const sessionId = data.sessionId
   if (cfg().debug) {
@@ -90,18 +88,14 @@ async function onmessage (m) {
 
   if (pong) {
     pongrecu = true
-    // DISCUTABLE
-    if (data.dhsync < data.dh) data.dhsync = data.dh
-    if (data.db) {
-      await setEtat()
-    }
+    data.setDhPong(syncList.dh)
     return
   }
 
   data.syncqueue.push(syncList) // syncList : { sessionId, dh, rowItems }
   if (data.statutsession === 2 && data.opWS == null) {
     setTimeout(async () => {
-      while (data.sessionId === sessionId && data.ws && data.syncqueue.length) {
+      while (data.sessionId === sessionId && data.wsok && data.syncqueue.length) {
         const q = data.syncqueue
         data.syncqueue = []
         const op = new ProcessQueue()
@@ -113,7 +107,7 @@ async function onmessage (m) {
 
 function heartBeat (sid) {
   data.to = setTimeout(async () => {
-    if (data.ws && data.sessionId === sid) {
+    if (data.wsok && data.sessionId === sid) {
       if (!pongrecu) {
         const choix = await excAffichage()
         if (choix === 'r') {

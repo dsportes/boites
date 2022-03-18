@@ -7,7 +7,7 @@ import { AppExc, E_DB } from './api.mjs'
 import { schemas } from './schemas.mjs'
 
 const STORES = {
-  etat: 'id',
+  sessionsync: 'id',
   compte: 'id',
   compta: 'id',
   prefs: 'id',
@@ -60,8 +60,7 @@ export async function openIDB () {
     const db = new Dexie(data.nombase, { autoOpen: true })
     db.version(2).stores(STORES)
     await db.open()
-    data.db = db
-    store().commit('ui/majstatutidb', 1)
+    data.ouvertureDB(db)
   } catch (e) {
     throw data.setErDB(EX1(e))
   }
@@ -71,7 +70,7 @@ export function closeIDB () {
   if (data.db && data.db.isOpen()) {
     try { data.db.close() } catch (e) {}
   }
-  data.db = null
+  data.fermetureDB()
 }
 
 export async function deleteIDB (lsKey) {
@@ -86,27 +85,80 @@ export async function deleteIDB (lsKey) {
   }
 }
 
-export async function getEtat () {
-  go()
-  try {
-    const obj = await data.db.etat.get(1)
-    try {
-      return JSON.parse(obj.data)
-    } catch (e) {
-      return { dhsync: 0, vcv: 0 }
+/* Dernier état de session synchronisé
+- dhdebutp : dh de début de la dernière session sync terminée
+- dhfinp : dh de fin de la dernière session sync terminée
+- dhdebut: dh de début de la session sync en cours
+- dhsync: dh du dernier traitement de synchronisation
+- dhpong: dh du dernier pong reçu
+- vcv: version des CVs synchronisées
+*/
+schemas.forSchema({
+  name: 'idbSessionSync',
+  cols: ['dhdebutp', 'dhfinp', 'dhdebut', 'dhsync', 'dhpong', 'vcv']
+})
+
+function max (a) { let m = 0; a.forEach(x => { if (x > m) m = x }); return m }
+
+class SessionSync {
+  fromIdb (idb) {
+    if (!idb) {
+      this.dhdebutp = 0
+      this.dhfinp = 0
+      this.dhdebut = 0
+      this.dhsync = 0
+      this.dhpong = 0
+      this.vcv = 0
+    } else {
+      schemas.deserialize('idbSessionSync', idb, this)
+      this.dhdebutp = this.dhdebut
+      this.dhfinp = max([this.dhdebut, this.dhsync, this.dhpong])
+      this.dhdebut = 0
+      this.dhsync = 0
+      this.dhpong = 0
     }
-  } catch (e) {
-    throw data.setErDB(EX2(e))
+    return this
+  }
+
+  async init () {
+    try {
+      this.fromIdb(await data.db.sessionsync.get(1))
+      store().commit('ui/setsessionsync', this)
+    } catch (e) {
+      throw data.setErDB(EX2(e))
+    }
+  }
+
+  async setConnexion (dh, vcv) {
+    this.dhdebut = dh
+    this.vcv = vcv
+    await this.save()
+  }
+
+  async setDhSync (dh) {
+    this.dhsync = dh
+    await this.save()
+  }
+
+  async setDhPong (dh) {
+    this.dhpong = dh
+    await this.save()
+  }
+
+  async save () {
+    try {
+      await data.db.sessionsync.put({ id: '1', data: schemas.serialize('idbSessionSync', this) })
+      store().commit('ui/setsessionsync', this)
+    } catch (e) {
+      throw data.setErDB(EX2(e))
+    }
   }
 }
 
-export async function setEtat (etat) {
-  go()
-  try {
-    await data.db.etat.put({ id: '1', data: JSON.stringify(etat) })
-  } catch (e) {
-    throw data.setErDB(EX2(e))
-  }
+export async function debutSessionSync () {
+  const s = new SessionSync()
+  await s.setConnexion()
+  return s
 }
 
 export async function getCompte () {
@@ -218,14 +270,14 @@ export async function getSecrets () {
   }
 }
 
-export async function getCvs (utiles, buf) {
+export async function getCvs (utilesvp, utilesvz, buf) {
   go()
   try {
     const r = {}
     await data.db.cv.each(async (idb) => {
       const cv = {}
       schemas.deserialize('idbCv', await crypt.decrypter(data.clek, idb.data), cv)
-      if (utiles.has(cv.id)) {
+      if (utilesvp.has(cv.id) || utilesvz.has(cv.id)) {
         r[cv.id] = cv
       } else {
         buf.supprIDB({ table: 'cv', id: cv.id })

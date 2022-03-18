@@ -18,14 +18,20 @@ export function razdialogues (state) {
   state.dialoguecreationcompte = false
 }
 
-export function majconnexionencours (state, val) {
-  if (val === false) {
+export function majstatutsession (state, val) {
+  state.statutsession = val
+  if (val === 2) {
+    state.sessionok = true
+  } else {
+    state.sessionok = false
     state.erreur = { code: -4, message: 'néant', conseil: 'néant', stack: null }
     razdialogues(state)
     state.idblec = IDBLEC_RAZ
   }
-  state.connexionencours = val
 }
+
+export function setsessionsync (state, val) { state.sessionsync = val }
+export function resetsessionsync (state, val) { state.sessionsync = null }
 
 export function majopencours (state, val) {
   state.opencours = val
@@ -187,10 +193,6 @@ export function majidblec (state, { table, st, vol, nbl }) {
 
 export function razidblec (state) {
   state.idblec = { ...IDBLEC_RAZ }
-}
-
-export function majstatutsession (state, val) {
-  state.statutsession = val
 }
 
 export function majdialoguesynchro (state, val) {

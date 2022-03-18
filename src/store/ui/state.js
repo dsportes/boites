@@ -33,9 +33,19 @@ export default function () {
     0: fantôme : la session n'a pas encore été ouverte par une opération de login / création compte
       ou cette opération s'est interrompue.
     1: opération de connexion / login en cours : ce temps est généralement court et se termine en 0 (échec) ou 2 (succès)
-    1: session totalement chargée / synchronisée et cohérente
+    2: session totalement chargée / synchronisée et cohérente
     */
     statutsession: 0,
+    sessionok: false,
+
+    /* Dernier état de session synchronisé
+    - dhdebutp : dh de début de la dernière session sync terminée
+    - dhfinp : dh de fin de la dernière session sync terminée
+    - dhdebut: dh de début de la session sync en cours
+    - dhsync: dh du dernier traitement de synchronisation
+    - dhpong: dh du dernier pong reçu
+    */
+    sessionsync: null,
 
     message: null,
     messageto: null,

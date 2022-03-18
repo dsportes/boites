@@ -1,5 +1,5 @@
 <template>
-  <q-card v-if="cnx" class="full-height moyennelargeur fs-md column">
+  <q-card v-if="sessionok" class="full-height moyennelargeur fs-md column">
     <q-toolbar v-if="state.g" class="col-auto bg-secondary text-white maToolBar">
       <q-btn flat round dense icon="close" size="md" class="q-mr-sm" @click="fermer" />
       <q-toolbar-title><div class="titre-md text-center">{{state.g.nom}}</div></q-toolbar-title>
@@ -359,7 +359,7 @@ export default ({
   setup () {
     const $q = useQuasar()
     const $store = useStore()
-    const cnx = computed(() => { return $store.state.ui.connexionencours })
+    const sessionok = computed(() => { return $store.state.ui.sessionok })
     const mcledit = ref(false)
     const ardedit = ref(false)
     const infoedit = ref(false)
@@ -527,7 +527,7 @@ export default ({
 
     function tousLesWatch () {
       watch(state, async (ap, av) => {
-        if (!cnx.value) return
+        if (!sessionok.value) return
         if (state.g) {
           const avant = state.g.sty === 1
           if (ap.arch !== avant) {
@@ -537,18 +537,18 @@ export default ({
       })
 
       watch(() => prefs.value, (ap, av) => {
-        if (!cnx.value) return
+        if (!sessionok.value) return
         chargerMc()
       })
 
       watch(() => membres.value, (ap, av) => {
-        if (!cnx.value) return
+        if (!sessionok.value) return
         getMembres()
         trier()
       })
 
       watch(() => groupeplus.value, (ap, av) => {
-        if (!cnx.value) return
+        if (!sessionok.value) return
         initState()
         chargerMcGr()
         chargerMc()
@@ -557,23 +557,25 @@ export default ({
       })
 
       watch(() => repertoire.value, (ap, av) => {
-        if (!cnx.value) return
+        if (!sessionok.value) return
         getMembres()
         trier()
       })
 
       watch(() => clipboard.value, (ap, av) => {
-        if (!cnx.value) return
+        if (!sessionok.value) return
         checkcb(ap)
       })
 
-      watch(() => cnx.value, (ap, av) => {
-        mcledit.value = false
-        ardedit.value = false
-        infoedit.value = false
-        editgr.value = false
-        panelinvit.value = false
-        invitcontact.value = false
+      watch(() => sessionok.value, (ap, av) => {
+        if (ap) {
+          mcledit.value = false
+          ardedit.value = false
+          infoedit.value = false
+          editgr.value = false
+          panelinvit.value = false
+          invitcontact.value = false
+        }
       })
     }
 
@@ -589,7 +591,7 @@ export default ({
     })
 
     return {
-      cnx,
+      sessionok,
       personnes,
       personne,
       avatar,
