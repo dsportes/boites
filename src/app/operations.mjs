@@ -3,7 +3,7 @@ import { remplacePage } from './page.mjs'
 import {
   deleteIDB, idbSidCompte, commitRows, getCompte, getCompta, getPrefs, getCvs,
   getAvatars, getGroupes, getCouples, getMembres, getSecrets,
-  openIDB, enregLScompte, setEtat, getEtat, putPj
+  openIDB, enregLScompte, getEtat, putPj
 } from './db.mjs'
 import { Compte, Avatar, rowItemsToMapObjets, commitMapObjets, data, Prefs, Contact, Invitgr, Compta, Groupe, Membre, Secret, Cv } from './modele.mjs'
 import { AppExc, EXBRK, EXPS, F_BRO, E_BRO, X_SRV, E_WS, MC, t1n, t2n } from './api.mjs'
@@ -533,21 +533,22 @@ export class OperationUI extends Operation {
     this.majopencours(this)
   }
 
-  async postCreation (ret) { // A REVOIR COMPLETEMENT
+  async postCreation (ret) {
     const mapObj = await rowItemsToMapObjets(ret.rowItems)
-    const compte2 = mapObj.compte // le DERNIER objet compte quand on en a reçu plusieurs (pas la liste)
-    data.setCompte(compte2)
-    const compta2 = mapObj.compta // le DERNIER objet compte quand on en a reçu plusieurs (pas la liste)
-    data.setCompta(compta2)
-    const prefs2 = mapObj.prefs // le DERNIER objet compte quand on en a reçu plusieurs (pas la liste)
-    data.setPrefs(prefs2)
-    const objets = [compte2, compta2, prefs2]
-    // ??? await commitMapObjets(objets, mapObj) // l'avatar n'a pas été traité, les singletons l'ont été juste ci-avant
+    const compte = mapObj.compte
+    const compta = mapObj.compta
+    const prefs = mapObj.prefs
+    const avatar = Object.values(mapObj.avatar)[0]
+
+    data.setCompte(compte)
+    data.setCompta(compta)
+    data.setPrefs(prefs)
+    const objets = [compte, compta, prefs, avatar]
 
     // création de la base IDB et chargement des rows compte et avatar
     if (data.mode === 1) { // synchronisé : IL FAUT OUVRIR IDB (et écrire dedans)
       this.BRK()
-      enregLScompte(compte2.sid)
+      enregLScompte(compte.sid)
       await deleteIDB()
       try {
         await openIDB()
@@ -555,14 +556,13 @@ export class OperationUI extends Operation {
         await deleteIDB(true)
         throw e
       }
-      await commitRows(objets)
+      await commitRows(objets, [])
     }
 
-    data.statutsession = 2
-    data.dhsync = data.dh
-    if (data.dbok) {
-      await setEtat()
-    }
+    data.estComptable = ret.estComptable
+    data.finConnexion(this.dh, 0)
+    this.finOK()
+    remplacePage('Compte')
   }
 }
 
@@ -607,7 +607,7 @@ E_WS, '01-Session interrompue. Se déconnecter et tenter de se reconnecter'
 On poste :
 - les rows Compte, Compta, Prefs, v et dds à 0
 - les clés publiques du compte et de l'avatar pour la table avrsa
-- le row Avatar, v et dds à 0
+- le row Avatar, v à 0
 Retour:
 - dh, sessionId
 - rowItems retournés : compte compta prefs avatar
@@ -640,15 +640,17 @@ export class CreationCompte extends OperationUI {
 
       this.BRK()
       const kpav = await crypt.genKeyPair()
-      const kpc = await crypt.genKeyPair()
       const nomAvatar = new NomAvatar(nom) // nouveau
 
-      const compte = new Compte().nouveau(nomAvatar, kpav.privateKey, kpc.privateKey)
+      const compte = new Compte().nouveau(nomAvatar, kpav.privateKey)
+      // nouveau() enregistre la clé K dans data.clek
       const rowCompte = await compte.toRow()
+
       const prefs = new Prefs().nouveau(compte.id)
       const rowPrefs = await prefs.toRow()
-      data.setPrefs(prefs) // tout de suite à cause de l'afficahage qui va y chercher des trucs
-      data.setCompte(compte)
+
+      // data.setPrefs(prefs) // tout de suite à cause de l'afficahage qui va y chercher des trucs
+      // data.setCompte(compte)
 
       const compta = new Compta().nouveau(compte.id, null)
       compta.compteurs.setRes(64, 64)
@@ -659,20 +661,16 @@ export class CreationCompte extends OperationUI {
       const avatar = new Avatar().nouveau(nomAvatar.id)
       const rowAvatar = await avatar.toRow()
 
-      const args = { sessionId: data.sessionId, clePubAv: kpav.publicKey, clePubC: kpc.publicKey, rowCompte, rowCompta, rowAvatar, rowPrefs }
+      const args = { sessionId: data.sessionId, clePubAv: kpav.publicKey, rowCompte, rowCompta, rowAvatar, rowPrefs }
       const ret = this.tr(await post(this, 'm1', 'creationCompte', args))
+
       /*
-      Le compte vient d'être créé et est déjà dans le modèle (clek enregistrée)
+      Le compte vient d'être créé  et clek enregistrée
       On peut désérialiser la liste d'items (compte et avatar)
       */
       this.postCreation(ret)
-
-      data.estComptable = true
-      const res = this.finOK()
-      remplacePage('Compte')
-      return res
     } catch (e) {
-      return await this.finKO(e)
+      this.finKO(e)
     }
   }
 }
@@ -953,16 +951,16 @@ export class ConnexionCompte extends OperationUI {
       this.dh = 0
       data.ps = ps
 
-      if (data.netok && razdb) {
+      if (razdb && data.netok) {
         await deleteIDB()
         await sleep(100)
         console.log('RAZ db')
       }
-      if (!data.netok && !idbSidCompte()) {
+      // En mode avion, vérifie que la phrase secrète a bien une propriété en localstorage donnant le nom de la base
+      if (data.mode === 3 && !idbSidCompte()) {
         throw new AppExc(F_BRO, 'Compte non enregistré localement : aucune session synchronisée ne s\'est préalablement exécutée sur ce poste avec cette phrase secrète. Erreur dans la saisie de la ligne 1 de la phrase ?')
       }
       await data.connexion()
-      this.BRK()
 
       for (let nb = 0; nb < 10; nb++) {
         if (nb >= 5) throw new AppExc(E_BRO, 'Plus de 5 tentatives de connexions. Bug ou incident temporaire. Ré-essayer un peu plus tard')
@@ -972,19 +970,27 @@ export class ConnexionCompte extends OperationUI {
         if (!await this.phase1()) continue // obtention des avatars du compte
         if (!await this.phase2()) continue // obtention des groupes et couples des avatars du compte
       }
+      this.BRK()
       /* YES ! on a tous les objets maîtres compte / avatar / groupe / couple) à jour, abonnés et signés */
 
-      // Récupération des membres et secrets
+      /* Récupération des membres et secrets
+      */
       await this.phase3()
 
-      // Récupération des CVs et s'y abonner
+      /* Récupération des CVs et s'y abonner
+      TODO - traiter les CV qui reviennent avec un x > 0 :
+        - poster des requêtes qui changent le statut des membres
+        - poster les requêtes qui changent le statut des couples
+      */
       this.nvcv = await this.phase4(this.vcv)
 
-      // Recharger les pièces jointes manquantes A REPRENDRE
-      const [nbp, vol] = await this.syncPjs()
+      /* Phase 5 : recharger les fichiers attachés aux secrets à stocker en IDB,
+      manquants ou ayant changé de version.
+      */
+      const [nbp, vol] = await this.syncPjs() // A REPRENDRE
       this.majsynclec({ st: 1, sid: '$PJ', nom: 'Pièces jointes "avion" : ' + edvol(vol), nbl: nbp })
 
-      /* Récupération des invitations aux groupes
+      /* Phase 6 : récupération des invitations aux groupes
       Elles seront de facto traitées en synchronisation quand un avatar reviendra avec un lgrk étendu
       */
       if (data.netok) await this.getInvitGrs(this.buf.compte)

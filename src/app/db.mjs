@@ -376,8 +376,7 @@ export async function commitRows (lmaj, lsuppr) {
   go()
   try {
     const lidb = []
-    const lidbs = []
-    if (lmaj || !lmaj.length) {
+    if (lmaj && lmaj.length) {
       for (let i = 0; i < lmaj.length; i++) {
         const obj = lmaj[i]
         const x = { table: obj.table, row: {} }
@@ -394,16 +393,18 @@ export async function commitRows (lmaj, lsuppr) {
       }
     }
 
-    if (!lsuppr || !lsuppr.length) return
-    for (let i = 0; i < lsuppr.length; i++) {
-      const obj = lsuppr[i]
-      const x = { ...obj }
-      x.id = estSingleton(obj.table) ? '1' : crypt.u8ToB64(await crypt.crypter(data.clek, Sid(obj.id), 1), true)
-      if (obj.id2) x.id2 = crypt.u8ToB64(await crypt.crypter(data.clek, Sid(obj.id2), 1), true)
-      lidbs.push(x)
-      if (obj.table === 'compte') {
-        lidbs.push({ table: 'prefs', id: '1' })
-        lidbs.push({ table: 'compta', id: '1' })
+    const lidbs = []
+    if (lsuppr && lsuppr.length) {
+      for (let i = 0; i < lsuppr.length; i++) {
+        const obj = lsuppr[i]
+        const x = { ...obj }
+        x.id = estSingleton(obj.table) ? '1' : crypt.u8ToB64(await crypt.crypter(data.clek, Sid(obj.id), 1), true)
+        if (obj.id2) x.id2 = crypt.u8ToB64(await crypt.crypter(data.clek, Sid(obj.id2), 1), true)
+        lidbs.push(x)
+        if (obj.table === 'compte') {
+          lidbs.push({ table: 'prefs', id: '1' })
+          lidbs.push({ table: 'compta', id: '1' })
+        }
       }
     }
 

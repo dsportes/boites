@@ -13,7 +13,6 @@ export default function () {
     avatars: {}, // Tous les avatars listés sur le compte
     groupes: {}, // Tous les groupes listés sur les avatars
     couples: {}, // Tous les couples listés sur les avatars
-    contact: {}, // Tous les contact (phch)
 
     repertoire: {}, // Toutes les cartes de visite : accès par data.repertoire
 
@@ -23,6 +22,5 @@ export default function () {
     Groupés par sid de groupe : membres_sid
     Groupés par sid d'avatar ou de groupe ou de couple : secrets_sid
     */
-
   }
 }

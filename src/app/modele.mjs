@@ -233,13 +233,12 @@ class Repertoire {
 
   raz () {
     this.rep = {}
-    this.modif = false
   }
 
   commit () {
     if (this.modif) {
+      delete this.modif
       store().commit('db/commitRepertoire', this)
-      this.modif = false
     }
   }
 
@@ -762,13 +761,7 @@ export class Compte {
 
   get sid () { return crypt.idToSid(this.id) }
 
-  get sid2 () { return null }
-
   get pk () { return '1' }
-
-  get suppr () { return false }
-
-  get horsLimite () { return false }
 
   get estComptable () { return data.estComptable }
 
@@ -789,7 +782,7 @@ export class Compte {
     data.clek = this.k
     this.mac = { }
     this.mac[nomAvatar.sid] = { na: nomAvatar, cpriv: cprivav }
-    data.setNa(nomAvatar.nom, nomAvatar.rnd)
+    data.repertoire.setAv(nomAvatar.nom, nomAvatar.rnd, true)
     this.vsh = 0
     return this
   }
@@ -837,7 +830,7 @@ export class Compte {
       m[sid] = [x.na.nom, x.na.rnd, x.cpriv]
     }
     m[na.sid] = [na.nom, na.rnd, kpav.privateKey]
-    data.setNa(na.nom, na.rnd)
+    data.repertoire.setAv(na.nom, na.rnd, true)
     return await crypt.crypter(data.clek, serial(m))
   }
 
@@ -881,13 +874,7 @@ export class Prefs {
 
   get sid () { return crypt.idToSid(this.id) }
 
-  get sid2 () { return null }
-
-  get pk () { return this.sid }
-
-  get suppr () { return false }
-
-  get horsLimite () { return false }
+  get pk () { return '1' }
 
   get memo () { return this.map.mp }
 
@@ -968,13 +955,7 @@ export class Compta {
 
   get sid () { return crypt.idToSid(this.id) }
 
-  get sid2 () { return null }
-
-  get pk () { return this.sid }
-
-  get suppr () { return false }
-
-  get horsLimite () { return false }
+  get pk () { return '1' }
 
   get estParrain () { return this.idp === null }
 
@@ -1054,10 +1035,6 @@ export class Avatar {
 
   get sid () { return crypt.idToSid(this.id) }
 
-  get sid2 () { return null }
-
-  get sidav () { return crypt.idToSid(this.id) }
-
   get pk () { return this.sid }
 
   get groupes () { return this.m2gr.keys() }
@@ -1089,11 +1066,6 @@ export class Avatar {
   nouveau (id) {
     this.id = id
     this.v = 0
-    this.st = 0
-    this.vcv = 0
-    this.dds = 0
-    this.photo = ''
-    this.info = ''
     this.vsh = 0
     return this
   }
