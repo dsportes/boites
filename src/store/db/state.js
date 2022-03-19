@@ -13,14 +13,13 @@ export default function () {
     avatars: {}, // Tous les avatars listés sur le compte
     groupes: {}, // Tous les groupes listés sur les avatars
     couples: {}, // Tous les couples listés sur les avatars
-
-    repertoire: {}, // Toutes les cartes de visite : accès par data.repertoire
+    cvs: {}, // Toutes les cartes de visite
 
     faidx: {} // index des pièces jointes disponibles en mode avion
 
     /*
-    Groupés par sid de groupe : membres_sid
-    Groupés par sid d'avatar ou de groupe ou de couple : secrets_sid
+    Groupés par sid de groupe : membres@sid
+    Groupés par sid d'avatar ou de groupe ou de couple : secrets@sid
     */
   }
 }

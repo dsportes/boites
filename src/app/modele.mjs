@@ -4,7 +4,7 @@ import { openIDB, closeIDB, putFa, getFadata } from './db.mjs'
 import { openWS, closeWS } from './ws.mjs'
 import {
   store, appexc, serial, deserial, dlvDepassee, NomAvatar, gzip, ungzip, dhstring,
-  getJourJ, cfg, ungzipT, normpath, getfa, titreEd, Sid
+  getJourJ, cfg, ungzipT, normpath, getfa, titreEd
 } from './util.mjs'
 import { remplacePage } from './page.mjs'
 import { EXPS, UNITEV1, UNITEV2, Compteurs, t0n, t1n } from './api.mjs'
@@ -40,6 +40,59 @@ export async function rowItemsToMapObjets (rowItems) {
       const k = t1n.has(item.table) ? obj.id : obj.pk
       const ex = e[k]
       if (!ex) e[k] = obj; else { if (ex.v < obj.v) e[k] = obj }
+    }
+  }
+  return res
+}
+
+const tbls = ['avatar', 'groupe', 'couple', 'cv', 'membre', 'secrets']
+
+export async function compileToObject (mr) {
+  for (const table of tbls) {
+    if (t0n.has(table)) {
+      const mrow = mr[table]
+      if (mrow) {
+        for (const id in mrow) {
+          const obj = newObjet(table)
+          mrow[id] = await obj.fromRow(mrow[id])
+        }
+      }
+    } else {
+      const m1 = mr[table]
+      if (m1) {
+        for (const id in m1) {
+          const mrow = m1[id]
+          for (const id in mrow) {
+            const obj = newObjet(table)
+            mrow[id] = await obj.fromRow(mrow[id])
+          }
+        }
+      }
+    }
+  }
+  return mr
+}
+
+export function pk (table, row) {
+  const id = '' + row.id
+  if (table === 'membre') return id + '/' + row.im
+  if (table === 'secret') return id + '/' + row.ns
+  return id
+}
+
+export function deserialRowItems (rowItems) {
+  const res = {}
+  for (let i = 0; i < rowItems.length; i++) {
+    const item = rowItems[i]
+    const row = schemas.deserialize('row' + item.table, item.serial)
+    if (item.table === 'compte' && row.pcbh !== data.ps.pcbh) throw EXPS // phrase secrète changée => déconnexion
+    if (t0n.has(item.table)) {
+      res[item.table] = row
+    } else {
+      let e = res[item.table]; if (!e) { e = {}; res[item.table] = e }
+      const k = pk(item.table, row)
+      const ex = e[k]
+      if (!ex) e[k] = row; else { if (ex.v < row.v) e[k] = row }
     }
   }
   return res
@@ -207,244 +260,75 @@ export async function commitMapObjets (objets, mapObj) { // SAUF mapObj.compte e
 }
 
 /* Répertoire des CV *******************************************************
-Il y a une entrée par objet majeur avatar / couple / groupe existant.
-L'entrée est fixée par setAv() setGr() setCp() sur lecture de :
-  - compte.mack pour un avatar
-  - avatar.lgrk pour un groupe
-  - avatar.lcck pour un couple
-Le nom d'un couple évolue par avIECp() quand,
-  - le conjoint interne est connu avec ou sans conjoint interne (lecture du row couple)
-  - le conjoint externe devient connu ou repasse inconnu (maj du row couple)
-
-Pour chaque entrée d'avatar on maintient ses cross-références :
-  - vers les groupes dont il est membre : liste lgr
-  - dans les couples dont il est conjoint EXTERNE : liste lcp
-    (quand un avatar est conjoint INTERNE de couplee, c'est son lcck qui en donne la liste)
-
-Pour un groupe on gère la liste de ses membres EXTERNES : liste lmb
-  - afin de pouvoir gérer la x-ref lgr des avatars EXTERNES référençant le groupe
-
-Les mises à jour d'une entrée de répertoire clone l'objet afin que state.db détecte bien un changement.
+Le répertoire a une entrée pour :
+- 1-chaque avatar du compte,
+- 2-chaque groupe dont un avatar du compte est membre
+- 3-chaque couple dont un avatar du compte est conjoint interne
+- 4-chaque avatar externe,
+  - membre d'un des groupes ci-dessus,
+  - conjoint externe d'un des couples ci-dessus
+Chaque entrée a les propriétés :
+- id
+- nom : pour un couple c'est 'x'
+- cle
+- x : si absent, l'objet est vivant, si true objet disparu
+Une entrée de répertoire est quasi immuable :
+- la seule valeur qui peut changer est x mais elle est inscrite à la connexion du compte
+et n'est mise à jour (au plus une fois) que par le GC de nuit.
+Le répertoire grossit en cours de session mais ne réduit jamais. Il contient des objets "obsolètes"
+- avatar du compte détruit
+- groupe n'ayant plus d'avatars du compte membre
+- couple quitté par leur conjoint interne
+- avatar externe n'étant plus membre d'aucun groupe ni conjoint externe d'aucun couple
 */
 class Repertoire {
   constructor () {
-    this.raz()
-  }
-
-  raz () {
+    this.idac = new Set()
+    this.idax = new Set()
+    this.idgr = new Set()
+    this.idcp = new Set()
     this.rep = {}
   }
 
-  commit () {
-    if (this.modif) {
-      delete this.modif
-      store().commit('db/commitRepertoire', this)
-    }
-  }
+  get (id) { return this.rep[id] }
+  cle (id) { const e = this.rep[id]; return e ? e.cle : null }
+  estAc (id) { return this.idac.has(id) }
+  estAx (id) { return this.idax.has(id) }
+  estGr (id) { return this.idgr.has(id) }
+  estCp (id) { return this.idcp.has(id) }
 
-  // Pour tous types
-  cle (id) { const x = this.get(id); return x ? x.na.cle : null }
+  disparition (id) { const e = this.rep[id]; if (e) e.x = true }
 
-  get (id) { return this.rep[Sid(id)] || null }
-
-  async cryptedCv (id) {
-    const x = this.get(id)
-    if (!x || !x.cv) return null
-    await crypt.crypter(x.na.cle, serial(x.cle))
-  }
-
-  // Pour un couple seulement : cv internes et externes
-  cvIX (id) {
-    const x = this.rep[Sid(id)]
-    if (!x) return [null, null]
-    const cvI = x.idI ? this.rep[Sid(x.idI)] : null
-    const cvE = x.idE ? this.rep[Sid(x.idE)] : null
-    return [cvI, cvE]
-  }
-
-  setAv (nom, rnd, avc) { // (re)création - avc : true si avatar du compte
-    const na = new NomAvatar(nom, rnd)
-    const sid = na.sid
-    let x = this.rep[sid]
-    if (!x) {
-      this.modif = true
-      x = { table: 'avatar', id: na.id, v: 0, cv: null, na: na, lgr: [], lcp: [], avc: (avc === true), vsh: 0 }
-      this.rep[sid] = x
-    }
-    return x
-  }
-
-  setGr (nom, rnd) { // (re)création
-    const na = new NomAvatar(nom, rnd)
-    const sid = na.sid
-    let x = this.rep[sid]
-    if (!x) {
-      this.modif = true
-      x = { table: 'groupe', id: na.id, v: 0, cv: null, na: na, lmb: [], vsh: 0 }
-      this.rep[sid] = x
-    }
-    return x
-  }
-
-  setCp (cc) { // (re)création
-    const na = new NomAvatar('(inconnu)-(inconnu)', cc)
+  setAc (na, x) {
     const id = na.id
-    const sid = na.sid
-    let x = this.rep[sid]
-    if (!x) {
-      this.modif = true
-      x = { table: 'groupe', id: id, v: 0, cv: null, na: na, idI: 0, idE: 0, vsh: 0 }
-      this.rep[sid] = x
-    }
-    return x
+    const obj = { id, nom: na.nom, cle: na.rnd }
+    if (x) obj.x = x
+    this.rep[id] = obj
+    this.idac.add(id)
   }
 
-  /* Suppression d'une entrée inutile ou disparue
-  Gestion des cross-ref dans lgr / lcp
-  - pour un groupe qui disparaît : les avatars membres (internes et externes) ne référencent plus le groupe
-  - pour un couple qui disparaît : l'éventuel avatar EXTERNE ne référence plus le couple
-  */
-  suppr (id) {
-    const sid = Sid(id)
-    const y = this.rep[sid]
-    if (!y) return
-    this.modif = true
-    if (y.table === 'groupe' && y.lmb.length) {
-      y.lmb.forEach(idmb => {
-        const sidmb = Sid(idmb)
-        const x = this.rep[sidmb]
-        if (x && x.lmb.length) {
-          const i = x.lmb.indexOf(id)
-          if (i !== -1) {
-            x.lmb.splice(i, 1)
-            this.rep[sidmb] = { ...x }
-          }
-        }
-      })
-    } else if (y.table === 'couple') {
-      const sidE = Sid(y.idE)
-      if (sidE) {
-        const x = this.rep[sidE]
-        if (x && x.lcp) {
-          const i = x.lcp.indexOf(id)
-          if (i !== -1) {
-            x.lcp.splice(i, 1)
-            this.rep[sidE] = { ...x }
-          }
-        }
-      }
-    }
-    delete this.rep[sid]
+  setGr (na, x) {
+    const id = na.id
+    const obj = { id, nom: na.nom, cle: na.rnd }
+    if (x) obj.x = x
+    this.rep[id] = obj
+    this.idgr.add(id)
   }
 
-  /* Pour un couple, MAJ des avatars interne et externe dès qu'on les connaît
-  ou que l'avatar externe devient connu ou repasse inconnu
-  x est le data.x d'un row couple :
-  [[idc, nom, rnd], [idc, nom, rnd]] : id du compte, nom et clé d'accès à la carte de visite
-  */
-  avIECp (id, x) {
-    const sid = Sid(id)
-    const y = this.rep[sid]
-    if (!y) return
-    const xx = { ...y }
-    const idEavant = y.idE
-    this.modif = true
-    const na0 = x[0] && x[0][1] && x[0][2] ? new NomAvatar(x[0][1], x[0][2]) : null
-    const na1 = x[1] && x[1][1] && x[1][2] ? new NomAvatar(x[1][1], x[1][2]) : null
-    const id0 = na0 ? na0.id : 0
-    const id1 = na1 ? na1.id : 0
-    let naI, naE
-    if (id0) {
-      const cv0 = this.cv(id0)
-      if (cv0.avc) {
-        xx.idI = id0; xx.idE = id1; naI = na0; naE = na1
-      } else {
-        xx.idE = id0; xx.idI = id1; naI = na1; naE = na0
-      }
-    } else if (id1) {
-      xx.idE = id0; xx.idI = id1; naI = na1; naE = na0
-    }
-    const nom = '(' + (naI ? naI.nom : 'inconnu') + ')-(' + (naE ? naE.nom : 'inconnu') + ')'
-    const na = new NomAvatar(nom, xx.na.cle)
-    xx.na = na
-    this.rep[sid] = xx
-    if (xx.idE) {
-      const sidE = Sid(xx.idE)
-      // maintien de la cross-ref lcp dans l'avatar
-      if (!idEavant) {
-        // n'était pas référencé par l'avatar externe : ajouté
-        const xE = this.rep[sidE]
-        xE.lcp.push(xx.idE)
-        this.rep[sidE] = { ...xE }
-      }
-    } else {
-      if (idEavant) {
-        const sidEavant = Sid(idEavant)
-        // était référencé par l'avatar externe: enlevé
-        const xE = this.rep[sidEavant]
-        const i = xE.lcp.indexOf(id)
-        if (i !== -1) {
-          xE.lcp.splice(i, 1)
-          this.rep[sidEavant] = { ...xE }
-        }
-      }
-    }
-    return xx
+  setCp (cle, x) {
+    const id = crypt.hashBin(cle)
+    const obj = { id, nom: 'x', cle: cle }
+    if (x) obj.x = x
+    this.rep[id] = obj
+    this.idcp.add(id)
   }
 
-  /* Ajout / détection d'un nouveau membre d'un groupe (on n'en supprime jamais tant que le groupe existe)
-  Gestion des x-ref mutuelles lmb (dans l'entrée groupe) et lgr (dans l'entrée avatar)
-  */
-  setMembre (nom, rnd, idg) {
-    const xg = this.get(idg)
-    if (!xg) return
-    const xa = this.setAv(nom, rnd)
-    const ida = xa.id
-    let i = xa.lgr.indexOf(idg)
-    if (i === -1) {
-      this.modif = true
-      xa.lgr.push(idg)
-      this.rep[Sid(ida)] = { ...xa }
-    }
-    i = xg.lmb.indexOf(ida)
-    if (i === -1) {
-      this.modif = true
-      xg.lmb.push(ida)
-      this.rep[Sid(idg)] = { ...xg }
-    }
-  }
-
-  // MAJ de la carte de visite
-  setCv (cv) {
-    const sid = Sid(cv.id)
-    const y = this.rep[sid]
-    if (!y) return
-    const x = { ...y }
-    this.modif = true
-    x.cv = { ...cv }
-    this.rep[sid] = x
-    return x
-  }
-
-  avUtiles () {
-    const vz = new Set()
-    const vp = new Set()
-    for (const sid in this.rep) {
-      const x = this.rep[sid]
-      if (x.table === 'avatar' && (x.avc || x.lcp.length || x.lgr.length)) {
-        if (x.v === 0) vz.add(x.id); else vp.add(x.id)
-      }
-    }
-    return [vp, vz]
-  }
-
-  avInutiles () {
-    const s = new Set()
-    for (const sid in this.rep) {
-      const x = this.rep[sid]
-      if (x.table === 'avatar' && !x.avc && !x.lcp.length && !x.lgr.length) s.add(x.id)
-    }
-    return s
+  setAx (na, x) {
+    const id = na.id
+    const obj = { id, nom: na.nom, cle: na.rnd }
+    if (x) obj.x = x
+    this.rep[id] = obj
+    this.idax.add(id)
   }
 }
 
@@ -587,6 +471,11 @@ class Session {
 
   stopOp () { if (this.opUI) this.opUI.stop() }
 
+  resetPhase012 () {
+    store().commit('ui/raz')
+    store().commit('ui/razsynclec')
+  }
+
   raz (init) { // init : l'objet data (Session) est créé à un moment où le store vuex n'est pas prêt
     this.db = null // IDB quand elle est ouverte
     this.nombase = null
@@ -601,7 +490,7 @@ class Session {
       this.statutidb = 0 // 0: idb pas ouvert, 1:idb OK, 2: idb KO
       this.statutsession = 0
       this.sessionId = null
-      store().commit('ui/razidblec')
+      store().commit('ui/raz')
       store().commit('ui/razsynclec')
     }
 
@@ -647,77 +536,33 @@ class Session {
   }
 
   getCompte () { return store().state.db.compte }
-
   setCompte (compte) { store().commit('db/setCompte', compte) }
 
   getCompta () { return store().state.db.compta }
-
   setCompta (compta) { store().commit('db/setCompta', compta) }
 
   getPrefs () { return store().state.db.prefs }
-
   setPrefs (prefs) { store().commit('db/setPrefs', prefs) }
 
-  avc (id) { return this.getCompte().av(id) }
-
   getAvatar (id) { return store().getters['db/avatar'](id) }
-
-  setAvatars (lobj, hls) {
-    if (lobj.length) {
-      if (hls) lobj.forEach(obj => { if (obj.suppr) hls.push(obj) })
-      store().commit('db/setObjets', ['avatar', lobj])
-    }
-  }
+  setAvatars (lobj) { store().commit('db/setObjets', lobj) }
 
   getGroupe (id) { return store().getters['db/groupe'](id) }
-
-  setGroupes (lobj, hls) {
-    if (lobj.length) {
-      if (hls) lobj.forEach(obj => { if (obj.suppr) hls.push(obj) })
-      store().commit('db/setObjets', ['groupe', lobj])
-    }
-  }
+  setGroupes (lobj) { store().commit('db/setObjets', lobj) }
 
   getCouple (id) { return store().getters['db/couple'](id) }
+  setCouples (lobj) { store().commit('db/setObjets', lobj) }
 
-  setCouples (lobj, hls) {
-    if (lobj.length) {
-      if (hls) lobj.forEach(obj => { if (obj.suppr) hls.push(obj) })
-      store().commit('db/setObjets', ['couple', lobj])
-    }
-  }
-
-  getContact (phch) { return store().getters['db/contact'](phch) }
-
-  setContacts (lobj, hls) {
-    if (lobj.length) {
-      if (hls) lobj.forEach(obj => { if (obj.suppr || obj.horslimite) hls.push(obj) })
-      store().commit('db/setObjets', ['contact', lobj])
-    }
-  }
-
-  getCv (id) { return this.repertoire[id] }
+  getCv (id) { return store().getters['db/cv'](id) }
+  setCvs (lobj) { store().commit('db/setCvs', lobj) }
 
   getMembre (idg, im) { return store().getters['db/membre'](idg, im) }
-
+  setMembres (lobj) { store().commit('db/setObjets', lobj) }
   // objet membre du groupe idg dont l'id est idm
   getMembreParId (idg, idm) { return store().getters['db/membreParId'](idg, idm) }
 
-  setMembres (lobj, hls) {
-    if (lobj.length) {
-      if (hls) lobj.forEach(obj => { if (obj.suppr || obj.horslimite) hls.push(obj) })
-      store().commit('db/setObjets', ['membre', lobj])
-    }
-  }
-
-  getSecret (sid, sid2) { return store().getters['db/secret'](sid, sid2) }
-
-  setSecrets (lobj, hls) {
-    if (lobj.length) {
-      if (hls) lobj.forEach(obj => { if (obj.suppr || obj.horslimite) hls.push(obj) })
-      store().commit('db/setObjets', ['secret', lobj])
-    }
-  }
+  getSecret (id, ns) { return store().getters['db/secret'](id, ns) }
+  setSecrets (lobj) { store().commit('db/setObjets', lobj) }
 
   purgeAvatars (lav) { if (lav.size) return store().commit('db/purgeAvatars', lav) }
 
@@ -758,20 +603,31 @@ schemas.forSchema({
 
 export class Compte {
   get table () { return 'compte' }
-
   get sid () { return crypt.idToSid(this.id) }
-
   get pk () { return '1' }
-
   get estComptable () { return data.estComptable }
-
   get titre () { return data.getPrefs(this.id).titre }
 
-  allAvId () {
-    const s = new Set()
-    for (const sid in this.mac) s.add(this.mac[sid].na.id)
-    return s
+  avatars (s) {
+    const s1 = new Set()
+    for (const sid in this.mac) {
+      const e = this.mac[sid]
+      const x = { id: e.na.id, nom: e.na.nom, cle: e.na.cle }
+      if (s) s.add(x); else s1.add(x)
+    }
+    return s || s1
   }
+
+  avatarIds (s) {
+    const s1 = new Set()
+    for (const sid in this.mac) {
+      const id = this.mac[sid].na.id
+      if (s) s.add(id); else s1.add(id)
+    }
+    return s || s1
+  }
+
+  repAvatars () { this.avatars().forEach(x => { data.repertoire.setAc(x.nom, x.cle) }) }
 
   nouveau (nomAvatar, cprivav, id) {
     this.id = id || crypt.rnd6()
@@ -782,16 +638,9 @@ export class Compte {
     data.clek = this.k
     this.mac = { }
     this.mac[nomAvatar.sid] = { na: nomAvatar, cpriv: cprivav }
-    data.repertoire.setAv(nomAvatar.nom, nomAvatar.rnd, true)
+    data.repertoire.setAc(nomAvatar.nom, nomAvatar.rnd)
     this.vsh = 0
     return this
-  }
-
-  get avatars () { // array des na triés par nom
-    const l = []
-    for (const avsid in this.mac) l.push(this.mac[avsid].na)
-    if (l.length > 1) l.sort((a, b) => a.nom > b.nom ? 1 : (a.nom === b.nom ? 0 : -1))
-    return l
   }
 
   async fromRow (row) {
@@ -830,7 +679,7 @@ export class Compte {
       m[sid] = [x.na.nom, x.na.rnd, x.cpriv]
     }
     m[na.sid] = [na.nom, na.rnd, kpav.privateKey]
-    data.repertoire.setAv(na.nom, na.rnd, true)
+    data.repertoire.setAc(na.nom, na.rnd)
     return await crypt.crypter(data.clek, serial(m))
   }
 
@@ -871,15 +720,10 @@ schemas.forSchema({
 
 export class Prefs {
   get table () { return 'prefs' }
-
   get sid () { return crypt.idToSid(this.id) }
-
   get pk () { return '1' }
-
   get memo () { return this.map.mp }
-
   get titre () { return titreEd(this.sid, this.map.mp) }
-
   get mc () { return this.map.mc }
 
   nouveau (id) {
@@ -952,11 +796,8 @@ schemas.forSchema({
 
 export class Compta {
   get table () { return 'compta' }
-
   get sid () { return crypt.idToSid(this.id) }
-
   get pk () { return '1' }
-
   get estParrain () { return this.idp === null }
 
   nouveau (id, idp) {
@@ -1032,18 +873,19 @@ schemas.forSchema({
 
 export class Avatar {
   get table () { return 'avatar' }
-
   get sid () { return crypt.idToSid(this.id) }
-
   get pk () { return this.sid }
 
-  get groupes () { return this.m2gr.keys() }
+  get cv () { return data.getCv(this.id) }
+  get photo () { const cv = this.cv; return cv ? cv.photo : '' }
+  get info () { const cv = this.cv; return cv ? cv.info : '' }
 
-  get cv () { return data.repertoire.get(this.id) }
+  get rep () { return data.repertoire.get(this.id) }
+  get cle () { return this.rep.cle }
+  get nom () { return this.rep.nom }
+  get nomEd () { return titreEd(this.nom || '', this.info) }
 
-  get cle () { return data.repertoire.cle(this.id) }
-
-  get nomf () { return normpath(this.cv.na.nom) }
+  get nomf () { return normpath(this.nom) }
 
   constructor () {
     this.m1gr = new Map() // clé:ni val: { na du groupe, im de l'avatar dans le groupe }
@@ -1051,17 +893,43 @@ export class Avatar {
     this.mcc = new Map() // clé: id du couple, val: clé cc
   }
 
-  allGrId (s) {
-    if (!s) s = new Set()
-    this.m1gr.forEach(val => { s.add(val.na.id) })
-    return s
+  groupeIds (s) {
+    const s1 = new Set()
+    this.m1gr.forEach(e => {
+      if (s) s.add(e.na.id); else s1.add(e.na.id)
+    })
+    return s || s1
   }
 
-  allCpId (s) {
-    if (!s) s = new Set()
-    this.mcc.forEach((val, id) => { s.add(id) })
-    return s
+  groupes (s) {
+    const s1 = new Set()
+    this.m1gr.forEach(e => {
+      const x = { id: e.na.id, nom: e.na.nom, cle: e.na.cle }
+      if (s) s.add(x); else s1.add(x)
+    })
+    return s || s1
   }
+
+  repGroupes () { this.groupes().forEach(x => { data.repertoire.setGr(x.nom, x.cle) }) }
+
+  coupleIds (s) {
+    const s1 = new Set()
+    this.mcc.forEach(cc => {
+      if (s) s.add(crypt.hashBin(cc)); else s1.add(crypt.hashBin(cc))
+    })
+    return s || s1
+  }
+
+  couples (s) {
+    const s1 = new Set()
+    this.mcc.forEach(cc => {
+      const x = { id: crypt.hashBin(cc), nom: 'x', cle: cc }
+      if (s) s.add(x); else s1.add(x)
+    })
+    return s || s1
+  }
+
+  repCouples () { this.groupes().forEach(x => { data.repertoire.setCp(x.cle) }) }
 
   nouveau (id) {
     this.id = id
@@ -1163,7 +1031,7 @@ export class Cv {
 
 schemas.forSchema({
   name: 'idbCouple',
-  cols: ['id', 'v', 'st', 'v1', 'v2', 'mx10', 'mx20', 'mx11', 'mx21', 'dlv', 'data', 'info0', 'info1', 'mc0', 'mc1', 'dh', 'ard', 'vsh']
+  cols: ['id', 'v', 'st', 'v1', 'v2', 'mx10', 'mx20', 'mx11', 'mx21', 'dlv', 'data', 'idI', 'idE', 'info', 'mc', 'dh', 'ard', 'vsh']
 })
 /*
 - `id` : id du couple
@@ -1185,24 +1053,41 @@ schemas.forSchema({
 
 export class Couple {
   get table () { return 'couple' }
-
   get sid () { return crypt.idToSid(this.id) }
-
-  get sid2 () { return null }
-
   get pk () { return this.sid }
-
   get pkv () { return this.sid + '/' + this.v }
 
   get stp () { return this.st > 0 ? Math.floor(this.st / 10) : 0 }
-
   get ste () { return this.st > 0 ? this.st % 10 : 0 }
 
-  get cv () { return data.repertoire.get(this.id) }
+  get cv () { return data.getCv(this.id) }
+  get photo () { const cv = this.cv; return cv ? cv.photo : '' }
+  get info () { const cv = this.cv; return cv ? cv.info : '' }
 
-  get cle () { return data.repertoire.cle(this.id) }
+  get rep () { return data.repertoire.get(this.id) }
+  get cle () { return this.rep.cle }
+  get nom () { return this.sid }
+  get nomEd () { return titreEd(this.nom, this.info) }
 
-  get nomf () { return normpath(this.cv.na.nom) }
+  get nomf () { return this.sid }
+
+  setRepE () { if (this.naE) data.repertoire.setAx(this.naE) }
+
+  setIdIE (x) {
+    const id0 = x[0] && x[0][1] && x[0][2] ? crypt.hashBin(x[0][2]) : 0
+    const id1 = x[1] && x[1][1] && x[1][2] ? crypt.hashBin(x[1][2]) : 0
+    if (data.repertoire.estAvc(id0)) {
+      this.idI = id0
+      this.idE = id1
+      this.naE = this.idE ? new NomAvatar(x[1][1], x[1][2]) : null
+      this.avc = 0
+    } else {
+      this.idI = id1
+      this.idE = id0
+      this.naE = this.idE ? new NomAvatar(x[0][1], x[0][2]) : null
+      this.avc = 1
+    }
+  }
 
   // cols: ['id', 'v', 'st', 'dds', 'v1', 'v2', 'mx10', 'mx20', 'mx11', 'mx21', 'dlv', 'data', 'info0', 'info1', 'mc0', 'mc1', 'dh', 'ard', 'vsh']
   async fromRow (row) {
@@ -1218,13 +1103,17 @@ export class Couple {
     this.mx21 = row.mx21
     this.dlv = row.dlv
     this.data = deserial(await crypt.decrypter(this.cle, row.datac))
+    this.setIdIE(this.data.x)
     const x = row.ardc ? deserial(await crypt.decrypter(this.cle, row.ardc)) : [0, '']
     this.dh = x[0]
     this.ard = x[1]
-    this.mc0 = row.mc0 || new Uint8Array([])
-    this.mc1 = row.mc1 || new Uint8Array([])
-    this.info0 = this.avc0 && row.info0k ? await crypt.decrypterStr(data.clek, row.info0k) : ''
-    this.info1 = this.avc1 && row.info1k ? await crypt.decrypterStr(data.clek, row.info1k) : ''
+    if (this.avc === 0) {
+      this.mc = row.mc0 || new Uint8Array([])
+      this.info = row.info0k ? await crypt.decrypterStr(data.clek, row.info0k) : ''
+    } else {
+      this.mc = row.mc1 || new Uint8Array([])
+      this.info = row.info1k ? await crypt.decrypterStr(data.clek, row.info1k) : ''
+    }
     return this
   }
 
@@ -1260,14 +1149,10 @@ schemas.forSchema({
 
 export class Contact {
   get table () { return 'contact' }
-
   get sid () { return crypt.idToSid(this.phch) }
-
-  get sid2 () { return crypt.idToSid(this.id) }
-
   get pk () { return this.sid }
 
-  get horsLimite () { return !this.suppr ? dlvDepassee(this.dlv) : false }
+  get horsLimite () { return dlvDepassee(this.dlv) }
 
   async nouveau (phch, clex, dlv, cc) {
     this.vsh = 0
@@ -1307,12 +1192,13 @@ Jamais stocké en IDB : dès réception, le row avatar correspondant est "régul
 
 export class Invitgr {
   get table () { return 'invitgr' }
+
   async fromRow (row) {
     this.id = row.id
     this.ni = row.ni
     const cpriv = data.avc(row.id).cpriv
     const x = deserial(await crypt.decrypterRSA(cpriv, row.datap))
-    this.idg = new NomAvatar(x[0], x[1]).id
+    this.idg = crypt.hashBin(x[1]) // utilité ???
     this.datak = await crypt.crypter(data.clek, serial(x))
     return this
   }
@@ -1330,12 +1216,9 @@ export class Invitgr {
 - `v` :
 - `dds` :
 - `dfh` : date (jour) de fin d'hébergement du groupe par son hébergeur
-- `st` : statut
-  - _négatif_ : le groupe est supprimé logiquement (c'est le numéro du jour de sa suppression).
-  - _positif_ `x y`
+- `st` : `x y`
     - `x` : 1-ouvert (accepte de nouveaux membres), 2-fermé (ré-ouverture en vote)
     - `y` : 0-en écriture, 1-protégé contre la mise à jour, création, suppression de secrets.
-- `cvg` : carte de visite du groupe `[photo, info]` cryptée par la clé G du groupe.
 - `idhg` : id du compte hébergeur crypté par la clé G du groupe.
 - `imh` : indice `im` du membre dont le compte est hébergeur.
 - `v1 v2` : volumes courants des secrets du groupe.
@@ -1351,33 +1234,24 @@ schemas.forSchema({
 
 export class Groupe {
   get table () { return 'groupe' }
-
   get sid () { return crypt.idToSid(this.id) }
-
-  get sid2 () { return null }
-
   get pk () { return this.sid }
 
-  get suppr () { return this.st < 0 }
+  get cv () { return data.getCv(this.id) }
+  get photo () { const cv = this.cv; return cv ? cv.photo : '' }
+  get info () { const cv = this.cv; return cv ? cv.info : '' }
 
-  get horsLimite () { return false }
+  get rep () { return data.repertoire.get(this.id) }
+  get cle () { return this.rep.cle }
+  get nom () { return this.rep.nom }
+  get nomEd () { return titreEd(this.nom || '', this.info) }
 
-  get sidgr () { return this.sid }
-
-  get icone () { return this.photo || '' }
-
-  get cleg () { return this.na.cle }
-
-  get na () { return data.getNa(this.id) }
+  get nomf () { return normpath(this.nom) }
 
   get stx () { return Math.floor(this.st / 10) }
-
   get sty () { return this.st % 10 }
 
-  get nom () { return titreEd(this.na.nom || '', this.info) }
-
   get pc1 () { return Math.round(this.v1 / UNITEV1 / this.f1) }
-
   get pc2 () { return Math.round(this.v2 / UNITEV2 / this.f2) }
 
   get estHeb () { return this.idh && !this.dfh && this.idh === data.getCompte().id }
@@ -1410,14 +1284,11 @@ export class Groupe {
     const na = data.setNa(nom)
     this.id = na.id
     this.v = 0
-    this.dds = 0
     this.dfh = 0
     this.st = 10
     this.mxim = 1
     this.idh = data.getCompte().id
     this.imh = imh
-    this.photo = ''
-    this.info = ''
     this.v1 = 0
     this.v2 = 0
     this.f1 = forfaits[0]
@@ -1431,43 +1302,36 @@ export class Groupe {
     this.vsh = row.vsh || 0
     this.id = row.id
     this.v = row.v
-    this.dds = row.dds
     this.dfh = row.dfh
     this.st = row.st
-    if (!this.suppr) {
-      this.mxim = row.mxim
-      const cv = row.cvg ? deserial(await crypt.decrypter(this.cleg, row.cvg)) : ['', '']
-      this.photo = cv[0]
-      this.info = cv[1]
-      this.mc = row.mcg ? deserial(await crypt.decrypter(this.cleg, row.mcg)) : {}
-      this.idh = row.idhg ? parseInt(await crypt.decrypterStr(this.cleg, row.idhg)) : 0
-      this.imh = row.imh
-      this.v1 = row.v1
-      this.v2 = row.v2
-      this.f1 = row.f1
-      this.f2 = row.f2
-    }
+    this.mxim = row.mxim
+    this.mc = row.mcg ? deserial(await crypt.decrypter(this.cle, row.mcg)) : {}
+    this.idh = row.idhg ? parseInt(await crypt.decrypterStr(this.cle, row.idhg)) : 0
+    this.imh = row.imh
+    this.v1 = row.v1
+    this.v2 = row.v2
+    this.f1 = row.f1
+    this.f2 = row.f2
     return this
   }
 
   async toRow () {
     const r = { ...this }
-    r.cvg = await crypt.crypter(this.cleg, serial([this.photo, this.info]))
-    r.mcg = Object.keys(r.mc).length ? await crypt.crypter(this.cleg, serial(this.mc)) : null
-    r.idhg = this.idh ? await crypt.crypter(this.cleg, '' + this.idh) : 0
+    r.mcg = Object.keys(r.mc).length ? await crypt.crypter(this.cle, serial(this.mc)) : null
+    r.idhg = this.idh ? await crypt.crypter(this.cle, '' + this.idh) : 0
     return schemas.serialize('rowgroupe', r)
   }
 
   async toIdhg (idc) {
-    return await crypt.crypter(this.cleg, '' + idc)
+    return await crypt.crypter(this.cle, '' + idc)
   }
 
   async toCvg (cv) {
-    return await crypt.crypter(this.cleg, serial([cv.ph, cv.info]))
+    return await crypt.crypter(this.cle, serial([cv.ph, cv.info]))
   }
 
   async toMcg (mc) {
-    return Object.keys(mc).length ? await crypt.crypter(this.cleg, serial(mc)) : null
+    return Object.keys(mc).length ? await crypt.crypter(this.cle, serial(mc)) : null
   }
 
   get toIdb () {
@@ -1494,7 +1358,7 @@ export class Groupe {
 - `datag` : données cryptées par la clé du groupe. (immuable)
   - `nom, rnd` : nom complet de l'avatar.
   - `ni` : numéro d'invitation du membre dans `invitgr`. Permet de supprimer l'invitation et d'effacer le groupe dans son avatar (clé de `lgrk`).
-  - `idi` : id du membre qui l'a inscrit en envisagé.
+  - `idi` : id du membre qui l'a _envisagé_.
 - `ardg` : ardoise du membre vis à vis du groupe. Couple `[dh, texte]` crypté par la clé du groupe. Contient le texte d'invitation puis la réponse de l'invité cryptée par la clé du groupe. Ensuite l'ardoise peut être écrite par le membre (actif) et les animateurs.
 - `vsh`
 */
@@ -1506,36 +1370,24 @@ schemas.forSchema({
 
 export class Membre {
   get table () { return 'membre' }
-
   get sid () { return crypt.idToSid(this.id) }
-
-  get sid2 () { return '' + this.im }
-
-  get pk () { return this.sid + '/' + this.sid2 }
-
-  get pkv () { return this.sid + '/' + this.sid2 + '/' + this.v }
-
-  get suppr () { return this.st < 0 }
-
-  get horsLimite () { return false }
-
-  get sidgr () { return this.sid }
+  get id2 () { return '' + this.im }
+  get pk () { return this.sid + '/' + this.id2 }
+  get pkv () { return this.sid + '/' + this.id2 + '/' + this.v }
 
   get stx () { return this.st < 0 ? -1 : Math.floor(this.st / 10) }
-
   get stp () { return this.st < 0 ? -1 : this.st % 10 }
 
-  get cleg () { return data.getNa(this.id).cle }
+  // De l'avatar membre
+  get estAvc () { return data.repertoire.estAc(this.namb.id) }
+  get cv () { return data.getCv(this.namb.id) }
+  get photo () { const cv = this.cv; return cv ? cv.photo : '' }
+  get info () { const cv = this.cv; return cv ? cv.info : '' }
 
-  get cv () { return data.repertoire.getCv(this.namb.id) } // cv du membre
-
-  get ph () { const cv = this.cv; return cv.photo ? cv.photo : '' }
-
-  get nom () { return this.namb.titre }
-
-  get estAvc () { // true si ce membre est un avatar du compte
-    return data.avc(this.namb.id) !== undefined
-  }
+  get rep () { return data.repertoire.get(this.namb.id) }
+  get cle () { return this.rep.cle }
+  get nom () { return this.rep.nom }
+  get nomEd () { return titreEd(this.nom || '', this.info) }
 
   get titre () {
     const i = this.info.indexOf('\n')
@@ -1543,6 +1395,15 @@ export class Membre {
     const t = t1.length <= 16 ? t1 : t1.substring(0, 13) + '...'
     return t ? t + ' [' + this.namb.titre + ']' : this.namb.titre
   }
+
+  // Du groupe
+  get cvg () { return data.getCv(this.id) }
+  get photog () { const cv = this.cv; return cv ? cv.photo : '' }
+  get infog () { const cv = this.cv; return cv ? cv.info : '' }
+  get repg () { return data.repertoire.get(this.namb.id) }
+  get cleg () { return this.repg.cle }
+  get nomg () { return this.repg.nom }
+  get nomEdg () { return titreEd(this.nomg || '', this.infog) }
 
   get dhed () { return dhstring(this.dh) }
 
@@ -1611,9 +1472,9 @@ export class Membre {
 /*
 - `id` : id du groupe ou de l'avatar.
 - `ns` : numéro du secret.
+- `x` : jour de suppression (0 si existant).
 - `v` :
 - `st` :
-  - < 0 pour un secret _supprimé_.
   - `99999` pour un *permanent*.
   - `dlv` pour un _temporaire_.
 - `xp` : _xxxp_ (`p` reste de la division par 10)
@@ -1634,15 +1495,11 @@ export class Membre {
 - `refs` : couple `[id, ns]` crypté par la clé du secret référençant un autre secret (référence de voisinage qui par principe, lui, n'aura pas de `refs`).
 - `vsh`
 
-**Map des pièces jointes :**
-Une pièce jointe est identifiée par : `nom.ext/dh`
-- le `nom.ext` d'une pièce jointe est un nom de fichier, qui indique donc son type MIME par `ext`, d'où un certain nombre de caractères interdits (dont le `/`).
-- `dh` est la date-heure d'écriture UTC (en secondes) : `YYYY-MM-JJThh:mm:ss`.
-
-- _clé_ : hash (court) de nom.ext en base64 URL. Permet d'effectuer des remplacements par une version ultérieure.
+**Map des fichiers attachés :**
+- _clé_ : hash (court) de `nom.ext` en base64 URL. Permet d'effectuer des remplacements par une version ultérieure.
 - _valeur_ : `[idc, taille]`
-  - `idc` : id complète de la pièce jointe, cryptée par la clé du secret et en base64 URL.
-  - `taille` : en bytes. Par convention une taille négative indique que la pièce jointe a été gzippée.
+  - `idc` : id complète du fichier (`nom.ext|type|dh$`), cryptée par la clé du secret et en base64 URL.
+  - `taille` : en bytes, avant gzip éventuel.
 */
 
 schemas.forSchema({
@@ -1652,34 +1509,22 @@ schemas.forSchema({
 
 export class Secret {
   get table () { return 'secret' }
-
   get sid () { return crypt.idToSid(this.id) }
-
-  get sid2 () { return crypt.idToSid(this.ns) }
-
-  get pk () { return this.sid + '/' + this.sid2 }
-
-  get pkref () { return !this.ref ? '' : (crypt.idToSid(this.ref[0]) + '/' + crypt.idToSid(this.ref[1])) }
+  get id2 () { return this.ns }
+  get pk () { return this.sid + '/' + this.ns }
+  get pkref () { return !this.ref ? '' : (crypt.idToSid(this.ref[0]) + '/' + this.ref[1]) }
 
   get vk () { return this.pk + '@' + this.v }
 
   get suppr () { return this.st < 0 }
-
   get horsLimite () { return this.st < 0 || this.st >= 99999 ? false : dlvDepassee(this.st) }
 
-  get sidavgr () { return this.sid }
-
   get ts () { return this.ns % 3 } // 0:personnel 1:couple 2:groupe
-
   get titre () { return titreEd(null, this.txt.t) }
-
   get nbj () { return this.st <= 0 || this.st === 99999 ? 0 : (this.st - getJourJ()) }
-
   get dh () { return dhstring(new Date(this.txt.d * 1000)) }
 
-  get cles () {
-    return this.ts ? (this.ts === 1 ? data.getClec(this.id) : data.getNa(this.id).cle) : data.clek
-  }
+  get cle () { return this.ts ? data.repertoire.cle(this.id) : data.clek }
 
   get nomf () {
     const i = this.txt.t.indexOf('\n')
@@ -1687,22 +1532,9 @@ export class Secret {
     return normpath(t) + '@' + this.sid2
   }
 
-  get path () { return (this.ts === 1 ? this.id.nomf : data.getNa(this.id)) + '/' + this.nomf }
-
-  get avatar () {
-    if (this.ts !== 0) return null
-    return data.getAvatar(this.id)
-  }
-
-  get couple () {
-    if (this.ts !== 1) return null
-    return data.getCouple(this.id)
-  }
-
-  get groupe () {
-    if (this.ts !== 2) return null
-    return data.getGroupe(this.id)
-  }
+  get avatar () { return this.ts !== 0 ? null : data.getAvatar(this.id) }
+  get couple () { return this.ts !== 1 ? null : data.getCouple(this.id) }
+  get groupe () { return this.ts !== 2 ? null : data.getGroupe(this.id) }
 
   get partage () {
     if (this.ts === 0) return 'Secret personnel'
@@ -1767,9 +1599,9 @@ export class Secret {
     if (!this.suppr) {
       this.v1 = row.v1
       this.v2 = row.v2
-      const cles = this.cles
+      const cle = this.cle
       try {
-        this.txt = deserial(await crypt.decrypter(cles, row.txts))
+        this.txt = deserial(await crypt.decrypter(cle, row.txts))
         this.txt.t = ungzip(this.txt.t)
       } catch (e) {
         console.log(e.toString())
@@ -1786,7 +1618,7 @@ export class Secret {
         const map = row.mpjs ? deserial(row.mfas) : {}
         for (const cfa in map) {
           const x = map[cfa]
-          let nomc = await crypt.decrypterStr(cles, crypt.b64ToU8(x[0]))
+          let nomc = await crypt.decrypterStr(cle, crypt.b64ToU8(x[0]))
           let gz = false
           if (nomc.endsWith('$')) {
             gz = true
@@ -1800,7 +1632,7 @@ export class Secret {
           this.mfa[cfa] = fa
         }
       }
-      this.ref = row.refs ? deserial(await crypt.decrypter(cles, row.refs)) : null
+      this.ref = row.refs ? deserial(await crypt.decrypter(cle, row.refs)) : null
     }
     return this
   }
@@ -1832,7 +1664,7 @@ export class Secret {
 
   nomc (fa) { return fa.nom + '|' + fa.type + '|' + fa.dh + (fa.gz ? '$' : '') }
 
-  cle (fa) { return crypt.hash(fa.nom, false, true) }
+  clefa (fa) { return crypt.hash(fa.nom, false, true) }
 
   sidfa (cle) { return this.secidfa + '@' + cle }
 

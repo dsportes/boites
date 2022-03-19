@@ -5,12 +5,10 @@ import { t1n, t2n } from '../../app/api.mjs'
 avatars: {}, // Tous les avatars listés sur le compte
 groupes: {}, // Tous les groupes listés sur les avatars
 couples: {}, // Tous les couples listés sur les avatars
+cvs: {}, // Toutes les cartes de visite
 
 Groupés par id de groupe : membres@id
 Groupés par id d'avatar ou de groupe ou de couple : secrets@id
-
-repertoire: {} // Les objets CV sont conservés dans la map data.repertoire
-Le store/db conserve l'image de data.repertoire à chaque changement
 
 Voisins : un ensemble de voisins est matérialisé par une entrée voisins@sid/sns
 ou sid/sns est la pk du secret de référence de l'ensemnle des voisins
@@ -27,21 +25,13 @@ Normalement quand une entrée existe il n'y a pas que le secret de référence d
 */
 
 // objets courants représentés par un singleton
-const l1 = { compte: true, compta: true, prefs: true, avatar: true, groupe: true, couple: true, secret: true }
+const l1 = new Set(['compte', 'compta', 'prefs', 'avatar', 'groupe', 'couple', 'secret'])
 
 // objets multiples à un seul niveau représenté par une map
-const l2 = { avatars: true, groupes: true, couples: true, repertoire: true, pjidx: true }
+const l2 = new Set(['avatars', 'groupes', 'couples', 'cvs', 'faidx'])
 
 export function raz (state) {
-  for (const e in state) {
-    if (l1[e]) {
-      state[e] = null
-    } else if (l2[e]) {
-      state[e] = {}
-    } else {
-      delete state[e]
-    }
-  }
+  for (const e in state) if (l1.has(e)) state[e] = null; else if (l2.has(e)) state[e] = {}; else delete state[e]
 }
 
 /* Déclaration de l'avatar courant */
@@ -118,20 +108,20 @@ export function purgeCouples (state, val) { // val : Set des ids des couples INU
   return ng + ns
 }
 
-/* Mises à jour brutes des objets dans le store */
-function setEntree (state, table, id) {
-  let e = state[table + 's@' + id]
-  if (!e) { e = {}; state[table + 's@' + id] = e }
-  return e
-}
-
-/* Stockage (et suppression) d'une liste d'objets "multiples", SAUF cvs fait par commitRepertoire */
+/* Stockage (et suppression) d'une liste d'objets "multiples", SAUF cvs */
 export function setObjets (state, lobj) { // lobj : array d'objets
   if (!lobj || !lobj.length) return
-  const cs = state.secret
+  const cs = state.secret // secret courant
+  const sta = {}
   lobj.forEach(obj => {
     if (t2n.has(obj.table)) {
-      const st = setEntree(state, obj.table, obj.id)
+      const n = obj.table + 's@' + obj.id
+      let st = sta[n]
+      if (!st) {
+        st = state[n]
+        if (!st) { st = {}; state[n] = st }
+        sta[n] = st
+      }
       const oc = cs && obj.table === 'secret' && cs.id === obj.id && cs.ns === obj.ns // c'est le secret courant
       if (obj.suppr) {
         delete st[obj.id2]
@@ -141,9 +131,9 @@ export function setObjets (state, lobj) { // lobj : array d'objets
         if (oc) state.secret = obj
         if (obj.table === 'secret') majvoisin(state, obj)
       }
-      state[obj.table + 's@' + obj.id] = { ...st }
-    } else if (t1n.has.has(obj.table)) {
-      const st = state[obj.table + 's']
+    } else if (t1n.has(obj.table)) {
+      const n = obj.table + 's'
+      let st = sta[n]; if (!st) { st = state[n]; sta[n] = st }
       const oc = state[obj.table].id === obj.id
       if (obj.suppr) {
         delete st[obj.id]
@@ -155,6 +145,14 @@ export function setObjets (state, lobj) { // lobj : array d'objets
       state[obj.table + 's'] = { ...st }
     }
   })
+  for (const n in sta) state[n] = { ...sta[n] }
+}
+
+export function setCvs (state, lst) { // lst : array [{id, cv}]
+  if (!lst || !lst.length) return
+  const l = { ...state.cvs }
+  lst.forEach(obj => { if (obj.cv) l[obj.id] = obj.cv; else delete l[obj.id] })
+  state.cvs = l
 }
 
 export function setCompte (state, obj) { state.compte = obj }
@@ -163,6 +161,13 @@ export function setPrefs (state, obj) { state.prefs = obj }
 
 /* Enregistrement de toutes les cv d'un coup */
 export function commitRepertoire (state, repertoire) { state.repertoire = { ...repertoire } }
+
+/* Entrée d'un objet à 2 niveaux */
+function setEntree (state, table, id) {
+  let e = state[table + 's@' + id]
+  if (!e) { e = {}; state[table + 's@' + id] = e }
+  return e
+}
 
 /* Force à créer une entrée de voisinage pour un secret de référence
 AVANT insertion (éventuelle) d'un voisin en création et qui POURRAIT être validée */

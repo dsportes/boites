@@ -8,6 +8,7 @@ import { schemas } from './schemas.mjs'
 
 const STORES = {
   sessionsync: 'id',
+  listecvids: 'id',
   compte: 'id',
   compta: 'id',
   prefs: 'id',
@@ -85,17 +86,55 @@ export async function deleteIDB (lsKey) {
   }
 }
 
+schemas.forSchema({
+  name: 'idbListeCvIds',
+  cols: ['v', 'lids']
+})
+
+class ListeCvIds {
+  fromIdb (idb) {
+    if (!idb) {
+      this.v = 0
+      this.ids = new Set()
+    } else {
+      schemas.deserialize('idbListeCvIds', idb, this)
+      this.ids = new Set(this.lids)
+      delete this.lids
+    }
+    return this
+  }
+
+  async init () {
+    try {
+      const r = await data.db.listecvids.get(1)
+      const idb = r ? await crypt.decrypter(data.clek, r.data) : null
+      return this.fromIdb(idb)
+    } catch (e) {
+      throw data.setErDB(EX2(e))
+    }
+  }
+}
+
+export async function getListeCvIds () { return await new ListeCvIds().init() }
+export async function saveListeCvIds (v, setIds) {
+  try {
+    const r = schemas.serialize('idbListeCvIds', { v: v, lids: Array.from(setIds) })
+    await data.db.listecvids.put({ id: '1', data: await crypt.crypter(data.clek, r) })
+  } catch (e) {
+    throw data.setErDB(EX2(e))
+  }
+}
+
 /* Dernier état de session synchronisé
 - dhdebutp : dh de début de la dernière session sync terminée
 - dhfinp : dh de fin de la dernière session sync terminée
 - dhdebut: dh de début de la session sync en cours
 - dhsync: dh du dernier traitement de synchronisation
 - dhpong: dh du dernier pong reçu
-- vcv: version des CVs synchronisées
 */
 schemas.forSchema({
   name: 'idbSessionSync',
-  cols: ['dhdebutp', 'dhfinp', 'dhdebut', 'dhsync', 'dhpong', 'vcv']
+  cols: ['dhdebutp', 'dhfinp', 'dhdebut', 'dhsync', 'dhpong']
 })
 
 function max (a) { let m = 0; a.forEach(x => { if (x > m) m = x }); return m }
@@ -108,7 +147,6 @@ class SessionSync {
       this.dhdebut = 0
       this.dhsync = 0
       this.dhpong = 0
-      this.vcv = 0
     } else {
       schemas.deserialize('idbSessionSync', idb, this)
       this.dhdebutp = this.dhdebut
@@ -122,16 +160,18 @@ class SessionSync {
 
   async init () {
     try {
-      this.fromIdb(await data.db.sessionsync.get(1))
-      store().commit('ui/setsessionsync', this)
+      const r = await data.db.sessionsync.get(1)
+      const idb = r ? await crypt.decrypter(data.clek, r.data) : null
+      this.fromIdb(idb)
+      store().commit('ui/setsessionsync', { ...this })
+      return this
     } catch (e) {
       throw data.setErDB(EX2(e))
     }
   }
 
-  async setConnexion (dh, vcv) {
+  async setConnexion (dh) {
     this.dhdebut = dh
-    this.vcv = vcv
     await this.save()
   }
 
@@ -147,8 +187,10 @@ class SessionSync {
 
   async save () {
     try {
-      await data.db.sessionsync.put({ id: '1', data: schemas.serialize('idbSessionSync', this) })
-      store().commit('ui/setsessionsync', this)
+      const x = { ...this }
+      const r = schemas.serialize('idbSessionSync', x)
+      await data.db.sessionsync.put({ id: '1', data: await crypt.crypter(data.clek, r) })
+      store().commit('ui/setsessionsync', x)
     } catch (e) {
       throw data.setErDB(EX2(e))
     }
@@ -428,10 +470,10 @@ export async function commitRows (lmaj, lsuppr) {
 }
 
 /*
-  Gestion des pièces jointes
+  Gestion des fichiers attachés
   Table fadata : id, data
-  - id : identifiant b64 crypté par la clé K de la pièce jointe. sid@sid2@cle
-  - data : contenu (éventuellement gzippé) crypté par la clé K de la pièce jointe. Comme en stockage serveur.
+  - id : identifiant b64 crypté par la clé K du fichier attaché. sid@sid2@cle
+  - data : contenu (éventuellement gzippé) crypté par la clé K du fichier attaché. Comme en stockage serveur.
   Table faidx : id, hv
   - id : le même que fadata
   - data : { id, ns, cle, hv } sérialisé, crypté par la clé k
