@@ -171,6 +171,11 @@ export function u8ToMcs (u8) {
   return u8 && u8.length ? '/' + u8.join('/') + '/' : null
 }
 
+export function splitpk (pk) {
+  const i = pk.indexOf('/')
+  return [parseInt(pk.substring(0, i)), parseInt(pk.substring(i + 1))]
+}
+
 export async function readFile (file, bin) {
   return new Promise((resolve, reject) => {
     const image = { size: file.size, name: file.name }

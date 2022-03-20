@@ -115,7 +115,10 @@ class ListeCvIds {
   }
 }
 
-export async function getListeCvIds () { return await new ListeCvIds().init() }
+export async function getVIdCvs () {
+  const x = await new ListeCvIds().init()
+  return [x.v, x.ids]
+}
 export async function saveListeCvIds (v, setIds) {
   try {
     const r = schemas.serialize('idbListeCvIds', { v: v, lids: Array.from(setIds) })
@@ -312,14 +315,14 @@ export async function getSecrets () {
   }
 }
 
-export async function getCvs (utilesvp, utilesvz, buf) {
+export async function getCvs (cvIds, buf) {
   go()
   try {
     const r = {}
     await data.db.cv.each(async (idb) => {
       const cv = {}
       schemas.deserialize('idbCv', await crypt.decrypter(data.clek, idb.data), cv)
-      if (utilesvp.has(cv.id) || utilesvz.has(cv.id)) {
+      if (cvIds.has(cv.id)) {
         r[cv.id] = cv
       } else {
         buf.supprIDB({ table: 'cv', id: cv.id })

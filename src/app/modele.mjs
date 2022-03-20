@@ -299,37 +299,18 @@ class Repertoire {
 
   disparition (id) { const e = this.rep[id]; if (e) e.x = true }
 
-  setAc (na, x) {
+  setXX (na, x) {
     const id = na.id
     const obj = { id, nom: na.nom, cle: na.rnd }
     if (x) obj.x = x
     this.rep[id] = obj
-    this.idac.add(id)
+    return id
   }
 
-  setGr (na, x) {
-    const id = na.id
-    const obj = { id, nom: na.nom, cle: na.rnd }
-    if (x) obj.x = x
-    this.rep[id] = obj
-    this.idgr.add(id)
-  }
-
-  setCp (cle, x) {
-    const id = crypt.hashBin(cle)
-    const obj = { id, nom: 'x', cle: cle }
-    if (x) obj.x = x
-    this.rep[id] = obj
-    this.idcp.add(id)
-  }
-
-  setAx (na, x) {
-    const id = na.id
-    const obj = { id, nom: na.nom, cle: na.rnd }
-    if (x) obj.x = x
-    this.rep[id] = obj
-    this.idax.add(id)
-  }
+  setAc (na, x) { this.idac.add(this.setXX(na, x)) }
+  setGr (na, x) { this.idgr.add(this.setXX(na, x)) }
+  setCp (na, x) { this.idcp.add(this.setXX(na, x)) }
+  setAx (na, x) { this.idax.add(this.setXX(na, x)) }
 }
 
 /* état de session ************************************************************/
@@ -472,8 +453,8 @@ class Session {
   stopOp () { if (this.opUI) this.opUI.stop() }
 
   resetPhase012 () {
-    store().commit('ui/raz')
-    store().commit('ui/razsynclec')
+    store().commit('ui/razsyncitems')
+    store().commit('db/raz')
   }
 
   raz (init) { // init : l'objet data (Session) est créé à un moment où le store vuex n'est pas prêt
@@ -490,8 +471,6 @@ class Session {
       this.statutidb = 0 // 0: idb pas ouvert, 1:idb OK, 2: idb KO
       this.statutsession = 0
       this.sessionId = null
-      store().commit('ui/raz')
-      store().commit('ui/razsynclec')
     }
 
     this.ws = null // websocket de la session
@@ -504,36 +483,11 @@ class Session {
     this.repertoire = new Repertoire()
   }
 
-  setFaPerdues (x) { this.pjPerdues.push(x) }
+  setFaPerdues (x) { this.faPerdues.push(x) }
+
+  setSyncItem (k, st, label) { store().commit('ui/setsyncitem', { k, st, label }) }
 
   /* Getters / Setters ****************************************/
-  get setIdsAvatarsUtiles () { return this.getCompte().allAvId() }
-
-  get setIdsGroupesUtiles () {
-    const s = new Set()
-    const avs = this.setIdsAvatarsUtiles
-    // un compte peut avoir un avatar référencé dans mac mais qui n'a jamais encore été chargé en IDB
-    // à ce stade ses groupes sont donc inconnus
-    avs.forEach(id => {
-      const a = this.getAvatar(id)
-      if (a) a.allGrId(s)
-    })
-    return s
-  }
-
-  get setIdsAvatarsStore () {
-    const s = new Set()
-    const avs = this.getAvatar()
-    for (const sid in avs) s.add(this.getAvatar(sid).id)
-    return s
-  }
-
-  get setIdsGroupesStore () {
-    const s = new Set()
-    const grs = this.getGroupe()
-    for (const sid in grs) s.add(this.getGroupe(sid).id)
-    return s
-  }
 
   getCompte () { return store().state.db.compte }
   setCompte (compte) { store().commit('db/setCompte', compte) }
@@ -570,15 +524,19 @@ class Session {
 
   purgeCouples (lgr) { if (lgr.size) return store().commit('db/purgeCouples', lgr) }
 
+  /* Retourne une map avec pour clé l'id de l'avatar externe un couple de Set: { c:, m:}
+  - c : set des ids des couples dont Ax est le conjoint externe
+  - m : id/im du membre im du groupe id (externe, pas avatar du compte)
+  */
+  tousAx () { return store().getters['db/tousAx']() }
+
   /*
   idx = { id, ns, cle } - ns cle peuvent être null
   retourne un array de { id, ns, cle, hv }
   */
   getFaidx (idx) { return store().getters['db/faidx'](idx) }
 
-  setFaidx (lst) { // lst : array de { id, ns, cle, hv }
-    store().commit('db/majfaidx', lst)
-  }
+  setFaidx (lst) { store().commit('db/majfaidx', lst) }// lst : array de { id, ns, cle, hv }
 }
 
 export const data = new Session()
@@ -929,7 +887,7 @@ export class Avatar {
     return s || s1
   }
 
-  repCouples () { this.groupes().forEach(x => { data.repertoire.setCp(x.cle) }) }
+  repCouples () { this.groupes().forEach(x => { data.repertoire.setCp(x.na) }) }
 
   nouveau (id) {
     this.id = id
@@ -1036,7 +994,7 @@ schemas.forSchema({
 /*
 - `id` : id du couple
 - `v` :
-- `st` : deux chiffres `pe` : phase / état
+- `st` : quatre chiffres `pe` : phase / état / 0 présent / 1 présent
 - `v1 v2` : volumes actuels des secrets.
 - `mx10 mx20` : maximum des volumes autorisés pour A0
 - `mx11 mx21` : maximum des volumes autorisés pour A1
@@ -1057,8 +1015,10 @@ export class Couple {
   get pk () { return this.sid }
   get pkv () { return this.sid + '/' + this.v }
 
-  get stp () { return this.st > 0 ? Math.floor(this.st / 10) : 0 }
-  get ste () { return this.st > 0 ? this.st % 10 : 0 }
+  get stp () { return Math.floor(this.st / 1000) }
+  get ste () { return Math.floor(this.st / 100) % 10 }
+  get st0 () { return Math.floor(this.st / 10) % 10 }
+  get st1 () { return this.st % 10 }
 
   get cv () { return data.getCv(this.id) }
   get photo () { const cv = this.cv; return cv ? cv.photo : '' }
@@ -1066,27 +1026,30 @@ export class Couple {
 
   get rep () { return data.repertoire.get(this.id) }
   get cle () { return this.rep.cle }
-  get nom () { return this.sid }
+  get nom () { const x = this.data.x; return x[0][1] + '__' + x[1][1] }
   get nomEd () { return titreEd(this.nom, this.info) }
 
   get nomf () { return this.sid }
 
-  setRepE () { if (this.naE) data.repertoire.setAx(this.naE) }
+  setRepE () { data.repertoire.setAx(this.naE) }
 
   setIdIE (x) {
-    const id0 = x[0] && x[0][1] && x[0][2] ? crypt.hashBin(x[0][2]) : 0
-    const id1 = x[1] && x[1][1] && x[1][2] ? crypt.hashBin(x[1][2]) : 0
+    const id0 = this.st0 ? crypt.hashBin(x[0][2]) : 0
+    const id1 = this.st1 ? crypt.hashBin(x[1][2]) : 0
     if (data.repertoire.estAvc(id0)) {
       this.idI = id0
       this.idE = id1
       this.naE = this.idE ? new NomAvatar(x[1][1], x[1][2]) : null
+      this.naI = new NomAvatar(x[0][1], x[0][2])
       this.avc = 0
     } else {
       this.idI = id1
       this.idE = id0
       this.naE = this.idE ? new NomAvatar(x[0][1], x[0][2]) : null
+      this.naI = new NomAvatar(x[1][1], x[1][2])
       this.avc = 1
     }
+    this.na = new NomAvatar(this.nom, this.cle)
   }
 
   // cols: ['id', 'v', 'st', 'dds', 'v1', 'v2', 'mx10', 'mx20', 'mx11', 'mx21', 'dlv', 'data', 'info0', 'info1', 'mc0', 'mc1', 'dh', 'ard', 'vsh']

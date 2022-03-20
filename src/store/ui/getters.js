@@ -1,5 +1,9 @@
-import * as CONST from '../constantes.js'
 import { cfg } from '../../app/util.mjs'
+
+const MODE_INCONNU = 0
+const MODE_SYNC = 1
+const MODE_INCOGNITO = 2
+const MODE_AVION = 3
 
 export function orgicon (state) {
   return state.org ? cfg().orgs[state.org].icon : cfg().logo
@@ -30,22 +34,22 @@ export function diagnosticvisible (state) {
 }
 
 export function enligne (state) { // boolean
-  return state.mode === CONST.MODE_SYNC || state.mode === CONST.MODE_INCOGNITO
+  return state.mode === MODE_SYNC || state.mode === MODE_INCOGNITO
 }
 export function enlocal (state) { // boolean
-  return state.mode === CONST.MODE_AVION || state.mode === CONST.MODE_SYNC
+  return state.mode === MODE_AVION || state.mode === MODE_SYNC
 }
 export function modeincognito (state) { // boolean
-  return state.mode === CONST.MODE_INCOGNITO
+  return state.mode === MODE_INCOGNITO
 }
 export function modeavion (state) { // boolean
-  return state.mode === CONST.MODE_AVION
+  return state.mode === MODE_AVION
 }
 export function modesync (state) { // boolean
-  return state.mode === CONST.MODE_SYNC
+  return state.mode === MODE_SYNC
 }
 export function modeinconnu (state) { // boolean
-  return state.mode === CONST.MODE_INCONNU
+  return state.mode === MODE_INCONNU
 }
 
 export function sessionerreurmsg (state) {

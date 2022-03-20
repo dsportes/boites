@@ -36,7 +36,7 @@ export const secret = (state) => (id, ns) => {
   return !ns ? lc || {} : lc ? lc[Sid(ns)] : null
 }
 
-export const pjidx = (state) => ({ id, ns, cle }) => {
+export const faidx = (state) => ({ id, ns, cle }) => {
   const k = crypt.idToSid(id) + '@' + (!ns ? '' : crypt.idToSid(ns) + '@' + (!cle ? '' : cle))
   const st = state.pjidx
   const r = []
@@ -44,4 +44,33 @@ export const pjidx = (state) => ({ id, ns, cle }) => {
     if (kx.startsWith(k)) r.push(st[kx])
   }
   return r
+}
+
+/* Retourne une map avec pour clé l'id de l'avatar externe un couple de Set: { c:, m:}
+- c : set des ids des couples dont Ax est le conjoint externe
+- m : id/im du membre im du groupe id (externe, pas avatar du compte)
+*/
+export function tousAx (state) {
+  const mapx = {}
+  for (const e in state) {
+    if (e.startsWith('membres@')) {
+      const m1 = state[e]
+      for (const im in m1) {
+        const mb = m1[im] // m.id : id du groupe
+        if (!mb.estAvc) {
+          let y = mapx[mb.namb.id]; if (!y) { y = { c: new Set(), m: new Set() }; mapx[mb.namb.id] = y }
+          y.m.add(mb.id + '/' + mb.im)
+        }
+      }
+    }
+  }
+  const mc = state.couples
+  for (const id in mc) {
+    const c = mc[id]
+    if (c.idE) {
+      let y = mapx[c.idE]; if (!y) { y = { c: new Set(), m: new Set() }; mapx[c.idE] = y }
+      y.c.add(c.id)
+    }
+  }
+  return mapx
 }
