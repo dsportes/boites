@@ -60,52 +60,34 @@ export function majsecret (state, val) { state.secret = val }
 export function purgeAvatars (state, val) { // val : Set des ids des avatars INUTILES
   if (!val || !val.size) return 0
   const xa = state.avatars
-  let na = 0
-  const xs = state.secrets
-  let ns = 0
   for (const id of val) {
-    if (xa[id]) { na++; delete xa[id] }
-    if (xs[id]) { ns++; delete xs[id] }
+    delete xa[id]
+    delete state['secrets@' + id]
   }
-  if (na) state.avatars = { ...xa }
-  if (ns) state.secrets = { ...xs }
-  return na + ns
+  state.avatars = { ...xa }
 }
 
 /* purge des groupes inutiles et membres, secrets associés */
 export function purgeGroupes (state, val) { // val : Set des ids des groupes INUTILES
   if (!val || !val.size) return 0
   const xg = state.groupes
-  let ng = 0
-  const xm = state.membres
-  let nm = 0
-  const xs = state.secrets
-  let ns = 0
   for (const id of val) {
-    if (xg[id]) { ng++; delete xg[id] }
-    if (xm[id]) { nm++; delete xm[id] }
-    if (xs[id]) { ns++; delete xs[id] }
+    delete xg[id]
+    delete state['membres@' + id]
+    delete state['secrets@' + id]
   }
-  if (ng) state.groupes = { ...xg }
-  if (nm) state.membres = { ...xm }
-  if (ns) state.secrets = { ...xs }
-  return ng + nm + ns
+  state.groupes = { ...xg }
 }
 
 /* purge des couples inutiles et secrets associés */
 export function purgeCouples (state, val) { // val : Set des ids des couples INUTILES
   if (!val || !val.size) return 0
   const xg = state.groupes
-  let ng = 0
-  const xs = state.secrets
-  let ns = 0
   for (const id of val) {
-    if (xg[id]) { ng++; delete xg[id] }
-    if (xs[id]) { ns++; delete xs[id] }
+    delete xg[id]
+    delete state['secrets@' + id]
   }
-  if (ng) state.groupes = { ...xg }
-  if (ns) state.secrets = { ...xs }
-  return ng + ns
+  state.groupes = { ...xg }
 }
 
 /* Stockage (et suppression) d'une liste d'objets "multiples", SAUF cvs */

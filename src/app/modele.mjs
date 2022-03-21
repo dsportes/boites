@@ -7,7 +7,7 @@ import {
   getJourJ, cfg, ungzipT, normpath, getfa, titreEd
 } from './util.mjs'
 import { remplacePage } from './page.mjs'
-import { EXPS, UNITEV1, UNITEV2, Compteurs, t0n, t1n } from './api.mjs'
+import { EXPS, UNITEV1, UNITEV2, Compteurs, t0n } from './api.mjs'
 
 export const MODES = ['inconnu', 'synchronisé', 'incognito', 'avion', 'visio']
 
@@ -17,38 +17,11 @@ export async function traitInvitGr (row) {
   return { id: row.id, ni: row.ni, datak: crypt.crypter(data.clek, x) }
 }
 
-/*
-  Retourne une map avec une entrée pour chaque table et en valeur,
-  - pour les singletons : l'objet le plus récent reçu dans la liste
-  - pour les autres : une map dont,
-    - la clé est l'id / pk de chaque objet
-    - la valeur est l'objet le plus récent reçu dans la liste
-*/
+const tbls1 = ['avatar', 'groupe', 'couple', 'cv', 'membre', 'secrets']
+const tbls2 = ['avatar', 'groupe', 'couple', 'cv', 'membre', 'secrets']
 
-export async function rowItemsToMapObjets (rowItems) {
-  const res = {}
-  for (let i = 0; i < rowItems.length; i++) {
-    const item = rowItems[i]
-    const row = schemas.deserialize('row' + item.table, item.serial)
-    if (item.table === 'compte' && row.pcbh !== data.ps.pcbh) throw EXPS // phrase secrète changée => déconnexion
-    const obj = newObjet(item.table)
-    await obj.fromRow(row)
-    if (t0n.has(item.table)) {
-      res[item.table] = obj
-    } else {
-      let e = res[item.table]; if (!e) { e = {}; res[item.table] = e }
-      const k = t1n.has(item.table) ? obj.id : obj.pk
-      const ex = e[k]
-      if (!ex) e[k] = obj; else { if (ex.v < obj.v) e[k] = obj }
-    }
-  }
-  return res
-}
-
-const tbls = ['avatar', 'groupe', 'couple', 'cv', 'membre', 'secrets']
-
-export async function compileToObject (mr) {
-  for (const table of tbls) {
+export async function compileToObject (mr, courte) {
+  for (const table of (courte ? tbls2 : tbls1)) {
     if (t0n.has(table)) {
       const mrow = mr[table]
       if (mrow) {
@@ -302,7 +275,7 @@ class Repertoire {
   setXX (na, x) {
     const id = na.id
     const obj = { id, nom: na.nom, cle: na.rnd }
-    if (x) obj.x = x
+    if (x) obj.x = true
     this.rep[id] = obj
     return id
   }
@@ -517,6 +490,7 @@ class Session {
 
   getSecret (id, ns) { return store().getters['db/secret'](id, ns) }
   setSecrets (lobj) { store().commit('db/setObjets', lobj) }
+  setObjets (lobj) { store().commit('db/setObjets', lobj) }
 
   purgeAvatars (lav) { if (lav.size) return store().commit('db/purgeAvatars', lav) }
 
