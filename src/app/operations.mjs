@@ -646,8 +646,6 @@ export class Operation {
       }
     }
 
-    /* Notification au serveur des membres détectés disparus et des couples détectés disparus */
-
     /* Désabonnements des disparus / non référencés (les Moins) */
     if (this.acgDisp) {
       await this.desabonnements(this.avatarIdsM, this.groupeIdsM, this.coupleIdsM, null)
@@ -655,14 +653,17 @@ export class Operation {
 
     /* commit de store/db : séquence SANS AWAIT pour unicité de la mise à jour du store */
     this.buf.commitStore()
-    this.couplesDisp = new Set()
-    this.membresDisp = new Set()
+    this.coupleIdsDisp = new Set()
+    this.membreIdsDisp = new Set()
     if (this.acgP || this.acgM || this.axP || this.axM) {
       if (this.axDisparus.size) {
         const tousAx = data.getTousAx()
         this.axDisparus.forEach(id => {
           const ax = tousAx[id]
-
+          if (ax) {
+            ax.c.forEach(id => { this.coupleIdsDisp.add(id) })
+            ax.m.forEach(idim => { this.membreIdsDisp.add(idim) })
+          }
         })
       }
       data.setTousAx(this.axDisparus)
@@ -706,6 +707,16 @@ export class Operation {
           if (!em) store().commit('db/setgroupeplus', null)
         }
       }
+    }
+
+    /* Notification au serveur des membres détectés disparus et des couples détectés disparus
+      pour changements de leurs statuts
+    */
+    if (this.coupleIdsDisp.size) {
+      await this.couplesDisparus(Array.from(this.coupleIdsDisp))
+    }
+    if (this.membreIdsDisp.size) {
+      await this.membresDisparus(Array.from(this.membreIdsDisp))
     }
 
     /* commits finaux */
