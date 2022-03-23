@@ -211,3 +211,46 @@ export function majfaidx (state, lst) { // lst : array de { id, ns, cle, hv }
   })
   if (b) state.faidx = { ...st }
 }
+
+/* Recalcul la liste des avatars externes avaec pour chacun :
+- na : son na
+- x : si true, c'est un disparu
+- c : set des ids des couples dont il est avatar externe
+- m : set des [id, im] des membres dont il est avatar externe
+*/
+export function setTousAx (state, disparus) {
+  const mapx = {}
+  for (const e in state) {
+    if (e.startsWith('membres@')) {
+      const m1 = state[e]
+      for (const im in m1) {
+        const mb = m1[im] // m.id : id du groupe
+        if (!mb.estAvc) {
+          let y = mapx[mb.namb.id]
+          if (!y) {
+            y = { na: mb.namb, c: new Set(), m: new Set() }
+            mapx[mb.namb.id] = y
+          }
+          y.m.add([mb.id, mb.im])
+        }
+      }
+    }
+  }
+  const mc = state.couples
+  for (const id in mc) {
+    const c = mc[id]
+    if (c.idE) {
+      let y = mapx[c.idE]
+      if (!y) {
+        y = { na: c.naE, c: new Set(), m: new Set() }
+        mapx[c.idE] = y
+      }
+      y.c.add(c.id)
+    }
+  }
+  if (disparus) {
+    disparus.forEach(id => { const ax = mapx[id]; if (ax) ax.x = true })
+  }
+  state.tousAx = mapx
+  return mapx
+}

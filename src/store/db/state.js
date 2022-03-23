@@ -15,6 +15,14 @@ export default function () {
     couples: {}, // Tous les couples listés sur les avatars
     cvs: {}, // Toutes les cartes de visite
 
+    tousAx: {},
+    /* Map par leur id de tous les avatars externes : { na, x, c, m }
+    - na : son na
+    - x : si true, c'est un disparu
+    - c : set des ids des couples dont il est avatar externe
+    - m : set des [id, im] des membres dont il est avatar externe
+    */
+
     faidx: {} // index des pièces jointes disponibles en mode avion
 
     /*

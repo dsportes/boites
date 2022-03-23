@@ -359,6 +359,7 @@ class Session {
 
   getSecret (id, ns) { return store().getters['db/secret'](id, ns) }
   setSecrets (lobj) { store().commit('db/setObjets', lobj) }
+
   setObjets (lobj) { store().commit('db/setObjets', lobj) }
 
   purgeAvatars (lav) { if (lav.size) return store().commit('db/purgeAvatars', lav) }
@@ -367,11 +368,14 @@ class Session {
 
   purgeCouples (lgr) { if (lgr.size) return store().commit('db/purgeCouples', lgr) }
 
-  /* Retourne une map avec pour clé l'id de l'avatar externe un couple de Set: { c:, m:}
-  - c : set des ids des couples dont Ax est le conjoint externe
-  - m : id/im du membre im du groupe id (externe, pas avatar du compte)
+  /* Recalcul la liste des avatars externes avaec pour chacun :
+  - na : son na
+  - x : si true, c'est un disparu
+  - c : set des ids des couples dont il est avatar externe
+  - m : set des [id, im] des membres dont il est avatar externe
   */
-  tousAx () { return store().getters['db/tousAx']() }
+  setTousAx (disparus) { return store().commit('db/setTousAx', disparus) }
+  getTousAx () { return store().state.db.tousAx }
 
   /*
   idx = { id, ns, cle } - ns cle peuvent être null
