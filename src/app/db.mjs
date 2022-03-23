@@ -335,95 +335,15 @@ export async function getCvs (cvIds, buf) {
 }
 
 /*
-Purge des avatars du compte et des groupes inutiles, dans toutes les tables où ils apparaissent.
-- lav : liste des ids des avatars
-- lgr : liste des ids des groupes
-- lcc : liste des ids des couples
+Mise à jour / suppression de listes d'objets et purges globales par avatar / couple / groupe
 */
-export async function purgeGroupes (lgr) {
-  go()
-  try {
-    if (!lgr || !lgr.size) return 0
-    const idgc = []
-    for (const i of lgr) idgc.push(crypt.u8ToB64(await crypt.crypter(data.clek, crypt.idToSid(i), 1), true))
-    await data.db.transaction('rw', TABLES, async () => {
-      for (let i = 0; i < idgc.length; i++) {
-        const id = { id: idgc[i] }
-        await data.db.groupe.where(id).delete()
-        await data.db.membre.where(id).delete()
-        await data.db.secret.where(id).delete()
-      }
-    })
-    return lgr.size
-  } catch (e) {
-    throw data.setErDB(EX2(e))
-  }
-}
-
-export async function purgeAvatars (lav) {
-  go()
-  try {
-    if (!lav || !lav.size) return 0
-    const idac = []
-    for (const i of lav) idac.push(crypt.u8ToB64(await crypt.crypter(data.clek, crypt.idToSid(i), 1), true))
-    await data.db.transaction('rw', TABLES, async () => {
-      for (let i = 0; i < idac.length; i++) {
-        const id = { id: idac[i] }
-        await data.db.avatar.where(id).delete()
-        await data.db.secret.where(id).delete()
-      }
-    })
-    return lav.size
-  } catch (e) {
-    throw data.setErDB(EX2(e))
-  }
-}
-
-export async function purgeCouples (lcc) {
-  go()
-  try {
-    if (!lcc || !lcc.size) return 0
-    const idcc = []
-    for (const i of lcc) idcc.push(crypt.u8ToB64(await crypt.crypter(data.clek, crypt.idToSid(i), 1), true))
-    await data.db.transaction('rw', TABLES, async () => {
-      for (let i = 0; i < idcc.length; i++) {
-        const id = { id: idcc[i] }
-        await data.db.couple.where(id).delete()
-        await data.db.secret.where(id).delete()
-      }
-    })
-    return lcc.size
-  } catch (e) {
-    throw data.setErDB(EX2(e))
-  }
-}
-
-export async function purgeCvs (lcv) {
-  go()
-  try {
-    if (!lcv || !lcv.size) return 0
-    await data.db.transaction('rw', TABLES, async () => {
-      for (const i of lcv) {
-        const id = { id: i }
-        await data.db.repertoire.where(id).delete()
-      }
-    })
-    return lcv.size
-  } catch (e) {
-    throw data.setErDB(EX2(e))
-  }
-}
-
-/*
-Mise à jour / suppression de listes d'objets (compte, avatar, etc.)
-*/
-export async function commitRows (lmaj, lsuppr) {
+export async function commitRows (opBuf) {
   go()
   try {
     const lidb = []
-    if (lmaj && lmaj.length) {
-      for (let i = 0; i < lmaj.length; i++) {
-        const obj = lmaj[i]
+    if (opBuf.lmaj && opBuf.lmaj.length) {
+      for (let i = 0; i < opBuf.lmaj.length; i++) {
+        const obj = opBuf.lmaj[i]
         const x = { table: obj.table, row: {} }
         x.row.id = estSingleton(obj.table) ? '1' : crypt.u8ToB64(await crypt.crypter(data.clek, Sid(obj.id), 1), true)
         if (obj.id2) x.row.id2 = crypt.u8ToB64(await crypt.crypter(data.clek, Sid(obj.id2), 1), true)
@@ -439,9 +359,9 @@ export async function commitRows (lmaj, lsuppr) {
     }
 
     const lidbs = []
-    if (lsuppr && lsuppr.length) {
-      for (let i = 0; i < lsuppr.length; i++) {
-        const obj = lsuppr[i]
+    if (opBuf.lsuppr && opBuf.lsuppr.length) {
+      for (let i = 0; i < opBuf.lsuppr.length; i++) {
+        const obj = opBuf.lsuppr[i]
         const x = { ...obj }
         x.id = estSingleton(obj.table) ? '1' : crypt.u8ToB64(await crypt.crypter(data.clek, Sid(obj.id), 1), true)
         if (obj.id2) x.id2 = crypt.u8ToB64(await crypt.crypter(data.clek, Sid(obj.id2), 1), true)
@@ -453,11 +373,24 @@ export async function commitRows (lmaj, lsuppr) {
       }
     }
 
+    if (!opBuf.lcc || !opBuf.lcc.size) return 0
+    const idcc = []
+    for (const i of opBuf.lcc) idcc.push(crypt.u8ToB64(await crypt.crypter(data.clek, crypt.idToSid(i), 1), true))
+
+    if (!opBuf.lav || !opBuf.lav.size) return 0
+    const idac = []
+    for (const i of opBuf.lav) idac.push(crypt.u8ToB64(await crypt.crypter(data.clek, crypt.idToSid(i), 1), true))
+
+    if (!opBuf.lgr || !opBuf.size) return 0
+    const idgc = []
+    for (const i of opBuf) idgc.push(crypt.u8ToB64(await crypt.crypter(data.clek, crypt.idToSid(i), 1), true))
+
     await data.db.transaction('rw', TABLES, async () => {
       for (let i = 0; i < lidb.length; i++) {
         const x = lidb[i]
         await data.db[x.table].put(x.row)
       }
+
       for (let i = 0; i < lidbs.length; i++) {
         const x = lidbs[i]
         if (x.row.id2) {
@@ -465,6 +398,25 @@ export async function commitRows (lmaj, lsuppr) {
         } else {
           await data.db[x.table].where({ id: x.id }).delete()
         }
+      }
+
+      for (let i = 0; i < idcc.length; i++) {
+        const id = { id: idcc[i] }
+        await data.db.couple.where(id).delete()
+        await data.db.secret.where(id).delete()
+      }
+
+      for (let i = 0; i < idac.length; i++) {
+        const id = { id: idac[i] }
+        await data.db.avatar.where(id).delete()
+        await data.db.secret.where(id).delete()
+      }
+
+      for (let i = 0; i < idgc.length; i++) {
+        const id = { id: idgc[i] }
+        await data.db.groupe.where(id).delete()
+        await data.db.membre.where(id).delete()
+        await data.db.secret.where(id).delete()
       }
     })
   } catch (e) {

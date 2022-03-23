@@ -1,6 +1,6 @@
 import { schemas } from './schemas.mjs'
 import { crypt } from './crypto.mjs'
-import { openIDB, closeIDB, putFa, getFadata } from './db.mjs'
+import { openIDB, closeIDB, getFadata } from './db.mjs'
 import { openWS, closeWS } from './ws.mjs'
 import {
   store, appexc, serial, deserial, dlvDepassee, NomAvatar, gzip, ungzip, dhstring,
@@ -17,33 +17,40 @@ export async function traitInvitGr (row) {
   return { id: row.id, ni: row.ni, datak: crypt.crypter(data.clek, x) }
 }
 
-const tbls1 = ['avatar', 'groupe', 'couple', 'cv', 'membre', 'secrets']
-const tbls2 = ['avatar', 'groupe', 'couple', 'cv', 'membre', 'secrets']
-
-export async function compileToObject (mr, courte) {
-  for (const table of (courte ? tbls2 : tbls1)) {
+/* Compile en objet tous les rows de la structure de rows désérialisée mr
+La structure de sortie mapObj est identique. Elle peut être fourni en entrée
+ce qui provoque une mise à jour par les versions postérieures de chaque objet
+*/
+export async function compileToObject (mr, mapObj) {
+  if (!mapObj) mapObj = {}
+  for (const table of mr) {
     if (t0n.has(table)) {
       const mrow = mr[table]
-      if (mrow) {
-        for (const id in mrow) {
+      for (const pk in mrow) {
+        const row = mrow[pk]
+        const av = mapObj[pk]
+        if (av && av.v < row.v) {
           const obj = newObjet(table)
-          mrow[id] = await obj.fromRow(mrow[id])
+          mapObj[pk] = await obj.fromRow(row)
         }
       }
     } else {
       const m1 = mr[table]
-      if (m1) {
-        for (const id in m1) {
-          const mrow = m1[id]
-          for (const id in mrow) {
+      for (const id in m1) {
+        const mrow = m1[id]
+        for (const pk in mrow) {
+          const row = mrow[pk]
+          const av = mapObj[pk]
+          if (av && av.v < row.v) {
+            let e = mapObj[id]; if (!e) { e = {}; mapObj[id] = e }
             const obj = newObjet(table)
-            mrow[id] = await obj.fromRow(mrow[id])
+            e[pk] = await obj.fromRow(row)
           }
         }
       }
     }
   }
-  return mr
+  return mapObj
 }
 
 export function pk (table, row) {
@@ -53,6 +60,12 @@ export function pk (table, row) {
   return id
 }
 
+/* Désérialise un array de rowItems dans une map ayant une entrée par table :
+- pour les singletons (compte / compta / prefs), la valeur est directement le row
+- pour les collections la valeur est une map dont la clé est la "primary key" du row (id ou id/im ou id/ns)
+et la valeur est le row désérialisé.
+Seule la version la plus récente pour chaque row est conservée (d'où le stockage par pk)
+*/
 export function deserialRowItems (rowItems) {
   const res = {}
   for (let i = 0; i < rowItems.length; i++) {
@@ -86,150 +99,6 @@ function newObjet (table) {
     case 'secret' : return new Secret()
     case 'cv' : return new Cv()
   }
-}
-
-/* mapObj : clé par table, valeur : array des objets **************************************/
-/*
-- ne traite ni les singletons ('compte compta prefs'), ni 'invitgr'
-- inscrit en store OU les supprime du store s'il y était
-- objets : array remplie par tous les objets à mettre en IDB
-Retourne vcv : version de la plus CV trouvée
-*/
-export async function commitMapObjets (objets, mapObj) { // SAUF mapObj.compte et mapObj.prefs
-  let vcv = 0
-
-  function push (n) { mapObj[n].forEach((x) => { objets.push(x) }) }
-
-  if (mapObj.avatar) {
-    data.setAvatars(mapObj.avatar)
-    push('avatar')
-  }
-
-  if (mapObj.groupe) {
-    const grSuppr = [] // liste des groupes supprimés
-    data.setGroupes(mapObj.groupe, grSuppr)
-    // if (grSuppr.length) traitGrSuppr(grSuppr)
-    push('groupe')
-  }
-
-  if (mapObj.couple) {
-    /* Pour chaque couple, gestion au plus d'une CV dans le répertoire :
-    - soit création (fake)
-    - soit suppression
-    - soit mise à jour de la liste des contacts dans la CV
-    */
-    for (let i = 0; i < mapObj.couple.length; i++) {
-      const x = mapObj.couple[i]
-      if (x.suppr) {
-        const avant = data.getCouple(x.id)
-        if (avant && !avant.suppr) {
-          if (!avant.avc0 && avant.na0) {
-            // en 0 avait une CV (pas avatar du compte et na connu)
-            data.repertoire.getCv(avant.na0.sid).moinsCtc(x.id)
-          }
-          if (!avant.avc1 && avant.na1) {
-            // en 1 avait une CV (pas avatar du compte et na connu)
-            data.repertoire.getCv(avant.na1.sid).moinsCtc(x.id)
-          }
-        }
-      } else {
-        if (!x.avc0 && x.na0) {
-          // en 0 a une CV (pas avatar du compte et na connu)
-          data.repertoire.getCv(x.na0.sid).moinsCtc(x.id)
-        }
-        if (!x.avc1 && x.na1) {
-          // en 1 avait une CV (pas avatar du compte et na connu)
-          data.repertoire.getCv(x.na1.sid).moinsCtc(x.id)
-        }
-      }
-    }
-    data.setCouples(mapObj.couple)
-    push('couple')
-  }
-
-  if (mapObj.contact) {
-    data.setContacts(mapObj.contact)
-    push('contact')
-  }
-
-  if (mapObj.membre) {
-    // Gérer la CV
-    mapObj.membre.forEach((x) => {
-      if (x.suppr) {
-        const avant = data.getMembre(x.id, x.im)
-        if (avant && !avant.estAvc && !avant.suppr) {
-          data.repertoire.getCv(avant.namb.sid).moinsMbr(x.id)
-        }
-      } else {
-        if (!x.estAvc) data.repertoire.getCv(x.namb.sid).plusMbr(x.id)
-      }
-    })
-    data.setMembres(mapObj.membre)
-    push('membre')
-  }
-
-  if (mapObj.secret) {
-    data.setSecrets(mapObj.secret)
-    /* il peut y avoir des secrets ayant un changement de FA */
-    const lst = []
-    const st = store().state.db.faidx
-    for (let i = 0; i < mapObj.secret.length; i++) {
-      const secret = mapObj.secret[i]
-      for (const cle in secret.mfa) {
-        const fa = secret.mfa[cle]
-        const x = st ? st[secret.sidpj(cle)] : null
-        if (x && fa.hv !== x.hv) { // fa locale pas à jour
-          try {
-            const data = await getfa(secret.sid + '@' + secret.sid2, x.cle) // rechargement du contenu du serveur
-            x.hv = fa.hv
-            putFa(x, data) // store en IDB
-            lst.push(x)
-          } catch (e) {
-            console.log(e.toString())
-            x.hv = null
-            lst.push(x)
-            data.setFaPerdues(x)
-          }
-        }
-      }
-    }
-    if (lst.length) data.setFaidx(lst)
-    push('secret')
-  }
-
-  if (mapObj.cv) {
-    mapObj.cv.forEach((x) => {
-      if (!x.suppr) {
-        const cv = data.repertoire.getCv(x.sid)
-        if (cv) {
-          const f = cv.fusionCV(x)
-          data.repertoire.setCv(f)
-        } else {
-          data.repertoire.setCv(x)
-        }
-        if (x.vcv > vcv) vcv = x.vcv
-      }
-    })
-    push('cv')
-  }
-
-  /* Il peut y avoir des FA non référencées, avatar / groupe disparu, FA disparue */
-  {
-    const lst = []
-    const st = store().state.db.faidx
-    for (const k in st) {
-      const x = st[k]
-      const secret = data.getSecret(x.id, x.ns)
-      if (secret && secret.nbpj) {
-        const fa = secret.mpj[x.cle]
-        if (!fa) { x.hv = null; lst.push(x) }
-      } else { x.hv = null; lst.push(x) }
-    }
-    if (lst.length) data.setFaidx(lst)
-  }
-
-  data.repertoire.commit() // un seul à la fin
-  return vcv
 }
 
 /* Répertoire des CV *******************************************************

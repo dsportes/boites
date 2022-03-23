@@ -27,15 +27,18 @@ export async function reconnexion () {
 /* ***************************************************/
 class OpBuf {
   constructor () {
-    this.lmaj = []
-    this.lsuppr = []
+    this.lmaj = [] // objets à modifier / insérer en IDB
+    this.lsuppr = [] // objets (du moins {table id (id2))} à supprimer de IDB
+    this.lav = null // set des ids des avatars à purger
+    this.lcc = null // set des ids des couples à purger
+    this.lgr = null // set des ids des groupes à purger
+    this.lobj = [] // objets en attente d'être rangés en store/db : en synchro permet d'effectuer une validation cohérente
   }
 
   putIDB (obj) { this.lmaj.push(obj) }
-
   supprIDB (obj) { this.lsuppr.push(obj) } // obj : {table, id, (sid2)}
-
-  async commiIDB () { await commitRows(this.lmaj, this.lsuppr) }
+  setObj (obj) { this.lobj.push(obj) }
+  async commiIDB () { await commitRows(this) }
 }
 
 /****************************************************************/
@@ -225,6 +228,55 @@ export class Operation {
     }
   }
 
+  /*
+  if (mapObj.secret) {
+    data.setSecrets(mapObj.secret)
+    // il peut y avoir des secrets ayant un changement de FA
+    const lst = []
+    const st = store().state.db.faidx
+    for (let i = 0; i < mapObj.secret.length; i++) {
+      const secret = mapObj.secret[i]
+      for (const cle in secret.mfa) {
+        const fa = secret.mfa[cle]
+        const x = st ? st[secret.sidpj(cle)] : null
+        if (x && fa.hv !== x.hv) { // fa locale pas à jour
+          try {
+            const data = await getfa(secret.sid + '@' + secret.sid2, x.cle) // rechargement du contenu du serveur
+            x.hv = fa.hv
+            putFa(x, data) // store en IDB
+            lst.push(x)
+          } catch (e) {
+            console.log(e.toString())
+            x.hv = null
+            lst.push(x)
+            data.setFaPerdues(x)
+          }
+        }
+      }
+    }
+    if (lst.length) data.setFaidx(lst)
+    push('secret')
+  }
+
+  // Il peut y avoir des FA non référencées, avatar / groupe disparu, FA disparue
+  {
+    const lst = []
+    const st = store().state.db.faidx
+    for (const k in st) {
+      const x = st[k]
+      const secret = data.getSecret(x.id, x.ns)
+      if (secret && secret.nbpj) {
+        const fa = secret.mpj[x.cle]
+        if (!fa) { x.hv = null; lst.push(x) }
+      } else { x.hv = null; lst.push(x) }
+    }
+    if (lst.length) data.setFaidx(lst)
+  }
+
+  data.repertoire.commit() // un seul à la fin
+  return vcv
+}
+*/
   async syncPjs () { // A REPRENDRE
     /* Vérification que toutes les PJ accessibles en avion sont, a) encore utiles, b) encore à jour */
     let nbp = 0
@@ -259,60 +311,17 @@ export class Operation {
     return [nbp, vol]
   }
 
-  /* Recharge depuis le serveur tous les secrets d'id (avatar / couple / groupe) donnée et de version postérieure à v
-  Remplit aussi la liste des secrets à mettre à jour et à supprimer de IDB
-  Un secret peut être supprimé : s'il figurait dans la source, il y est enlevé
-  */
-  async chargerSc (id, v, src) {
-    const ret = this.tr(await post(this, 'm1', 'chargerSc', { sessionId: data.sessionId, id, v }))
-    if (ret.rowItems.length) {
-      const r = await compileToObject(deserialRowItems(ret.rowItems))
-      if (r.secret) {
-        for (const pk of r) {
-          const s = r[pk]
-          if (s.suppr) {
-            if (src[id] && src[id][s.ns]) delete src[id][s.ns]
-            this.buf.supprIDB({ table: 'secret', id: id, id2: s.ns })
-          } else {
-            let e = src[id]; if (!e) { e = {}; src[id] = e }
-            e[s.ns] = s
-            this.buf.putIDB(s)
-          }
-        }
-      }
-    }
-  }
-
-  /* Recharge depuis le serveur tous les membres d'id de groupe donnée et de version postérieure à v
-    Remplit aussi la liste des membres à mettre à jour en IDB
-  */
-  async chargerMb (id, v, src) {
-    const ret = this.tr(await post(this, 'm1', 'chargerMb', { sessionId: data.sessionId, id, v }))
-    if (ret.rowItems.length) {
-      const r = await compileToObject(deserialRowItems(ret.rowItems))
-      if (r.membre) {
-        for (const pk of r) {
-          const m = r[pk]
-          let e = src[id]; if (!e) { e = {}; src[id] = e }
-          e[m.ns] = m
-          this.buf.putIDB(m)
-        }
-      }
-    }
-  }
-
   /* Recharge depuis le serveur les secrets d'un avatar et s'abonner à l'avatar
     Remplit aussi la liste des membres à mettre à jour en IDB
   */
-  async chargerAS (id, lobj) {
+  async chargerAS (id, mapObj) {
     const ret = this.tr(await post(this, 'm1', 'chargerAS', { sessionId: data.sessionId, id }))
     if (ret.rowItems.length) {
-      const r = await compileToObject(deserialRowItems(ret.rowItems))
-      if (r.secret && r.secret[id]) {
-        const x = r.secret[id]
-        for (const ns of x) {
-          const obj = x[ns]
-          lobj.push(obj)
+      const r = await compileToObject(deserialRowItems(ret.rowItems), mapObj)
+      if (r.secret) {
+        for (const pk of r.secret) {
+          const obj = r.secret[pk]
+          this.buf.setObj(obj)
           this.buf.putIDB(obj)
         }
       }
@@ -322,20 +331,21 @@ export class Operation {
   /* Recharge depuis le serveur un couple et ses secrets, et s'abonne
     Remplit aussi la liste des membres à mettre à jour en IDB
   */
-  async chargerCS (id, lobj) {
+  async chargerCS (id, mapObj) {
     const ret = this.tr(await post(this, 'm1', 'chargerCS', { sessionId: data.sessionId, id }))
     if (ret.rowItems.length) {
-      const r = await compileToObject(deserialRowItems(ret.rowItems))
-      if (r.couple && r.couple[id]) {
-        const obj = r.couple[id]
-        lobj.push(obj)
-        this.buf.putIDB(obj)
+      const r = await compileToObject(deserialRowItems(ret.rowItems), mapObj)
+      if (r.couple) {
+        for (const pk of r.couple) {
+          const obj = r.couple[pk]
+          this.buf.setObj(obj)
+          this.buf.putIDB(obj)
+        }
       }
-      if (r.secret && r.secret[id]) {
-        const x = r.secret[id]
-        for (const ns of x) {
-          const obj = x[ns]
-          lobj.push(obj)
+      if (r.secret) {
+        for (const pk of r.secret) {
+          const obj = r.secret[pk]
+          this.buf.setObj(obj)
           this.buf.putIDB(obj)
         }
       }
@@ -345,28 +355,28 @@ export class Operation {
   /* Recharge depuis le serveur un groupe, ses membres et ses secrets, et s'abonne
     Remplit aussi la liste des membres à mettre à jour en IDB
   */
-  async chargerGMS (id, lobj) {
+  async chargerGMS (id, mapObj) {
     const ret = this.tr(await post(this, 'm1', 'chargerGMS', { sessionId: data.sessionId, id }))
     if (ret.rowItems.length) {
-      const r = await compileToObject(deserialRowItems(ret.rowItems))
-      if (r.couple && r.couple[id]) {
-        const obj = r.couple[id]
-        lobj.push(obj)
-        this.buf.putIDB(obj)
-      }
-      if (r.membre && r.membre[id]) {
-        const x = r.membre[id]
-        for (const im of x) {
-          const obj = x[im]
-          lobj.push(obj)
+      const r = await compileToObject(deserialRowItems(ret.rowItems), mapObj)
+      if (r.groupe) {
+        for (const pk of r.groupe) {
+          const obj = r.groupe[pk]
+          this.buf.setObj(obj)
           this.buf.putIDB(obj)
         }
       }
-      if (r.secret && r.secret[id]) {
-        const x = r.secret[id]
-        for (const ns of x) {
-          const obj = x[ns]
-          lobj.push(obj)
+      if (r.membre) {
+        for (const pk of r.membre) {
+          const obj = r.membre[pk]
+          this.buf.setObj(obj)
+          this.buf.putIDB(obj)
+        }
+      }
+      if (r.secret) {
+        for (const pk of r.secret) {
+          const obj = r.secret[pk]
+          this.buf.setObj(obj)
           this.buf.putIDB(obj)
         }
       }
@@ -387,7 +397,6 @@ export class Operation {
     const apAvatarIds = new Set()
 
     if (apCompte && apCompte.v > avCompte.v) {
-      apCompte.repAvatars()
       apCompte.avatarIds(apAvatarIds)
       apAvatarIds.forEach(id => { if (!avAvatarIds.has(id)) this.avatarIdsP.add(id) })
       avAvatarIds.forEach(id => { if (!apAvatarIds.has(id)) this.avatarIdsM.add(id) })
@@ -396,7 +405,6 @@ export class Operation {
     }
 
     const apGroupeIds = new Set()
-
     const apCoupleIds = new Set()
 
     if (apAvatars) {
@@ -417,28 +425,35 @@ export class Operation {
 
     // Traitements des suppressions
     if (this.avatarIdsM.size) {
-      data.purgeAvatars(this.avatarIdsM)
+      this.buf.lav = this.avatarIdsM
       this.buf.avatarIdsM = this.avatarIdsM
     }
     if (this.groupeIdsM.size) {
-      data.purgeGroupes(this.groupeIdsM)
+      this.buf.lgr = this.groupeIdsM
       this.buf.groupeIdsM = this.groupeIdsM
     }
     if (this.coupleIdsM.size) {
-      data.purgeCouples(this.coupleIdsM)
+      this.buf.lgr = this.coupleIdsM
       this.buf.coupleIdsM = this.coupleIdsM
     }
-
-    // Traitement des manquants récupérés du serveur
-    const lobj = []
-    for (const id in this.avatarIdsP) await this.chargerAS(id, lobj)
-    for (const id in this.groupeIdsP) await this.chargerGMS(id, lobj)
-    for (const id in this.coupleIdsP) await this.chargerCS(id, lobj)
-    data.setObjets(lobj)
   }
 
   /* traiteQueue ***********************************************************************
   Traitement des synchronisations reçues en queue invoquée dans l'opération ProcessQueue()
+  - Principes généraux :
+    - tout objet de version inférieure à celle détenue est ignoré
+    - la mise à jour de store/db ne s'effectue qu'à la fin en une séquence sans wait
+      de manière à ne laisser voir aux vues QUE des états cohérents respectant les frontières des
+      transactions du serveur (et dans l'ordre d'éxécution)
+    - la mise à jour d'IDB ne s'effectue qu'à la fin en une seule transaction (même raison)
+    - la mise à jour du répertoire est au fil de l'eau, il n'est jamais incohérent et n'a pas de suppressions
+      les suppressions logiques x de chaque entrée indiquent, soit une entrée disparue, soit une entrée n'étant plus référencée
+      Pour celles non référencées, à la fin les objets courants "avatar groupe groupeplus couple secret" sont mis à null
+      afin de permettre aux vues de tenir compte de leurs "pseudo" disparitions (suppression de leur dernière référence)
+  - Phase 0 : compilation du compte : le répertoire a ainsi la liste des avatars avec leurs clés
+  - Phase 1 : compilation des avatars : le répertoire a ainsi la liste des groupes et couples avec leurs clés
+  - Phase 2 : détection des avatars disparus et ajoutés, détection des couples et groupes disparus et ajoutés
+  - Phase 3 : récupération des manquants depuis le serveur et abonnements
   */
   async traiteQueue (q) {
     // concaténation des syncList reçus et stackées dans items
@@ -447,9 +462,8 @@ export class Operation {
       if (syncList.rowItems) syncList.rowItems.forEach((rowItem) => { items.push(rowItem) })
     })
 
-    const mrow = deserialRowItems(items)
+    const mrows = deserialRowItems(items) // map des rows désérialisés (mais pas compilés en objet)
 
-    // Principe général : tout objet de version inférieure à celle détenue est ignoré
     const avTousAx = new Set(Object.keys(data.tousAx))
     this.nvAx = new Map() // clé: id, valeur: na
     this.groupeIdsP = new Set()
@@ -459,13 +473,12 @@ export class Operation {
     this.coupleIdsP = new Set()
     this.coupleIdsM = new Set()
 
-    /* Compiler d'abord le compte éventuel
-    pour enregistrer les avatars dans le répertoire
+    /* Phase 0 : compilation du compte éventuel pour enregistrer les avatars dans le répertoire
     */
     let nvcompte = null
-    if (mrow.compte) {
+    if (mrows.compte) {
       const obj = new Compte()
-      await obj.fromRow(mrow.compte)
+      await obj.fromRow(mrows.compte)
       const a = data.getCompte()
       if (obj.v > a.v) {
         nvcompte = obj
@@ -474,15 +487,13 @@ export class Operation {
       }
     }
 
-    /* Compiler ensuite les avatars éventuels
-    pour enregistrer les groupes et couples dans le répertoire
-    sinon leur compilation ne trouvera pas leur clé
+    /* Phase 1 : compilation des avatars éventuels pour enregistrer les groupes et couples dans le répertoire
     */
     let nvavatars = null
-    if (mrow.avatar) {
-      for (const id in mrow.avatar) {
+    if (mrows.avatar) {
+      for (const id in mrows.avatar) {
         const obj = new Avatar()
-        await obj.fromRow(mrow.avatar[id])
+        await obj.fromRow(mrows.avatar[id])
         const a = data.getAvatar(id)
         if (!a || obj.v > a.v) {
           if (!nvavatars) nvavatars = {}
@@ -494,25 +505,24 @@ export class Operation {
       }
     }
 
-    /* Traiter en une fois :
-    - de la mise à jour de compte => avatars disparus et ajoutés
-    - des mises à jour des avatars => couples et groupes disparus et ajoutés
-    - en conséquence :
-      - les membres / secrets des groupes disparus disparaissent
-      - les secrets des couples et avatars disparus disparaissent.
-      - les groupes ajoutés, leurs membres et secrets sont à aller chercher sur le serveur
-      - les couples ajoutés et leurs secrets sont à aller charcher sur le serveur
-      - les abonnements sont à ajuster, avatars, groupes, couples en plus et en moins
-    - en conséquence :
-      - des CVs peuvent disparaître
-      - des CV sont à ajouter, aller chercher sur le serveur et s'abonner
+    /* Phase 2 : détection des avatars disparus et ajoutés, détection des couples et groupes disparus et ajoutés
+      Abonnements aux Plus ???
     */
     if (nvcompte || nvavatars) await this.processCA(nvcompte, nvavatars)
 
-    // Tous les autres items peuvent se compiler, les clés sont dans le répertoire
-    // eslint-disable-next-line no-unused-vars
-    const mapObj = await compileToObject(mrow)
+    /* Phase 3 : récupération des manquants depuis le serveur et abonnements
+      Abonnements aux Plus ???
+    */
+    const mapObj = {}
+    for (const id in this.avatarIdsP) await this.chargerAS(id, mapObj)
+    for (const id in this.groupeIdsP) await this.chargerGMS(id, mapObj)
+    for (const id in this.coupleIdsP) await this.chargerCS(id, mapObj)
 
+    // Tous les autres items peuvent se compiler, les clés sont dans le répertoire
+
+    await compileToObject(mrows, mapObj)
+
+    // Abonnements aux nouveaux avatars / couples / groupes (les Plus) et désabonnemt des disparus / non référencés (les Moins)
     // Traitement des Ax : entrées de répertoire et CVs
     if (this.nvAx.size) {
       // TODO à la fin - les membres nouveaux ou changeant de statut créée des Ax
@@ -776,7 +786,7 @@ export class ConnexionCompte extends OperationUI {
     const avnouveaux = !data.netok ? {} : await this.chargerAvatars(avidsVers, this.compte.id, this.compte.v)
     if (avnouveaux === false) return false// le compte a changé de version, reboucler
     // avnouveaux contient tous les avatars ayant une version plus récente que celle (éventuellement) obtenue de IDB
-    for (const id of avnouveaux) { const av = avnouveaux[id]; this.buf.putIDB(av); this.avatars[av.id] = av }
+    for (const pk of avnouveaux) { const av = avnouveaux[pk]; this.buf.putIDB(av); this.avatars[av.id] = av }
     // avatars contient la version au top des objets avatars du compte requis et seulement eux
     const lav = Object.values(this.avatars)
     data.setAvatars(lav) // mis en store/db
@@ -838,13 +848,13 @@ export class ConnexionCompte extends OperationUI {
 
     const [grnouveaux, cpnouveaux] = x
     // grnouveaux contient tous les groupes ayant une version plus récente que celle (éventuellement) obtenue de IDB
-    for (const id of grnouveaux) { const gr = grnouveaux[id]; this.buf.putIDB(gr); this.groupes[gr.id] = gr }
+    for (const pk of grnouveaux) { const gr = grnouveaux[pk]; this.buf.putIDB(gr); this.groupes[gr.id] = gr }
     // groupes contient la version au top des objets groupes du compte requis par ses avatars et seulement eux
     const lgr = Object.values(this.groupes)
     data.setGroupes(lgr) // mis en store/db
 
     // cpnouveaux contient tous les couples ayant une version plus récente que celle (éventuellement) obtenue de IDB
-    for (const id of cpnouveaux) { const cp = cpnouveaux[id]; this.buf.putIDB(cp); this.couples[cp.id] = cp }
+    for (const pk of cpnouveaux) { const cp = cpnouveaux[pk]; this.buf.putIDB(cp); this.couples[cp.id] = cp }
     // couples contient la version au top des objets couples du compte requis par ses avatars et seulement eux
     const lcp = Object.values(this.couples)
     data.setCouples(lcp) // mis en store/db
@@ -852,6 +862,48 @@ export class ConnexionCompte extends OperationUI {
     lgr.forEach(gr => { data.setSyncItem('10' + gr.sid, 0, 'Groupe ' + gr.nom) })
     lcp.forEach(av => { data.setSyncItem('15' + av.sid, 0, 'Avatar ' + av.nom) })
     return true
+  }
+
+  /* Recharge depuis le serveur tous les secrets d'id (avatar / couple / groupe) donnée et de version postérieure à v
+  Remplit aussi la liste des secrets à mettre à jour et à supprimer de IDB
+  Un secret peut être supprimé : s'il figurait dans la source, il y est enlevé
+  */
+  async chargerSc (id, v, src) {
+    const ret = this.tr(await post(this, 'm1', 'chargerSc', { sessionId: data.sessionId, id, v }))
+    if (ret.rowItems.length) {
+      const r = await compileToObject(deserialRowItems(ret.rowItems))
+      if (r.secret) {
+        for (const pk of r) {
+          const s = r[pk]
+          if (s.suppr) {
+            if (src[id] && src[id][s.ns]) delete src[id][s.ns]
+            this.buf.supprIDB({ table: 'secret', id: id, id2: s.ns })
+          } else {
+            let e = src[id]; if (!e) { e = {}; src[id] = e }
+            e[s.ns] = s
+            this.buf.putIDB(s)
+          }
+        }
+      }
+    }
+  }
+
+  /* Recharge depuis le serveur tous les membres d'id de groupe donnée et de version postérieure à v
+    Remplit aussi la liste des membres à mettre à jour en IDB
+  */
+  async chargerMb (id, v, src) {
+    const ret = this.tr(await post(this, 'm1', 'chargerMb', { sessionId: data.sessionId, id, v }))
+    if (ret.rowItems.length) {
+      const r = await compileToObject(deserialRowItems(ret.rowItems))
+      if (r.membre) {
+        for (const pk of r) {
+          const m = r[pk]
+          let e = src[id]; if (!e) { e = {}; src[id] = e }
+          e[m.ns] = m
+          this.buf.putIDB(m)
+        }
+      }
+    }
   }
 
   /* Récupération des membres et secrets requis par les avatars / couples / groupes */
