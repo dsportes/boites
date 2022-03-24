@@ -6,7 +6,7 @@ export default function () {
 
     avatar: null, // avatar courant
     groupe: null, // groupe courant
-    groupeplus: null, // couple courant [groupe, membre] ou membre est celui de l'avatar courant
+    membre: null, // membre courant
     couple: null, // couple courant
     secret: null, // secret courant
 

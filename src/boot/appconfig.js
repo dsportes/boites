@@ -51,8 +51,9 @@ export default boot(async ({ app, router, store /* Vue */ }) => {
   const cfg = await getJsonPub('app-config.json')
   cfg.logo = await getImagePub(cfg.pathlogo)
   cfg.cliccamera = require('../assets/cliccamera.txt')
-  cfg.personne = require('../assets/personne.txt')
-  cfg.personnes = require('../assets/personnes.txt')
+  cfg.avatar = require('../assets/avatar.txt')
+  cfg.groupe = require('../assets/groupe.txt')
+  cfg.couple = require('../assets/couple.txt')
   cfg.idb = idb
   cfg.isDev = process.env.DEV
   for (const org in cfg.orgs) {

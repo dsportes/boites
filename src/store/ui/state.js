@@ -1,8 +1,13 @@
 export default function () {
   return {
     erreur: { code: -4, message: 'néant', conseil: 'néant', stack: null },
-    statutidb: 0, // 0:inconnu 1:idb accessible 2:idb inaccessible (a rencontré une erreur)
-    statutnet: 0,
+
+    // MainLayout
+    menuouvert: false,
+    confirmerdrc: false,
+    infomode: false,
+    inforeseau: false,
+    infoidb: false,
 
     dialoguecrypto: false,
     dialoguehelp: false,
@@ -12,12 +17,6 @@ export default function () {
     dialoguesynchro: false,
     dialogueerreur: false,
     diagnostic: null,
-    menuouvert: false,
-    confirmerdrc: false,
-
-    infomode: false,
-    inforeseau: false,
-    infoidb: false,
 
     helpstack: [],
 
@@ -36,6 +35,8 @@ export default function () {
     */
     statutsession: 0,
     sessionok: false,
+    statutidb: 0, // 0:inconnu 1:idb accessible 2:idb inaccessible (a rencontré une erreur)
+    statutnet: 0,
 
     /* Dernier état de session synchronisé
     - dhdebutp : dh de début de la dernière session sync terminée
@@ -56,9 +57,10 @@ export default function () {
     page: 'Org',
 
     tabavatar: 'secrets',
-    evtavatar: null,
-    evtavatarct: null,
+    evtavatarsc: null,
+    evtavatarcp: null,
     evtavatargr: null,
+
     evtfiltresecrets: null,
     evtfiltresecrets2: null,
     invitationattente: null,

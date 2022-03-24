@@ -41,17 +41,10 @@ export function majavatar (state, val) { state.avatar = val }
 export function majcouple (state, val) { state.couple = val }
 
 /* Déclaration du groupe courant */
-export function majgroupe (state, val) {
-  state.groupe = val
-  const x = state.groupeplus
-  if (x && x.g && x.g.id === val.id) state.groupeplus = { g: val, m: x.m }
-}
+export function majgroupe (state, val) { state.groupe = val }
 
-/* Déclaration du groupe plus courant */
-export function majgroupeplus (state, val) {
-  state.groupe = val.g
-  state.groupeplus = val
-}
+/* Déclaration du membre courant */
+export function majmembre (state, val) { state.membre = val }
 
 /* Déclaration du secret courant */
 export function majsecret (state, val) { state.secret = val }

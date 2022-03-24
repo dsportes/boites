@@ -676,9 +676,17 @@ export class MdpAdmin {
     this.mdph = crypt.hashBin(this.mdpb)
   }
 }
-/************************************************
- * Employé directement seulement pour le nom d'un compte et le titre d'un secret
-*/
+/************************************************/
+export function titreCompte (sid, info) {
+  if (!info) return sid
+  if (!lgnom) lgnom = cfg().lgnom || 16
+  let l = info.substring(0, lgnom)
+  const i = l.indexOf('\n')
+  if (i !== -1) l = l.substring(0, i)
+  return l + '(@' + sid + ')'
+}
+
+// Employé directement seulement pour un secret ???
 export function titreEd (nom, info, court) {
   if (!lgtitre) lgtitre = cfg().lgtitre || 50
   if (!lgnom) lgnom = cfg().lgnom || 16
@@ -702,20 +710,19 @@ export class NomAvatar {
     this.id = crypt.hashBin(this.rnd)
   }
 
-  get nomc () { return this.nom + '@' + this.sid }
-
+  get nomc () { return this.nom + '@' + this.substring(this.sid.length - 3, this.sid.length) }
+  get nomf () { return normpath(this.nomc) }
   get sid () { return crypt.idToSid(this.id) }
-
   get cle () { return this.rnd }
-
-  get nomf () {
+  get noml () {
+    const cv = data.getCv(this.id)
+    if (!cv || !cv.info) return this.nomc
     if (!lgnom) lgnom = cfg().lgnom || 16
-    const i = this.nom.indexOf('\n')
-    const t = this.nom.substring(0, (i === -1 ? lgnom : (i < lgnom ? i : lgnom)))
-    return normpath(t) + '@' + this.sid
+    let l = cv.info.substring(0, lgnom)
+    const i = l.indexOf('\n')
+    if (i !== -1) l = l.substring(0, i)
+    return l + '(' + this.nomc + ')'
   }
-
-  get titre () { return titreEd(this.nom, data.getCv(this.id) || '', true) }
 }
 
 /** Filtre des contacts *************************************/

@@ -4,7 +4,7 @@ import { openIDB, closeIDB, getFadata } from './db.mjs'
 import { openWS, closeWS } from './ws.mjs'
 import {
   store, appexc, serial, deserial, dlvDepassee, NomAvatar, gzip, ungzip, dhstring,
-  getJourJ, cfg, ungzipT, normpath, getfa, titreEd
+  getJourJ, cfg, ungzipT, normpath, getfa, titreEd, titreCompte
 } from './util.mjs'
 import { remplacePage } from './page.mjs'
 import { EXPS, UNITEV1, UNITEV2, Compteurs, t0n } from './api.mjs'
@@ -132,8 +132,9 @@ class Repertoire {
     this.rep = {}
   }
 
-  get (id) { return this.rep[id] }
-  cle (id) { const e = this.rep[id]; return e ? e.cle : null }
+  cle (id) { const e = this.rep[id]; return e ? e.na.rnd : null }
+  na (id) { const e = this.rep[id]; return e ? e.na : null }
+  disparu (id) { const e = this.rep[id]; return !e || e.x }
   estAc (id) { return this.idac.has(id) }
   estAx (id) { return this.idax.has(id) }
   estGr (id) { return this.idgr.has(id) }
@@ -143,7 +144,7 @@ class Repertoire {
 
   setXX (na, x) {
     const id = na.id
-    const obj = { id, nom: na.nom, cle: na.rnd }
+    const obj = { na: na }
     if (x) obj.x = true
     this.rep[id] = obj
     return id
@@ -411,7 +412,6 @@ export class Compte {
   get sid () { return crypt.idToSid(this.id) }
   get pk () { return '1' }
   get estComptable () { return data.estComptable }
-  get titre () { return data.getPrefs(this.id).titre }
 
   avatars (s) {
     const s1 = new Set()
@@ -528,7 +528,7 @@ export class Prefs {
   get sid () { return crypt.idToSid(this.id) }
   get pk () { return '1' }
   get memo () { return this.map.mp }
-  get titre () { return titreEd(this.sid, this.map.mp) }
+  get titre () { return titreCompte(this.sid, this.map.mp) }
   get mc () { return this.map.mc }
 
   nouveau (id) {
@@ -681,16 +681,8 @@ export class Avatar {
   get sid () { return crypt.idToSid(this.id) }
   get pk () { return this.sid }
 
-  get cv () { return data.getCv(this.id) }
-  get photo () { const cv = this.cv; return cv ? cv.photo : '' }
-  get info () { const cv = this.cv; return cv ? cv.info : '' }
-
-  get rep () { return data.repertoire.get(this.id) }
-  get cle () { return this.rep.cle }
-  get nom () { return this.rep.nom }
-  get nomEd () { return titreEd(this.nom || '', this.info) }
-
-  get nomf () { return normpath(this.nom) }
+  get na () { return data.repertoire.na(this.id) }
+  get cle () { return this.na.cle }
 
   constructor () {
     this.m1gr = new Map() // clé:ni val: { na du groupe, im de l'avatar dans le groupe }

@@ -479,7 +479,7 @@ export class Operation {
     - la mise à jour d'IDB ne s'effectue qu'à la fin en une seule transaction (même raison)
     - la mise à jour du répertoire est au fil de l'eau, il n'est jamais incohérent et n'a pas de suppressions
       les suppressions logiques x de chaque entrée indiquent, soit une entrée disparue, soit une entrée n'étant plus référencée
-      Pour celles non référencées, à la fin les objets courants "avatar groupe groupeplus couple secret" sont mis à null
+      Pour celles non référencées, à la fin les objets courants "avatar groupe couple membre secret" sont mis à null
       afin de permettre aux vues de tenir compte de leurs "pseudo" disparitions (suppression de leur dernière référence)
   - Phase 0 : compilation du compte : le répertoire a ainsi la liste des avatars avec leurs clés
   - Phase 1 : compilation des avatars : le répertoire a ainsi la liste des groupes et couples avec leurs clés
@@ -638,8 +638,7 @@ export class Operation {
         // Gestion de l'avatar externe associé (s'il était connu)
         if (cv.x) {
           // disparition
-          const e = data.repertoire.get(cv.id)
-          if (e) e.disparition(cv.id)
+          data.repertoire.disparition(cv.id)
           this.axM = true
           this.axDisparus.add(cv.id)
         }
@@ -701,10 +700,10 @@ export class Operation {
       if (gp) {
         const eg = data.getGroupe(gp[0])
         if (!eg) {
-          store().commit('db/setgroupeplus', null)
+          store().commit('db/majgroupeplus', null)
         } else {
           const em = data.getMembre(gp[1].id, gp[1].im)
-          if (!em) store().commit('db/setgroupeplus', null)
+          if (!em) store().commit('db/majgroupeplus', null)
         }
       }
     }
@@ -1186,8 +1185,7 @@ export class ConnexionCompte extends OperationUI {
         const cv = chg[id]
         n++
         if (cv.x) { // disparu
-          const e = data.repertoire.get(cv.id)
-          if (!e.x) { e.x = true; axdisparus.add(cv.id) }
+          if (!data.repertoire.disparu(cv.id)) { data.repertoire.disparition(cv.id); axdisparus.add(cv.id) }
           cvs[cv.id] = { id: cv.id, cv: null }
           this.buf.supprIDB({ table: 'cv', id: cv.id })
         } else {

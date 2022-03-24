@@ -3,29 +3,30 @@
     <q-header elevated>
       <q-toolbar>
         <q-toolbar-title>
-          <span :class="sessionId == null ? 'cursor-pointer' : 'no-pointer-events'" @click="toorg">
-            <q-avatar size="sm"><img :src="orgicon"></q-avatar>
-            <span v-if="page === 'Login'" :class="orglabelclass">{{ orglabel }}
+          <span :class="!sessionok ? 'cursor-pointer' : 'no-pointer-events'" @click="toorg">
+            <q-avatar size="sm"><img :src="orgicon()"></q-avatar>
+            <span v-if="page === 'Login'" :class="orglabelclass()">{{ orglabel() }}
               <q-tooltip>Changer d'organisation</q-tooltip>
             </span>
           </span>
-          <q-icon v-if="compte!=null && compte.estComptable" size="sm" color="secondary" name="savings" aria-label="Compte de comptable"/>
-          <span v-if="compte != null" :class="page!=='Avatar' ? 'disabled' : 'cursor-pointer'" @click="tocompte">
+          <q-icon v-if="sessionok && compte.estComptable" size="sm" color="secondary" name="savings" aria-label="Compte de comptable"/>
+          <span v-if="sessionok" :class="page!=='Avatar' ? 'disabled' : 'cursor-pointer'" @click="tocompte">
             <q-icon size="sm" name="home" aria-label="Accueil du compte"/>
-            <span class="fs-md q-px-sm">{{ prefs.titre }}</span>
+            <span v-if="prefs" class="fs-md q-px-sm">{{ prefs.titre }}</span>
+            <span v-else class="fs-md q-px-sm">{{ compte.sid }}</span>
           </span>
         </q-toolbar-title>
 
-        <q-btn v-if="org != null && sessionId != null" dense size="sm" color="warning" icon="logout" @click="confirmerdrc = true">
+        <q-btn v-if="sessionok" dense size="sm" color="warning" icon="logout" @click="confirmerdrc = true">
           <q-tooltip>Déconnexion / Reconnexion du compte</q-tooltip>
         </q-btn>
 
         <div class="cursor-pointer q-px-xs" @click="infoidb = true">
-          <q-avatar v-if="mode === 0 || mode === 2 || sessionId == null" size="sm">
+          <q-avatar v-if="!sessionok || mode === 0 || mode === 2" size="sm">
             <img src="~assets/database_gris.svg">
           </q-avatar>
           <div v-else>
-            <q-avatar v-if="(mode == 1 || mode == 3) && statutidb != 0 && sessionId != null" size="sm">
+            <q-avatar v-if="sessionok && (mode == 1 || mode == 3) && statutidb != 0" size="sm">
               <img src="~assets/database_vert.svg">
             </q-avatar>
             <q-avatar v-else square size="sm">
@@ -39,7 +40,7 @@
          </div>
 
         <div class="cursor-pointer q-px-xs" @click="infomode = true">
-          <q-avatar size="sm" :color="mode !== 0 && sessionId != null && mode !== modeInitial ? 'warning' : 'primary'">
+          <q-avatar size="sm" :color="sessionok && mode !== 0 && mode !== modeInitial ? 'warning' : 'primary'">
             <q-icon v-if="mode === 0" size="sm" name="info"/>
             <q-icon v-if="mode === 1" size="sm" name="autorenew"/>
             <img v-if="mode === 2" src="~assets/incognito_blanc.svg">
@@ -48,7 +49,7 @@
           </q-avatar>
         </div>
 
-        <q-btn class="q-pr-sm" flat dense round size="sm" icon="settings" aria-label="Menu" @click="$store.commit('ui/togglemenuouvert')"/>
+        <q-btn class="q-pr-sm" flat dense round size="sm" icon="settings" aria-label="Menu" @click="menuouvert = !menuouvert"/>
 
       </q-toolbar>
 
@@ -57,12 +58,16 @@
           <div v-if="page==='Org'" class="tbpage">Choix de l'organisation</div>
           <div v-if="page==='Login'" class="tbpage">Connexion à un compte</div>
           <div v-if="page==='Synchro'" class="tbpage">Synchronisation des données</div>
-          <div v-if="page==='Compte' && compte != null && !compte.ko" class="tbpage">Compte : {{ compte.titre }}</div>
+          <div v-if="sessionok && page==='Compte'" class="tbpage fs-md">
+            <span class="q-pr-sm">Compte :</span>
+            <span v-if="prefs">{{ prefs.titre }}</span>
+            <span v-else>{{ compte.sid }}</span>
+          </div>
 
-          <div v-if="page==='Avatar'" class="tbpage titre-lg">
+          <div v-if="sessionok && page==='Avatar' && avatar" class="tbpage titre-lg">
             <div class="row justify-center no-wrap">
-              <img class="photo" :src="avatar && avatar.photo ? avatar.photo : personne"/>
-              <span class="q-px-sm">{{avatar ? avatar.nom : ''}}</span>
+              <img class="photo" :src="avphoto()"/>
+              <span class="q-px-sm">{{avatar.na.noml}}</span>
             </div>
           </div>
 
@@ -74,8 +79,8 @@
           <q-tabs class="" v-model="tabavatar" inline-label no-caps dense>
             <q-btn v-if="tabavatar==='secrets' && $q.screen.lt.md" size="md" dense icon="search" color="secondary" @click="optAvatar('recherche')"/>
             <q-tab name="secrets" label="Secrets" />
-            <q-btn v-if="tabavatar==='contacts' && $q.screen.lt.md" size="md" dense icon="search" color="secondary" @click="optAvatarCt('recherche')"/>
-            <q-tab name="contacts" label="Contacts" />
+            <q-btn v-if="tabavatar==='contacts' && $q.screen.lt.md" size="md" dense icon="search" color="secondary" @click="optAvatarCp('recherche')"/>
+            <q-tab name="couples" label="Couples" />
             <q-btn v-if="tabavatar==='groupes' && $q.screen.lt.md" size="md" dense icon="search" color="secondary" @click="optAvatarGr('recherche')"/>
             <q-tab name="groupes" label="Groupes" />
             <q-tab name="etc" label="Etc." />
@@ -86,7 +91,7 @@
 
     <q-drawer v-model="menuouvert"  :breakpoint="200" overlay elevated side="right" style="padding:0.5rem"><panel-menu></panel-menu></q-drawer>
 
-    <q-drawer elevated side="left"></q-drawer>
+    <!--q-drawer elevated side="left"></q-drawer-->
 
     <q-page-container>
       <router-view v-slot="{ Component }">
@@ -102,13 +107,13 @@
     <q-dialog v-model="confirmerdrc">
       <q-card  class="q-ma-xs moyennelargeur">
         <q-card-section>
-            <div class="titre fs-lg">Déconnexion / <span v-if="sessionId != null && mode !== 0 && mode !== modeInitial">Reconnexion /</span>Continuation</div>
-            <div v-if="sessionId != null && mode !== 0 && mode !== modeInitial" class="titre fs-md bg-warning">{{msgdegrade()}}</div>
+            <div class="titre fs-lg">Déconnexion / <span v-if="sessionok && mode !== 0 && mode !== modeInitial">Reconnexion /</span>Continuation</div>
+            <div v-if="sessionok && mode !== 0 && mode !== modeInitial" class="titre fs-md bg-warning">{{msgdegrade()}}</div>
         </q-card-section>
-        <q-card-actions  v-if="sessionId != null" align="center">
+        <q-card-actions  v-if="sessionok" align="center">
           <q-btn class="q-ma-xs" dense size="md" color="warning"
             icon="logout" label="Déconnexion du compte" @click="deconnexion" v-close-popup/>
-          <q-btn class="q-ma-xs" v-if="sessionId != null && mode !== 0 && mode !== modeInitial" dense size="md" color="warning"
+          <q-btn class="q-ma-xs" v-if="mode !== 0 && mode !== modeInitial" dense size="md" color="warning"
             icon="logout" label="Tentative de reconnexion au compte" @click="reconnexion" v-close-popup/>
           <q-btn class="q-ma-xs" dense size="md" color="primary"
             label="J'ai lu, la session continue" v-close-popup/>
@@ -116,9 +121,9 @@
       </q-card>
     </q-dialog>
 
-    <q-dialog v-model="messagevisible" seamless position="bottom">
-      <div :class="'q-pa-sm cursor-pointer ' + ($store.state.ui.message.important ? 'msgimp' : 'text-white bg-grey-9')"  @click="$store.commit('ui/razmessage')">
-        {{ $store.state.ui.message.texte }}
+    <q-dialog v-model="aunmessage" seamless position="bottom">
+      <div :class="'q-pa-sm cursor-pointer ' + (message.important ? 'msgimp' : 'text-white bg-grey-9')"  @click="aunmessage = false">
+        {{ message.texte }}
       </div>
     </q-dialog>
 
@@ -134,8 +139,8 @@
     <q-dialog v-model="confirmstopop">
       <q-card>
         <q-card-section v-if="opencours != null && opencours.sync" class="q-pa-md fs-md text-center">
-          Interrompre l'opération de connexion qui charge les données de la base locale et/ou du serveur, affichera des données
-          incomplètes et passera la session en mode dégradé.
+          Interrompre l'opération de connexion qui charge les données de la base locale et/ou du serveur
+          passera la session en mode dégradé.
         </q-card-section>
         <q-card-section v-else class="q-pa-md fs-md text-center">
           Interrompre une opération n'est jamais souhaitable. Ne le faire que quand il y a suspicion
@@ -148,11 +153,11 @@
       </q-card>
     </q-dialog>
 
-    <q-dialog v-model="diagnosticvisible">
+    <q-dialog v-model="aundiagnostic">
       <q-card>
         <q-card-section class="q-pa-md diag"><div v-html="diagnostic"></div></q-card-section>
         <q-card-actions align="right">
-          <q-btn flat label="J'ai lu" color="primary" v-close-popup @click="razdiagnostic"/>
+          <q-btn flat label="J'ai lu" color="primary" v-close-popup @click="aundiagnostic=false"/>
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -215,56 +220,19 @@ export default {
   },
 
   methods: {
-    login () {
-      remplacePage('Login')
-    },
+    login () { remplacePage('Login') },
+    toorg () { remplacePage('Org') },
+    tocompte () { remplacePage('Compte') },
+    async deconnexion () { await data.deconnexion() },
+    async reconnexion () { await reconnexion() },
 
-    toorg () {
-      remplacePage('Org')
-    },
-
-    optAvatar (opt) {
-      this.$store.commit('ui/majevtavatar', opt)
-    },
-
-    optAvatarCt (opt) {
-      this.$store.commit('ui/majevtavatarct', opt)
-    },
-
-    optAvatarGr (opt) {
-      this.$store.commit('ui/majevtavatargr', opt)
-    },
-
-    tocompte () {
-      remplacePage('Compte')
-    },
-
-    toavatar () {
-      if (this.avatar) {
-        remplacePage('Avatar')
-        return
-      }
-      const la = this.compte.avatars // leurs na
-      if (la.length === 1) {
-        const na = la[0]
-        const av = data.getAvatar(na.id)
-        this.$store.commit('db/majavatar', av)
-        remplacePage('Avatar')
-      } else {
-        this.tabcompte = 'avatars'
-        remplacePage('Compte')
-      }
-    },
+    optAvatarSc (opt) { this.$store.commit('ui/majevtavatarsc', opt) },
+    optAvatarCp (opt) { this.$store.commit('ui/majevtavatarcp', opt) },
+    optAvatarGr (opt) { this.$store.commit('ui/majevtavatargr', opt) },
 
     toInvit () { retourInvitation(null) },
 
-    async deconnexion () { await data.deconnexion() },
-
-    async reconnexion () { await reconnexion() },
-
-    stop () {
-      data.stopOp()
-    }
+    stop () { data.stopOp() }
   },
 
   setup () {
@@ -272,26 +240,30 @@ export default {
     $q.dark.set(true)
     onBoot()
 
-    const personne = cfg().personne.default
-    const personnes = cfg().personnes.default
-
     const $store = useStore()
-    const invitationattente = computed({
-      get: () => $store.state.ui.invitationattente,
-      set: (val) => $store.commit('ui/majinvitationattente', val)
-    })
-    const menuouvert = computed({
-      get: () => $store.state.ui.menuouvert,
-      set: (val) => $store.commit('ui/majmenuouvert', val)
-    })
-    const auneop = computed({
-      get: () => $store.state.ui.opencours != null,
-      set: (val) => $store.commit('ui/majopencours', null)
-    })
-    const confirmstopop = computed({
-      get: () => $store.state.ui.confirmstopop,
-      set: (val) => $store.commit('ui/majconfirmstopop', val)
-    })
+    const sessionok = computed(() => $store.state.ui.sessionok)
+    const statutnet = computed(() => $store.state.ui.statutnet)
+    const statutidb = computed(() => $store.state.ui.statutidb)
+
+    const org = computed(() => $store.state.ui.org)
+    function orgicon () { return org.value ? cfg().orgs[org.value].icon : cfg().logo }
+    function orglabel () { return org.value || 'Organisation non saisie' }
+    function orglabelclass () { return 'font-antonio-l fs-md ' + (!org.value ? 'text-negative' : 'q-pr-xs text-white') }
+
+    const mode = computed(() => $store.state.ui.mode)
+    const modeInitial = computed(() => $store.state.ui.modeinitial)
+    const page = computed(() => $store.state.ui.page)
+
+    const compte = computed(() => $store.state.db.compte)
+    const prefs = computed(() => $store.state.db.prefs)
+    const avatar = computed(() => $store.state.db.avatar)
+    const cvs = computed(() => { return $store.state.db.cvs })
+
+    function avphoto () {
+      const cv = avatar.value ? cvs.value(avatar.value.id) : null
+      return cv && cv.photo ? cv.photo : '~assets/avatar.jpg'
+    }
+
     const infomode = computed({
       get: () => $store.state.ui.infomode,
       set: (val) => $store.commit('ui/majinfomode', val)
@@ -308,86 +280,88 @@ export default {
       get: () => $store.state.ui.confirmerdrc,
       set: (val) => $store.commit('ui/majconfirmerdrc', val)
     })
-    const dialoguetestping = computed({
-      get: () => $store.state.ui.dialoguetestping,
-      set: (val) => $store.commit('ui/majdialoguetestping', val)
+    const confirmstopop = computed({
+      get: () => $store.state.ui.confirmstopop,
+      set: (val) => $store.commit('ui/majconfirmstopop', val)
     })
-    const dialoguesynchro = computed({
-      get: () => $store.state.ui.dialoguesynchro,
-      set: (val) => $store.commit('ui/majdialoguesynchro', val)
+    const menuouvert = computed({
+      get: () => $store.state.ui.menuouvert,
+      set: (val) => $store.commit('ui/majmenuouvert', val)
     })
-    const org = computed({
-      get: () => $store.state.ui.org,
-      set: (val) => $store.commit('ui/majorg', val)
-    })
+
     const tabavatar = computed({
       get: () => $store.state.ui.tabavatar,
       set: (val) => $store.commit('ui/majtabavatar', val)
     })
 
-    const page = computed(() => $store.state.ui.page)
-    const orgicon = computed(() => $store.getters['ui/orgicon'])
-    const orglabel = computed(() => $store.getters['ui/orglabel'])
-    const orglabelclass = computed(() => 'font-antonio-l fs-md ' + ($store.state.ui.org == null ? 'text-negative' : 'q-pr-xs text-white'))
-    const compte = computed(() => $store.state.db.compte)
-    const prefs = computed(() => $store.state.db.prefs)
-    const avatar = computed(() => $store.state.db.avatar)
-    const contact = computed(() => $store.state.db.contact) // contact courant
-    const mode = computed(() => $store.state.ui.mode)
-    const modeInitial = computed(() => $store.state.ui.modeinitial)
-    const messagevisible = computed(() => $store.getters['ui/messagevisible'])
-    const diagnosticvisible = computed(() => $store.getters['ui/diagnosticvisible'])
+    const invitationattente = computed(() => $store.state.ui.invitationattente)
+
+    const message = computed(() => $store.state.ui.message)
+    const aunmessage = computed({
+      get: () => $store.state.ui.message != null,
+      set: (val) => $store.commit('ui/razmessage')
+    })
+
     const diagnostic = computed(() => $store.state.ui.diagnostic)
+    const aundiagnostic = computed({
+      get: () => $store.state.ui.diagnostic != null,
+      set: (val) => $store.commit('ui/razdiagnostic')
+    })
+
     const opencours = computed(() => $store.state.ui.opencours)
-    const statutnet = computed(() => $store.state.ui.statutnet)
-    const statut = computed(() => $store.state.ui.statutsession)
-    const statutidb = computed(() => $store.state.ui.statutidb)
-    const sessionId = computed(() => $store.state.ui.sessionid)
+    const auneop = computed({
+      get: () => $store.state.ui.opencours != null,
+      set: (val) => $store.commit('ui/majopencours', null)
+    })
+
+    const dialoguesynchro = computed({
+      get: () => $store.state.ui.dialoguesynchro,
+      set: (val) => $store.commit('ui/majdialoguesynchro', val)
+    })
 
     function msgdegrade () {
       return 'Suite à un incident réseau ou d\'accès à la base locale, le mode a été dégradé de "' +
       MODES[data.modeInitial] + '" à "' + MODES[data.mode] + '".'
     }
 
-    function razdiagnostic () { $store.commit('ui/razdiagnostic') }
-
-    // watch(() => contact.value, (ap, av) => { if (ap) console.log(ap.nom) })
-
     return {
-      personne,
-      personnes,
+      org,
+      orgicon,
+      orglabel,
+      orglabelclass,
+      mode,
+      modeInitial,
       page,
+      sessionok,
+      statutnet,
+      statutidb,
+      tabavatar,
+      invitationattente,
+
+      compte,
+      prefs,
+      avatar,
+
+      avphoto,
+      msgdegrade,
+
       menuouvert,
       confirmerdrc,
       infomode,
       inforeseau,
       infoidb,
-      confirmstopop,
-      dialoguetestping,
-      dialoguesynchro,
-      org,
-      orgicon,
-      orglabel,
-      orglabelclass,
-      compte,
-      prefs,
-      avatar,
-      contact,
-      mode,
-      modeInitial,
-      messagevisible,
-      diagnosticvisible,
+
+      aunmessage,
+      message,
+
       diagnostic,
-      razdiagnostic,
+      aundiagnostic,
+
       opencours,
       auneop,
-      statutnet,
-      statutidb,
-      sessionId,
-      msgdegrade,
-      statut,
-      tabavatar,
-      invitationattente
+      confirmstopop,
+
+      dialoguesynchro
     }
   }
 }
