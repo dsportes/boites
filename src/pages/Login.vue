@@ -52,13 +52,13 @@
 <script>
 import { computed, ref, watch } from 'vue'
 import { useStore } from 'vuex'
-import { ConnexionCompte, ConnexionCompteAvion } from '../app/operations'
+import { ConnexionCompte } from '../app/operations'
 import PhraseSecrete from '../components/PhraseSecrete.vue'
 import AcceptParrain from '../components/AcceptParrain.vue'
 import { onBoot } from '../app/page.mjs'
 import { crypt } from '../app/crypto.mjs'
 import { get, deserial, afficherdiagnostic } from '../app/util.mjs'
-import { Parrain } from '../app/modele.mjs'
+import { Contact } from '../app/modele.mjs'
 
 export default ({
   name: 'Login',
@@ -85,7 +85,7 @@ export default ({
     connecter (ps) {
       if (ps) {
         if (this.mode === 3) {
-          new ConnexionCompteAvion().run(ps)
+          new ConnexionCompte().run(ps)
         } else {
           new ConnexionCompte().run(ps, this.razdb)
           this.razdb = false
@@ -107,7 +107,7 @@ export default ({
         } else {
           try {
             const rowpar = deserial(new Uint8Array(resp))
-            const p = new Parrain()
+            const p = new Contact()
             await p.fromRow(rowpar, this.phrase, this.clex)
             this.phrasepar = false
             this.dialcp = true

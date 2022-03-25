@@ -182,7 +182,7 @@ import { equ8, getJourJ, cfg, serial, Motscles, dhstring, gzipT } from '../app/u
 import { NouveauSecret, Maj1Secret, PjSecret } from '../app/operations.mjs'
 import { data, Secret } from '../app/modele.mjs'
 import { crypt } from '../app/crypto.mjs'
-import { putPj } from '../app/db.mjs'
+import { putFa } from '../app/db.mjs'
 import { saveAs } from 'file-saver'
 
 export default ({
@@ -395,11 +395,11 @@ export default ({
       if (ap) {
         // dispo en mode avion
         const buf = await s.datapj(pj, true)
-        await putPj(x, buf) // en IDB
+        await putFa(x, buf) // en IDB
         data.setPjidx([x]) // lst : array de { id, ns, cle, hv } - Dans le store
       } else {
         x.hv = null
-        await putPj(x, null) // suppr en IDB
+        await putFa(x, null) // suppr en IDB
         data.setPjidx([x])
       }
     },
