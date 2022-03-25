@@ -1,9 +1,9 @@
 /* eslint-disable func-call-spacing */
 import Dexie from 'dexie'
-import { Avatar, Compte, Prefs, Compta, Couple, Groupe, Membre, Secret, data, estSingleton } from './modele.mjs'
+import { Avatar, Compte, Prefs, Compta, Couple, Groupe, Membre, Secret, data } from './modele.mjs'
 import { store, deserial, serial, Sid } from './util.mjs'
 import { crypt } from './crypto.mjs'
-import { AppExc, E_DB } from './api.mjs'
+import { AppExc, E_DB, t0n } from './api.mjs'
 import { schemas } from './schemas.mjs'
 
 const STORES = {
@@ -345,7 +345,7 @@ export async function commitRows (opBuf) {
       for (let i = 0; i < opBuf.lmaj.length; i++) {
         const obj = opBuf.lmaj[i]
         const x = { table: obj.table, row: {} }
-        x.row.id = estSingleton(obj.table) ? '1' : crypt.u8ToB64(await crypt.crypter(data.clek, Sid(obj.id), 1), true)
+        x.row.id = t0n.has(obj.table) ? '1' : crypt.u8ToB64(await crypt.crypter(data.clek, Sid(obj.id), 1), true)
         if (obj.id2) x.row.id2 = crypt.u8ToB64(await crypt.crypter(data.clek, Sid(obj.id2), 1), true)
         if (obj.table === 'compte') {
           x.row.data = await crypt.crypter(data.ps.pcb, obj.toIdb)
@@ -363,7 +363,7 @@ export async function commitRows (opBuf) {
       for (let i = 0; i < opBuf.lsuppr.length; i++) {
         const obj = opBuf.lsuppr[i]
         const x = { ...obj }
-        x.id = estSingleton(obj.table) ? '1' : crypt.u8ToB64(await crypt.crypter(data.clek, Sid(obj.id), 1), true)
+        x.id = t0n.has(obj.table) ? '1' : crypt.u8ToB64(await crypt.crypter(data.clek, Sid(obj.id), 1), true)
         if (obj.id2) x.id2 = crypt.u8ToB64(await crypt.crypter(data.clek, Sid(obj.id2), 1), true)
         lidbs.push(x)
         if (obj.table === 'compte') {

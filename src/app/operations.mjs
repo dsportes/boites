@@ -1,4 +1,4 @@
-import { NomAvatar, store, post, get, affichermessage, cfg, sleep, affichererreur, appexc, idToIc, difference, getpj, getJourJ, serial, edvol, equ8 } from './util.mjs'
+import { NomAvatar, store, post, get, affichermessage, cfg, sleep, affichererreur, appexc, idToIc, difference, getfa, getJourJ, serial, edvol, equ8 } from './util.mjs'
 import { remplacePage } from './page.mjs'
 import {
   deleteIDB, idbSidCompte, commitRows, getCompte, getCompta, getPrefs, getCvs,
@@ -311,7 +311,7 @@ export class Operation {
           if (pj.hv !== x.hv) { // pj locale pas à jour
             x.hv = pj.hv
             // rechargement du contenu
-            const data = await getpj(secret.sid + '@' + secret.sid2, x.cle) // du serveur
+            const data = await getfa(secret.sid + '@' + secret.sid2, x.cle) // du serveur
             nbp++
             vol += data.length
             await putFa(x, data) // store en IDB

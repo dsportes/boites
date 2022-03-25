@@ -4,7 +4,7 @@
     <div class="col row justify-start items-center full-width ligne cursor-pointer" @click="toAvatar">
       <img class="col-auto photomax" :src="a.photo"/>
       <div class="col q-px-sm">
-        <span class='titre-lg text-bold'>{{a.av.na.noml}}</span><span class='titre-sm q-pl-sm'>[id: {{a.av.sid}}]/span>
+        <span class='titre-lg text-bold'>{{a.av.na.noml}}</span><span class='titre-sm q-pl-sm'>[id: {{a.av.sid}}]</span>
       </div>
     </div>
     <q-btn class="col-auto" v-if="editer" flat dense size="md" color="primary" icon="edit" @click="cvloc=true"/>

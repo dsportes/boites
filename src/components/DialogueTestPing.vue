@@ -39,7 +39,7 @@ import { ping, post, appexc } from '../app/util'
 import { computed } from 'vue'
 import { useStore } from 'vuex'
 import { data } from '../app/modele'
-import { getEtat } from '../app/db'
+import { getCompte } from '../app/db'
 import { E_SRV, AppExc } from '../app/api.mjs'
 
 export default ({
@@ -93,7 +93,7 @@ export default ({
         this.resultat3a = '-'
         this.resultat3b = '-'
         try {
-          await getEtat()
+          await getCompte()
           this.resultat3a = 'OK'
         } catch (e) {
           const ex = appexc(e)
