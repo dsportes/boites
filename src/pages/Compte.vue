@@ -1,15 +1,15 @@
 <template>
 <q-page class="fs-md row">
-  <div v-if="compte" class="col-12 col-md-7 q-pa-xs">
+  <div v-if="sessionok" class="col-12 col-md-7 q-pa-xs">
     <q-expansion-item label="Sélectionner un des avatars du compte" default-opened
         header-class="expansion-header-class-1 titre-lg bg-primary text-white">
       <q-btn class="q-my-sm" size="md" icon="add" label="Nouvel avatar" color="primary" dense @click="nvav=true"/>
-      <div v-for="e in compte.mac" :key="e.na.id" class="full-width">
-        <apercu-avatar editer selectionner :avatar-id="e.na.id"/>
+      <div v-for="id in compte.avatarIds" :key="id" class="full-width">
+        <apercu-avatar editer selectionner :avatar-id="id"/>
       </div>
     </q-expansion-item>
   </div>
-  <div v-if="compte" class="col-12 col-md-5 q-px-xs">
+  <div v-if="sessionok" class="col-12 col-md-5 q-px-xs">
     <q-expansion-item label="Identité, mémo du compte" default-opened  group="groupeetc"
       header-class="expansion-header-class-1 titre-lg bg-secondary text-white">
       <div class="q-pa-sm column justify-center petitelargeur maauto">
@@ -24,7 +24,7 @@
     </q-expansion-item>
   </div>
 
-  <q-dialog v-model="nvav" persistent>
+  <q-dialog v-if="sessionok" v-model="nvav" persistent>
     <q-card class="shadow-8 petitelargeur">
       <nom-avatar label-valider="Créer l\'avatar" icon-valider="add" verif @ok-nom="nvAvatar" />
     </q-card>
@@ -52,7 +52,6 @@ export default ({
   data () {
     return {
       u8mc: new Uint8Array([]),
-      court: false,
       nvav: false,
       selecteur: false
     }
@@ -88,7 +87,7 @@ export default ({
     const memoed = ref(null)
     onBoot()
     const $store = useStore()
-    const org = computed(() => $store.state.ui.org)
+    const sessionok = computed(() => { return $store.state.ui.sessionok })
     // En déconnexion, compte passe à null et provoque un problème dans la page. Un getter ne marche pas ?!
     const compte = computed(() => $store.state.db.compte)
     const prefs = computed(() => $store.state.db.prefs)
@@ -106,9 +105,9 @@ export default ({
     })
 
     return {
+      sessionok,
       motscles,
       memoed,
-      org,
       compte,
       prefs,
       mode,

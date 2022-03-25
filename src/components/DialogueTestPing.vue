@@ -21,7 +21,7 @@
       </q-card-section>
       <q-card-section>
         <div class="titre-2">Accès à la base locale d'un compte</div>
-        <div v-if="(mode === 1 || mode === 3) && sessionId != null">
+        <div v-if="sessionok && (mode === 1 || mode === 3)">
           <q-btn dense label="Ping de la base locale" color="primary" @click="pingIDB"/>
           <div>{{ resultat3a }}</div>
           <div>{{ resultat3b }}</div>
@@ -112,15 +112,13 @@ export default ({
       set: (val) => $store.commit('ui/majdialoguetestping', val)
     })
     const mode = computed(() => $store.state.ui.modeinitial)
-    const sessionId = computed(() => $store.state.ui.sessionid)
+    const sessionok = computed(() => $store.state.ui.sessionok)
     const org = computed(() => $store.state.ui.org)
-    const compte = computed(() => $store.state.db.compte)
     return {
       dialoguetestping,
-      sessionId,
+      sessionok,
       mode,
-      org,
-      compte
+      org
     }
   }
 })

@@ -1,11 +1,11 @@
 <template>
-  <q-card class="q-ma-xs moyennelargeur fs-md">
+  <q-card v-if="sessionok" class="q-ma-xs moyennelargeur fs-md">
     <q-card-section class="column justify-start">
       <div class="row justify-between">
-        <div class='titre-lg'>{{n.na.nom}}</div>
+        <div class='titre-lg'>{{nom}}</div>
         <bouton-help page="p1"/>
       </div>
-      <div>Code: <span class='font-mono'>{{n.na.sid}}</span></div>
+      <div>Code: <span class='font-mono'>{{sid}}</span></div>
     </q-card-section>
     <q-separator />
     <q-card-section class="row justify-start">
@@ -59,10 +59,11 @@
 </template>
 <script>
 
-import { ref, onMounted, watch, toRef, reactive } from 'vue'
+import { ref, watch, toRef, reactive, computed } from 'vue'
+import { useStore } from 'vuex'
 import BoutonHelp from './BoutonHelp.vue'
 import EditeurMd from './EditeurMd.vue'
-import { readFile, cfg, NomAvatar } from '../app/util.mjs'
+import { readFile, cfg } from '../app/util.mjs'
 import Webcam from 'webcam-easy'
 import { Cropper } from 'vue-advanced-cropper'
 
@@ -74,7 +75,7 @@ export default ({
   props: {
     photoInit: String,
     infoInit: String,
-    nomc: String,
+    na: Object,
     close: Function
   },
 
@@ -124,7 +125,7 @@ export default ({
     },
     undoph () {
       this.enedition = false
-      this.photolocal = this.photoInit || this.personne
+      this.photolocal = this.photoInit || this.phdef
       this.resultat.ph = this.photoInit
       this.stopCam()
     },
@@ -165,28 +166,40 @@ export default ({
   },
 
   setup (props) {
+    const $store = useStore()
+    const sessionok = computed(() => $store.state.ui.sessionok)
+
+    const phdef = '~assets/avatar.jpg'
+
+    const webcam = ref(null)
+    const canvas = ref(null)
+    const sound = ref(null)
+    const cropper = ref(null)
     const md = ref(null)
-    const personne = cfg().personne.default
     const infolocal = ref('') // en Ref parce que sa valeur dépend du changement de la prop texte ET de enedition (sinon ça serait texte)
     const photolocal = ref('')
-    const n = reactive({ na: { nom: '', sid: '', sfrx: '' } })
     const enedition = ref(false) // en Ref pour pouvoir le traiter dans le watch
+    const nom = ref('')
+    const sid = ref('')
+
     const infoInit = toRef(props, 'infoInit') // pour pouvoir mettre un watch sur le changement de la propriété
     const photoInit = toRef(props, 'photoInit') // pour pouvoir mettre un watch sur le changement de la propriété
-    const nomc = toRef(props, 'nomc')
+    const na = toRef(props, 'na')
+
     const resultat = reactive({ info: '', ph: '' })
 
-    onMounted(() => { // initialisation de textelocal par défaut à texte
+    function init () {
+      nom.value = na.value.nom
+      sid.value = na.value.sid
       infolocal.value = infoInit.value
-      photolocal.value = photoInit.value ? photoInit.value : personne
+      photolocal.value = photoInit.value ? photoInit.value : phdef
       resultat.info = infolocal.value
       resultat.ph = photoInit.value
-      if (nomc.value) n.na = new NomAvatar(nomc.value)
-    })
+    }
 
     watch(photoInit, (ap, av) => { // quand texte change, textelocal ne change pas si en édition
       if (!enedition.value) {
-        photolocal.value = ap || personne
+        photolocal.value = ap || phdef
       }
     })
 
@@ -196,16 +209,19 @@ export default ({
       }
     })
 
-    watch(nomc, (ap, av) => {
-      n.na = new NomAvatar(ap)
+    watch(na, (ap, av) => {
+      nom.value = ap.nom
+      sid.value = ap.sid
     })
 
-    const webcam = ref(null)
-    const canvas = ref(null)
-    const sound = ref(null)
-    const cropper = ref(null)
+    // onMounted(() => { init() }) ???
+    init()
 
     return {
+      sessionok,
+      phdef,
+      nom,
+      sid,
       md,
       webcam,
       canvas,
@@ -213,8 +229,6 @@ export default ({
       enedition,
       photolocal,
       infolocal,
-      n,
-      personne,
       resultat,
       cropper
     }

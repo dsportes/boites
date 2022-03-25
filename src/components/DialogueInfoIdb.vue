@@ -8,7 +8,7 @@
           <q-avatar size="md">
             <img src="~assets/database_gris.svg">
           </q-avatar>
-          <span :class="mode == 2 || mode == 0 || sessionId == null ? 'text-bold text-primary' : ''">
+          <span :class="mode == 2 || mode == 0 || !sessionok ? 'text-bold text-primary' : ''">
             Il n'y a pas d'accès à la base locale avant connexion à un compte ou en mode incognito
           </span>
         </q-card-section>
@@ -16,7 +16,7 @@
           <q-avatar size="md">
             <img src="~assets/database_vert.svg">
           </q-avatar>
-          <span :class="(mode == 1 || mode == 3) && statutidb == 0 && sessionId != null ? 'text-bold text-primary' : ''">
+          <span :class="(mode == 1 || mode == 3) && statutidb == 0 && !sessionok ? 'text-bold text-primary' : ''">
               La base locale est accessible : un compte est connecté en mode synchronisé ou avion
           </span>
         </q-card-section>
@@ -24,7 +24,7 @@
           <q-avatar square size="md">
             <img src="~assets/database_rouge.svg" class="bord">
           </q-avatar>
-          <span :class="(mode == 1 || mode == 3) && statutidb != 0 && sessionId != null ? 'text-bold text-primary' : ''">
+          <span :class="(mode == 1 || mode == 3) && statutidb != 0 && sessionok ? 'text-bold text-primary' : ''">
               Erreur d'accès à la base locale (corrompue ? détruite ?). Un compte est connecté en mode synchronisé ou avion.
               Les opérations de mise à jour sont interdites jusqu'à une reconnexion réussie.
           </span>
@@ -61,7 +61,7 @@ export default ({
     const $store = useStore()
     const mode = computed(() => $store.state.ui.mode)
     const statutidb = computed(() => $store.state.ui.statutidb)
-    const sessionId = computed(() => $store.state.ui.sessionId)
+    const sessionok = computed(() => $store.state.ui.sessionok)
     const infoidb = computed({
       get: () => $store.state.ui.infoidb,
       set: (val) => $store.commit('ui/majinfoidb', val)
@@ -75,7 +75,7 @@ export default ({
       mode,
       infoidb,
       statutidb,
-      sessionId,
+      sessionok,
       dialoguetestping
     }
   }

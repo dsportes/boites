@@ -30,14 +30,14 @@
         </q-card-actions>
       </q-card>
       <q-dialog v-model="cvloc">
-        <carte-visite :nomc="nomc" :close="closecv" info-init="Mon info initiale" photo-init="" @ok="okcv"/>
+        <carte-visite :na="na" :close="closecv" info-init="Mon info initiale" photo-init="" @ok="okcv"/>
       </q-dialog>
     </q-dialog>
 </template>
 
 <script>
 import { useStore } from 'vuex'
-import { computed, ref } from 'vue'
+import { computed, ref, onUnmounted } from 'vue'
 import { crypt } from '../app/crypto.mjs'
 import PhraseSecrete from '../components/PhraseSecrete.vue'
 import MdpAdmin from '../components/MdpAdmin.vue'
@@ -64,11 +64,11 @@ export default ({
 
   data () {
     return {
+      na: new NomAvatar('Toto'),
       forfaits: [2, 3],
       ps: null,
       mdp: null,
       memo: 'Mon beau memo',
-      cvloc: false,
       texteedite: '',
       nomc: new NomAvatar('Toto', true).nomc
     }
@@ -133,13 +133,20 @@ export default ({
 
   setup () {
     const edmd = ref(null)
+    const cvloc = ref(false)
     const $store = useStore()
+    const dialoguecrypto = computed({
+      get: () => $store.state.ui.dialoguecrypto,
+      set: (val) => $store.commit('ui/majdialoguecrypto', val)
+    })
+    onUnmounted(() => {
+      cvloc.value = false
+    })
+
     return {
       edmd,
-      dialoguecrypto: computed({
-        get: () => $store.state.ui.dialoguecrypto,
-        set: (val) => $store.commit('ui/majdialoguecrypto', val)
-      })
+      cvloc,
+      dialoguecrypto
     }
   }
 })

@@ -38,24 +38,9 @@ export default ({
   },
 
   methods: {
-    fermererreur (code) {
-      this.$store.commit('ui/majdialogueerreur', false)
-      this.erreur.resolve(code)
-    }
   },
 
   setup () {
-    /*
-    export const E_BRK = -1 // Interruption volontaire de l'opération
-    export const E_WS = -2 // Toutes erreurs de réseau
-    export const E_DB = -3 // Toutes erreurs d'accès à la base locale
-    export const E_BRO = -4 // Erreur inattendue trappée sur le browser
-    export const E_SRV = -5 // Erreur inattendue trappée sur le serveur
-    export const X_SRV = -6 // Erreur fonctionnelle trappée sur le serveur transmise en exception
-    export const F_BRO = -7 // Erreur fonctionnelle trappée sur le browser
-    export const F_SRV = -8 // Erreur fonctionnelle trappée sur le serveur transmise en résultat
-    export const A_SRV = -9 // Situation inattendue : assertion trappée sur le serveur
-    */
     const labels = {
       'x-1': 'Interruption volontaire (appui sur le bouton rouge)',
       'x-2': 'Erreur d`accès au serveur, réseau indisponible ?',
@@ -75,10 +60,16 @@ export default ({
       get: () => $store.state.ui.dialogueerreur,
       set: (val) => $store.commit('ui/majdialogueerreur', false)
     })
+    function fermererreur (code) {
+      dialogueerreur.value = false
+      const e = erreur.value
+      if (e.resolve) e.resolve(code)
+    }
 
     return {
       erreur,
       labels,
+      fermererreur,
       dialogueerreur
     }
   }

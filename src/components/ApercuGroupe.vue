@@ -11,7 +11,7 @@
   </div>
   <div class="full-width overflow-y-auto height-4 shadow-8"><show-html :texte="info"/></div>
   <q-dialog v-model="cvloc">
-    <carte-visite :nomc="nomc" :close="closedialog" :photo-init="photox" :info-init="info" @ok="validercv"/>
+    <carte-visite :na="''" :close="closedialog" :photo-init="photox" :info-init="info" @ok="validercv"/>
   </q-dialog>
 </q-card>
 </template>
@@ -37,7 +37,6 @@ export default ({
     photo () { return this.state.g && this.state.g.photo ? this.state.g.photo : this.personnes },
     photox () { return this.state.g && this.state.g.photo ? this.state.g.photo : '' },
     ids () { return this.state.g ? [this.state.g.na.sid, this.state.g.na.nom] : ['', ''] },
-    nomc () { return this.state.g ? this.state.g.na.nomc : '' },
     info () { return this.state.g ? this.state.g.info : '' }
   },
 

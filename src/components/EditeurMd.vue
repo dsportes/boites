@@ -1,6 +1,6 @@
 <template>
 <div ref="root">
-  <q-card v-if="!max" :class="'column fs-md full-height overflow-hidden shadow-8 ' + dlclass">
+  <q-card v-if="sessionok && !max" :class="'column fs-md full-height overflow-hidden shadow-8 ' + dlclass">
     <q-toolbar class="col-auto full-width">
       <q-btn icon="zoom_out_map" size="md" push flat dense @click="max=true"></q-btn>
       <q-btn :disable="!md" class="q-mr-xs" size="md" label="TXT" :color="md ? 'warning' : 'purple'" push flat dense @click="md=false"></q-btn>
@@ -12,7 +12,7 @@
     <textarea v-if="!md" :class="'q-pa-xs col full-width font-mono ta ' + dlclass" v-model="textelocal" :readonly="!editable"/>
     <div v-else class="q-pa-xs col full-width ta"><show-html :idx="idx" :texte="textelocal"/></div>
   </q-card>
-  <q-dialog v-model="max" full-height transition-show="slide-up" transition-hide="slide-down">
+  <q-dialog v-if="sessionok" v-model="max" full-height transition-show="slide-up" transition-hide="slide-down">
     <div ref="root2" :class="'column fs-md full-height grandelargeur overflow-hidden ' + dlclass">
       <q-toolbar class="col-auto">
       <q-btn icon="zoom_in_map" size="md" dense flat push @click="max=false"></q-btn>
@@ -26,7 +26,7 @@
       <div v-else :class="'q-pa-xs col ta ' + dlclass"><show-html :idx="idx" :texte="textelocal"/></div>
     </div>
   </q-dialog>
-  <q-dialog v-model="emoji">
+  <q-dialog v-if="sessionok" v-model="emoji">
     <VuemojiPicker @emojiClick="emojiclick" data-source="emoji.json"/>
   </q-dialog>
 </div>
@@ -34,8 +34,9 @@
 <script>
 import ShowHtml from './ShowHtml.vue'
 import { VuemojiPicker } from 'vuemoji-picker'
-import { ref, toRef, watch } from 'vue'
+import { ref, toRef, watch, computed } from 'vue'
 import { affidbmsg } from '../app/util.mjs'
+import { useStore } from 'vuex'
 
 export default ({
   name: 'EditeurMd',
@@ -85,6 +86,9 @@ export default ({
   },
 
   setup (props, context) {
+    const $store = useStore()
+    const sessionok = computed(() => { return $store.state.ui.sessionok })
+
     const root = ref(null)
     const root2 = ref(null)
     const taille = ref(0)
@@ -126,6 +130,7 @@ export default ({
     affidbmsg('Quand Firefox est en mode privé, le premier affichage des emojis peut être long (plus d\'une minute)')
 
     return {
+      sessionok,
       md,
       root,
       root2,

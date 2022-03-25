@@ -13,12 +13,10 @@ export function razdialogues (state) {
   majconfirmstopop(state, false)
   majinvitationattente(state, null)
   majdialoguesynchro(state, false)
-
-  majdialoguecrypto(state, false)
   majdialoguehelp(state, false)
+  majdialoguecrypto(state, false)
   majdialoguetestping(state, false)
-
-  state.dialoguecreationcompte = false
+  majdialoguecreationcompte(state, false)
 }
 
 export function majstatutsession (state, val) {

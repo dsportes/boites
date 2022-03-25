@@ -415,24 +415,17 @@ export class Compte {
 
   avatars (s) {
     const s1 = new Set()
-    for (const sid in this.mac) {
-      const e = this.mac[sid]
-      const x = { id: e.na.id, nom: e.na.nom, cle: e.na.cle }
-      if (s) s.add(x); else s1.add(x)
-    }
+    for (const sid in this.mac) if (s) s.add(this.mac[sid].na); else s1.add(this.mac[sid].na)
     return s || s1
   }
 
   avatarIds (s) {
     const s1 = new Set()
-    for (const sid in this.mac) {
-      const id = this.mac[sid].na.id
-      if (s) s.add(id); else s1.add(id)
-    }
+    for (const sid in this.mac) if (s) s.add(this.mac[sid].na.id); else s1.add(this.mac[sid].na.id)
     return s || s1
   }
 
-  repAvatars () { this.avatars().forEach(x => { data.repertoire.setAc(x.nom, x.cle) }) }
+  repAvatars () { this.avatars().forEach(na => { data.repertoire.setAc(na) }) }
 
   nouveau (nomAvatar, cprivav, id) {
     this.id = id || crypt.rnd6()
@@ -443,7 +436,7 @@ export class Compte {
     data.clek = this.k
     this.mac = { }
     this.mac[nomAvatar.sid] = { na: nomAvatar, cpriv: cprivav }
-    data.repertoire.setAc(nomAvatar.nom, nomAvatar.rnd)
+    data.repertoire.setAc(nomAvatar)
     this.vsh = 0
     return this
   }
@@ -484,7 +477,7 @@ export class Compte {
       m[sid] = [x.na.nom, x.na.rnd, x.cpriv]
     }
     m[na.sid] = [na.nom, na.rnd, kpav.privateKey]
-    data.repertoire.setAc(na.nom, na.rnd)
+    data.repertoire.setAc(na)
     return await crypt.crypter(data.clek, serial(m))
   }
 
@@ -493,10 +486,8 @@ export class Compte {
   fromIdb (idb) {
     schemas.deserialize('idbCompte', idb, this)
     data.clek = this.k
-    for (const sid in this.mac) {
-      const na = this.mac[sid].na
-      data.setNa(na.nom, na.rnd)
-    }
+    // TODO utilité à vérifier
+    for (const sid in this.mac) data.repertoire.setAc(this.mac[sid].na)
     return this
   }
 

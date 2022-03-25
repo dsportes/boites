@@ -3,10 +3,10 @@
       <q-card class="q-ma-xs petitelargeur fs-md">
         <q-card-section>
           <div class="titre-lg text-center">Les modes inconnu, synchronisé, incognito, avion, visio</div>
-          <div v-if="sessionId != null" class="titre-md">{{'Une session est en cours (#' + sessionId + ')'}}</div>
+          <div v-if="sessionok" class="titre-md">{{'Une session est en cours (#' + sessionId + ')'}}</div>
           <div v-if="sessionId != null && mode !== 0 && mode !== modeInitial" class="bg-negative">{{msgdegrade()}}</div>
         </q-card-section>
-        <q-card-actions  v-if="sessionId != null && mode != 0 && mode != modeInitial" align="center">
+        <q-card-actions  v-if="sessionok && mode != 0 && mode != modeInitial" align="center">
           <q-btn dense size="md" color="warning" class="q-ma-xs"
             icon="autorenew" label="Tenter de reconnecter le compte" @click="reconnexion" v-close-popup/>
           <q-btn dense size="md" color="primary" class="q-ma-xs"
@@ -77,6 +77,7 @@ export default ({
 
   setup () {
     const $store = useStore()
+    const sessionok = computed(() => $store.state.ui.sessionok)
     const sessionId = computed(() => $store.state.ui.sessionid)
     const mode = computed(() => $store.state.ui.mode)
     const modeInitial = computed(() => $store.state.ui.modeinitial)
@@ -90,6 +91,7 @@ export default ({
     }
 
     return {
+      sessionok,
       sessionId,
       mode,
       modeInitial,

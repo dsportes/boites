@@ -1,10 +1,10 @@
 <template>
-<q-card class="q-pa-sm full-width fs-md shadow-8">
+<q-card v-if="sessionok && avatarId" class="q-pa-sm full-width fs-md shadow-8">
   <div class="row justify-between items-center full-width">
     <div class="col row justify-start items-center full-width ligne cursor-pointer" @click="toAvatar">
-      <img class="col-auto photomax" :src="photo"/>
+      <img class="col-auto photomax" :src="a.photo"/>
       <div class="col q-px-sm">
-        <span class='titre-lg text-bold'>{{ids[1]}}</span><span class='titre-sm q-pl-sm'>@{{ids[0]}}</span>
+        <span class='titre-lg text-bold'>{{a.av.na.noml}}</span><span class='titre-sm q-pl-sm'>[id: {{a.av.sid}}]/span>
       </div>
     </div>
     <q-btn class="col-auto" v-if="editer" flat dense size="md" color="primary" icon="edit" @click="cvloc=true"/>
@@ -13,17 +13,16 @@
   <q-btn v-if="invitationattente" class="titre-lg text-bold text-grey-8 bg-yellow-4 q-mx-sm" label="[Contact !]" dense flat @click="copier"/>
 
   <q-dialog v-model="cvloc">
-    <carte-visite :nomc="nomc" :close="closedialog" :photo-init="photo" :info-init="info" @ok="validercv"/>
+    <carte-visite :na="a.av.na" :close="closedialog" :photo-init="photo" :info-init="info" @ok="validercv"/>
   </q-dialog>
 </q-card>
 </template>
 
 <script>
 import { useStore } from 'vuex'
-import { watch, toRef, reactive, computed } from 'vue'
+import { watch, toRef, reactive, computed, ref } from 'vue'
 import ShowHtml from './ShowHtml.vue'
 import CarteVisite from './CarteVisite.vue'
-import { cfg } from '../app/util.mjs'
 import { data } from '../app/modele.mjs'
 import { remplacePage, retourInvitation } from '../app/page.mjs'
 import { CvAvatar } from '../app/operations.mjs'
@@ -37,24 +36,13 @@ export default ({
     selectionner: Boolean
   },
 
-  components: {
-    ShowHtml, CarteVisite
-  },
+  components: { ShowHtml, CarteVisite },
 
-  computed: {
-    photo () { return this.a.av && this.a.av.photo ? this.a.av.photo : this.personne },
-    ids () { return this.a.av ? [this.a.av.sid, this.a.av.na.nom] : ['', ''] },
-    nomc () { return this.a.av ? this.a.av.na.nomc : '' },
-    info () { return this.a.av ? this.a.av.info : '' }
-  },
+  computed: { },
 
   watch: { },
 
-  data () {
-    return {
-      cvloc: false
-    }
-  },
+  data () { return { } },
 
   methods: {
     toAvatar () {
@@ -76,31 +64,49 @@ export default ({
 
   setup (props) {
     const $store = useStore()
+    const phdef = '~assets/avatar.jpg'
+    const sessionok = computed(() => $store.state.ui.sessionok)
+    const cvloc = ref(false)
 
-    const personne = cfg().personne.default
-    const a = reactive({ av: null })
+    const a = reactive({ av: null, photo: phdef, memo: '' })
     const avatarId = toRef(props, 'avatarId')
     const invitationattente = computed({
       get: () => $store.state.ui.invitationattente,
       set: (val) => $store.commit('ui/majinvitationattente', val)
     })
 
+    const cvs = computed(() => { return $store.state.db.cvs })
+
     // Pour tracker les retours mettant à jour l'avatar
     const avatars = computed(() => { return $store.state.db.avatars })
 
-    if (avatarId.value) a.av = data.getAvatar(avatarId.value)
+    function init () {
+      a.av = data.getAvatar(avatarId.value)
+      const cv = a.av ? cvs.value(a.av.id) : null
+      a.photo = cv && cv.photo ? cv.photo : phdef
+      a.memo = cv && cv.memo ? cv.memo : ''
+    }
 
     watch(avatarId, (ap, av) => {
       a.av = data.getAvatar(ap)
+      init()
     })
 
     watch(() => avatars.value, (ap, av) => {
       a.av = data.getAvatar(avatarId.value)
+      init()
     })
 
+    watch(() => sessionok.value, (ap, av) => {
+      cvloc.value = false
+    })
+
+    if (avatarId.value) init()
+
     return {
+      cvloc,
       a,
-      personne,
+      sessionok,
       invitationattente
     }
   }

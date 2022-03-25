@@ -735,7 +735,7 @@ export class OperationUI extends Operation {
     const mapRows = deserialRowItems(ret.rowItems)
 
     const compte = await new Compte().fromRow(mapRows.compte)
-    compte.avatars().forEach(x => { data.repertoire.setAc(x.nom, x.cle) })
+    compte.repAvatars()
     data.setCompte(compte)
 
     const compta = await new Compta().fromRow(mapRows.compta)
@@ -1754,7 +1754,6 @@ export class CreationAvatar extends OperationUI {
           affichermessage('(' + n++ + ')-Petit incident, nouvel essai en cours, merci d\'attendre', true)
           await sleep(2000)
         } else {
-          if (data.dh < ret.dh) data.dh = ret.dh
           break
         }
       }

@@ -100,13 +100,11 @@ export default ({
 
   setup () {
     const $store = useStore()
-    const org = computed(() => $store.state.ui.org)
     const dialoguecreationcompte = computed({
       get: () => $store.state.ui.dialoguecreationcompte,
       set: (val) => $store.commit('ui/majdialoguecreationcompte', val)
     })
     return {
-      org,
       dialoguecreationcompte
     }
   }

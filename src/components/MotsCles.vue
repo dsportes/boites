@@ -44,7 +44,7 @@
       </q-tab-panels>
     </template>
   </q-splitter>
-  <q-dialog v-model="emoji">
+  <q-dialog v-if="sessionok" v-model="emoji">
     <VuemojiPicker @emojiClick="emojiclick" data-source="emoji.json"/>
   </q-dialog>
 </q-card>
@@ -141,7 +141,7 @@ export default ({
     const root = ref(null)
     const tab = ref('')
     const $store = useStore()
-    const compte = computed(() => $store.state.db.compte)
+    const sessionok = computed(() => { return $store.state.ui.sessionok })
 
     tab.value = motscles.value.mc.lcategs[0]
 
@@ -150,8 +150,8 @@ export default ({
     })
 
     return {
+      sessionok,
       root,
-      compte,
       tab,
       splitterModel: ref(33) // start at 33%
     }
