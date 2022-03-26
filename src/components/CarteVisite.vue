@@ -169,7 +169,7 @@ export default ({
     const $store = useStore()
     const sessionok = computed(() => $store.state.ui.sessionok)
 
-    const phdef = '~assets/avatar.jpg'
+    const phdef = cfg().avatar
 
     const webcam = ref(null)
     const canvas = ref(null)

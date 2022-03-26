@@ -4,7 +4,7 @@
     <q-expansion-item label="Sélectionner un des avatars du compte" default-opened
         header-class="expansion-header-class-1 titre-lg bg-primary text-white">
       <q-btn class="q-my-sm" size="md" icon="add" label="Nouvel avatar" color="primary" dense @click="nvav=true"/>
-      <div v-for="id in compte.avatarIds" :key="id" class="full-width">
+      <div v-for="id in state.lst" :key="id" class="full-width">
         <apercu-avatar editer selectionner :avatar-id="id"/>
       </div>
     </q-expansion-item>
@@ -14,7 +14,7 @@
       header-class="expansion-header-class-1 titre-lg bg-secondary text-white">
       <div class="q-pa-sm column justify-center petitelargeur maauto">
         <div class="row justify-between items-center q-my-md"><span class="titre-md ">Code du compte : {{compte.sid}}</span><bouton-help page="page1"/></div>
-        <editeur-md ref="memoed" style="height:10rem" :texte="prefs.memo" editable modetxt label-ok="OK" v-on:ok="memook"></editeur-md>
+        <editeur-md ref="memoed" style="height:10rem" :texte="state.memo" editable modetxt label-ok="OK" v-on:ok="memook"></editeur-md>
       </div>
     </q-expansion-item>
     <q-separator/>
@@ -92,27 +92,46 @@ export default ({
     // En déconnexion, compte passe à null et provoque un problème dans la page. Un getter ne marche pas ?!
     const compte = computed(() => $store.state.db.compte)
     const prefs = computed(() => $store.state.db.prefs)
-    const cvs = computed(() => $store.state.db.cvs)
+    // const cvs = computed(() => $store.state.db.cvs)
     const mode = computed(() => $store.state.ui.mode)
 
     const mc = reactive({ categs: new Map(), lcategs: [], st: { enedition: false, modifie: false } })
     const motscles = new Motscles(mc, 1)
-    motscles.recharger()
+    const state = reactive({ lst: [], memo: '' })
+
+    function init1 () {
+      if (sessionok.value) {
+        state.lst = compte.value.avatarIds()
+      }
+    }
+
+    function init2 () {
+      if (sessionok.value) {
+        motscles.recharger()
+        state.memo = prefs.value.memo
+      }
+    }
 
     watch(() => prefs.value, (ap, av) => {
-      if (ap && ap.v > av.v) {
-        motscles.recharger()
-      }
+      if (ap && ap.v > av.v) init2()
     })
 
+    watch(() => compte.value, (ap, av) => {
+      if (ap && ap.v > av.v) init1()
+    })
+
+    init1()
+    init2()
+
     return {
+      state,
       sessionok,
       motscles,
       memoed,
       compte,
       prefs,
-      mode,
-      cvs
+      mode
+      // cvs
     }
   }
 

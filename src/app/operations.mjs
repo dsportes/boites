@@ -744,10 +744,11 @@ export class OperationUI extends Operation {
     const prefs = await new Prefs().fromRow(mapRows.prefs)
     data.setPrefs(prefs)
 
-    const avatar = await new Compte().fromRow(Object.values(mapRows.avatar)[0])
+    const x = Object.values(mapRows.avatar)
+    const avatar = await new Avatar().fromRow(x[0])
     data.setAvatars([avatar])
 
-    // création de la base IDB et chargement des rows compte et avatar
+    // création de la base IDB et chargement des rows compte avatar ...
     if (data.mode === 1) { // synchronisé : IL FAUT OUVRIR IDB (et écrire dedans)
       this.BRK()
       enregLScompte(compte.sid)
@@ -758,11 +759,12 @@ export class OperationUI extends Operation {
         await deleteIDB(true)
         throw e
       }
-      await commitRows([compte, compta, prefs, avatar])
+      await commitRows({ lmaj: [compte, compta, prefs, avatar] })
+      await data.debutConnexion()
     }
 
     data.estComptable = ret.estComptable
-    data.finConnexion(this.dh, 0)
+    await data.finConnexion(this.dh)
     this.finOK()
     remplacePage('Compte')
   }
@@ -867,7 +869,7 @@ export class CreationCompte extends OperationUI {
       const ret = this.tr(await post(this, 'm1', 'creationCompte', args))
 
       // Le compte vient d'être créé  et clek enregistrée
-      this.postCreation(ret)
+      await this.postCreation(ret)
     } catch (e) {
       this.finKO(e)
     }
@@ -1227,7 +1229,7 @@ export class ConnexionCompte extends OperationUI {
       this.dh = 0
       data.ps = ps
 
-      if (razdb && data.netok) {
+      if (razdb) {
         await deleteIDB()
         await sleep(100)
         console.log('RAZ db')

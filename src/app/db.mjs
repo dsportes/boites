@@ -105,21 +105,22 @@ export async function getVIdCvs () {
   }
 }
 
-export async function saveSessionSync (idb) {
+export async function saveSessionSync (idb, s) {
   try {
     await data.db.sessionsync.put({ id: '1', data: await crypt.crypter(data.clek, idb) })
+    store().commit('ui/setsessionsync', s)
   } catch (e) {
     throw data.setErDB(EX2(e))
   }
 }
 
-export async function debutSessionSync () {
+export async function debutSessionSync (ex) {
   try {
-    const r = await data.db.sessionsync.get('1')
+    const s = new SessionSync()
+    const r = ex ? await data.db.sessionsync.get('1') : null
     const idb = r ? await crypt.decrypter(data.clek, r.data) : null
-    const s = new SessionSync().fromIdb(idb)
-    await s.setConnexion()
-    store().commit('ui/setsessionsync', { ...s })
+    s.fromIdb(idb)
+    store().commit('ui/setsessionsync', s)
     return s
   } catch (e) {
     throw data.setErDB(EX2(e))
@@ -291,17 +292,20 @@ export async function commitRows (opBuf) {
       }
     }
 
-    if (!opBuf.lcc || !opBuf.lcc.size) return 0
     const idcc = []
-    for (const i of opBuf.lcc) idcc.push(crypt.u8ToB64(await crypt.crypter(data.clek, crypt.idToSid(i), 1), true))
+    if (opBuf.lcc && opBuf.lcc.size) {
+      for (const i of opBuf.lcc) idcc.push(crypt.u8ToB64(await crypt.crypter(data.clek, crypt.idToSid(i), 1), true))
+    }
 
-    if (!opBuf.lav || !opBuf.lav.size) return 0
     const idac = []
-    for (const i of opBuf.lav) idac.push(crypt.u8ToB64(await crypt.crypter(data.clek, crypt.idToSid(i), 1), true))
+    if (opBuf.lav && opBuf.lav.size) {
+      for (const i of opBuf.lav) idac.push(crypt.u8ToB64(await crypt.crypter(data.clek, crypt.idToSid(i), 1), true))
+    }
 
-    if (!opBuf.lgr || !opBuf.size) return 0
     const idgc = []
-    for (const i of opBuf) idgc.push(crypt.u8ToB64(await crypt.crypter(data.clek, crypt.idToSid(i), 1), true))
+    if (opBuf.lgr && opBuf.lgr.size) {
+      for (const i of opBuf.lgr) idgc.push(crypt.u8ToB64(await crypt.crypter(data.clek, crypt.idToSid(i), 1), true))
+    }
 
     await data.db.transaction('rw', TABLES, async () => {
       for (let i = 0; i < lidb.length; i++) {

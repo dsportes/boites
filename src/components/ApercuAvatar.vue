@@ -9,11 +9,11 @@
     </div>
     <q-btn class="col-auto" v-if="editer" flat dense size="md" color="primary" icon="edit" @click="cvloc=true"/>
   </div>
-  <div v-if="info" class="full-width overflow-y-auto height-4 shadow-8"><show-html :texte="info"/></div>
+  <div v-if="a.info" class="full-width overflow-y-auto height-4 shadow-8"><show-html :texte="a.info"/></div>
   <q-btn v-if="invitationattente" class="titre-lg text-bold text-grey-8 bg-yellow-4 q-mx-sm" label="[Contact !]" dense flat @click="copier"/>
 
   <q-dialog v-model="cvloc">
-    <carte-visite :na="a.av.na" :close="closedialog" :photo-init="photo" :info-init="info" @ok="validercv"/>
+    <carte-visite :na="a.av.na" :close="closedialog" :photo-init="photo" :info-init="a.info" @ok="validercv"/>
   </q-dialog>
 </q-card>
 </template>
@@ -26,6 +26,7 @@ import CarteVisite from './CarteVisite.vue'
 import { data } from '../app/modele.mjs'
 import { remplacePage, retourInvitation } from '../app/page.mjs'
 import { CvAvatar } from '../app/operations.mjs'
+import { cfg } from '../app/util.mjs'
 
 export default ({
   name: 'ApercuAvatar',
@@ -64,11 +65,11 @@ export default ({
 
   setup (props) {
     const $store = useStore()
-    const phdef = '~assets/avatar.jpg'
+    const phdef = cfg().avatar
     const sessionok = computed(() => $store.state.ui.sessionok)
     const cvloc = ref(false)
 
-    const a = reactive({ av: null, photo: phdef, memo: '' })
+    const a = reactive({ av: null, photo: phdef, info: '' })
     const avatarId = toRef(props, 'avatarId')
     const invitationattente = computed({
       get: () => $store.state.ui.invitationattente,
@@ -81,10 +82,11 @@ export default ({
     const avatars = computed(() => { return $store.state.db.avatars })
 
     function init () {
+      if (!sessionok.value) return
       a.av = data.getAvatar(avatarId.value)
-      const cv = a.av ? cvs.value(a.av.id) : null
+      const cv = a.av ? cvs.value[a.av.id] : null
       a.photo = cv && cv.photo ? cv.photo : phdef
-      a.memo = cv && cv.memo ? cv.memo : ''
+      a.info = cv && cv.info ? cv.info : ''
     }
 
     watch(avatarId, (ap, av) => {

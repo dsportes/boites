@@ -87,7 +87,7 @@ export function purgeCouples (state, val) { // val : Set des ids des couples INU
 export function setObjets (state, lobj) { // lobj : array d'objets
   if (!lobj || !lobj.length) return
   const cs = state.secret // secret courant
-  const sta = {}
+  const sta = {} // accumulation des state racine ayant changé
   lobj.forEach(obj => {
     if (t2n.has(obj.table)) {
       const n = obj.table + 's@' + obj.id
@@ -109,7 +109,7 @@ export function setObjets (state, lobj) { // lobj : array d'objets
     } else if (t1n.has(obj.table)) {
       const n = obj.table + 's'
       let st = sta[n]; if (!st) { st = state[n]; sta[n] = st }
-      const oc = state[obj.table].id === obj.id
+      const oc = state[obj.table] && state[obj.table].id === obj.id
       if (obj.suppr) {
         delete st[obj.id]
         if (oc) state[obj.table] = null
@@ -117,7 +117,6 @@ export function setObjets (state, lobj) { // lobj : array d'objets
         st[obj.id] = obj
         if (oc) state[obj.table] = obj
       }
-      state[obj.table + 's'] = { ...st }
     }
   })
   for (const n in sta) state[n] = { ...sta[n] }

@@ -1,6 +1,6 @@
 import { schemas, serial, deserial } from './schemas.mjs'
 import { crypt } from './crypto.mjs'
-import { openIDB, closeIDB, getFadata, saveSessionSync } from './db.mjs'
+import { openIDB, closeIDB, getFadata, debutSessionSync, saveSessionSync } from './db.mjs'
 import { openWS, closeWS } from './ws.mjs'
 import {
   store, appexc, dlvDepassee, NomAvatar, gzip, ungzip, dhstring,
@@ -124,7 +124,9 @@ Le répertoire grossit en cours de session mais ne réduit jamais. Il contient d
 - avatar externe n'étant plus membre d'aucun groupe ni conjoint externe d'aucun couple
 */
 class Repertoire {
-  constructor () {
+  constructor () { this.raz() }
+
+  raz () {
     this.idac = new Set()
     this.idax = new Set()
     this.idgr = new Set()
@@ -172,16 +174,9 @@ class Session {
   */
   get statutsession () { return store().state.ui.statutsession }
   set statutsession (val) { store().commit('ui/majstatutsession', val) }
-  get sessionsync () { return store().state.ui.sessionsync }
-  async debutSessionSync () { return this.dbok && this.netok ? await this.debutSessionSync() : { dh: 0, vcv: 0 } }
-  async finConnexionSync (dh, vcv) { if (this.dbok && this.netok) await store().state.ui.sessionsync.setConnexion(dh, vcv) }
-  async setDhSync (dh) { if (this.dbok && this.netok) await store().state.ui.sessionsync.setDhSync(dh) }
-  async setDhPong (dh) {
-    if (this.dbok && this.netok) {
-      const x = store().state.ui.sessionsync
-      if (x) await x.setDhPong(dh)
-    }
-  }
+  get sessionsync () { const s = store().state.ui.sessionsync; return s ? s.clone() : null }
+  async setDhSync (dh) { if (this.dbok && this.netok) this.sessionsync.setDhSync(dh) }
+  async setDhPong (dh) { if (this.dbok && this.netok) this.sessionsync.setDhPong(dh) }
 
   get mode () { return store().state.ui.mode }
   set mode (val) { store().commit('ui/majmode', val) }
@@ -240,12 +235,13 @@ class Session {
 
   async debutConnexion () {
     this.statutsession = 1
-    return await this.debutSessionSync()
+    return await debutSessionSync(this.dbok && this.netok)
   }
 
-  async finConnexion (dh, vcv) {
+  async finConnexion (dh) {
     this.statutsession = 2
-    await this.finConnexionSync(dh, vcv)
+    const s = this.sessionsync
+    if (this.dbok && this.netok && s) await s.setConnexion(dh)
   }
 
   degraderMode () {
@@ -1572,10 +1568,18 @@ export class SessionSync {
     await this.save()
   }
 
+  clone () {
+    const c = new SessionSync()
+    c.dhdebutp = this.dhdebutp
+    c.dhfinp = this.dhfinp
+    c.dhdebut = this.dhdebut
+    c.dhsync = this.dhsync
+    c.dhpong = this.dhpong
+    return c
+  }
+
   async save () {
-    const x = { ...this }
-    const r = schemas.serialize('idbSessionSync', x)
-    await saveSessionSync(r)
-    store().commit('ui/setsessionsync', x)
+    const r = schemas.serialize('idbSessionSync', this)
+    await saveSessionSync(r, this)
   }
 }
