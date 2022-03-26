@@ -57,7 +57,8 @@ import PhraseSecrete from '../components/PhraseSecrete.vue'
 import AcceptParrain from '../components/AcceptParrain.vue'
 import { onBoot } from '../app/page.mjs'
 import { crypt } from '../app/crypto.mjs'
-import { get, deserial, afficherdiagnostic } from '../app/util.mjs'
+import { get, afficherdiagnostic } from '../app/util.mjs'
+import { deserial } from '../app/schemas.mjs'
 import { Contact } from '../app/modele.mjs'
 
 export default ({

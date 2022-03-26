@@ -1,9 +1,9 @@
-import { schemas } from './schemas.mjs'
+import { schemas, serial, deserial } from './schemas.mjs'
 import { crypt } from './crypto.mjs'
-import { openIDB, closeIDB, getFadata } from './db.mjs'
+import { openIDB, closeIDB, getFadata, saveSessionSync } from './db.mjs'
 import { openWS, closeWS } from './ws.mjs'
 import {
-  store, appexc, serial, deserial, dlvDepassee, NomAvatar, gzip, ungzip, dhstring,
+  store, appexc, dlvDepassee, NomAvatar, gzip, ungzip, dhstring,
   getJourJ, cfg, ungzipT, normpath, getfa, titreEd, titreCompte
 } from './util.mjs'
 import { remplacePage } from './page.mjs'
@@ -173,7 +173,7 @@ class Session {
   get statutsession () { return store().state.ui.statutsession }
   set statutsession (val) { store().commit('ui/majstatutsession', val) }
   get sessionsync () { return store().state.ui.sessionsync }
-  async debutSessionSync () { return this.dbok && this.netok ? await this.debutSessionSync() : { vcv: 0 } }
+  async debutSessionSync () { return this.dbok && this.netok ? await this.debutSessionSync() : { dh: 0, vcv: 0 } }
   async finConnexionSync (dh, vcv) { if (this.dbok && this.netok) await store().state.ui.sessionsync.setConnexion(dh, vcv) }
   async setDhSync (dh) { if (this.dbok && this.netok) await store().state.ui.sessionsync.setDhSync(dh) }
   async setDhPong (dh) {
@@ -240,7 +240,7 @@ class Session {
 
   async debutConnexion () {
     this.statutsession = 1
-    return await this.debutConnexionSync()
+    return await this.debutSessionSync()
   }
 
   async finConnexion (dh, vcv) {
@@ -804,6 +804,12 @@ export class Cv {
     this.vsh = 0
   }
 
+  init (id, v, cv) {
+    this.id = id
+    this.cv = cv
+    this.v = v
+  }
+
   async fromRow (row) { // row : rowCv - item retour de sync
     this.id = row.id
     this.v = row.v
@@ -811,6 +817,15 @@ export class Cv {
     this.dds = row.dds
     const cle = data.repertoire.cle(this.id)
     this.cv = row.cv && cle ? deserial(await crypt.decrypter(cle, row.cv)) : null
+    return this
+  }
+
+  get toIdb () {
+    return schemas.serialize('idbCv', this)
+  }
+
+  fromIdb (idb) {
+    schemas.deserialize('idbCv', idb, this)
     return this
   }
 }
@@ -1475,5 +1490,92 @@ export class Secret {
     const buf2 = await crypt.decrypter(this.cles, buf)
     const buf3 = fa.gz ? ungzipT(buf2) : buf2
     return buf3
+  }
+}
+
+/*****************************************************/
+schemas.forSchema({
+  name: 'idbListeCvIds',
+  cols: ['v', 'lids']
+})
+
+export class ListeCvIds {
+  init (v, setIds) {
+    this.v = v
+    this.lids = Array.from(setIds)
+  }
+
+  fromIdb (idb) {
+    if (!idb) {
+      this.v = 0
+      this.ids = new Set()
+    } else {
+      schemas.deserialize('idbListeCvIds', idb, this)
+      this.ids = new Set(this.lids)
+      delete this.lids
+    }
+    return this
+  }
+
+  toIdb () {
+    return schemas.serialize('idbListeCvIds', this)
+  }
+}
+
+/*****************************************************/
+
+/* Dernier état de session synchronisé
+- dhdebutp : dh de début de la dernière session sync terminée
+- dhfinp : dh de fin de la dernière session sync terminée
+- dhdebut: dh de début de la session sync en cours
+- dhsync: dh du dernier traitement de synchronisation
+- dhpong: dh du dernier pong reçu
+*/
+schemas.forSchema({
+  name: 'idbSessionSync',
+  cols: ['dhdebutp', 'dhfinp', 'dhdebut', 'dhsync', 'dhpong']
+})
+
+function max (a) { let m = 0; a.forEach(x => { if (x > m) m = x }); return m }
+
+export class SessionSync {
+  fromIdb (idb) {
+    if (!idb) {
+      this.dhdebutp = 0
+      this.dhfinp = 0
+      this.dhdebut = 0
+      this.dhsync = 0
+      this.dhpong = 0
+    } else {
+      schemas.deserialize('idbSessionSync', idb, this)
+      this.dhdebutp = this.dhdebut
+      this.dhfinp = max([this.dhdebut, this.dhsync, this.dhpong])
+      this.dhdebut = 0
+      this.dhsync = 0
+      this.dhpong = 0
+    }
+    return this
+  }
+
+  async setConnexion (dh) {
+    this.dhdebut = dh
+    await this.save()
+  }
+
+  async setDhSync (dh) {
+    this.dhsync = dh
+    await this.save()
+  }
+
+  async setDhPong (dh) {
+    this.dhpong = dh
+    await this.save()
+  }
+
+  async save () {
+    const x = { ...this }
+    const r = schemas.serialize('idbSessionSync', x)
+    await saveSessionSync(r)
+    store().commit('ui/setsessionsync', x)
   }
 }

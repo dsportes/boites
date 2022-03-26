@@ -44,7 +44,8 @@
 
 <script>
 import { toRef } from 'vue'
-import { FiltreGrp, serial, deserial } from '../app/util.mjs'
+import { FiltreGrp } from '../app/util.mjs'
+import { serial, deserial } from '../app/schemas.mjs'
 import ApercuMotscles from './ApercuMotscles.vue'
 import SelectMotscles from './SelectMotscles.vue'
 

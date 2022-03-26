@@ -36,7 +36,8 @@
 </div>
 </template>
 <script>
-import { Motscles, difference, Filtre, getJourJ, upload, normpath, deserial, serial } from '../app/util.mjs'
+import { Motscles, difference, Filtre, getJourJ, upload, normpath } from '../app/util.mjs'
+import { serial, deserial } from '../app/schemas.mjs'
 import { computed, reactive, watch, ref, isRef } from 'vue'
 import { useStore } from 'vuex'
 import { Secret, data } from '../app/modele.mjs'

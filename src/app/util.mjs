@@ -1,8 +1,8 @@
 import axios from 'axios'
 import { data } from './modele.mjs'
 import { AppExc, version, E_BRO, E_SRV, EXBRK } from './api.mjs'
+import { serial, deserial } from './schemas.mjs'
 import { u8ToB64, crypt } from './crypto.mjs'
-import { encode, decode } from '@msgpack/msgpack'
 
 const headers = { 'x-api-version': version }
 
@@ -238,14 +238,6 @@ console.log(edvol(6757892000))
 console.log(edvol(67578920000))
 console.log(edvol(675789200000))
 */
-
-export function serial (obj) {
-  return new Uint8Array(encode(obj))
-}
-
-export function deserial (u8) {
-  return decode(u8)
-}
 
 export function appexc (e) {
   return !e ? null : (e instanceof AppExc ? e : new AppExc(E_BRO, 'Exception inattendue', e.message + (e.stack ? '\n' + e.stack : '')))
@@ -710,7 +702,7 @@ export class NomAvatar {
     this.id = crypt.hashBin(this.rnd)
   }
 
-  get nomc () { return this.nom + '@' + this.substring(this.sid.length - 3, this.sid.length) }
+  get nomc () { return this.nom + '@' + this.sid.substring(this.sid.length - 3, this.sid.length) }
   get nomf () { return normpath(this.nomc) }
   get sid () { return crypt.idToSid(this.id) }
   get cle () { return this.rnd }

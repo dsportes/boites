@@ -55,7 +55,8 @@
 
 <script>
 import { toRef } from 'vue'
-import { FiltreCtc, serial, deserial } from '../app/util.mjs'
+import { FiltreCtc } from '../app/util.mjs'
+import { serial, deserial } from '../app/schemas.mjs'
 import ApercuMotscles from './ApercuMotscles.vue'
 import SelectMotscles from './SelectMotscles.vue'
 

@@ -42,9 +42,10 @@ import BoutonHelp from '../components/BoutonHelp.vue'
 import MotsCles from '../components/MotsCles.vue'
 import ApercuAvatar from '../components/ApercuAvatar.vue'
 import NomAvatar from '../components/NomAvatar.vue'
-import { Motscles, serial } from '../app/util.mjs'
+import { Motscles } from '../app/util.mjs'
 import { crypt } from '../app/crypto.mjs'
 import { data } from '../app/modele.mjs'
+import { serial } from '../app/schemas.mjs'
 
 export default ({
   name: 'Compte',

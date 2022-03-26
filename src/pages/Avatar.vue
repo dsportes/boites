@@ -51,7 +51,7 @@
 import { computed, reactive, watch } from 'vue'
 import { useStore } from 'vuex'
 import { onBoot } from '../app/page.mjs'
-import { Motscles, getJourJ, serial } from '../app/util.mjs'
+import { Motscles, getJourJ } from '../app/util.mjs'
 import MotsCles from '../components/MotsCles.vue'
 import ApercuAvatar from '../components/ApercuAvatar.vue'
 import NouveauParrainage from '../components/NouveauParrainage.vue'
@@ -62,6 +62,7 @@ import TabContacts from '../components/TabContacts.vue'
 import TabGroupes from '../components/TabGroupes.vue'
 import { data } from '../app/modele.mjs'
 import { crypt } from '../app/crypto.mjs'
+import { serial } from '../app/schemas.mjs'
 
 export default ({
   name: 'Avatar',

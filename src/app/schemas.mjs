@@ -1,5 +1,13 @@
-import { serial, deserial } from './util.mjs'
+import { encode, decode } from '@msgpack/msgpack'
 export const schemas = { forSchema, serialize, deserialize, clone }
+
+export function serial (obj) {
+  return new Uint8Array(encode(obj))
+}
+
+export function deserial (u8) {
+  return decode(u8)
+}
 
 /* Gestion des schémas **************************************************/
 const allTypes = {}

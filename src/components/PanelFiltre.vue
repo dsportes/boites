@@ -96,7 +96,8 @@
 <script>
 import { useStore } from 'vuex'
 import { computed, toRef, watch } from 'vue'
-import { Filtre, serial, deserial } from '../app/util.mjs'
+import { Filtre } from '../app/util.mjs'
+import { serial, deserial } from '../app/schemas.mjs'
 import ApercuMotscles from './ApercuMotscles.vue'
 import SelectMotscles from './SelectMotscles.vue'
 

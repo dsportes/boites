@@ -1,10 +1,10 @@
 /* eslint-disable func-call-spacing */
 import Dexie from 'dexie'
-import { Avatar, Compte, Prefs, Compta, Couple, Groupe, Membre, Secret, data } from './modele.mjs'
-import { store, deserial, serial, Sid } from './util.mjs'
+import { Avatar, Compte, Prefs, Compta, Couple, Groupe, Membre, Secret, ListeCvIds, SessionSync, data, Cv } from './modele.mjs'
+import { store, Sid } from './util.mjs'
+import { deserial, serial } from './schemas.mjs'
 import { crypt } from './crypto.mjs'
 import { AppExc, E_DB, t0n } from './api.mjs'
-import { schemas } from './schemas.mjs'
 
 const STORES = {
   sessionsync: 'id',
@@ -86,124 +86,44 @@ export async function deleteIDB (lsKey) {
   }
 }
 
-schemas.forSchema({
-  name: 'idbListeCvIds',
-  cols: ['v', 'lids']
-})
-
-class ListeCvIds {
-  fromIdb (idb) {
-    if (!idb) {
-      this.v = 0
-      this.ids = new Set()
-    } else {
-      schemas.deserialize('idbListeCvIds', idb, this)
-      this.ids = new Set(this.lids)
-      delete this.lids
-    }
-    return this
-  }
-
-  async init () {
-    try {
-      const r = await data.db.listecvids.get(1)
-      const idb = r ? await crypt.decrypter(data.clek, r.data) : null
-      return this.fromIdb(idb)
-    } catch (e) {
-      throw data.setErDB(EX2(e))
-    }
-  }
-}
-
-export async function getVIdCvs () {
-  const x = await new ListeCvIds().init()
-  return [x.v, x.ids]
-}
 export async function saveListeCvIds (v, setIds) {
   try {
-    const r = schemas.serialize('idbListeCvIds', { v: v, lids: Array.from(setIds) })
-    await data.db.listecvids.put({ id: '1', data: await crypt.crypter(data.clek, r) })
+    const row = new ListeCvIds().init(v, setIds).toIdb()
+    await data.db.listecvids.put({ id: '1', data: await crypt.crypter(data.clek, row) })
   } catch (e) {
     throw data.setErDB(EX2(e))
   }
 }
 
-/* Dernier état de session synchronisé
-- dhdebutp : dh de début de la dernière session sync terminée
-- dhfinp : dh de fin de la dernière session sync terminée
-- dhdebut: dh de début de la session sync en cours
-- dhsync: dh du dernier traitement de synchronisation
-- dhpong: dh du dernier pong reçu
-*/
-schemas.forSchema({
-  name: 'idbSessionSync',
-  cols: ['dhdebutp', 'dhfinp', 'dhdebut', 'dhsync', 'dhpong']
-})
-
-function max (a) { let m = 0; a.forEach(x => { if (x > m) m = x }); return m }
-
-class SessionSync {
-  fromIdb (idb) {
-    if (!idb) {
-      this.dhdebutp = 0
-      this.dhfinp = 0
-      this.dhdebut = 0
-      this.dhsync = 0
-      this.dhpong = 0
-    } else {
-      schemas.deserialize('idbSessionSync', idb, this)
-      this.dhdebutp = this.dhdebut
-      this.dhfinp = max([this.dhdebut, this.dhsync, this.dhpong])
-      this.dhdebut = 0
-      this.dhsync = 0
-      this.dhpong = 0
-    }
-    return this
+export async function getVIdCvs () {
+  try {
+    const idb = await data.db.listecvids.get('1')
+    const x = idb ? new ListeCvIds().fromIdb(await crypt.decrypter(data.clek, idb.data)) : null
+    return [x.v, x.ids]
+  } catch (e) {
+    throw data.setErDB(EX2(e))
   }
+}
 
-  async init () {
-    try {
-      const r = await data.db.sessionsync.get(1)
-      const idb = r ? await crypt.decrypter(data.clek, r.data) : null
-      this.fromIdb(idb)
-      store().commit('ui/setsessionsync', { ...this })
-      return this
-    } catch (e) {
-      throw data.setErDB(EX2(e))
-    }
-  }
-
-  async setConnexion (dh) {
-    this.dhdebut = dh
-    await this.save()
-  }
-
-  async setDhSync (dh) {
-    this.dhsync = dh
-    await this.save()
-  }
-
-  async setDhPong (dh) {
-    this.dhpong = dh
-    await this.save()
-  }
-
-  async save () {
-    try {
-      const x = { ...this }
-      const r = schemas.serialize('idbSessionSync', x)
-      await data.db.sessionsync.put({ id: '1', data: await crypt.crypter(data.clek, r) })
-      store().commit('ui/setsessionsync', x)
-    } catch (e) {
-      throw data.setErDB(EX2(e))
-    }
+export async function saveSessionSync (idb) {
+  try {
+    await data.db.sessionsync.put({ id: '1', data: await crypt.crypter(data.clek, idb) })
+  } catch (e) {
+    throw data.setErDB(EX2(e))
   }
 }
 
 export async function debutSessionSync () {
-  const s = new SessionSync()
-  await s.setConnexion()
-  return s
+  try {
+    const r = await data.db.sessionsync.get('1')
+    const idb = r ? await crypt.decrypter(data.clek, r.data) : null
+    const s = new SessionSync().fromIdb(idb)
+    await s.setConnexion()
+    store().commit('ui/setsessionsync', { ...s })
+    return s
+  } catch (e) {
+    throw data.setErDB(EX2(e))
+  }
 }
 
 export async function getCompte () {
@@ -319,9 +239,9 @@ export async function getCvs (cvIds, buf) {
   go()
   try {
     const r = {}
-    await data.db.cv.each(async (idb) => {
-      const cv = {}
-      schemas.deserialize('idbCv', await crypt.decrypter(data.clek, idb.data), cv)
+    await data.db.cv.each(async (row) => {
+      const idb = await crypt.decrypter(data.clek, row.data)
+      const cv = new Cv().fromIdb(idb)
       if (cvIds.has(cv.id)) {
         r[cv.id] = cv
       } else {
@@ -349,8 +269,6 @@ export async function commitRows (opBuf) {
         if (obj.id2) x.row.id2 = crypt.u8ToB64(await crypt.crypter(data.clek, Sid(obj.id2), 1), true)
         if (obj.table === 'compte') {
           x.row.data = await crypt.crypter(data.ps.pcb, obj.toIdb)
-        } else if (obj.table === 'cv') {
-          x.row.data = await crypt.crypter(data.clek, schemas.serialize('idbCv', obj))
         } else {
           x.row.data = await crypt.crypter(data.clek, obj.toIdb)
         }

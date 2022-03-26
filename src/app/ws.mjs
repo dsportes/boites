@@ -1,6 +1,6 @@
 /* gestion WebSocket */
-
-import { cfg, store, dhtToString, affichererreur, deserial } from './util.mjs'
+import { deserial } from './schemas.mjs'
+import { cfg, store, dhtToString, affichererreur } from './util.mjs'
 import { data } from './modele.mjs'
 import { ProcessQueue, reconnexion } from './operations.mjs'
 import { AppExc, E_WS, PINGTO } from './api.mjs'

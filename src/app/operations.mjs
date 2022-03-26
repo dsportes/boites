@@ -1,4 +1,4 @@
-import { NomAvatar, store, post, get, affichermessage, cfg, sleep, affichererreur, appexc, idToIc, difference, getfa, getJourJ, serial, edvol, equ8 } from './util.mjs'
+import { NomAvatar, store, post, get, affichermessage, cfg, sleep, affichererreur, appexc, idToIc, difference, getfa, getJourJ, edvol, equ8 } from './util.mjs'
 import { remplacePage } from './page.mjs'
 import {
   deleteIDB, idbSidCompte, commitRows, getCompte, getCompta, getPrefs, getCvs,
@@ -9,7 +9,7 @@ import { Compte, Avatar, deserialRowItems, compileToObject, data, Prefs, Contact
 import { AppExc, EXBRK, EXPS, F_BRO, E_BRO, X_SRV, E_WS, MC } from './api.mjs'
 
 import { crypt } from './crypto.mjs'
-import { schemas } from './schemas.mjs'
+import { schemas, serial } from './schemas.mjs'
 
 const OUI = 1
 const NON = 0
@@ -1191,7 +1191,7 @@ export class ConnexionCompte extends OperationUI {
         } else {
           if (cv.v > nv) nv = cv.v
           cvs[cv.id] = cv
-          this.buf.putIDB({ table: 'cv', id: cv.id })
+          this.buf.putIDB(cv)
         }
       }
       if (axdisparus.size) {
