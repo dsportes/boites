@@ -38,7 +38,7 @@ class OpBuf {
   putIDB (obj) { this.lmaj.push(obj) }
   supprIDB (obj) { this.lsuppr.push(obj) } // obj : {table, id, (sid2)}
   setObj (obj) { this.lobj.push(obj) }
-  async commiIDB () { await commitRows(this) }
+  async commitIDB () { await commitRows(this) }
   commitStore () {
     if (this.lobj.length) data.setObjets(this.lobj)
   }
@@ -208,7 +208,7 @@ export class Operation {
 
   /* Obtention des invitGr du compte et traitement de régularisation ***********************************/
   async getInvitGrs (compte) {
-    const ids = compte.allAvId()
+    const ids = compte.avatarIds()
     const ret = this.tr(await post(this, 'm1', 'chargerInvitGr', { sessionId: data.sessionId, ids: Array.from(ids) }))
     const lstInvitGr = []
     if (ret.rowItems.length) {
@@ -719,7 +719,7 @@ export class Operation {
     }
 
     /* commits finaux */
-    await this.buf.commiIDB()
+    await this.buf.commitIDB()
   }
 }
 
@@ -792,7 +792,7 @@ export class ProcessQueue extends OperationWS {
       this.buf = new OpBuf()
       this.dh = 0
       await this.traiteQueue(q)
-      if (data.dbok && data.netok) await this.buf.commiIDB()
+      if (data.dbok && data.netok) await this.buf.commitIDB()
       data.setDhSync(this.dh)
       return this.finOK()
     } catch (e) {
@@ -894,7 +894,7 @@ export class ConnexionCompte extends OperationUI {
   */
   async chargerCPC (vcompte, vprefs, vcompta) {
     const args = { sessionId: data.sessionId, pcbh: data.ps.pcbh, dpbh: data.ps.dpbh, vcompte, vprefs, vcompta }
-    const ret = this.ret(await post(this, 'm1', 'connexionCompte', args))
+    const ret = this.tr(await post(this, 'm1', 'connexionCompte', args))
     const compte = ret.rowCompte ? new Compte() : null
     const prefs = ret.rowPrefs ? new Prefs() : null
     const compta = ret.rowCompta ? new Compta() : null
@@ -920,13 +920,17 @@ export class ConnexionCompte extends OperationUI {
     if (data.dbok) enregLScompte(this.compte.sid)
     this.estComptable = estComptable
 
-    this.compte.regAvatars()
+    this.compte.repAvatars()
     const prefs = prefsSrv || prefsIdb
     const compta = comptaSrv || comptaIdb
     data.setCompte(this.compte)
     data.setPrefs(prefs)
     data.setCompta(compta)
+    this.buf.putIDB(this.compte)
+    this.buf.putIDB(prefs)
+    this.buf.putIDB(compta)
     data.setSyncItem('01', 1, 'Compte et comptabilité')
+    return true
   }
 
   /* Recharge depuis le serveur les avatars du compte, abonnement aux avatars */
@@ -946,7 +950,7 @@ export class ConnexionCompte extends OperationUI {
   */
   async phase1 () {
     this.avatars = data.dbok ? await getAvatars() : {}
-    const setidbav = new Set(); for (const id of this.avatars) setidbav.add(id)
+    const setidbav = new Set(); for (const id in this.avatars) setidbav.add(parseInt(id))
     const avrequis = this.compte.avatarIds()
     this.nbAvatars = avrequis.size
     const aventrop = difference(setidbav, avrequis) // avatars en IDB NON requis (à supprimer de IDB)
@@ -959,18 +963,18 @@ export class ConnexionCompte extends OperationUI {
     const avnouveaux = !data.netok ? {} : await this.chargerAvatars(avidsVers, this.compte.id, this.compte.v)
     if (avnouveaux === false) return false// le compte a changé de version, reboucler
     // avnouveaux contient tous les avatars ayant une version plus récente que celle (éventuellement) obtenue de IDB
-    for (const pk of avnouveaux) { const av = avnouveaux[pk]; this.buf.putIDB(av); this.avatars[av.id] = av }
+    for (const pk in avnouveaux) { const av = avnouveaux[pk]; this.buf.putIDB(av); this.avatars[av.id] = av }
     // avatars contient la version au top des objets avatars du compte requis et seulement eux
     const lav = Object.values(this.avatars)
     data.setAvatars(lav) // mis en store/db
-    lav.forEach(av => { av.regGroupes(); av.regCouples() })
-    lav.forEach(av => { data.setSyncItem('05' + av.sid, 0, 'Avatar ' + av.nom) })
+    lav.forEach(av => { av.repGroupes(); av.repCouples() })
+    lav.forEach(av => { data.setSyncItem('05' + av.sid, 0, 'Avatar ' + av.na.nom) })
     return true
   }
 
   /* Recharge depuis le serveur les groupes et couples des avatars du compte et s'y abonne */
-  async chargerGroupesCouples (gridsVers, cpidsVers, avIdsVers, idc, vc) {
-    const args = { sessionId: data.sessionId, gridsVers, cpidsVers, avIdsVers, idc, vc }
+  async chargerGroupesCouples (gridsVers, cpidsVers, avidsVers, idc, vc) {
+    const args = { sessionId: data.sessionId, gridsVers, cpidsVers, avidsVers, idc, vc }
     const ret = this.tr(await post(this, 'm1', 'chargerGrCp', args))
     if (!ret.ok) return false
     const r = await compileToObject(deserialRowItems(ret.rowItems))
@@ -991,15 +995,15 @@ export class ConnexionCompte extends OperationUI {
     const cprequis = new Set()
     for (const id in this.avatars) {
       const av = this.avatars[id]
-      av.GroupeIds(grrequis)
-      av.CoupleIds(cprequis)
+      av.groupeIds(grrequis)
+      av.coupleIds(cprequis)
     }
     this.nbGroupes = grrequis.size
     this.nbCouples = cprequis.size
     this.groupes = data.dbok ? await getGroupes() : {}
-    const setidbgr = new Set(); for (const id of this.groupes) setidbgr.add(id)
+    const setidbgr = new Set(); for (const id in this.groupes) setidbgr.add(parseInt(id))
     this.couples = data.dbok ? await getCouples() : {}
-    const setidbcp = new Set(); for (const id of this.groupes) setidbcp.add(id)
+    const setidbcp = new Set(); for (const id in this.groupes) setidbcp.add(parseInt(id))
     const grentrop = difference(setidbgr, grrequis) // groupes en IDB NON requis (à supprimer de IDB)
     grentrop.forEach(id => {
       this.buf.supprIDB({ table: 'groupe', id: id })
@@ -1016,24 +1020,24 @@ export class ConnexionCompte extends OperationUI {
     const cpidsVers = {}
     cprequis.forEach(id => { const obj = this.couples[id]; cpidsVers[id] = obj ? obj.v : 0 })
 
-    const x = !data.netok ? {} : await this.chargerGroupesCouples(gridsVers, cpidsVers, avidsVers, this.compte.id, this.compte.v)
+    const x = !data.netok ? [{}, {}] : await this.chargerGroupesCouples(gridsVers, cpidsVers, avidsVers, this.compte.id, this.compte.v)
     if (x === false) return false // le compte ou les avatars ont changé de version
 
     const [grnouveaux, cpnouveaux] = x
     // grnouveaux contient tous les groupes ayant une version plus récente que celle (éventuellement) obtenue de IDB
-    for (const pk of grnouveaux) { const gr = grnouveaux[pk]; this.buf.putIDB(gr); this.groupes[gr.id] = gr }
+    for (const pk in grnouveaux) { const gr = grnouveaux[pk]; this.buf.putIDB(gr); this.groupes[gr.id] = gr }
     // groupes contient la version au top des objets groupes du compte requis par ses avatars et seulement eux
     const lgr = Object.values(this.groupes)
     data.setGroupes(lgr) // mis en store/db
 
     // cpnouveaux contient tous les couples ayant une version plus récente que celle (éventuellement) obtenue de IDB
-    for (const pk of cpnouveaux) { const cp = cpnouveaux[pk]; this.buf.putIDB(cp); this.couples[cp.id] = cp }
+    for (const pk in cpnouveaux) { const cp = cpnouveaux[pk]; this.buf.putIDB(cp); this.couples[cp.id] = cp }
     // couples contient la version au top des objets couples du compte requis par ses avatars et seulement eux
     const lcp = Object.values(this.couples)
     data.setCouples(lcp) // mis en store/db
 
-    lgr.forEach(gr => { data.setSyncItem('10' + gr.sid, 0, 'Groupe ' + gr.nom) })
-    lcp.forEach(av => { data.setSyncItem('15' + av.sid, 0, 'Avatar ' + av.nom) })
+    lgr.forEach(gr => { data.setSyncItem('10' + gr.sid, 0, 'Groupe ' + gr.na.nom) })
+    lcp.forEach(cp => { data.setSyncItem('15' + cp.sid, 0, 'Couple ' + cp.na.nom) })
     return true
   }
 
@@ -1046,7 +1050,7 @@ export class ConnexionCompte extends OperationUI {
     if (ret.rowItems.length) {
       const r = await compileToObject(deserialRowItems(ret.rowItems))
       if (r.secret) {
-        for (const pk of r) {
+        for (const pk in r) {
           const s = r[pk]
           if (s.suppr) {
             if (src[id] && src[id][s.ns]) delete src[id][s.ns]
@@ -1069,7 +1073,7 @@ export class ConnexionCompte extends OperationUI {
     if (ret.rowItems.length) {
       const r = await compileToObject(deserialRowItems(ret.rowItems))
       if (r.membre) {
-        for (const pk of r) {
+        for (const pk in r) {
           const m = r[pk]
           let e = src[id]; if (!e) { e = {}; src[id] = e }
           e[m.ns] = m
@@ -1085,35 +1089,38 @@ export class ConnexionCompte extends OperationUI {
     - groupés par id de l'objet maître
     - avec la version la plus récente par objet maître
     */
-    const [membres, vmbIdb] = data.dbok ? getMembres() : [{}, {}]
-    const [secrets, vscIdb] = data.dbok ? getSecrets() : [{}, {}]
+    const [membres, vmbIdb] = data.dbok ? await getMembres() : [{}, {}]
+    const [secrets, vscIdb] = data.dbok ? await getSecrets() : [{}, {}]
 
     /* Récupération depuis le serveur des versions plus récentes des secrets et membres
     pour chaque objet maître et qu'il y en ait eu ou non trouvée en IDB
     */
 
-    for (const id in this.avatars) {
+    for (const idx in this.avatars) {
+      const id = parseInt(idx)
       const av = this.avatars[id]
       if (data.netok) await this.chargerSc(id, vscIdb[id] || 0, secrets)
-      const nbs = Object.keys(secrets[id]).length
-      data.setSyncItem('05' + av.sid, 1, 'Avatar ' + av.nom + ' - ' + nbs + ' secret(s)')
+      const nbs = secrets[id] ? Object.keys(secrets[id]).length : 0
+      data.setSyncItem('05' + av.sid, 1, 'Avatar ' + av.na.nom + ' - ' + nbs + ' secret(s)')
     }
 
-    for (const id in this.groupes) {
+    for (const idx in this.groupes) {
+      const id = parseInt(idx)
       const gr = this.groupes[id]
       if (data.netok) await this.chargerSc(id, vscIdb[id] || 0, secrets)
-      const nbs = Object.keys(secrets[id]).length
-      data.setSyncItem('10' + gr.sid, 0, 'Groupe ' + gr.nom + ' - ' + nbs + ' secret(s)')
+      const nbs = secrets[id] ? Object.keys(secrets[id]).length : 0
+      data.setSyncItem('10' + gr.sid, 0, 'Groupe ' + gr.na.nom + ' - ' + nbs + ' secret(s)')
       if (data.netok) await this.chargerMb(id, vmbIdb[id] || 0, membres)
-      const nbm = Object.keys(membres[id]).length
-      data.setSyncItem('10' + gr.sid, 1, 'Groupe ' + gr.nom + ' - ' + nbs + ' secret(s)' + ' - ' + nbm + ' membre(s)')
+      const nbm = membres[id] ? Object.keys(membres[id]).length : 0
+      data.setSyncItem('10' + gr.sid, 1, 'Groupe ' + gr.na.nom + ' - ' + nbs + ' secret(s)' + ' - ' + nbm + ' membre(s)')
     }
 
-    for (const id in this.couples) {
+    for (const idx in this.couples) {
+      const id = parseInt(idx)
       const cp = this.couples[id]
       if (data.netok) await this.chargerSc(id, vscIdb[id] || 0, secrets)
       const nbs = Object.keys(secrets[id]).length
-      data.setSyncItem('15' + cp.sid, 1, 'Couple ' + cp.nom + ' - ' + nbs + ' secret(s)')
+      data.setSyncItem('15' + cp.sid, 1, 'Couple ' + cp.na.nom + ' - ' + nbs + ' secret(s)')
     }
 
     /* Mise à jour du modèle */
@@ -1158,22 +1165,22 @@ export class ConnexionCompte extends OperationUI {
     const tousAx = data.setTousAx() // Calcul de la liste des avatars externes
     const cvIds = new Set()
     let nb = 0
-    new Set(Object.keys(tousAx)).forEach(id => { cvIds.add(id); nb++ })
-    new Set(data.getAvatar()).forEach(id => { cvIds.add(id); nb++ })
-    new Set(data.getGroupe()).forEach(id => { cvIds.add(id); nb++ })
-    new Set(data.getCouple()).forEach(id => { cvIds.add(id); nb++ })
+    for (const id in tousAx) { cvIds.add(parseInt(id)); nb++ }
+    for (const id in data.getAvatar()) { cvIds.add(parseInt(id)); nb++ }
+    for (const id in data.getGroupe()) { cvIds.add(parseInt(id)); nb++ }
+    for (const id in data.getCouple()) { cvIds.add(parseInt(id)); nb++ }
     let msg = 'Cartes de visite : ' + nb + ' requise(s)'
     data.setSyncItem('20', 0, msg)
 
     // dans this.buf, les CVs à supprimer de IDB (ne sont plus référencées)
     const n1 = this.buf.lsuppr.length
-    const cvs = data.dbok ? getCvs(cvIds, this.buf) : {}
+    const cvs = data.dbok ? await getCvs(cvIds, this.buf) : {}
     const nbsuppr = n1 - this.buf.lsuppr.length
     if (nbsuppr) {
       msg = msg + ' - ' + nbsuppr + ' supprimée(s)'
       data.setSyncItem('20', 0, msg)
     }
-    const [vcv, ids] = data.dbok ? await getVIdCvs() : [0, {}]
+    const [vcv, ids] = data.dbok ? await getVIdCvs() : [0, new Set()]
     let nv = 0
     let n = 0
 
@@ -1209,14 +1216,14 @@ export class ConnexionCompte extends OperationUI {
       if (mbdisp.length) await this.membresDisparus(mbdisp)
       if (cpdisp.length) await this.couplesDisparus(cpdisp)
     }
-    data.setCvs(cvs)
+    data.setCvs(Object.values(cvs))
     if (data.dbok) { // liste des ids des CV resynchronisées
       const lst = []
       for (const id in cvs) {
         const cv = cvs[id]
         if (cv.v > 0) lst.push(id)
       }
-      saveListeCvIds(nv > vcv ? nv : vcv, lst)
+      await saveListeCvIds(nv > vcv ? nv : vcv, lst)
     }
     if (n) msg = msg + ' - ' + n + 'mise(s) à jour'
     data.setSyncItem('20', 1, msg)
@@ -1247,6 +1254,7 @@ export class ConnexionCompte extends OperationUI {
         if (!await this.phase0()) continue // obtention du compte / prefs / compta
         if (!await this.phase1()) continue // obtention des avatars du compte
         if (!await this.phase2()) continue // obtention des groupes et couples des avatars du compte
+        break
       }
       this.BRK()
       /* YES ! on a tous les objets maîtres compte / avatar / groupe / couple) à jour, abonnés et signés */
@@ -1268,12 +1276,11 @@ export class ConnexionCompte extends OperationUI {
       /* Phase 6 : récupération des invitations aux groupes
       Elles seront de facto traitées en synchronisation quand un avatar reviendra avec un lgrk étendu
       */
-      if (data.netok) await this.getInvitGrs(this.buf.compte)
+      if (data.netok) await this.getInvitGrs(this.compte)
 
-      // Finalisation en une seule fois: commit en IDB et state/db des données accumulées
-      if (data.dbok && data.netok) await this.buf.commiIDB()
-      this.buf.commitState()
-      data.finConnexion(this.dh, this.nvcv)
+      // Finalisation en une seule fois, commit en IDB
+      if (data.dbok && data.netok) await this.buf.commitIDB()
+      await data.finConnexion(this.dh)
       this.finOK()
       remplacePage('Compte')
     } catch (e) {

@@ -23,29 +23,25 @@ ce qui provoque une mise à jour par les versions postérieures de chaque objet
 */
 export async function compileToObject (mr, mapObj) {
   if (!mapObj) mapObj = {}
-  for (const table of mr) {
+  for (const table in mr) {
     if (t0n.has(table)) {
-      const mrow = mr[table]
-      for (const pk in mrow) {
-        const row = mrow[pk]
-        const av = mapObj[pk]
-        if (av && av.v < row.v) {
-          const obj = newObjet(table)
-          mapObj[pk] = await obj.fromRow(row)
-        }
+      const row = mr[table]
+      if (!mapObj[table]) mapObj[table] = {}
+      const av = mapObj[table]
+      if (!av || av.v < row.v) {
+        const obj = newObjet(table)
+        mapObj[table] = await obj.fromRow(row)
       }
     } else {
       const m1 = mr[table]
-      for (const id in m1) {
-        const mrow = m1[id]
-        for (const pk in mrow) {
-          const row = mrow[pk]
-          const av = mapObj[pk]
-          if (av && av.v < row.v) {
-            let e = mapObj[id]; if (!e) { e = {}; mapObj[id] = e }
-            const obj = newObjet(table)
-            e[pk] = await obj.fromRow(row)
-          }
+      for (const pk in m1) {
+        const row = m1[pk]
+        if (!mapObj[table]) mapObj[table] = {}
+        const e = mapObj[table]
+        const av = e[pk]
+        if (!av || av.v < row.v) {
+          const obj = newObjet(table)
+          e[pk] = await obj.fromRow(row)
         }
       }
     }
@@ -371,7 +367,7 @@ class Session {
   - c : set des ids des couples dont il est avatar externe
   - m : set des [id, im] des membres dont il est avatar externe
   */
-  setTousAx (disparus) { return store().commit('db/setTousAx', disparus) }
+  setTousAx (disparus) { store().commit('db/setTousAx', disparus); return store().state.db.tousAx }
   getTousAx () { return store().state.db.tousAx }
 
   /*
@@ -865,12 +861,11 @@ export class Couple {
   get photo () { const cv = this.cv; return cv ? cv.photo : '' }
   get info () { const cv = this.cv; return cv ? cv.info : '' }
 
-  get rep () { return data.repertoire.get(this.id) }
-  get cle () { return this.rep.cle }
+  get cle () { return data.repertoire.cle(this.id) }
   get nom () { const x = this.data.x; return x[0][1] + '__' + x[1][1] }
   get nomEd () { return titreEd(this.nom, this.info) }
 
-  get nomf () { return this.sid }
+  get nomf () { return normpath(this.nom) }
 
   setRepE () { data.repertoire.setAx(this.naE) }
 
@@ -942,7 +937,9 @@ export class Couple {
 /*
 - `phch` : hash de la phrase de contact convenue entre le parrain A0 et son filleul A1 (s'il accepte)
 - `dlv`
-- `ccx` : clé du couple (donne son id) cryptée par le PBKFD de la phrase de contact.
+- `ccx` : [cle nom] cryptée par le PBKFD de la phrase de contact:
+  - `cle` : clé du couple (donne son id).
+  - `nom` : nom de A1 pour première vérification immédiate en session que la phrase est a priori bien destinée à cet avatar. Le nom de A1 figure dans le nom du couple après celui de A1.
 - `vsh` :
 */
 
@@ -958,10 +955,10 @@ export class Contact {
 
   get horsLimite () { return dlvDepassee(this.dlv) }
 
-  async nouveau (phch, clex, dlv, cc) {
+  async nouveau (phch, clex, dlv, cc, nom) { // clex : PBKFD de la phrase de contact
     this.vsh = 0
-    this.phcs = phch
-    this.ccx = await crypt.crypter(clex, cc || await crypt.random(32))
+    this.phch = phch
+    this.ccx = await crypt.crypter(clex, serial([cc || await crypt.random(32), nom]))
     this.dlv = dlv
     return this
   }
@@ -975,9 +972,9 @@ export class Contact {
   }
 
   async getCcId (clex) {
-    const cc = await crypt.crypter(clex, this.ccx)
+    const [cc, nom] = deserial(await crypt.crypter(clex, this.ccx))
     const id = crypt.hashBin(cc)
-    return [cc, id]
+    return [cc, id, nom]
   }
 
   async toRow () {
@@ -1045,12 +1042,11 @@ export class Groupe {
   get photo () { const cv = this.cv; return cv ? cv.photo : '' }
   get info () { const cv = this.cv; return cv ? cv.info : '' }
 
-  get rep () { return data.repertoire.get(this.id) }
-  get cle () { return this.rep.cle }
-  get nom () { return this.rep.nom }
-  get nomEd () { return titreEd(this.nom || '', this.info) }
+  get cle () { return data.repertoire.cle(this.id) }
+  get na () { return data.repertoire.na(this.id) }
+  get nomEd () { return titreEd(this.na.nom || '', this.info) }
 
-  get nomf () { return normpath(this.nom) }
+  get nomf () { return normpath(this.na.nom) }
 
   get stx () { return Math.floor(this.st / 10) }
   get sty () { return this.st % 10 }
@@ -1496,9 +1492,15 @@ schemas.forSchema({
 })
 
 export class ListeCvIds {
+  constructor () {
+    this.v = 0
+    this.ids = []
+  }
+
   init (v, setIds) {
     this.v = v
     this.lids = Array.from(setIds)
+    return this
   }
 
   fromIdb (idb) {
@@ -1559,11 +1561,13 @@ export class SessionSync {
   }
 
   async setDhSync (dh) {
+    if (data.statutsession !== 2) return
     this.dhsync = dh
     await this.save()
   }
 
   async setDhPong (dh) {
+    if (data.statutsession !== 2) return
     this.dhpong = dh
     await this.save()
   }

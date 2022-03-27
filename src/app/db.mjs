@@ -98,8 +98,9 @@ export async function saveListeCvIds (v, setIds) {
 export async function getVIdCvs () {
   try {
     const idb = await data.db.listecvids.get('1')
-    const x = idb ? new ListeCvIds().fromIdb(await crypt.decrypter(data.clek, idb.data)) : null
-    return [x.v, x.ids]
+    const x = new ListeCvIds()
+    if (idb) x.fromIdb(await crypt.decrypter(data.clek, idb.data))
+    return [x.v, new Set(x.ids)]
   } catch (e) {
     throw data.setErDB(EX2(e))
   }
@@ -190,7 +191,7 @@ export async function getCouples () {
   go()
   try {
     const r = {}
-    await data.db.contact.each(async (idb) => {
+    await data.db.couple.each(async (idb) => {
       const x = new Couple().fromIdb(await crypt.decrypter(data.clek, idb.data))
       r[x.id] = x
     })

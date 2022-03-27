@@ -125,8 +125,16 @@ export function setObjets (state, lobj) { // lobj : array d'objets
 export function setCvs (state, lst) { // lst : array [{id, cv}]
   if (!lst || !lst.length) return
   const l = { ...state.cvs }
-  lst.forEach(obj => { if (obj.cv) l[obj.id] = obj.cv; else delete l[obj.id] })
-  state.cvs = l
+  let chg = false
+  lst.forEach(obj => {
+    if (l[obj.id]) {
+      if (obj.cv) l[obj.id] = obj.cv; else delete l[obj.id]
+      chg = true
+    } else {
+      if (obj.cv) { l[obj.id] = obj.cv; chg = true }
+    }
+  })
+  if (chg) state.cvs = l
 }
 
 export function setCompte (state, obj) { state.compte = obj }
