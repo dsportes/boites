@@ -34,7 +34,7 @@
 
 <script>
 import { PrefCompte, CreationAvatar } from '../app/operations.mjs'
-import { computed, ref, reactive, /* onMounted, */ watch } from 'vue'
+import { computed, ref, reactive, watch } from 'vue'
 import { useStore } from 'vuex'
 import { onBoot } from '../app/page.mjs'
 import EditeurMd from '../components/EditeurMd.vue'
@@ -52,9 +52,6 @@ export default ({
   components: { EditeurMd, BoutonHelp, MotsCles, ApercuAvatar, NomAvatar },
   data () {
     return {
-      u8mc: new Uint8Array([]),
-      nvav: false,
-      selecteur: false
     }
   },
 
@@ -63,20 +60,10 @@ export default ({
       const datak = await crypt.crypter(data.clek, serial(mmc))
       await new PrefCompte().run('mc', datak)
     },
-    closeSel () {
-      this.selecteur = false
-    },
-    mcclick (args) {
-      console.log('mcclick', JSON.stringify(args))
-      this.selecteur = true
-    },
     async memook (m) {
       this.memoed.undo()
       const datak = await crypt.crypter(data.clek, serial(m))
       await new PrefCompte().run('mp', datak)
-    },
-    selection (u8) {
-      this.u8mc = u8
     },
     async nvAvatar (nom) {
       if (nom) await new CreationAvatar().run(nom)
@@ -86,6 +73,7 @@ export default ({
 
   setup () {
     const memoed = ref(null)
+    const nvav = ref(false)
     onBoot()
     const $store = useStore()
     const sessionok = computed(() => { return $store.state.ui.sessionok })
@@ -120,10 +108,15 @@ export default ({
       if (ap && ap.v > av.v) init1()
     })
 
+    watch(() => sessionok.value, (ap, av) => {
+      nvav.value = false
+    })
+
     init1()
     init2()
 
     return {
+      nvav,
       state,
       sessionok,
       motscles,

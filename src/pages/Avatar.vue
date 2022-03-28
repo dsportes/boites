@@ -56,11 +56,11 @@ import MotsCles from '../components/MotsCles.vue'
 import ApercuAvatar from '../components/ApercuAvatar.vue'
 import NouveauParrainage from '../components/NouveauParrainage.vue'
 import InfoParrainage from '../components/InfoParrainage.vue'
-import { CvAvatar, PrefCompte } from '../app/operations.mjs'
+import { MajCv, PrefCompte } from '../app/operations.mjs'
 import TabSecrets from '../components/TabSecrets.vue'
 import TabContacts from '../components/TabContacts.vue'
 import TabGroupes from '../components/TabGroupes.vue'
-import { data } from '../app/modele.mjs'
+import { data, Cv } from '../app/modele.mjs'
 import { crypt } from '../app/crypto.mjs'
 import { serial } from '../app/schemas.mjs'
 
@@ -92,8 +92,8 @@ export default ({
     async validercv (resultat) {
       if (resultat) {
         // console.log('CV changée : ' + resultat.info + '\n' + resultat.ph.substring(0, 30))
-        const cvinfo = await this.avatar.cvToRow(resultat.ph, resultat.info)
-        await new CvAvatar().run(this.avatar.id, cvinfo)
+        const cv = new Cv().init(this.a.av.id, resultat.ph, resultat.info)
+        await new MajCv().run(cv)
       }
     }
   },

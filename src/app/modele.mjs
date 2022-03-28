@@ -26,7 +26,6 @@ export async function compileToObject (mr, mapObj) {
   for (const table in mr) {
     if (t0n.has(table)) {
       const row = mr[table]
-      if (!mapObj[table]) mapObj[table] = {}
       const av = mapObj[table]
       if (!av || av.v < row.v) {
         const obj = newObjet(table)
@@ -142,7 +141,7 @@ class Repertoire {
 
   setXX (na, x) {
     const id = na.id
-    const obj = { na: na }
+    const obj = { na: new NomAvatar(na.nom, na.rnd, na.id) }
     if (x) obj.x = true
     this.rep[id] = obj
     return id
@@ -786,6 +785,7 @@ export class Avatar {
 // cols: ['id', 'v', 'x', 'dds', 'cv', 'vsh']
 export class Cv {
   get table () { return 'cv' }
+  get cle () { return data.repertoire.cle(this.id) }
 
   constructor () {
     this.id = 0
@@ -796,10 +796,10 @@ export class Cv {
     this.vsh = 0
   }
 
-  init (id, v, cv) {
+  init (id, photo, info) {
     this.id = id
-    this.cv = cv
-    this.v = v
+    this.cv = [photo, info]
+    return this
   }
 
   async fromRow (row) { // row : rowCv - item retour de sync
@@ -807,9 +807,12 @@ export class Cv {
     this.v = row.v
     this.x = row.x
     this.dds = row.dds
-    const cle = data.repertoire.cle(this.id)
-    this.cv = row.cv && cle ? deserial(await crypt.decrypter(cle, row.cv)) : null
+    this.cv = row.cv ? deserial(await crypt.decrypter(this.cle, row.cv)) : null
     return this
+  }
+
+  async toRow (photo, info) { // seulement la cv (photo, info)
+    return await crypt.crypter(this.cle, serial(this.cv))
   }
 
   get toIdb () {

@@ -144,18 +144,12 @@ export function sleep (delai) {
 }
 
 const j0 = Math.floor(new Date('2020-01-01T00:00:00').getTime() / 86400000)
-function cjourj () {
+export function getJourJ () {
   return Math.floor(new Date().getTime() / 86400000) - j0
 }
-let jourJ // nombre de jours écoulés depuis le 1/1/2020. Recalculé toutes les heures.
-setInterval(() => { jourJ = cjourj() }, 60000)
-export function getJourJ () {
-  if (!jourJ) jourJ = cjourj()
-  return jourJ
-}
 
-/* `dlv` : date limite de validité, en nombre de jours depuis le 1/1/2021. */
-export function dlvDepassee (dlv) { return dlv !== 0 && dlv < jourJ }
+/* `dlv` : date limite de validité, en nombre de jours depuis le 1/1/2020. */
+export function dlvDepassee (dlv) { return dlv !== 0 && dlv < getJourJ() }
 
 // Mots clés en string ('245/232/21' en Uint8Array)
 export function mcsToU8 (s) {
@@ -696,10 +690,10 @@ export function titreEd (nom, info, court) {
 
 /** NomAvatar **********************************/
 export class NomAvatar {
-  constructor (nom, rnd) {
+  constructor (nom, rnd, id) {
     this.nom = nom
     this.rnd = !rnd ? crypt.random(32) : rnd
-    this.id = crypt.hashBin(this.rnd)
+    this.id = !id ? crypt.hashBin(this.rnd) : id
   }
 
   get nomc () { return this.nom + '@' + this.sid.substring(this.sid.length - 3, this.sid.length) }

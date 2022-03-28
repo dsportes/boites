@@ -32,15 +32,30 @@ class OpBuf {
     this.lav = null // set des ids des avatars à purger
     this.lcc = null // set des ids des couples à purger
     this.lgr = null // set des ids des groupes à purger
+
     this.lobj = [] // objets en attente d'être rangés en store/db : en synchro permet d'effectuer une validation cohérente
+    this.compte = null
+    this.prefs = null
+    this.compta = null
+    this.lcvs = []
   }
 
   putIDB (obj) { this.lmaj.push(obj) }
   supprIDB (obj) { this.lsuppr.push(obj) } // obj : {table, id, (sid2)}
-  setObj (obj) { this.lobj.push(obj) }
   async commitIDB () { await commitRows(this) }
+
+  setCompte (obj) { this.compte = obj }
+  setCompta (obj) { this.compta = obj }
+  setPrefs (obj) { this.prefs = obj }
+  setCv (obj) { this.lcvs.push(obj) }
+  setObj (obj) { this.lobj.push(obj) }
+
   commitStore () {
+    if (this.compte) data.setCompte(this.compte)
+    if (this.compta) data.setCompta(this.compta)
+    if (this.prefs) data.setPrefs(this.prefs)
     if (this.lobj.length) data.setObjets(this.lobj)
+    if (this.lcvs.length) data.setCvs(this.lcvs)
   }
 }
 
@@ -487,6 +502,9 @@ export class Operation {
   - Phase 3 : récupération des manquants depuis le serveur et abonnements
   */
   async traiteQueue (q) {
+    this.buf = new OpBuf()
+    this.dh = 0
+
     // concaténation des syncList reçus et stackées dans items
     const items = []
     q.forEach(syncList => {
@@ -512,6 +530,7 @@ export class Operation {
       if (obj.v > a.v) {
         nvcompte = obj
         obj.repAvatars()
+        this.buf.setCompte(obj)
         this.buf.putIDB(obj)
       }
     }
@@ -529,6 +548,7 @@ export class Operation {
           nvavatars[id] = obj
           obj.repGroupes()
           obj.repCouples()
+          this.buf.setObj(obj)
           this.buf.putIDB(obj)
         }
       }
@@ -556,6 +576,26 @@ export class Operation {
 
     /* Tous les autres items peuvent se compiler, les clés sont dans le répertoire */
     await compileToObject(mrows, mapObj)
+
+    // Prefs : singleton
+    if (mapObj.prefs) {
+      const obj = mapObj.prefs
+      const a = data.getPrefs()
+      if (obj.v > a.v) {
+        this.buf.setPrefs(obj)
+        this.buf.putIDB(obj)
+      }
+    }
+
+    // Compta : singleton
+    if (mapObj.compta) {
+      const obj = mapObj.compta
+      const a = data.getCompta()
+      if (obj.v > a.v) {
+        this.buf.setCompta(obj)
+        this.buf.putIDB(obj)
+      }
+    }
 
     // Groupes : mise à jour des données
     if (mapObj.groupe) {
@@ -624,17 +664,15 @@ export class Operation {
     if (mapObj.cv) {
       for (const pk in mapObj.cv) {
         const cv = mapObj.cv[pk]
-        const av = data.getCv(cv.id)
         if (!cv.cv) { // Plus de cv
+          const av = data.getCv(cv.id)
           if (av) { // Il y en avait une
-            const obj = { table: 'cv', id: cv.id }
-            this.buf.supprIDB(obj)
-            this.buf.setObj(obj)
+            this.buf.setCv({ id: cv.id }) // ça la supprime
           }
         } else { // Il y en a une
-          this.buf.putIDB(cv)
-          this.buf.setObj(cv)
+          this.buf.setCv(cv) // ça la crée / met à jour
         }
+        this.buf.putIDB(cv)
         // Gestion de l'avatar externe associé (s'il était connu)
         if (cv.x) {
           // disparition
@@ -719,7 +757,8 @@ export class Operation {
     }
 
     /* commits finaux */
-    await this.buf.commitIDB()
+    if (data.dbok && data.netok) await this.buf.commitIDB()
+    data.setDhSync(this.dh)
   }
 }
 
@@ -789,11 +828,7 @@ export class ProcessQueue extends OperationWS {
 
   async run (q) {
     try {
-      this.buf = new OpBuf()
-      this.dh = 0
       await this.traiteQueue(q)
-      if (data.dbok && data.netok) await this.buf.commitIDB()
-      data.setDhSync(this.dh)
       return this.finOK()
     } catch (e) {
       return await this.finKO(e)
@@ -1221,7 +1256,7 @@ export class ConnexionCompte extends OperationUI {
       const lst = []
       for (const id in cvs) {
         const cv = cvs[id]
-        if (cv.v > 0) lst.push(id)
+        if (cv.v > 0) lst.push(cv.id)
       }
       await saveListeCvIds(nv > vcv ? nv : vcv, lst)
     }
@@ -1300,10 +1335,8 @@ export class PrefCompte extends OperationUI {
 
   async run (code, datak) {
     try {
-      this.BRK()
       const args = { sessionId: data.sessionId, id: data.getCompte().id, code: code, datak: datak }
-      const ret = await post(this, 'm1', 'prefCompte', args)
-      if (data.dh < ret.dh) data.dh = ret.dh
+      await post(this, 'm1', 'prefCompte', args)
       this.finOK()
     } catch (e) {
       await this.finKO(e)
@@ -1312,19 +1345,19 @@ export class PrefCompte extends OperationUI {
 }
 
 /******************************************************
-Mise à jour de la carte de visite d'un avatar
-A_SRV, '07-Avatar non trouvé'
+Mise à jour d'une carte de visite
+A_SRV, '07-Carte de visite non trouvée'
 */
-export class CvAvatar extends OperationUI {
+export class MajCv extends OperationUI {
   constructor () {
-    super('Mise à jour de la carte de visite d\'un avatar', OUI, SELONMODE)
+    super('Mise à jour de la carte de visite d\'un avatar / groupe / couple', OUI, SELONMODE)
   }
 
-  async run (id, phinfo) {
+  async run (cv) {
     try {
-      const args = { sessionId: data.sessionId, id: id, phinfo: phinfo }
-      const ret = await post(this, 'm1', 'cvAvatar', args)
-      if (data.dh < ret.dh) data.dh = ret.dh
+      const cvc = await cv.toRow()
+      const args = { sessionId: data.sessionId, id: cv.id, cv: cvc }
+      await post(this, 'm1', 'majCV', args)
       this.finOK()
     } catch (e) {
       await this.finKO(e)
