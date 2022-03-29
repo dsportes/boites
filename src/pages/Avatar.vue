@@ -5,7 +5,8 @@
   <tab-groupes v-if="sessionok && tabavatar === 'groupes'"></tab-groupes>
 
   <div v-if="sessionok && tabavatar === 'etc'">
-    <q-btn v-if="compta.estParrain" class="full-width maauto q-py-lg" flat dense color="primary" icon="add" label="Nouveau parrainage" @click="nvpar = true"></q-btn>
+    <q-btn v-if="compta.estParrain" class="full-width maauto q-py-lg" flat dense color="primary"
+      icon="add" label="Nouveau parrainage" @click="nvpar = true"></q-btn>
 
     <q-expansion-item label="Carte de visite de l'avatar" group="groupeetc"
       header-class="expansion-header-class-1 titre-lg bg-secondary text-white">

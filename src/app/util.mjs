@@ -716,11 +716,11 @@ export class NomAvatar {
 }
 
 /** Filtre des contacts *************************************/
-export class FiltreCtc {
+export class FiltreCp {
   constructor () {
     this.m1 = new Uint8Array([])
     this.m2 = new Uint8Array([])
-    this.aps = 0 // 0:tous 1:acceptant le partage de secrets 2:n'acceptant pas le partage
+    this.phase = 0 // 0:toutes phases, sinon numéro de phase (stp)
     this.texte = '' // contacts dont le nom contient ce texte
     this.corps = false // true: rechercher le texte dans l'ardoise et l'info aussi
     /*
@@ -736,7 +736,7 @@ export class FiltreCtc {
     const a = {
       mc1: f.m1,
       mc2: f.m2,
-      aps: f.aps,
+      phase: f.phase,
       texte: f.texte,
       corps: f.corps,
       tri: f.asc ? f.tri : -f.tri
@@ -748,7 +748,7 @@ export class FiltreCtc {
     const f = this
     f.m1 = a.mc1
     f.m2 = a.mc2
-    f.aps = a.aps
+    f.phase = a.phase
     f.texte = a.texte
     f.corps = a.corps
     f.asc = a.tri >= 0
@@ -766,14 +766,13 @@ export class FiltreCtc {
   }
 
   filtre (c) {
-    const sx = new Set(c.mc)
+    const sx = new Set(c.mc0)
     if (difference(this.f1, sx).size) return false
     if (intersection(this.f2, sx).size) return false
 
-    if (this.aps === 1 && !c.accepteNouveauSecret) return false
-    if (this.aps === 2 && c.accepteNouveauSecret) return false
+    if (this.phase && c.stp !== this.phase) return false
 
-    if (this.texte && c.nom.indexOf(this.texte) === -1) {
+    if (this.texte && c.nomE.indexOf(this.texte) === -1) {
       if (!this.corps) return false
       if (c.ard.indexOf(this.texte) === -1 && c.info.indexOf(this.texte) === -1) return false
     }
@@ -782,9 +781,9 @@ export class FiltreCtc {
 
   tri1 (a, b) {
     if (this.asc) {
-      return a.nom < b.nom ? -1 : (a.nom > b.nom ? 1 : 0)
+      return a.nomE < b.nomE ? -1 : (a.nomE > b.nomE ? 1 : 0)
     } else {
-      return a.nom < b.nom ? 1 : (a.nom > b.nom ? -1 : 0)
+      return a.nomE < b.nomE ? 1 : (a.nomE > b.nomE ? -1 : 0)
     }
   }
 
@@ -798,7 +797,7 @@ export class FiltreCtc {
     // niveau de changement avec le filtre précédemment employé.
     // 0: aucun, 1:tri seulement, 2:filtre
     if (!f) return 2
-    if (!equ8(this.m1, f.m1) || !equ8(this.m2, f.m2) || this.aps !== f.aps || this.texte !== f.texte || this.corps !== f.corps) return 2
+    if (!equ8(this.m1, f.m1) || !equ8(this.m2, f.m2) || this.phase !== f.phase || this.texte !== f.texte || this.corps !== f.corps) return 2
     if (this.tri !== f.tri || this.asc !== f.asc) return 1
     return 0
   }

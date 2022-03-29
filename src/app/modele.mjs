@@ -843,7 +843,8 @@ schemas.forSchema({
   - `x` : `[idc, nom, rnd], [idc, nom, rnd]` : id du compte, nom et clé d'accès à la carte de visite respectivement de A0 et A1. Quand l'un des deux est inconnu, le triplet est `null`.
   - `phrase` : phrase de contact en phases 1-2 et 1-3 (qui nécessitent une phrase).
   - `f1 f2` : en phase 1-2 (parrainage), forfaits attribués par le parrain A0 à son filleul A1.
-- `infok0 infok1` : commentaires cryptés par leur clé K, respectivement de A0 et A1.
+  - 'r1 r2' : en phase 1-2 (parrainage) et si le compte filleul est lui-même parrain, ressources attribuées.
+  - `infok0 infok1` : commentaires cryptés par leur clé K, respectivement de A0 et A1.
 - `mc0 mc1` : mots clé définis respectivement par A0 et A1.
 - `ardc` : ardoise commune cryptée par la clé cc. [dh, texte]
 - `vsh` :
@@ -862,7 +863,7 @@ export class Couple {
 
   get cle () { return data.repertoire.cle(this.id) }
   get nom () { const x = this.data.x; return x[0][1] + '__' + x[1][1] }
-  get nomEd () { return titreEd(this.nom, this.info) }
+  get nomE () { const x = this.data.x; return x[1][1] }
 
   get nomf () { return normpath(this.nom) }
 
@@ -887,7 +888,7 @@ export class Couple {
     this.na = new NomAvatar(this.nom, this.cle)
   }
 
-  nouveauP (naI, naE, cc, dlv, mot, idc0, idc1, pp, forfaits) {
+  nouveauP (naI, naE, cc, dlv, mot, idc0, idc1, pp, forfaits, ressources) {
     this.v = 0
     this.vsh = 0
     this.st = 1110
@@ -915,8 +916,11 @@ export class Couple {
       x: [[idc0, naI.nom, naI.rnd], [idc1, naE.nom, naE.rnd]],
       phrase: pp,
       f1: forfaits[0],
-      f2: forfaits[1]
+      f2: forfaits[1],
+      r1: ressources ? ressources[0] : 0,
+      r2: ressources ? ressources[1] : 0
     }
+    return this
   }
 
   // cols: ['id', 'v', 'st', 'dds', 'v1', 'v2', 'mx10', 'mx20', 'mx11', 'mx21', 'dlv', 'data', 'info0', 'info1', 'mc0', 'mc1', 'dh', 'ard', 'vsh']

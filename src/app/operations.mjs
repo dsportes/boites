@@ -953,7 +953,7 @@ export class ConnexionCompte extends OperationUI {
     if (data.ps.pcbh !== this.compte.pcbh) throw EXPS
     // Bien que l'utilisateur ait saisie la bonne phrase secrète, elle a pu changer : celle du serveur est installée
     if (data.dbok) enregLScompte(this.compte.sid)
-    this.estComptable = estComptable
+    data.estComptable = estComptable
 
     this.compte.repAvatars()
     const prefs = prefsSrv || prefsIdb
@@ -1442,8 +1442,6 @@ Parrainage : args de m1/nouveauParrainage
 - sessionId: data.sessionId,
 - rowCouple
 - rowContact
-- ressources // à affecter au compte filleul quand il est lui-même parrain (sinon null)
-- idcp, idcf // id des comptes parrain et filleul
 Retour : dh
 X_SRV, '14-Cette phrase de parrainage est trop proche d\'une déjà enregistrée' + x
 */
@@ -1475,13 +1473,13 @@ export class NouveauParrainage extends OperationUI {
       const idcf = crypt.rnd6() // id du compte filleul
       const dlv = getJourJ() + cfg().limitesjour.parrainage
 
-      const couple = new Couple().nouveauP(nap, naf, cc, dlv, arg.mot, compte.id, idcf, arg.pp, arg.forfaits)
+      const couple = new Couple().nouveauP(nap, naf, cc, dlv, arg.mot, compte.id, idcf, arg.pp, arg.forfaits, arg.ressources)
       const rowCouple = await couple.toRow()
 
       const contact = new Contact().nouveau(arg.pph, arg.clex, dlv, cc, arg.nomf)
       const rowContact = await contact.toRow()
 
-      const args = { sessionId: data.sessionId, rowCouple, rowContact, idcp: compte.id, idcf }
+      const args = { sessionId: data.sessionId, rowCouple, rowContact }
       await post(this, 'm1', 'nouveauParrainage', args)
       return this.finOK()
     } catch (e) {

@@ -27,11 +27,13 @@
     <q-separator/>
     <div class="q-pa-sm colmun justify-start">
       <div class="row">
-        <q-btn-dropdown size="md" dense color="primary" label="acceptant le partage de secrets ..." v-model="menudd1">
+        <q-btn-dropdown size="md" dense color="primary" label="Etat du contact / couple" v-model="menudd1">
           <div class="clair1 column">
-            <q-btn flat dense no-caps :label="labelaps['0']" @click="menudd1=false;state.a.aps=0"/>
-            <q-btn flat dense no-caps :label="labelaps['1']" @click="menudd1=false;state.a.aps=1"/>
-            <q-btn flat dense no-caps :label="labelaps['2']" @click="menudd1=false;state.a.aps=2"/>
+            <q-btn flat dense no-caps :label="labelaps['0']" @click="menudd1=false;state.a.phase=0"/>
+            <q-btn flat dense no-caps :label="labelaps['1']" @click="menudd1=false;state.a.phase=1"/>
+            <q-btn flat dense no-caps :label="labelaps['2']" @click="menudd1=false;state.a.phase=2"/>
+            <q-btn flat dense no-caps :label="labelaps['3']" @click="menudd1=false;state.a.phase=3"/>
+            <q-btn flat dense no-caps :label="labelaps['4']" @click="menudd1=false;state.a.phase=4"/>
           </div>
         </q-btn-dropdown>
         <div class="q-pl-md">{{labelaps['' + state.a.aps]}}</div>
@@ -55,7 +57,7 @@
 
 <script>
 import { toRef } from 'vue'
-import { FiltreCtc } from '../app/util.mjs'
+import { FiltreCp } from '../app/util.mjs'
 import { serial, deserial } from '../app/schemas.mjs'
 import ApercuMotscles from './ApercuMotscles.vue'
 import SelectMotscles from './SelectMotscles.vue'
@@ -92,7 +94,7 @@ export default ({
     changermc1 (mc) { this.state.a.mc1 = mc },
     changermc2 (mc) { this.state.a.mc2 = mc },
     ok () {
-      const f = new FiltreCtc().depuisEtat(this.state.a)
+      const f = new FiltreCp().depuisEtat(this.state.a)
       this.state.p = deserial(serial(this.state.a))
       this.$emit('ok', f)
       if (this.fermer) this.fermer()
@@ -110,10 +112,12 @@ export default ({
     const state = toRef(props, 'etatInterne')
     toRef(props, 'motscles')
 
-    const labelaps = {
+    const labelphase = {
       0: 'Indifférent',
-      1: 'Acceptant le partage',
-      2: 'N\'acceptant PAS le partage'
+      1: 'En attente',
+      2: 'Réfusé',
+      3: 'En couple',
+      4: 'Séparé'
     }
     const labeltri = {
       p0: 'Ne pas trier les contacts',
@@ -124,7 +128,7 @@ export default ({
     }
 
     return {
-      labelaps,
+      labelphase,
       labeltri,
       state
     }

@@ -1,10 +1,10 @@
 <template>
   <q-card-section class="q-pt-none shadow-8 row justify-between w20">
     <q-select v-model="f1c" :options="options1" :disable="lecture" bottom-slots dense options-dense label="Forfait 1 (textes)" class="w10">
-      <template v-slot:hint>Unité : 1 méga-octet</template>
+      <template v-slot:hint>Unité : 1/4 méga-octet</template>
     </q-select>
     <q-select v-model="f2c" :options="options2" :disable="lecture" bottom-slots dense options-dense label="Forfait 2 (fichiers attachés)" class="w10">
-      <template v-slot:hint>Unité : 100 méga-octets</template>
+      <template v-slot:hint>Unité : 25 méga-octets</template>
     </q-select>
   </q-card-section>
   <q-card-section v-if="diag1 !== '' || diag2 !== ''">
@@ -20,6 +20,7 @@
 <script>
 import { cfg } from '../app/util.mjs'
 import { ref, toRef, watch } from 'vue'
+import { UNITEV2, UNITEV1 } from '../app/api.mjs'
 
 export default ({
   name: 'ChoixForfaits',
@@ -57,8 +58,8 @@ export default ({
     const diag2 = ref('')
 
     function setOptions () {
-      min1.value = v1.value ? Math.ceil(v1.value / 1000000) : 0
-      min2.value = v2.value ? Math.ceil(v2.value / 100000000) : 0
+      min1.value = v1.value ? Math.ceil(v1.value / UNITEV1) : 0
+      min2.value = v2.value ? Math.ceil(v2.value / UNITEV2) : 0
       for (const f in lf) {
         const v = lf[f]
         if (v < min1.value) continue

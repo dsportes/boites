@@ -39,14 +39,14 @@
         </q-step>
 
         <q-step :name="4" title="Forfaits attribués" icon="settings" :done="step > 4" >
-          <choix-forfaits v-model="forfaits" class="q-ma-xs" :f1="1" :f2="2"/>
-          <div v-if="compte.estComptable">
+          <choix-forfaits v-model="forfaits" :f1="4" :f2="4"/>
+          <div v-if="estComptable">
             <div style="margin-left:-0.8rem" class="text-primary">
               <q-toggle v-model="estParrain" size="md" color="primary" :label="estParrain ? 'Compte parrain lui-même' : 'Compte filleul standard'"/>
             </div>
             <div v-if="estParrain">
               <div>Ressources maximales attribuables aux filleuls</div>
-              <choix-forfaits v-model="ressources" class="q-ma-xs" :f1="1" :f2="2"/>
+              <choix-forfaits v-model="ressources" :f1="4" :f2="4"/>
             </div>
           </div>
           <q-stepper-navigation>
@@ -60,12 +60,12 @@
           <div>Nom de l'avatar: <span class="font-mono q-pl-md">{{nom}}</span></div>
           <div>Mot de bienvenue: <span class="font-mono q-pl-md">{{mot}}</span></div>
           <div>Forfaits du compte:
-            <span class="font-mono q-pl-md">{{'v1: ' + forfaits[0] + 'MB'}}</span>
-            <span class="font-mono q-pl-lg">{{'v2: ' + forfaits[1] + '*100MB'}}</span>
+            <span class="font-mono q-pl-md">{{'v1: ' + forfaits[0] + '*0,25MB'}}</span>
+            <span class="font-mono q-pl-lg">{{'v2: ' + forfaits[1] + '*25MB'}}</span>
           </div>
           <div v-if="estParrain">Ressources attribuables aux filleuls:
-            <span class="font-mono q-pl-md">{{'v1: ' + ressources[0] + 'MB'}}</span>
-            <span class="font-mono q-pl-lg">{{'v2: ' + ressources[1] + '*100MB'}}</span>
+            <span class="font-mono q-pl-md">{{'v1: ' + ressources[0] + '*0,25MB'}}</span>
+            <span class="font-mono q-pl-lg">{{'v2: ' + ressources[1] + '*25MB'}}</span>
           </div>
           <q-stepper-navigation>
             <q-btn flat @click="corriger" color="primary" label="Corriger" class="q-ml-sm" />
@@ -85,6 +85,7 @@ import NomAvatar from './NomAvatar.vue'
 import ChoixForfaits from './ChoixForfaits.vue'
 import { NouveauParrainage } from '../app/operations.mjs'
 import { crypt } from '../app/crypto.mjs'
+import { data } from '../app/modele.mjs'
 
 export default ({
   name: 'NouveauParrainage',
@@ -101,8 +102,8 @@ export default ({
     return {
       isPwd: false,
       step: 1,
-      forfaits: [1, 1],
-      ressources: [4, 4],
+      forfaits: [],
+      ressources: [],
       estParrain: false,
       nom: '',
       phrase: '',
@@ -166,6 +167,7 @@ export default ({
         this.pp = ''
         this.clex = null
         this.pph = 0
+        this.tabavatar = 'couples'
         if (this.close) this.close()
       } else {
         console.log(ex.message)
@@ -181,13 +183,21 @@ export default ({
     const avatar = computed(() => $store.state.db.avatar)
     const compte = computed(() => { return $store.state.db.compte })
     const sessionok = computed(() => { return $store.state.ui.sessionok })
+    const tabavatar = computed({
+      get: () => $store.state.ui.tabavatar,
+      set: (val) => $store.commit('ui/majtabavatar', val)
+    })
+
     const close = toRef(props, 'close')
     watch(() => sessionok.value, (ap, av) => {
       if (close.value) close.value()
     })
 
+    const estComptable = data.estComptable
     return {
+      estComptable,
       sessionok,
+      tabavatar,
       compte,
       avatar
     }
