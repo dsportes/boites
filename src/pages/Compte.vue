@@ -5,7 +5,7 @@
         header-class="expansion-header-class-1 titre-lg bg-primary text-white">
       <q-btn class="q-my-sm" size="md" icon="add" label="Nouvel avatar" color="primary" dense @click="nvav=true"/>
       <div v-for="id in state.lst" :key="id" class="full-width">
-        <apercu-avatar editer selectionner :avatar-id="id"/>
+        <apercu-avatar editer :avatar-id="id" @click-apercu="toAvatar"/>
       </div>
     </q-expansion-item>
   </div>
@@ -36,7 +36,7 @@
 import { PrefCompte, CreationAvatar } from '../app/operations.mjs'
 import { computed, ref, reactive, watch } from 'vue'
 import { useStore } from 'vuex'
-import { onBoot } from '../app/page.mjs'
+import { onBoot, remplacePage } from '../app/page.mjs'
 import EditeurMd from '../components/EditeurMd.vue'
 import BoutonHelp from '../components/BoutonHelp.vue'
 import MotsCles from '../components/MotsCles.vue'
@@ -56,6 +56,11 @@ export default ({
   },
 
   methods: {
+    toAvatar (avid) {
+      this.tabavatar = 'etc'
+      this.avatar = data.getAvatar(avid)
+      remplacePage('Avatar')
+    },
     async okmc (mmc) {
       const datak = await crypt.crypter(data.clek, serial(mmc))
       await new PrefCompte().run('mc', datak)
@@ -87,6 +92,15 @@ export default ({
     const motscles = new Motscles(mc, 1)
     const state = reactive({ lst: [], memo: '' })
 
+    const tabavatar = computed({
+      get: () => $store.state.ui.tabavatar,
+      set: (val) => $store.commit('ui/majtabavatar', val)
+    })
+    const avatar = computed({
+      get: () => $store.state.db.avatar,
+      set: (val) => $store.commit('db/majavatar', val)
+    })
+
     function init1 () {
       if (sessionok.value) {
         state.lst = compte.value.avatarIds()
@@ -117,7 +131,9 @@ export default ({
 
     return {
       nvav,
+      avatar,
       state,
+      tabavatar,
       sessionok,
       motscles,
       memoed,

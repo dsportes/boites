@@ -120,9 +120,11 @@ export function affidbmsg (msg) {
   }
 }
 
+/*
 export async function idToIc (id) {
   return crypt.hashBin(await crypt.crypter(data.clek, crypt.intToU8(id), 1), false, false)
 }
+*/
 
 let lgnom, lgtitre
 
@@ -702,9 +704,11 @@ export class NomAvatar {
   get cle () { return this.rnd }
   get noml () {
     const cv = data.getCv(this.id)
-    if (!cv || !cv.info) return this.nomc
+    if (!cv) return this.nomc
+    const info = cv[1]
+    if (!info) return this.nomc
     if (!lgnom) lgnom = cfg().lgnom || 16
-    let l = cv.info.substring(0, lgnom)
+    let l = info.substring(0, lgnom)
     const i = l.indexOf('\n')
     if (i !== -1) l = l.substring(0, i)
     return l + '(' + this.nomc + ')'

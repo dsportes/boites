@@ -54,7 +54,7 @@ export default function () {
     */
     sessionsync: null,
 
-    tabavatar: 'secrets',
+    tabavatar: 'etc',
     evtavatarsc: null,
     evtavatarcp: null,
     evtavatargr: null,

@@ -1,11 +1,11 @@
-import { NomAvatar, store, post, get, affichermessage, cfg, sleep, affichererreur, appexc, idToIc, difference, getfa, getJourJ, edvol, equ8 } from './util.mjs'
+import { NomAvatar, store, post, get, affichermessage, cfg, sleep, affichererreur, appexc, difference, getfa, getJourJ, edvol, equ8 } from './util.mjs'
 import { remplacePage } from './page.mjs'
 import {
   deleteIDB, idbSidCompte, commitRows, getCompte, getCompta, getPrefs, getCvs,
   getAvatars, getGroupes, getCouples, getMembres, getSecrets,
   openIDB, enregLScompte, getVIdCvs, putFa, saveListeCvIds
 } from './db.mjs'
-import { Compte, Avatar, deserialRowItems, compileToObject, data, Prefs, Contact, Invitgr, Compta, Groupe, Membre, Cv } from './modele.mjs'
+import { Compte, Avatar, deserialRowItems, compileToObject, data, Prefs, Contact, Invitgr, Compta, Groupe, Membre, Cv, Couple } from './modele.mjs'
 import { AppExc, EXBRK, EXPS, F_BRO, E_BRO, X_SRV, E_WS, MC } from './api.mjs'
 
 import { crypt } from './crypto.mjs'
@@ -1439,8 +1439,11 @@ export class PjSecret extends OperationUI {
 
 /******************************************************************
 Parrainage : args de m1/nouveauParrainage
-  sessionId: data.sessionId,
-  rowParrain: serial(rowParrain)
+- sessionId: data.sessionId,
+- rowCouple
+- rowContact
+- ressources // à affecter au compte filleul quand il est lui-même parrain (sinon null)
+- idcp, idcf // id des comptes parrain et filleul
 Retour : dh
 X_SRV, '14-Cette phrase de parrainage est trop proche d\'une déjà enregistrée' + x
 */
@@ -1456,77 +1459,30 @@ export class NouveauParrainage extends OperationUI {
       pp: this.phrase, // phrase de parrainage (string)
       clex: this.clex, // PBKFD de pp (u8)
       id: this.avatar.id,
-      aps: this.aps, // booléen (accepta partage de secrets)
       forfaits: this.forfaits,
       ressources: this.estParrain ? this.ressources : null,
       nomf: this.nom, // nom du filleul (string)
       mot: this.mot
-    row Parrain :
-    - `pph` : hash du PBKFD de la phrase de parrainage.
-    - `id` : id du parrain.
-    - `v`
-    - `dlv` : la date limite de validité permettant de purger les parrainages (quels qu'en soient les statuts).
-    - `st` : < 0: supprimé,
-      - 0: en attente de décision de F
-      - 1 : accepté
-      - 2 : refusé
-    - `datak` : cryptée par la clé K du parrain, **phrase de parrainage et clé X** (PBKFD de la phrase). La clé X figure afin de ne pas avoir à recalculer un PBKFD en session du parrain pour qu'il puisse afficher `datax`.
-    - `datax` : données de l'invitation cryptées par le PBKFD de la phrase de parrainage.
-      - `idcp` : id du compte parrain
-      - `idcf` : id du futur compte filleul
-      - `nomp, rndp, icp` : nom complet et indice de l'avatar P.
-      - `nomf, rndf, icf` : nom complet et indice du filleul F (donné par P).
-      - `cc` : clé `cc` générée par P pour le couple P / F.
-      - `aps` : `true` si le parrain accepte le partage de secrets.
-      - `f: [f1 f2]` : forfaits attribués par P à F.
-      - `r: [r1 r2]` : si non null, réserve attribuable aux filleuls si le compte _parrainé_ est en fait un _parrain_ lui-même.
-    - `data2k` : c'est le `datak` du futur contact créé en cas d'acceptation.
-      - `nom rnd` : nom complet du contact (B).
-      - `cc` : 32 bytes aléatoires donnant la clé `cc` d'un contact avec B (en attente ou accepté).
-      - `icb` : indice de A dans les contacts de B
-      - `idcf` : id du compte filleul
+    row Contact :
+    row Couple :
     */
     try {
       const compte = data.getCompte()
 
-      const cc = crypt.random(32)
-      const nap = data.getNa(arg.id)
-      const naf = new NomAvatar(arg.nomf)
-      const icp = await idToIc(naf.id)
-      const icf = crypt.rnd4()
-      const idcf = crypt.rnd6()
-      const x = serial([new Date().getTime(), arg.mot])
-      const datax = {
-        idcp: compte.id,
-        idcf,
-        nomp: nap.nom,
-        rndp: nap.rnd,
-        icp,
-        nomf: naf.nom,
-        rndf: naf.rnd,
-        icf,
-        cc,
-        aps: arg.aps,
-        f: arg.forfaits,
-        r: arg.ressources
-      }
-      const data2 = { nom: naf.nom, rnd: naf.rnd, ic: icf, cc, idcf }
-      const rowParrain = {
-        pph: arg.pph,
-        id: arg.id,
-        v: 0,
-        st: 0,
-        dlv: getJourJ() + cfg().limitesjour.parrainage,
-        datak: await crypt.crypter(data.clek, serial([arg.pp, arg.clex])),
-        datax: await crypt.crypter(arg.clex, serial(datax)),
-        data2k: await crypt.crypter(data.clek, serial(data2)),
-        ardc: await crypt.crypter(cc, x),
-        vsh: 0
-      }
+      const cc = crypt.random(32) // clé du couple
+      const nap = data.repertoire.na(arg.id) // na de l'avatar créateur
+      const naf = new NomAvatar(arg.nomf) // na de l'avatar du filleul
+      const idcf = crypt.rnd6() // id du compte filleul
+      const dlv = getJourJ() + cfg().limitesjour.parrainage
 
-      const args = { sessionId: data.sessionId, rowParrain: serial(rowParrain) }
-      const ret = await post(this, 'm1', 'nouveauParrainage', args)
-      if (data.dh < ret.dh) data.dh = ret.dh
+      const couple = new Couple().nouveauP(nap, naf, cc, dlv, arg.mot, compte.id, idcf, arg.pp, arg.forfaits)
+      const rowCouple = await couple.toRow()
+
+      const contact = new Contact().nouveau(arg.pph, arg.clex, dlv, cc, arg.nomf)
+      const rowContact = await contact.toRow()
+
+      const args = { sessionId: data.sessionId, rowCouple, rowContact, idcp: compte.id, idcf }
+      await post(this, 'm1', 'nouveauParrainage', args)
       return this.finOK()
     } catch (e) {
       return await this.finKO(e)

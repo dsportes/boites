@@ -34,15 +34,15 @@
   </div>
 
   <q-dialog v-model="editct" class="moyennelargeur">
-    <panel-contact :close="fermeredit"/>
+    <panel-couple :close="fermeredit"/>
   </q-dialog>
 
   <q-dialog v-model="panelfiltre" position="left">
-    <panel-filtre-contacts @ok="rechercher" :motscles="motscles" :etat-interne="recherche" :fermer="fermerfiltre"></panel-filtre-contacts>
+    <panel-filtre-couples @ok="rechercher" :motscles="motscles" :etat-interne="recherche" :fermer="fermerfiltre"></panel-filtre-couples>
   </q-dialog>
 
   <q-page-sticky v-if="$q.screen.gt.sm" position="top-left" expand :offset="[5,5]">
-    <panel-filtre-contacts @ok="rechercher" :motscles="motscles" :etat-interne="recherche" :fermer="fermerfiltre"></panel-filtre-contacts>
+    <panel-filtre-couples @ok="rechercher" :motscles="motscles" :etat-interne="recherche" :fermer="fermerfiltre"></panel-filtre-couples>
   </q-page-sticky>
 
 </div>
@@ -51,15 +51,15 @@
 import { computed, reactive, watch, ref } from 'vue'
 import { useStore } from 'vuex'
 import { Motscles, FiltreCtc } from '../app/util.mjs'
-import PanelFiltreContacts from './PanelFiltreContacts.vue'
-import PanelContact from './PanelContact.vue'
+import PanelFiltreCouples from './PanelFiltreCouples.vue'
+import PanelCouple from './PanelCouple.vue'
 import { data } from '../app/modele.mjs'
 import { retourInvitation } from '../app/page.mjs'
 
 export default ({
-  name: 'TabContacts',
+  name: 'TabCouples',
 
-  components: { PanelFiltreContacts, PanelContact },
+  components: { PanelFiltreCouples, PanelCouple },
 
   computed: {
   },

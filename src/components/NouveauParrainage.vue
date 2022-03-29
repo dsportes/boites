@@ -5,7 +5,7 @@
       <q-btn flat @click="close" color="primary" label="Renoncer" class="q-ml-sm" />
     </q-card-section>
 
-    <q-card-section>
+    <q-card-section v-if="sessionok">
       <q-stepper v-model="step" vertical color="primary" animated>
         <q-step :name="1" title="Phrase de parrainage" icon="settings" :done="step > 1">
           <span class="fs-sm q-py-sm">Phrase à ne communiquer qu'au titulaire du compte à parrainer.</span>
@@ -63,12 +63,9 @@
             <span class="font-mono q-pl-md">{{'v1: ' + forfaits[0] + 'MB'}}</span>
             <span class="font-mono q-pl-lg">{{'v2: ' + forfaits[1] + '*100MB'}}</span>
           </div>
-          <div v-if="estParrain">Ressources pour filleuls:
+          <div v-if="estParrain">Ressources attribuables aux filleuls:
             <span class="font-mono q-pl-md">{{'v1: ' + ressources[0] + 'MB'}}</span>
             <span class="font-mono q-pl-lg">{{'v2: ' + ressources[1] + '*100MB'}}</span>
-          </div>
-          <div style="margin-left:-0.8rem" class="text-primary">
-            <q-toggle v-model="aps" size="md" :color="aps ? 'green' : 'grey'" label="Partage de secrets avec cet avatar"/>
           </div>
           <q-stepper-navigation>
             <q-btn flat @click="corriger" color="primary" label="Corriger" class="q-ml-sm" />
@@ -83,7 +80,7 @@
 
 <script>
 import { useStore } from 'vuex'
-import { computed } from 'vue'
+import { computed, toRef, watch } from 'vue'
 import NomAvatar from './NomAvatar.vue'
 import ChoixForfaits from './ChoixForfaits.vue'
 import { NouveauParrainage } from '../app/operations.mjs'
@@ -111,7 +108,6 @@ export default ({
       phrase: '',
       mot: '',
       diagmot: false,
-      aps: false,
       encours: false
     }
   },
@@ -157,7 +153,6 @@ export default ({
         pp: this.phrase, // phrase de parrainage (string)
         clex: this.clex, // PBKFD de pp (u8)
         id: this.avatar.id,
-        aps: this.aps, // booléen (accepta partage de secrets)
         forfaits: this.forfaits,
         ressources: this.estParrain ? this.ressources : null,
         nomf: this.nom, // nom du filleul (string)
@@ -171,7 +166,6 @@ export default ({
         this.pp = ''
         this.clex = null
         this.pph = 0
-        this.aps = false
         if (this.close) this.close()
       } else {
         console.log(ex.message)
@@ -182,11 +176,18 @@ export default ({
     }
   },
 
-  setup () {
+  setup (props) {
     const $store = useStore()
     const avatar = computed(() => $store.state.db.avatar)
     const compte = computed(() => { return $store.state.db.compte })
+    const sessionok = computed(() => { return $store.state.ui.sessionok })
+    const close = toRef(props, 'close')
+    watch(() => sessionok.value, (ap, av) => {
+      if (close.value) close.value()
+    })
+
     return {
+      sessionok,
       compte,
       avatar
     }

@@ -63,7 +63,7 @@ import SelectMotscles from './SelectMotscles.vue'
 const vars = ['mc1', 'mc2', 'aps', 'texte', 'corps', 'tri']
 
 export default ({
-  name: 'PanelFiltreContacts',
+  name: 'PanelFiltreCouples',
 
   props: { fermer: Function, etatInterne: Object, motscles: Object },
 

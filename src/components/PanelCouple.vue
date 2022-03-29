@@ -61,7 +61,7 @@ import SelectMotscles from './SelectMotscles.vue'
 import { retourInvitation } from '../app/page.mjs'
 
 export default ({
-  name: 'PanelContact',
+  name: 'PanelCouple',
 
   components: { ShowHtml, EditeurMd, ApercuMotscles, SelectMotscles },
 

@@ -860,10 +860,6 @@ export class Couple {
   get st0 () { return Math.floor(this.st / 10) % 10 }
   get st1 () { return this.st % 10 }
 
-  get cv () { return data.getCv(this.id) }
-  get photo () { const cv = this.cv; return cv ? cv.photo : '' }
-  get info () { const cv = this.cv; return cv ? cv.info : '' }
-
   get cle () { return data.repertoire.cle(this.id) }
   get nom () { const x = this.data.x; return x[0][1] + '__' + x[1][1] }
   get nomEd () { return titreEd(this.nom, this.info) }
@@ -889,6 +885,38 @@ export class Couple {
       this.avc = 1
     }
     this.na = new NomAvatar(this.nom, this.cle)
+  }
+
+  nouveauP (naI, naE, cc, dlv, mot, idc0, idc1, pp, forfaits) {
+    this.v = 0
+    this.vsh = 0
+    this.st = 1110
+    this.naI = naI
+    this.idI = naI.id
+    this.naE = naE
+    this.idE = naE.id
+    this.avc = 0
+    data.repertoire.setAx(naE)
+    this.na = new NomAvatar(naI.nom + '__' + naE.nom, cc)
+    data.repertoire.setCp(this.na)
+    this.v1 = 0
+    this.v2 = 0
+    this.mx10 = 1
+    this.mx20 = 1
+    this.mx11 = 0
+    this.mx21 = 0
+    this.dlv = dlv
+    this.mc0 = null
+    this.mc1 = null
+    this.info = null
+    this.ard = mot
+    this.dh = new Date().getTime()
+    this.data = {
+      x: [[idc0, naI.nom, naI.rnd], [idc1, naE.nom, naE.rnd]],
+      phrase: pp,
+      f1: forfaits[0],
+      f2: forfaits[1]
+    }
   }
 
   // cols: ['id', 'v', 'st', 'dds', 'v1', 'v2', 'mx10', 'mx20', 'mx11', 'mx21', 'dlv', 'data', 'info0', 'info1', 'mc0', 'mc1', 'dh', 'ard', 'vsh']
@@ -919,10 +947,12 @@ export class Couple {
     return this
   }
 
-  async toRow (datak, cc) { // TODO ???
+  async toRow () { // pour création de couple
     const r = { ...this }
     r.datac = await crypt.crypter(this.cle, serial(r.data))
     r.ardc = await crypt.crypter(this.cle, serial([r.dh, r.ard]))
+    r.infok0 = null
+    r.infok1 = null
     return schemas.serialize('rowcouple', r)
   }
 

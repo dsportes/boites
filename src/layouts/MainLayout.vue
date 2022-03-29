@@ -239,6 +239,7 @@ export default {
     const $q = useQuasar()
     $q.dark.set(true)
     onBoot()
+    const phdef = cfg().avatar
 
     const $store = useStore()
     const sessionok = computed(() => $store.state.ui.sessionok)
@@ -260,8 +261,8 @@ export default {
     const cvs = computed(() => { return $store.state.db.cvs })
 
     function avphoto () {
-      const cv = avatar.value ? cvs.value(avatar.value.id) : null
-      return cv && cv.photo ? cv.photo : '~assets/avatar.jpg'
+      const cv = avatar.value ? cvs.value[avatar.value.id] : null
+      return cv ? cv[0] : phdef
     }
 
     const infomode = computed({

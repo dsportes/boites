@@ -1,7 +1,7 @@
 <template>
 <q-card v-if="sessionok && avatarId" class="q-pa-sm full-width fs-md shadow-8">
   <div class="row justify-between items-center full-width">
-    <div class="col row justify-start items-center full-width ligne cursor-pointer" @click="toAvatar">
+    <div class="col row justify-start items-center full-width ligne cursor-pointer" @click="click">
       <img class="col-auto photomax" :src="a.photo"/>
       <div class="col q-px-sm">
         <span class='titre-lg text-bold'>{{a.na.noml}}</span><span class='titre-sm q-pl-sm'>[id: {{a.na.sid}}]</span>
@@ -24,7 +24,7 @@ import { watch, toRef, reactive, computed, ref } from 'vue'
 import ShowHtml from './ShowHtml.vue'
 import CarteVisite from './CarteVisite.vue'
 import { data, Cv } from '../app/modele.mjs'
-import { remplacePage, retourInvitation } from '../app/page.mjs'
+import { retourInvitation } from '../app/page.mjs'
 import { MajCv } from '../app/operations.mjs'
 import { cfg } from '../app/util.mjs'
 
@@ -33,8 +33,7 @@ export default ({
 
   props: {
     avatarId: Number,
-    editer: Boolean,
-    selectionner: Boolean
+    editer: Boolean
   },
 
   components: { ShowHtml, CarteVisite },
@@ -46,9 +45,8 @@ export default ({
   data () { return { } },
 
   methods: {
-    toAvatar () {
-      this.$store.commit('db/majavatar', this.a.av)
-      remplacePage('Avatar')
+    click () {
+      this.$emit('click-apercu', this.avatarId)
     },
     closedialog () { this.cvloc = false },
     async validercv (resultat) {
