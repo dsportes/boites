@@ -370,14 +370,14 @@ export class Operation {
     if (ret.rowItems.length) {
       const r = await compileToObject(deserialRowItems(ret.rowItems), mapObj)
       if (r.couple) {
-        for (const pk of r.couple) {
+        for (const pk in r.couple) {
           const obj = r.couple[pk]
           this.buf.setObj(obj)
           this.buf.putIDB(obj)
         }
       }
       if (r.secret) {
-        for (const pk of r.secret) {
+        for (const pk in r.secret) {
           const obj = r.secret[pk]
           this.buf.setObj(obj)
           this.buf.putIDB(obj)
@@ -394,21 +394,21 @@ export class Operation {
     if (ret.rowItems.length) {
       const r = await compileToObject(deserialRowItems(ret.rowItems), mapObj)
       if (r.groupe) {
-        for (const pk of r.groupe) {
+        for (const pk in r.groupe) {
           const obj = r.groupe[pk]
           this.buf.setObj(obj)
           this.buf.putIDB(obj)
         }
       }
       if (r.membre) {
-        for (const pk of r.membre) {
+        for (const pk in r.membre) {
           const obj = r.membre[pk]
           this.buf.setObj(obj)
           this.buf.putIDB(obj)
         }
       }
       if (r.secret) {
-        for (const pk of r.secret) {
+        for (const pk in r.secret) {
           const obj = r.secret[pk]
           this.buf.setObj(obj)
           this.buf.putIDB(obj)
@@ -435,9 +435,10 @@ export class Operation {
     const avAvatarIds = avCompte.avatarIds()
     const avGroupeIds = new Set()
     const avCoupleIds = new Set()
-    avAvatarIds.forEach(av => {
+    avAvatarIds.forEach(id => {
+      const av = data.getAvatar(id)
       av.groupeIds(avGroupeIds)
-      av.couplesIds(avCoupleIds)
+      av.coupleIds(avCoupleIds)
     })
 
     const apAvatarIds = new Set()
@@ -460,8 +461,8 @@ export class Operation {
         if (!avAvatar || avAvatar.v > apAvatar.v) continue
         apAvatar.repGroupes()
         apAvatar.repCouples()
-        avAvatar.groupeIds(apGroupeIds)
-        avAvatar.coupleIds(apCoupleIds)
+        apAvatar.groupeIds(apGroupeIds)
+        apAvatar.coupleIds(apCoupleIds)
       }
       apGroupeIds.forEach(id => { if (!avGroupeIds.has(id)) this.groupeIdsP.add(id) })
       avGroupeIds.forEach(id => { if (!apGroupeIds.has(id)) this.groupeIdsM.add(id) })
@@ -563,9 +564,9 @@ export class Operation {
       Abonnements aux Plus ???
     */
     const mapObj = {}
-    for (const id in this.avatarIdsP) await this.chargerAS(id, mapObj)
-    for (const id in this.groupeIdsP) await this.chargerGMS(id, mapObj)
-    for (const id in this.coupleIdsP) await this.chargerCS(id, mapObj)
+    for (const id of this.avatarIdsP) await this.chargerAS(id, mapObj)
+    for (const id of this.groupeIdsP) await this.chargerGMS(id, mapObj)
+    for (const id of this.coupleIdsP) await this.chargerCS(id, mapObj)
 
     this.acgM = this.avatarIdsM.size || this.groupeIdsM.size || this.coupleIdsM.size
     this.acgP = this.avatarIdsP.size || this.groupeIdsP.size || this.coupleIdsP.size
@@ -1038,6 +1039,7 @@ export class ConnexionCompte extends OperationUI {
     this.groupes = data.dbok ? await getGroupes() : {}
     const setidbgr = new Set(); for (const id in this.groupes) setidbgr.add(parseInt(id))
     this.couples = data.dbok ? await getCouples() : {}
+    for (const id in this.couples) { this.couples[id].setRepE() }
     const setidbcp = new Set(); for (const id in this.groupes) setidbcp.add(parseInt(id))
     const grentrop = difference(setidbgr, grrequis) // groupes en IDB NON requis (à supprimer de IDB)
     grentrop.forEach(id => {
@@ -1066,13 +1068,18 @@ export class ConnexionCompte extends OperationUI {
     data.setGroupes(lgr) // mis en store/db
 
     // cpnouveaux contient tous les couples ayant une version plus récente que celle (éventuellement) obtenue de IDB
-    for (const pk in cpnouveaux) { const cp = cpnouveaux[pk]; this.buf.putIDB(cp); this.couples[cp.id] = cp }
+    for (const pk in cpnouveaux) {
+      const cp = cpnouveaux[pk]
+      cp.setRepE()
+      this.buf.putIDB(cp)
+      this.couples[cp.id] = cp
+    }
     // couples contient la version au top des objets couples du compte requis par ses avatars et seulement eux
     const lcp = Object.values(this.couples)
     data.setCouples(lcp) // mis en store/db
 
     lgr.forEach(gr => { data.setSyncItem('10' + gr.sid, 0, 'Groupe ' + gr.na.nom) })
-    lcp.forEach(cp => { data.setSyncItem('15' + cp.sid, 0, 'Couple ' + cp.na.nom) })
+    lcp.forEach(cp => { data.setSyncItem('15' + cp.sid, 0, 'Couple ' + cp.nom) })
     return true
   }
 
@@ -1154,8 +1161,8 @@ export class ConnexionCompte extends OperationUI {
       const id = parseInt(idx)
       const cp = this.couples[id]
       if (data.netok) await this.chargerSc(id, vscIdb[id] || 0, secrets)
-      const nbs = Object.keys(secrets[id]).length
-      data.setSyncItem('15' + cp.sid, 1, 'Couple ' + cp.na.nom + ' - ' + nbs + ' secret(s)')
+      const nbs = secrets[id] ? Object.keys(secrets[id]).length : 0
+      data.setSyncItem('15' + cp.sid, 1, 'Couple ' + cp.nom + ' - ' + nbs + ' secret(s)')
     }
 
     /* Mise à jour du modèle */
@@ -1453,21 +1460,32 @@ export class NouveauParrainage extends OperationUI {
 
   async run (arg) {
     /*
+      - `lcck` : map : de avatar
+        - _clé_ : `ni`, numéro pseudo aléatoire. Hash de (`cc` en hexa suivi de `0` ou `1`).
+        - _valeur_ : clé `cc` cryptée par la clé K de l'avatar cible. Le hash d'une clé d'un couple donne son id.
       pph: this.pph, // le hash de la clex (integer)
       pp: this.phrase, // phrase de parrainage (string)
       clex: this.clex, // PBKFD de pp (u8)
-      id: this.avatar.id,
       forfaits: this.forfaits,
       ressources: this.estParrain ? this.ressources : null,
       nomf: this.nom, // nom du filleul (string)
       mot: this.mot
-    row Contact :
-    row Couple :
+    args :
+      - sessionid
+      - row Contact :
+      - row Couple :
+      - id: id de l'avatar
+      - ni: clé d'accès à lcck de l'avatar
+      - datak : clé cc cryptée par la clé k
+    X_SRV, '14-Cette phrase de parrainage est trop proche d\'une déjà enregistrée'
+    X_SRV, '23-Avatar non trouvé.'
     */
     try {
       const compte = data.getCompte()
 
       const cc = crypt.random(32) // clé du couple
+      const ni = crypt.hash(crypt.u8ToHex(cc) + '0')
+      const datak = await crypt.crypter(data.clek, cc)
       const nap = data.repertoire.na(arg.id) // na de l'avatar créateur
       const naf = new NomAvatar(arg.nomf) // na de l'avatar du filleul
       const idcf = crypt.rnd6() // id du compte filleul
@@ -1476,10 +1494,10 @@ export class NouveauParrainage extends OperationUI {
       const couple = new Couple().nouveauP(nap, naf, cc, dlv, arg.mot, compte.id, idcf, arg.pp, arg.forfaits, arg.ressources)
       const rowCouple = await couple.toRow()
 
-      const contact = new Contact().nouveau(arg.pph, arg.clex, dlv, cc, arg.nomf)
-      const rowContact = await contact.toRow()
+      const contact = await new Contact().nouveau(arg.pph, arg.clex, dlv, cc, arg.nomf)
+      const rowContact = contact.toRow()
 
-      const args = { sessionId: data.sessionId, rowCouple, rowContact }
+      const args = { sessionId: data.sessionId, rowCouple, rowContact, ni, datak, id: nap.id }
       await post(this, 'm1', 'nouveauParrainage', args)
       return this.finOK()
     } catch (e) {

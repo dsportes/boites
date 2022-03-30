@@ -30,7 +30,8 @@
         </q-step>
 
         <q-step :name="3" title="Mot de bienvenue pour le futur nouveau compte" icon="settings" :done="step > 3" >
-          <textarea :class="'q-pa-xs full-width font-mono height-8 ta ' + dlclass" v-model="mot"/>
+          <editeur-md texte="" v-model="mot" editable modetxt style="height:8rem"></editeur-md>
+          <!--textarea :class="'q-pa-xs full-width font-mono height-8 ta ' + dlclass" v-model="mot"/-->
           <div v-if="diagmot" class="fs-sm text-warning">De 10 à 140 signes ({{mot.length}})</div>
           <q-stepper-navigation>
             <q-btn flat @click="step = 2" color="primary" label="Précédent" class="q-ml-sm" />
@@ -83,6 +84,7 @@ import { useStore } from 'vuex'
 import { computed, toRef, watch } from 'vue'
 import NomAvatar from './NomAvatar.vue'
 import ChoixForfaits from './ChoixForfaits.vue'
+import EditeurMd from './EditeurMd.vue'
 import { NouveauParrainage } from '../app/operations.mjs'
 import { crypt } from '../app/crypto.mjs'
 import { data } from '../app/modele.mjs'
@@ -92,7 +94,7 @@ export default ({
 
   props: { close: Function },
 
-  components: { ChoixForfaits, NomAvatar },
+  components: { ChoixForfaits, NomAvatar, EditeurMd },
 
   computed: {
     dlclass () { return this.$q.dark.isActive ? 'sombre' : 'clair' }

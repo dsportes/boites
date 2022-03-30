@@ -141,9 +141,9 @@ class Repertoire {
 
   setXX (na, x) {
     const id = na.id
-    const obj = { na: new NomAvatar(na.nom, na.rnd, na.id) }
+    let obj = this.rep[id]; if (!obj) { obj = { }; this.rep[id] = obj }
+    obj.na = na
     if (x) obj.x = true
-    this.rep[id] = obj
     return id
   }
 
@@ -404,7 +404,7 @@ export class Compte {
   get pk () { return '1' }
   get estComptable () { return data.estComptable }
 
-  avatars (s) {
+  avatarNas (s) {
     const s1 = new Set()
     for (const sid in this.mac) if (s) s.add(this.mac[sid].na); else s1.add(this.mac[sid].na)
     return s || s1
@@ -416,7 +416,7 @@ export class Compte {
     return s || s1
   }
 
-  repAvatars () { this.avatars().forEach(na => { data.repertoire.setAc(na) }) }
+  repAvatars () { this.avatarNas().forEach(na => { data.repertoire.setAc(na, na.id) }) }
 
   nouveau (nomAvatar, cprivav, id) {
     this.id = id || crypt.rnd6()
@@ -427,7 +427,7 @@ export class Compte {
     data.clek = this.k
     this.mac = { }
     this.mac[nomAvatar.sid] = { na: nomAvatar, cpriv: cprivav }
-    data.repertoire.setAc(nomAvatar)
+    data.repertoire.setAc(nomAvatar, id)
     this.vsh = 0
     return this
   }
@@ -472,11 +472,25 @@ export class Compte {
     return await crypt.crypter(data.clek, serial(m))
   }
 
-  get toIdb () { return schemas.serialize('idbCompte', this) }
+  get toIdb () {
+    const r = { ...this }
+    r.mac = {}
+    for (const sid in this.mac) {
+      const x = this.mac[sid]
+      r.mac[sid] = [x.na.nom, x.na.rnd, x.cpriv]
+    }
+    return schemas.serialize('idbCompte', r)
+  }
 
   fromIdb (idb) {
     schemas.deserialize('idbCompte', idb, this)
     data.clek = this.k
+    const m = {}
+    for (const sid in this.mac) {
+      const [nom, rnd, cpriv] = this.mac[sid]
+      m[sid] = { na: new NomAvatar(nom, rnd), cpriv: cpriv }
+    }
+    this.mac = m
     // TODO utilité à vérifier
     for (const sid in this.mac) data.repertoire.setAc(this.mac[sid].na)
     return this
@@ -674,41 +688,31 @@ export class Avatar {
 
   groupeIds (s) {
     const s1 = new Set()
-    this.m1gr.forEach(e => {
-      if (s) s.add(e.na.id); else s1.add(e.na.id)
-    })
+    this.m1gr.forEach(e => { if (s) s.add(e.na.id); else s1.add(e.na.id) })
     return s || s1
   }
 
-  groupes (s) {
+  groupeNas (s) {
     const s1 = new Set()
-    this.m1gr.forEach(e => {
-      const x = { id: e.na.id, nom: e.na.nom, cle: e.na.cle }
-      if (s) s.add(x); else s1.add(x)
-    })
+    this.m1gr.forEach(e => { if (s) s.add(e.na); else s1.add(e.na) })
     return s || s1
   }
 
-  repGroupes () { this.groupes().forEach(x => { data.repertoire.setGr(x.nom, x.cle) }) }
+  repGroupes () { this.m1gr.forEach(e => { data.repertoire.setGr(e.na) }) }
 
   coupleIds (s) {
     const s1 = new Set()
-    this.mcc.forEach(cc => {
-      if (s) s.add(crypt.hashBin(cc)); else s1.add(crypt.hashBin(cc))
-    })
+    this.mcc.forEach(na => { if (s) s.add(na.id); else s1.add(na.id) })
     return s || s1
   }
 
-  couples (s) {
+  coupleNas (s) {
     const s1 = new Set()
-    this.mcc.forEach(cc => {
-      const x = { id: crypt.hashBin(cc), nom: 'x', cle: cc }
-      if (s) s.add(x); else s1.add(x)
-    })
+    this.mcc.forEach(na => { if (s) s.add(na); else s1.add(na) })
     return s || s1
   }
 
-  repCouples () { this.groupes().forEach(x => { data.repertoire.setCp(x.na) }) }
+  repCouples () { this.mcc.forEach(na => { data.repertoire.setCp(na) }) }
 
   nouveau (id) {
     this.id = id
@@ -723,8 +727,8 @@ export class Avatar {
       for (const ni in lcc) {
         const y = lcc[ni]
         const cc = brut ? y : await crypt.decrypter(data.clek, y)
-        const id = crypt.hashBin(cc)
-        this.mcc.set(id, cc)
+        const na = new NomAvatar('x', cc)
+        this.mcc.set(na.id, na)
       }
     }
     this.m1gr.clear()
@@ -732,9 +736,10 @@ export class Avatar {
       for (const ni in lgr) {
         const y = lgr[ni]
         const x = deserial(brut ? y : await crypt.decrypter(data.clek, y))
-        const na = data.setNa(x[0], x[1])
+        const na = new NomAvatar(x[0], x[1])
+        const id = na.id
         this.m1gr.set(ni, { na: na, im: x[2] })
-        this.m2gr.set(na.id, [x[2], ni])
+        this.m2gr.set(id, [x[2], ni])
       }
     }
   }
@@ -743,7 +748,7 @@ export class Avatar {
     const lgr = {}
     for (const [ni, x] of this.m1gr) lgr[ni] = serial([x.na.nom, x.na.rnd, x.im])
     const lcc = {}
-    for (const [ni, x] of this.mcc) lcc[ni] = x
+    for (const [ni, na] of this.mcc) lcc[ni] = na.rnd
     return [lgr, lcc]
   }
 
@@ -862,17 +867,18 @@ export class Couple {
   get st1 () { return this.st % 10 }
 
   get cle () { return data.repertoire.cle(this.id) }
+  get na () { return data.repertoire.na(this.id) }
   get nom () { const x = this.data.x; return x[0][1] + '__' + x[1][1] }
   get nomE () { const x = this.data.x; return x[1][1] }
 
   get nomf () { return normpath(this.nom) }
 
-  setRepE () { data.repertoire.setAx(this.naE) }
+  setRepE () { if (this.naE) data.repertoire.setAx(this.naE) }
 
   setIdIE (x) {
-    const id0 = this.st0 ? crypt.hashBin(x[0][2]) : 0
-    const id1 = this.st1 ? crypt.hashBin(x[1][2]) : 0
-    if (data.repertoire.estAvc(id0)) {
+    const id0 = x[0][2] ? crypt.hashBin(x[0][2]) : 0
+    const id1 = x[1][2] ? crypt.hashBin(x[1][2]) : 0
+    if (data.repertoire.estAc(id0)) {
       this.idI = id0
       this.idE = id1
       this.naE = this.idE ? new NomAvatar(x[1][1], x[1][2]) : null
@@ -885,7 +891,7 @@ export class Couple {
       this.naI = new NomAvatar(x[1][1], x[1][2])
       this.avc = 1
     }
-    this.na = new NomAvatar(this.nom, this.cle)
+    data.repertoire.setCp(new NomAvatar(this.nom, this.cle))
   }
 
   nouveauP (naI, naE, cc, dlv, mot, idc0, idc1, pp, forfaits, ressources) {
@@ -899,7 +905,8 @@ export class Couple {
     this.avc = 0
     data.repertoire.setAx(naE)
     this.na = new NomAvatar(naI.nom + '__' + naE.nom, cc)
-    data.repertoire.setCp(this.na)
+    this.id = this.na.id
+    data.repertoire.setCp(this.na, this.id)
     this.v1 = 0
     this.v2 = 0
     this.mx10 = 1
@@ -966,6 +973,7 @@ export class Couple {
 
   fromIdb (idb) {
     schemas.deserialize('idbCouple', idb, this)
+    this.setIdIE(this.data.x)
     return this
   }
 }
@@ -995,7 +1003,8 @@ export class Contact {
   async nouveau (phch, clex, dlv, cc, nom) { // clex : PBKFD de la phrase de contact
     this.vsh = 0
     this.phch = phch
-    this.ccx = await crypt.crypter(clex, serial([cc || await crypt.random(32), nom]))
+    if (!cc) cc = crypt.random(32)
+    this.ccx = await crypt.crypter(clex, serial([cc, nom]))
     this.dlv = dlv
     return this
   }
@@ -1014,7 +1023,7 @@ export class Contact {
     return [cc, id, nom]
   }
 
-  async toRow () {
+  toRow () {
     return schemas.serialize('rowcontact', this)
   }
 }

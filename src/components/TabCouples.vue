@@ -153,6 +153,7 @@ export default ({
     }
 
     function latotale () {
+      if (!sessionok.value) return
       getCouples()
       trier()
     }
@@ -160,15 +161,12 @@ export default ({
     function photo (c) {
       const cv = cvs.value[c.id]
       if (cv && cv[0]) return cv[0]
-      const cvE = c.idE && cvs.value(c.idE)
+      const cvE = c.idE && cvs.value[c.idE]
       if (cvE && cvE[0]) return cvE[0]
       return phdef
     }
 
-    function nom (c) {
-      if (!c.idE) return data.repertoire.nom(c.id)
-      return data.repertoire.na(c.id).noml
-    }
+    function nom (c) { return c.naE ? c.naE.noml : c.na.nom }
 
     function icone (p) {
       return ['thumb_up', 'hourglass_empty', 'thumb_down', 'thumb_up', 'o_thumb_down'][p]
@@ -219,6 +217,7 @@ export default ({
     })
 
     return {
+      sessionok,
       photo,
       nom,
       icone,
