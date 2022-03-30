@@ -1,6 +1,6 @@
 <template>
 <div ref="root">
-  <q-card v-if="sessionok && !max" :class="'column fs-md full-height overflow-hidden shadow-8 ' + dlclass">
+  <q-card v-if="visi && !max" :class="'column fs-md full-height overflow-hidden shadow-8 ' + dlclass">
     <q-toolbar class="col-auto full-width">
       <q-btn icon="zoom_out_map" size="md" push flat dense @click="max=true"></q-btn>
       <q-btn :disable="!md" class="q-mr-xs" size="md" label="TXT" :color="md ? 'warning' : 'purple'" push flat dense @click="md=false"></q-btn>
@@ -12,7 +12,7 @@
     <textarea v-if="!md" :class="'q-pa-xs col full-width font-mono ta ' + dlclass" v-model="textelocal" :readonly="!editable"/>
     <div v-else class="q-pa-xs col full-width ta"><show-html :idx="idx" :texte="textelocal"/></div>
   </q-card>
-  <q-dialog v-if="sessionok" v-model="max" full-height transition-show="slide-up" transition-hide="slide-down">
+  <q-dialog v-if="visi" v-model="max" full-height transition-show="slide-up" transition-hide="slide-down">
     <div ref="root2" :class="'column fs-md full-height grandelargeur overflow-hidden ' + dlclass">
       <q-toolbar class="col-auto">
       <q-btn icon="zoom_in_map" size="md" dense flat push @click="max=false"></q-btn>
@@ -26,7 +26,7 @@
       <div v-else :class="'q-pa-xs col ta ' + dlclass"><show-html :idx="idx" :texte="textelocal"/></div>
     </div>
   </q-dialog>
-  <q-dialog v-if="sessionok" v-model="emoji">
+  <q-dialog v-if="visi" v-model="emoji">
     <VuemojiPicker @emojiClick="emojiclick" data-source="emoji.json"/>
   </q-dialog>
 </div>
@@ -45,9 +45,10 @@ export default ({
 
   emits: ['update:modelValue', 'ok'],
 
-  props: { modelValue: String, texte: String, labelOk: String, editable: Boolean, idx: Number, modetxt: Boolean },
+  props: { modelValue: String, texte: String, labelOk: String, editable: Boolean, idx: Number, modetxt: Boolean, horsSession: Boolean },
 
   computed: {
+    visi () { return this.sessionok || this.horsSession },
     dlclass () {
       if (this.$q.dark.isActive) return this.idx ? ' sombre' + (this.idx % 2) : ' sombre0'
       return this.idx ? ' clair' + (this.idx % 2) : ' clair0'

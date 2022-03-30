@@ -6,7 +6,7 @@ import {
   openIDB, enregLScompte, getVIdCvs, putFa, saveListeCvIds
 } from './db.mjs'
 import { Compte, Avatar, deserialRowItems, compileToObject, data, Prefs, Contact, Invitgr, Compta, Groupe, Membre, Cv, Couple } from './modele.mjs'
-import { AppExc, EXBRK, EXPS, F_BRO, E_BRO, X_SRV, E_WS, MC } from './api.mjs'
+import { AppExc, EXBRK, EXPS, F_BRO, E_BRO, X_SRV, E_WS /*, MC */ } from './api.mjs'
 
 import { crypt } from './crypto.mjs'
 import { schemas, serial } from './schemas.mjs'
@@ -1565,19 +1565,18 @@ export class AcceptationParrainage extends OperationUI {
   /* arg :
   - ps : phrase secrète
   - ard : réponse du filleul
-  - aps : true si le filleul accepte le partage de secret
-  - pph : hash phrase de parrainage
+  - vmax : [v1, v2] volumes max pour les secrets du couple
+  - estpar : si le compte à créer est parrain aussi
+  - phch : hash phrase de contact
   */
-  async run (parrain, arg) {
+  async run (couple, arg) {
     try {
       // LE COMPTE EST CELUI DU FILLEUL
       data.ps = arg.ps
+      /*
       await data.connexion(true) // On force A NE PAS OUVRIR IDB (compte pas encore connu)
 
-      this.BRK()
       const kpav = await crypt.genKeyPair()
-      const kpc = await crypt.genKeyPair()
-      const estpar = parrain.data.r !== null
 
       const compte = new Compte().nouveau(parrain.naf, kpav.privateKey, kpc.privateKey, parrain.data.idcf)
       const rowCompte = await compte.toRow()
@@ -1645,16 +1644,18 @@ export class AcceptationParrainage extends OperationUI {
       }
       const ret = await post(this, 'm1', 'acceptParrainage', args)
       if (data.dh < ret.dh) data.dh = ret.dh
+      */
       /*
       Le compte vient d'être créé et est déjà dans le modèle (clek enregistrée)
       On peut désérialiser la liste d'items (compte, contact, avatar)
-      */
+
       this.postCreation(ret)
 
       data.estComptable = false
       const res = this.finOK()
       remplacePage('Compte')
       return res
+      */
     } catch (e) {
       return await this.finKO(e)
     }

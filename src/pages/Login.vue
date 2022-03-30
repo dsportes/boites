@@ -44,7 +44,7 @@
     </div>
 
     <q-dialog v-model="dialcp">
-      <AcceptParrain :parrain="p" :pph="pph" :close="fermerap" />
+      <AcceptParrain :couple="couple" :phch="phch" :close="fermerap" />
     </q-dialog>
   </q-page>
 </template>
@@ -57,9 +57,9 @@ import PhraseSecrete from '../components/PhraseSecrete.vue'
 import AcceptParrain from '../components/AcceptParrain.vue'
 import { onBoot } from '../app/page.mjs'
 import { crypt } from '../app/crypto.mjs'
-import { get, afficherdiagnostic } from '../app/util.mjs'
+import { get, afficherdiagnostic, dlvDepassee } from '../app/util.mjs'
 import { deserial } from '../app/schemas.mjs'
-import { Contact } from '../app/modele.mjs'
+import { Contact, Couple } from '../app/modele.mjs'
 
 export default ({
   name: 'Login',
@@ -100,19 +100,30 @@ export default ({
         this.clex = await crypt.pbkfd(this.phrase)
         let hx = ''
         for (let i = 0; i < this.phrase.length; i = i + 2) hx += this.phrase.charAt(i)
-        this.pph = crypt.hash(hx)
+        this.phch = crypt.hash(hx)
         this.encours = false
-        const resp = await get('m1', 'getPph', { pph: this.pph })
+        const resp = await get('m1', 'getContact', { phch: this.phch })
         if (!resp) {
           this.diagnostic = 'Cette phrase de parrainage est introuvable'
         } else {
           try {
-            const rowpar = deserial(new Uint8Array(resp))
-            const p = new Contact()
-            await p.fromRow(rowpar, this.phrase, this.clex)
+            const row = deserial(new Uint8Array(resp))
+            const contact = await new Contact().fromRow(row)
+            if (dlvDepassee(contact.dlv)) {
+              this.diagnostic = 'Cette phrase de parrainage n\'est plus valide'
+              return
+            }
+            // eslint-disable-next-line no-unused-vars
+            const [cc, id, nom] = await contact.getCcId(this.clex)
+            const resp2 = await get('m1', 'getCouple', { id })
+            if (!resp2) {
+              this.diagnostic = 'Pas de parrainage en attente avec cette phrase'
+              return
+            }
+            const row2 = deserial(new Uint8Array(resp2))
+            this.couple = await new Couple().fromRow(row2, cc)
             this.phrasepar = false
             this.dialcp = true
-            this.p = p
           } catch (e) {
             console.log(e.toString())
           }

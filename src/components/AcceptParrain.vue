@@ -7,24 +7,20 @@
     <q-card-section>
       <q-stepper v-model="step" vertical color="primary" animated>
         <q-step :name="1" title="Proposition de parrainage" icon="settings" :done="step > 1">
-          <div>Premier avatar du nouveau compte: <span class="font-mono q-pl-md">{{parrain.data.nomf}}</span></div>
-          <div>Nom du parrain: <span class="font-mono q-pl-md">{{parrain.data.nomp}}</span></div>
+          <div>Premier avatar du nouveau compte: <span class="font-mono q-pl-md">{{couple.naI.nom}}</span></div>
+          <div>Nom du parrain: <span class="font-mono q-pl-md">{{couple.naE.nom}}</span></div>
           <div>Forfaits du compte:
-            <span class="font-mono q-pl-md">{{'v1: ' + parrain.data.f[0] + 'MB'}}</span>
-            <span class="font-mono q-pl-lg">{{'v2: ' + parrain.data.f[1] + '*100MB'}}</span>
+            <span class="font-mono q-pl-md">{{'v1: ' + couple.data.f1 + '*0,25MB'}}</span>
+            <span class="font-mono q-pl-lg">{{'v2: ' + couple.data.f2 + '*25MB'}}</span>
           </div>
           <div v-if="estpar">Ressources attribuables aux futurs filleuls:
             <div>
-            <span class="font-mono q-pl-md">{{'v1: ' + parrain.data.r[0] + 'MB'}}</span>
-            <span class="font-mono q-pl-lg">{{'v2: ' + parrain.data.r[1] + '*100MB'}}</span>
+            <span class="font-mono q-pl-md">{{'v1: ' + couple.data.r1 + '*0,25MB'}}</span>
+            <span class="font-mono q-pl-lg">{{'v2: ' + couple.data.r2 + '*25MB'}}</span>
             </div>
           </div>
-          <div class="t1">Validité: <span class="sp1">{{parrain.dlv - jourJ}}</span> jour(s)</div>
-          <div style="margin-left:-0.8rem" class="text-primary">
-            <q-toggle v-model="apsp" size="md" disable :color="apsp ? 'green' : 'grey'"
-              :label="'Le parrain ' + (!apsp ? 'n\'accepte pas' : 'accepte') + ' le partage de secrets avec cet avatar'"/>
-          </div>
-          <show-html class="full-width height-6" :texte="parrain.ard" />
+          <div class="t1">Validité: <span class="sp1">{{couple.dlv - jourJ}}</span> jour(s)</div>
+          <show-html class="full-width height-6" :texte="couple.ard" />
           <q-stepper-navigation>
             <q-btn flat @click="fermer()" color="primary" label="Renoncer" class="q-ml-sm" />
             <q-btn flat @click="step=5" color="primary" label="Refuser" class="q-ml-sm" />
@@ -42,7 +38,7 @@
         </q-step>
 
         <q-step :name="3" title="Message de remerciement" icon="settings" :done="step > 3" >
-          <editeur-md class="full-width height-8" v-model="texte" :texte="parrain.ard" editable modetxt/>
+          <editeur-md class="full-width height-8" v-model="texte" :texte="couple.ard" editable modetxt hors-session/>
           <q-stepper-navigation>
             <q-btn flat @click="step=2" color="primary" label="Corriger" class="q-ml-sm" />
             <q-btn flat @click="fermer()" color="primary" label="Renoncer" class="q-ml-sm" />
@@ -55,15 +51,8 @@
           <q-icon :name="isPwd ? 'visibility_off' : 'visibility'" class="cursor-pointer" @click="isPwd = !isPwd"/>
           <div>Phrase secrète (ligne 1): <span class="font-mono q-pl-md">{{isPwd ? '***' : ps.debut}}</span></div>
           <div>Phrase secrète (ligne 2): <span class="font-mono q-pl-md">{{isPwd ? '***' : ps.fin}}</span></div>
-          <div style="margin-left:-0.8rem" class="text-primary">
-            <q-toggle v-model="apsp" size="md" disable :color="apsp ? 'green' : 'grey'"
-              :label="'Le parrain ' + (!apsp ? 'n\'accepte pas' : 'accepte') + ' le partage de secrets avec cet avatar'"/>
-          </div>
-          <div style="margin-left:-0.8rem" class="text-primary">
-            <q-toggle v-model="apsf" size="md" :color="apsf ? 'green' : 'grey'"
-              :label="(!apsf ? 'Ne pas accepter' : 'Accepter') + ' le partage de secrets avec cet avatar'"/>
-          </div>
-
+          <div>Volumes v1 / v2 maximaux pour les secrets du couple avec le parrain :</div>
+          <choix-forfaits v-model="vmax" :f1="couple.mx10" :f2="couple.mx11"/>
           <q-stepper-navigation>
             <q-btn flat @click="step=1" color="primary" label="Corriger" class="q-ml-sm" />
             <q-btn flat @click="fermer()" color="primary" label="Renoncer" class="q-ml-sm" />
@@ -73,7 +62,7 @@
         </q-step>
 
         <q-step :name="5" title="Remerciement / explication (pourquoi décliner)" icon="check" :done="step > 3" >
-          <editeur-md class="full-width height-8" v-model="texte" :texte="parrain.ard" editable modetxt/>
+          <editeur-md class="full-width height-8" v-model="texte" :texte="couple.ard" editable modetxt hors-session/>
           <q-stepper-navigation>
             <q-btn flat @click="step=1" color="primary" label="Corriger" class="q-ml-sm" />
             <q-btn flat @click="fermer()" color="primary" label="Renoncer" class="q-ml-sm" />
@@ -92,23 +81,24 @@ import EditeurMd from './EditeurMd.vue'
 import ShowHtml from './ShowHtml.vue'
 import { AcceptationParrainage, RefusParrainage } from '../app/operations.mjs'
 import { getJourJ } from '../app/util.mjs'
+import ChoixForfaits from './ChoixForfaits.vue'
 
 export default ({
   name: 'AcceptParrain',
 
-  props: { parrain: Object, pph: Number, close: Function },
+  props: { couple: Object, phch: Number, close: Function },
 
-  components: { PhraseSecrete, EditeurMd, ShowHtml },
+  components: { PhraseSecrete, EditeurMd, ShowHtml, ChoixForfaits },
 
   computed: {
-    estpar () { return this.parrain.data.r !== null }
+    estpar () { return this.couple && (this.couple.data.r1 || this.couple.data.r2) }
   },
 
   data () {
     return {
       isPwd: false,
       jourJ: getJourJ(),
-      apsp: this.parrain ? this.parrain.data.aps : false,
+      vmax: [],
       step: 1,
       ps: null,
       apsf: false,
@@ -140,14 +130,14 @@ export default ({
     },
     async confirmer () {
       // eslint-disable-next-line no-unused-vars
-      const arg = { ps: this.ps, ard: this.texte, pph: this.pph, aps: this.apsf }
+      const arg = { ps: this.ps, ard: this.texte, pph: this.phch, vmax: this.vmax, estpar: this.estpar }
       this.razps()
-      await new AcceptationParrainage().run(this.parrain, arg)
+      await new AcceptationParrainage().run(this.couple, arg)
       this.fermer()
     },
     async refuser () {
       this.razps()
-      await new RefusParrainage().run(this.parrain, this.texte)
+      await new RefusParrainage().run(this.couple, this.texte)
       this.fermer()
     }
   },

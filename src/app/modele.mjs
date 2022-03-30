@@ -875,10 +875,10 @@ export class Couple {
 
   setRepE () { if (this.naE) data.repertoire.setAx(this.naE) }
 
-  setIdIE (x) {
+  setIdIE (x, cle) { // cle : non null pour réception d'un couple HORS session (accepatation / refus parrainage)
     const id0 = x[0][2] ? crypt.hashBin(x[0][2]) : 0
     const id1 = x[1][2] ? crypt.hashBin(x[1][2]) : 0
-    if (data.repertoire.estAc(id0)) {
+    if (!cle && data.repertoire.estAc(id0)) {
       this.idI = id0
       this.idE = id1
       this.naE = this.idE ? new NomAvatar(x[1][1], x[1][2]) : null
@@ -891,7 +891,7 @@ export class Couple {
       this.naI = new NomAvatar(x[1][1], x[1][2])
       this.avc = 1
     }
-    data.repertoire.setCp(new NomAvatar(this.nom, this.cle))
+    if (!cle) data.repertoire.setCp(new NomAvatar(this.nom, this.cle))
   }
 
   nouveauP (naI, naE, cc, dlv, mot, idc0, idc1, pp, forfaits, ressources) {
@@ -931,7 +931,7 @@ export class Couple {
   }
 
   // cols: ['id', 'v', 'st', 'dds', 'v1', 'v2', 'mx10', 'mx20', 'mx11', 'mx21', 'dlv', 'data', 'info0', 'info1', 'mc0', 'mc1', 'dh', 'ard', 'vsh']
-  async fromRow (row) {
+  async fromRow (row, cle) { // cle : non null pour réception d'un couple HORS session (accepatation / refus parrainage)
     this.vsh = row.vsh || 0
     this.id = row.id
     this.v = row.v
@@ -943,17 +943,17 @@ export class Couple {
     this.mx11 = row.mx11
     this.mx21 = row.mx21
     this.dlv = row.dlv
-    this.data = deserial(await crypt.decrypter(this.cle, row.datac))
-    this.setIdIE(this.data.x)
-    const x = row.ardc ? deserial(await crypt.decrypter(this.cle, row.ardc)) : [0, '']
+    this.data = deserial(await crypt.decrypter(cle || this.cle, row.datac))
+    this.setIdIE(this.data.x, cle)
+    const x = row.ardc ? deserial(await crypt.decrypter(cle || this.cle, row.ardc)) : [0, '']
     this.dh = x[0]
     this.ard = x[1]
     if (this.avc === 0) {
       this.mc = row.mc0 || new Uint8Array([])
-      this.info = row.info0k ? await crypt.decrypterStr(data.clek, row.info0k) : ''
+      this.info = row.info0k && data.clek ? await crypt.decrypterStr(data.clek, row.info0k) : ''
     } else {
       this.mc = row.mc1 || new Uint8Array([])
-      this.info = row.info1k ? await crypt.decrypterStr(data.clek, row.info1k) : ''
+      this.info = row.info1k && data.clek ? await crypt.decrypterStr(data.clek, row.info1k) : ''
     }
     return this
   }
@@ -1018,7 +1018,7 @@ export class Contact {
   }
 
   async getCcId (clex) {
-    const [cc, nom] = deserial(await crypt.crypter(clex, this.ccx))
+    const [cc, nom] = deserial(await crypt.decrypter(clex, this.ccx))
     const id = crypt.hashBin(cc)
     return [cc, id, nom]
   }
