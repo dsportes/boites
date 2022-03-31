@@ -30,8 +30,7 @@
         </q-step>
 
         <q-step :name="3" title="Mot de bienvenue pour le futur nouveau compte" icon="settings" :done="step > 3" >
-          <editeur-md texte="" v-model="mot" editable modetxt style="height:8rem"></editeur-md>
-          <!--textarea :class="'q-pa-xs full-width font-mono height-8 ta ' + dlclass" v-model="mot"/-->
+          <editeur-md :texte="mot1" v-model="mot" editable modetxt style="height:8rem"></editeur-md>
           <div v-if="diagmot" class="fs-sm text-warning">De 10 à 140 signes ({{mot.length}})</div>
           <q-stepper-navigation>
             <q-btn flat @click="step = 2" color="primary" label="Précédent" class="q-ml-sm" />
@@ -142,10 +141,11 @@ export default ({
     },
     oknom (nom) {
       this.nom = nom
+      this.mot1 = 'Bonjour ' + this.nom + ' !'
       this.step = 3
     },
     okmot () {
-      if (this.mot.length > 10) {
+      if (this.mot.length > 0) {
         this.mot = this.mot.substring(0, 140)
         this.step = 4
       }

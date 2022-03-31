@@ -6,7 +6,7 @@ import {
   openIDB, enregLScompte, getVIdCvs, putFa, saveListeCvIds
 } from './db.mjs'
 import { Compte, Avatar, deserialRowItems, compileToObject, data, Prefs, Contact, Invitgr, Compta, Groupe, Membre, Cv, Couple } from './modele.mjs'
-import { AppExc, EXBRK, EXPS, F_BRO, E_BRO, X_SRV, E_WS /*, MC */ } from './api.mjs'
+import { AppExc, EXBRK, EXPS, F_BRO, E_BRO, X_SRV, E_WS, MC } from './api.mjs'
 
 import { crypt } from './crypto.mjs'
 import { schemas, serial } from './schemas.mjs'
@@ -262,6 +262,23 @@ export class Operation {
     }
   }
 
+  /* Recharge depuis le serveur tous les membres d'id de groupe donnée et de version postérieure à v
+  Remplit aussi la liste des membres à mettre à jour en IDB
+  */
+  async chargerCv (l1, l2, v) { // utiles : set des avatars utiles
+    const chg = {}
+    if (l1.length || l2.length) {
+      const args = { sessionId: data.sessionId, v, l1, l2 }
+      const ret = this.tr(await post(this, 'm1', 'chargerCVs', args))
+      for (const item of ret.rowItems) {
+        const row = schemas.deserialize('cv', item.serial)
+        const c = new Cv()
+        await c.fromRow(row)
+        chg[c.id] = c
+      }
+    }
+    return chg
+  }
   /*
   if (mapObj.secret) {
     data.setSecrets(mapObj.secret)
@@ -311,6 +328,7 @@ export class Operation {
   return vcv
 }
 */
+
   async syncPjs () { // A REPRENDRE
     /* Vérification que toutes les PJ accessibles en avion sont, a) encore utiles, b) encore à jour */
     let nbp = 0
@@ -611,6 +629,7 @@ export class Operation {
     if (mapObj.couple) {
       for (const pk in mapObj.couple) {
         const cp = mapObj.couple[pk]
+        cp.setRepE()
         this.buf.setObj(cp)
         this.buf.putIDB(cp)
         const av = data.getCouple(cp.id)
@@ -772,6 +791,7 @@ export class OperationUI extends Operation {
   }
 
   async postCreation (ret) {
+    data.estComptable = ret.estComptable
     const mapRows = deserialRowItems(ret.rowItems)
 
     const compte = await new Compte().fromRow(mapRows.compte)
@@ -786,7 +806,56 @@ export class OperationUI extends Operation {
 
     const x = Object.values(mapRows.avatar)
     const avatar = await new Avatar().fromRow(x[0])
+    avatar.repGroupes()
+    avatar.repCouples()
     data.setAvatars([avatar])
+
+    const lmaj = [compte, compta, prefs, avatar]
+    const lsuppr = []
+
+    if (mapRows.couple) {
+      const x = Object.values(mapRows.couple)
+      const couple = await new Couple().fromRow(x[0])
+      couple.setRepE()
+      data.setCouples([couple])
+      lmaj.push(couple)
+    }
+
+    const tousAx = data.setTousAx() // Calcul de la liste des avatars externes
+
+    // Récupération et traitement des CVs (a priori celle de l'avatar du parrain)
+    const cvIds = new Set()
+    for (const id in tousAx) { cvIds.add(parseInt(id)) }
+    for (const id in data.getAvatar()) { cvIds.add(parseInt(id)) }
+    for (const id in data.getGroupe()) { cvIds.add(parseInt(id)) }
+    for (const id in data.getCouple()) { cvIds.add(parseInt(id)) }
+    const l2 = []
+    let nv = 0
+    const vcv = 0
+    const cvs = {}
+    const lst = [] // id des cv synchronisées
+    cvIds.forEach(id => { l2.push(id) })
+    const chg = await this.chargerCv([], l2, vcv)
+
+    for (const id in chg) {
+      const cv = chg[id]
+      if (cv.x) { // disparu
+        data.repertoire.disparition(cv.id)
+        cvs[cv.id] = { id: cv.id, cv: null }
+        lsuppr.push({ table: 'cv', id: cv.id })
+      } else {
+        if (cv.v > nv) nv = cv.v
+        cvs[cv.id] = cv
+        lmaj.push(cv)
+      }
+    }
+    data.setCvs(Object.values(cvs))
+    if (data.dbok) { // liste des ids des CV resynchronisées
+      for (const id in cvs) {
+        const cv = cvs[id]
+        if (cv.v > 0) lst.push(cv.id)
+      }
+    }
 
     // création de la base IDB et chargement des rows compte avatar ...
     if (data.mode === 1) { // synchronisé : IL FAUT OUVRIR IDB (et écrire dedans)
@@ -799,12 +868,13 @@ export class OperationUI extends Operation {
         await deleteIDB(true)
         throw e
       }
-      await commitRows({ lmaj: [compte, compta, prefs, avatar] })
+      await saveListeCvIds(nv > vcv ? nv : vcv, lst)
+      await commitRows({ lmaj, lsuppr })
       await data.debutConnexion()
     }
 
-    data.estComptable = ret.estComptable
     await data.finConnexion(this.dh)
+    console.log('Création compte : ' + data.getCompte().id)
     this.finOK()
     remplacePage('Compte')
   }
@@ -889,11 +959,8 @@ export class CreationCompte extends OperationUI {
       const prefs = new Prefs().nouveau(compte.id)
       const rowPrefs = await prefs.toRow()
 
-      // data.setPrefs(prefs) // tout de suite à cause de l'afficahage qui va y chercher des trucs
-      // data.setCompte(compte)
-
       const compta = new Compta().nouveau(compte.id, null)
-      compta.compteurs.setRes(64, 64)
+      compta.compteurs.setRes([64, 64])
       compta.compteurs.setF1(forfaits[0])
       compta.compteurs.setF2(forfaits[1])
       const rowCompta = await compta.toRow()
@@ -1038,9 +1105,11 @@ export class ConnexionCompte extends OperationUI {
     this.nbCouples = cprequis.size
     this.groupes = data.dbok ? await getGroupes() : {}
     const setidbgr = new Set(); for (const id in this.groupes) setidbgr.add(parseInt(id))
+
     this.couples = data.dbok ? await getCouples() : {}
     for (const id in this.couples) { this.couples[id].setRepE() }
-    const setidbcp = new Set(); for (const id in this.groupes) setidbcp.add(parseInt(id))
+    const setidbcp = new Set(); for (const id in this.couples) setidbcp.add(parseInt(id))
+
     const grentrop = difference(setidbgr, grrequis) // groupes en IDB NON requis (à supprimer de IDB)
     grentrop.forEach(id => {
       this.buf.supprIDB({ table: 'groupe', id: id })
@@ -1184,24 +1253,6 @@ export class ConnexionCompte extends OperationUI {
     data.setMembres(lm)
   }
 
-  /* Recharge depuis le serveur tous les membres d'id de groupe donnée et de version postérieure à v
-  Remplit aussi la liste des membres à mettre à jour en IDB
-  */
-  async chargerCv (l1, l2, v) { // utiles : set des avatars utiles
-    const chg = {}
-    if (l1.length || l2.length) {
-      const args = { sessionId: data.sessionId, v, l1, l2 }
-      const ret = this.tr(await post(this, 'm1', 'chargerCVs', args))
-      for (const item of ret.rowItems) {
-        const row = schemas.deserialize('cv', item.serial)
-        const c = new Cv()
-        await c.fromRow(row)
-        chg[c.id] = c
-      }
-    }
-    return chg
-  }
-
   // Récupérer, synchroniser les CVs et s'y abonner
   async syncCVs () {
     const tousAx = data.setTousAx() // Calcul de la liste des avatars externes
@@ -1230,7 +1281,7 @@ export class ConnexionCompte extends OperationUI {
       // séparation des ids en l1 (celles après vcv) et celles sans filtre de version
       const l1 = [], l2 = [], axdisparus = new Set(), cpdisp = [], mbdisp = []
       cvIds.forEach(id => { if (ids.has(id)) l1.push(id); else l2.push(id) })
-      const chg = await this.chargerCv(l1, l2, vcv, cvs)
+      const chg = await this.chargerCv(l1, l2, vcv)
       // traitement des CVs changées / disparues
       for (const id in chg) {
         const cv = chg[id]
@@ -1323,6 +1374,7 @@ export class ConnexionCompte extends OperationUI {
       // Finalisation en une seule fois, commit en IDB
       if (data.dbok && data.netok) await this.buf.commitIDB()
       await data.finConnexion(this.dh)
+      console.log('Connexion compte : ' + data.getCompte().id)
       this.finOK()
       remplacePage('Compte')
     } catch (e) {
@@ -1532,25 +1584,12 @@ export class SupprParrainage extends OperationUI {
 }
 /******************************************************************
  * Acceptation d'un parrainage
- * - sessionId
- * - pph : hash de la phrase de parrainage
- * - idp : de l'avatar parrain
- * - icp : ic du contact du filleul chez le parrain
- * - idcp : id du compte parrain pour maj de son row compta
- * - ardc : mot du filleul crypté par la clé du couple
- * - idf : id du filleul (avatar)
- * - icbc : indice de P comme contact chez F crypté par leur clé cc
- * - clePubAv, clePubC : clés publiques de l'avatar et du compte
- * - rowCompte, rowCompta, rowAvatar, rowPrefs, rowContactF ("MOI" le filleul), rowContactP (du parrain)
- *  : v attribuées par le serveur
- * Retour : sessionId, dh
 A_SRV, '17-Compte parrain : données de comptabilité absentes'
 X_SRV, '18-Réserves de volume insuffisantes du parrain pour attribuer ces forfaits'
 X_SRV, '03-Phrase secrète probablement déjà utilisée. Vérifier que le compte n\'existe pas déjà en essayant de s\'y connecter avec la phrase secrète'
 X_SRV, '04-Une phrase secrète semblable est déjà utilisée. Changer a minima la première ligne de la phrase secrète pour ce nouveau compte'
-X_SRV, '15-Phrase de parrainage inconnue'
-X_SRV, '16-Ce parrainage a déjà fait l\'objet ' + (p.st !== 1 ? 'd\'une acceptation.' : 'd\'un refus'
- */
+A_SRV, '24-Couple non trouvé'
+*/
 
 export class AcceptationParrainage extends OperationUI {
   constructor () {
@@ -1573,89 +1612,62 @@ export class AcceptationParrainage extends OperationUI {
     try {
       // LE COMPTE EST CELUI DU FILLEUL
       data.ps = arg.ps
-      /*
+
       await data.connexion(true) // On force A NE PAS OUVRIR IDB (compte pas encore connu)
 
+      data.resetPhase012()
+      this.BRK()
       const kpav = await crypt.genKeyPair()
-
-      const compte = new Compte().nouveau(parrain.naf, kpav.privateKey, kpc.privateKey, parrain.data.idcf)
+      const d = couple.data
+      const idcf = d.x[1][0] // id du compte filleul
+      const idcp = d.x[0][0] // id du compte filleul
+      const compte = new Compte().nouveau(couple.naI, kpav.privateKey, idcf)
+      // nouveau() enregistre la clé K dans data.clek !!!
       const rowCompte = await compte.toRow()
-      data.setCompte(compte)
 
       const prefs = new Prefs().nouveau(compte.id)
-      data.setPrefs(prefs)
       const rowPrefs = await prefs.toRow()
 
-      const avatar = new Avatar().nouveau(parrain.naf.id)
-      const rowAvatar = await avatar.toRow()
-
-      const compta = new Compta().nouveau(compte.id, estpar ? null : parrain.data.idcp) // du "filleul / introduit"
-      compta.compteurs.setF1(parrain.data.f[0])
-      compta.compteurs.setF2(parrain.data.f[1])
-      if (estpar) compta.compteurs.setRes(parrain.data.r)
+      const compta = new Compta()
+      if (arg.estpar) {
+        // parrain lui-même
+        compta.nouveau(compte.id, null)
+        compta.compteurs.setRes([d.r1, d.r2])
+      } else {
+        // filleul
+        compta.nouveau(compte.id, idcp)
+      }
+      compta.compteurs.setF1(d.f1)
+      compta.compteurs.setF2(d.f2)
       const rowCompta = await compta.toRow()
 
-      const x = parrain.data.aps ? 1 : 0
-      const y = arg.aps ? 1 : 0 // y c'est MOI
-      const dh = new Date().getTime()
+      const ni = crypt.hash(crypt.u8ToHex(couple.cc) + '1')
+      const avatar = new Avatar().nouveau(couple.idI, ni, couple.naTemp)
+      const rowAvatar = await avatar.toRow()
 
-      const p = new Contact() // Contact dans LE COMPTE PARRAIN
-      p.id = parrain.id
-      p.ic = parrain.data.icp
-      p.v = 0
-      p.st = (10 * x) + y
-      p.ncc = y ? parrain.data.idcf : null // si j'accepte le partage, le parrain a mon numéro de compte
-      p.ard = arg.ard
-      p.dh = dh
-      p.mc = new Uint8Array([MC.NOUVEAU, (estpar ? MC.INTRODUIT : MC.FILLEUL)])
-      p.info = null
-      p.vsh = 0
-      const rowContactP = await p.toRow(parrain.data2k, parrain.data.cc)
-
-      const f = new Contact() // Contact dans "MON" COMPTE
-      f.id = parrain.naf.id
-      f.ic = parrain.data.icf
-      f.v = 0
-      f.st = (10 * y) + x // si le parrain accepte le partage, J'AI son numéro de compte
-      p.ncc = x ? parrain.data.idcp : null
-      f.ard = arg.ard
-      f.dh = dh
-      f.data = { nom: parrain.nap.nom, rnd: parrain.nap.rnd, ic: parrain.data.icp, cc: parrain.data.cc }
-      f.mc = new Uint8Array([MC.NOUVEAU, (estpar ? MC.INTRODUCTEUR : MC.PARRAIN)])
-      f.info = null
-      f.vsh = 0
-      const rowContactF = await f.toRow()
+      const ardc = await couple.toArdc(arg.ard, couple.cc)
 
       const args = {
         sessionId: data.sessionId,
-        pph: arg.pph,
-        idf: parrain.naf.id,
-        idp: parrain.id,
-        idcp: parrain.data.idcp, // id compte parrain : pour maj de son row compta
-        forfaits: parrain.data.f, // A déduire des ressources du row compta du parrain
-        clePubAv: kpav.publicKey,
-        clePubC: kpc.publicKey,
-        rowCompte,
-        rowPrefs,
-        rowAvatar,
-        rowCompta,
-        rowContactP,
-        rowContactF
+        clePubAv: kpav.publicKey, // clé publique de l'avatar créé
+        rowCompte, // compte créé
+        rowCompta, // compta du compte créé
+        rowAvatar, // premier avatar du compte créé
+        rowPrefs, // préférences du compte créé
+        idCouple: couple.id, // id du couple
+        phch: arg.phch, // hash de la phrase de contact
+        idcp, // id du compte parrain
+        idavp: couple.idE, // id de l'avatar parrain
+        dr1: arg.estpar ? d.r1 + d.f1 : d.f1, // montant à réduire de sa réserve
+        dr2: arg.estpar ? d.r2 + d.f2 : d.f2,
+        mc0: [arg.estpar ? MC.FILLEUL : MC.INTRODUIT], // array des mots clé à ajouter dans le couple
+        mc1: [arg.estpar ? MC.PARRAIN : MC.INTRODUCTEUR],
+        ardc
       }
-      const ret = await post(this, 'm1', 'acceptParrainage', args)
-      if (data.dh < ret.dh) data.dh = ret.dh
-      */
-      /*
-      Le compte vient d'être créé et est déjà dans le modèle (clek enregistrée)
-      On peut désérialiser la liste d'items (compte, contact, avatar)
+      const ret = this.tr(await post(this, 'm1', 'acceptParrainage', args))
 
-      this.postCreation(ret)
-
-      data.estComptable = false
-      const res = this.finOK()
-      remplacePage('Compte')
-      return res
-      */
+      // Le compte vient d'être créé et clek enregistrée
+      await this.postCreation(ret) // fin commune avec la création de compte comptable
     } catch (e) {
       return await this.finKO(e)
     }

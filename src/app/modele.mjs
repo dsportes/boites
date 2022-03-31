@@ -139,18 +139,17 @@ class Repertoire {
 
   disparition (id) { const e = this.rep[id]; if (e) e.x = true }
 
-  setXX (na, x) {
+  setXX (na) {
     const id = na.id
     let obj = this.rep[id]; if (!obj) { obj = { }; this.rep[id] = obj }
     obj.na = na
-    if (x) obj.x = true
     return id
   }
 
-  setAc (na, x) { this.idac.add(this.setXX(na, x)) }
-  setGr (na, x) { this.idgr.add(this.setXX(na, x)) }
-  setCp (na, x) { this.idcp.add(this.setXX(na, x)) }
-  setAx (na, x) { this.idax.add(this.setXX(na, x)) }
+  setAc (na) { this.idac.add(this.setXX(na)) }
+  setGr (na) { this.idgr.add(this.setXX(na)) }
+  setCp (na) { this.idcp.add(this.setXX(na)) }
+  setAx (na) { this.idax.add(this.setXX(na)) }
 }
 
 /* état de session ************************************************************/
@@ -418,7 +417,7 @@ export class Compte {
 
   repAvatars () { this.avatarNas().forEach(na => { data.repertoire.setAc(na, na.id) }) }
 
-  nouveau (nomAvatar, cprivav, id) {
+  nouveau (nomAvatar, cprivav, id) { // id : du compte lui-même
     this.id = id || crypt.rnd6()
     this.v = 0
     this.dpbh = data.ps.dpbh
@@ -683,7 +682,7 @@ export class Avatar {
   constructor () {
     this.m1gr = new Map() // clé:ni val: { na du groupe, im de l'avatar dans le groupe }
     this.m2gr = new Map() // clé:idg (id du groupe), val:[im, ni]
-    this.mcc = new Map() // clé: id du couple, val: clé cc
+    this.mcc = new Map() // clé: ni, val: clé cc
   }
 
   groupeIds (s) {
@@ -714,10 +713,11 @@ export class Avatar {
 
   repCouples () { this.mcc.forEach(na => { data.repertoire.setCp(na) }) }
 
-  nouveau (id) {
+  nouveau (id, niCouple, naCouple) { // naCouple : création lors d'une acceptation de parrainage
     this.id = id
     this.v = 0
     this.vsh = 0
+    if (naCouple) this.mcc.set(niCouple, naCouple)
     return this
   }
 
@@ -728,7 +728,7 @@ export class Avatar {
         const y = lcc[ni]
         const cc = brut ? y : await crypt.decrypter(data.clek, y)
         const na = new NomAvatar('x', cc)
-        this.mcc.set(na.id, na)
+        this.mcc.set(ni, na)
       }
     }
     this.m1gr.clear()
@@ -745,10 +745,26 @@ export class Avatar {
   }
 
   decompileListsBrut () {
-    const lgr = {}
-    for (const [ni, x] of this.m1gr) lgr[ni] = serial([x.na.nom, x.na.rnd, x.im])
-    const lcc = {}
-    for (const [ni, na] of this.mcc) lcc[ni] = na.rnd
+    const lgr = this.m1gr.size ? {} : null
+    if (this.m1gr.size) for (const [ni, x] of this.m1gr) lgr[ni] = serial([x.na.nom, x.na.rnd, x.im])
+    const lcc = this.mcc.size ? {} : null
+    if (this.mcc.size) for (const [ni, na] of this.mcc) lcc[ni] = na.rnd
+    return [lgr, lcc]
+  }
+
+  async decompileLists () {
+    const lgr = this.m1gr.size ? {} : null
+    if (this.m1gr.size) {
+      for (const [ni, x] of this.m1gr) {
+        lgr[ni] = await crypt.crypter(data.clek, serial([x.na.nom, x.na.rnd, x.im]))
+      }
+    }
+    const lcc = this.mcc.size ? {} : null
+    if (this.mcc.size) {
+      for (const [ni, na] of this.mcc) {
+        lcc[ni] = await crypt.crypter(data.clek, na.rnd)
+      }
+    }
     return [lgr, lcc]
   }
 
@@ -761,7 +777,8 @@ export class Avatar {
   }
 
   async toRow () { // pour un nouvel avatar seulement
-    const r = { id: this.id, v: this.v, lgrk: null, lcck: null, vsh: 0 }
+    const [lgr, lcc] = await this.decompileLists()
+    const r = { id: this.id, v: this.v, lgrk: serial(lgr), lcck: serial(lcc), vsh: 0 }
     return schemas.serialize('rowavatar', r)
   }
 
@@ -853,6 +870,27 @@ schemas.forSchema({
 - `mc0 mc1` : mots clé définis respectivement par A0 et A1.
 - `ardc` : ardoise commune cryptée par la clé cc. [dh, texte]
 - `vsh` :
+
+#### Phases de vie d'un couple
+- **(1) prise de contact par A0**. Etats : 147
+- **(2) fin de vie de A0 seul après refus de A1**. Etats : 235689
+- **(3) vie à deux**. Etat : 0
+- **(4) vie de A0 OU A1 seul après _départ_ de l'autre**. Etats: 0123
+- **(5) vie de A0 OU A1 seul après _disparition_ de l'autre**. Etat : 0
+
+Dans certaines de ces phases il y a des **états** significatifs (sinon 0).
+- (re)prise de contact standard
+  - (1) en attente de réponse
+  - (2) hors délai
+  - (3) refusée
+- parrainage
+  - (4) en attente de réponse
+  - (5) hors délai
+  - (6) refusée
+- rencontre
+  - (7) en attente de réponse
+  - (8) hors délai
+  - (9) refusée
 */
 
 export class Couple {
@@ -891,7 +929,8 @@ export class Couple {
       this.naI = new NomAvatar(x[1][1], x[1][2])
       this.avc = 1
     }
-    if (!cle) data.repertoire.setCp(new NomAvatar(this.nom, this.cle))
+    const na = new NomAvatar(this.nom, cle || this.cle)
+    if (!cle) data.repertoire.setCp(na); else this.naTemp = na
   }
 
   nouveauP (naI, naE, cc, dlv, mot, idc0, idc1, pp, forfaits, ressources) {
@@ -904,9 +943,9 @@ export class Couple {
     this.idE = naE.id
     this.avc = 0
     data.repertoire.setAx(naE)
-    this.na = new NomAvatar(naI.nom + '__' + naE.nom, cc)
-    this.id = this.na.id
-    data.repertoire.setCp(this.na, this.id)
+    const na = new NomAvatar(naI.nom + '__' + naE.nom, cc)
+    this.id = na.id
+    data.repertoire.setCp(na)
     this.v1 = 0
     this.v2 = 0
     this.mx10 = 1
@@ -930,8 +969,16 @@ export class Couple {
     return this
   }
 
+  dlvEtat () {
+    if (this.dlv && dlvDepassee(this.dlv)) {
+      if (this.stp === 1) { this.st += 1100; return } // si attente, passe en phase 2 et états hors délai
+      if (this.stp === 4 && this.ste === 1) this.st += 100 // si attente, passe en hors délai
+    }
+  }
+
   // cols: ['id', 'v', 'st', 'dds', 'v1', 'v2', 'mx10', 'mx20', 'mx11', 'mx21', 'dlv', 'data', 'info0', 'info1', 'mc0', 'mc1', 'dh', 'ard', 'vsh']
   async fromRow (row, cle) { // cle : non null pour réception d'un couple HORS session (accepatation / refus parrainage)
+    if (cle) this.cc = cle // NON persistante, utile pour acceptation de parrainage
     this.vsh = row.vsh || 0
     this.id = row.id
     this.v = row.v
@@ -955,6 +1002,7 @@ export class Couple {
       this.mc = row.mc1 || new Uint8Array([])
       this.info = row.info1k && data.clek ? await crypt.decrypterStr(data.clek, row.info1k) : ''
     }
+    this.dlvEtat()
     return this
   }
 
@@ -967,12 +1015,17 @@ export class Couple {
     return schemas.serialize('rowcouple', r)
   }
 
+  async toArdc (ard, cc) {
+    return await crypt.crypter(cc, serial([new Date().getTime(), ard]))
+  }
+
   get toIdb () {
     return schemas.serialize('idbCouple', this)
   }
 
   fromIdb (idb) {
     schemas.deserialize('idbCouple', idb, this)
+    this.dlvEtat()
     this.setIdIE(this.data.x)
     return this
   }

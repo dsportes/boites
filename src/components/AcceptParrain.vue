@@ -20,7 +20,7 @@
             </div>
           </div>
           <div class="t1">Validité: <span class="sp1">{{couple.dlv - jourJ}}</span> jour(s)</div>
-          <show-html class="full-width height-6" :texte="couple.ard" />
+          <show-html class="full-width height-6 border1" :texte="couple.ard" />
           <q-stepper-navigation>
             <q-btn flat @click="fermer()" color="primary" label="Renoncer" class="q-ml-sm" />
             <q-btn flat @click="step=5" color="primary" label="Refuser" class="q-ml-sm" />
@@ -38,7 +38,7 @@
         </q-step>
 
         <q-step :name="3" title="Message de remerciement" icon="settings" :done="step > 3" >
-          <editeur-md class="full-width height-8" v-model="texte" :texte="couple.ard" editable modetxt hors-session/>
+          <editeur-md class="full-width height-8" v-model="texte" :texte="textedef" editable modetxt hors-session/>
           <q-stepper-navigation>
             <q-btn flat @click="step=2" color="primary" label="Corriger" class="q-ml-sm" />
             <q-btn flat @click="fermer()" color="primary" label="Renoncer" class="q-ml-sm" />
@@ -91,7 +91,8 @@ export default ({
   components: { PhraseSecrete, EditeurMd, ShowHtml, ChoixForfaits },
 
   computed: {
-    estpar () { return this.couple && (this.couple.data.r1 || this.couple.data.r2) }
+    estpar () { return this.couple && (this.couple.data.r1 || this.couple.data.r2) },
+    textedef () { return 'Merci ' + this.couple.naE.nom + ',\n\n' + this.couple.ard }
   },
 
   data () {
@@ -130,7 +131,7 @@ export default ({
     },
     async confirmer () {
       // eslint-disable-next-line no-unused-vars
-      const arg = { ps: this.ps, ard: this.texte, pph: this.phch, vmax: this.vmax, estpar: this.estpar }
+      const arg = { ps: this.ps, ard: this.texte, phch: this.phch, vmax: this.vmax, estpar: this.estpar }
       this.razps()
       await new AcceptationParrainage().run(this.couple, arg)
       this.fermer()
@@ -149,6 +150,8 @@ export default ({
 
 <style lang="sass" scoped>
 @import '../css/app.sass'
+.border1
+  border: 1px solid grey
 .q-dialog__inner
   padding: 0 !important
 </style>
