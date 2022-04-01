@@ -1,93 +1,82 @@
 <template>
-  <q-card class="full-height moyennelargeur fs-md column">
+  <q-card v-if="sessionok" class="full-height moyennelargeur fs-md column">
     <q-toolbar class="col-auto bg-primary text-white maToolBar">
       <q-btn flat round dense icon="close" size="md" class="q-mr-sm" @click="fermer" />
-      <q-toolbar-title><div class="titre-md tit text-center">{{contact ? contact.nom : ''}}</div></q-toolbar-title>
-      <q-btn v-if="mode <= 2" :disable="!modif" class="q-ml-sm" flat dense color="white" icon="undo" @click="initState"/>
-      <q-btn v-if="mode <= 2" :disable="!modif || erreur !== ''" class="q-my-sm"
-        flat dense color="white" :label="'Valider'" icon="check" @click="valider"/>
+      <q-btn :disable="!precedent" flat round dense icon="arrow_back_ios" size="md" class="q-mr-sm" @click="prec" />
+      <span class="q-pa-sm">{{index + 1}} sur {{sur}}</span>
+      <q-btn :disable="!suivant" flat round dense icon="arrow_forward_ios" size="md" class="q-mr-sm" @click="suiv" />
+      <q-toolbar-title><div class="titre-md tit text-center">{{s.na ? s.na.nom : ''}}</div></q-toolbar-title>
     </q-toolbar>
 
     <q-card-section>
-      <div class="q-my-sm row">
-        <img class="col-auto photomax" :src="contact ? contact.ph : ''"/>
-        <show-html class="col q-ml-md bord1 height-6" :texte="contact ? contact.cv.info : ''"/>
-      </div>
-      <q-btn v-if="invitationattente" class="titre-lg text-bold text-grey-8 bg-yellow-4 q-mx-sm" label="[Contact !]" dense flat @click="copier(contact)"/>
-    </q-card-section>
-
-    <q-card-section>
-      <div style="margin-left:-0.8rem" class="text-primary">
-        <q-toggle v-model="state.aps" size="md" :color="state.aps ? 'green' : 'grey'"
-          :label="'' + (!state.aps ? 'Je n\'accepte pas' : 'J\'accepte') + ' le partage de secrets avec ce contact'"/>
-      </div>
-      <div style="margin-left:-0.8rem" class="text-primary">
-        <q-toggle v-model="state.apsb" size="md" disable :color="state.apsb ? 'green' : 'grey'"
-          :label="(!state.apsb ? 'Le contact n\'accepte pas' : 'Le contact accepte') + ' le partage de secrets avec moi'"/>
-      </div>
+      <div v-if="s.na" class="titre-md">Carte de visite du couple</div>
+      <identite-cv  v-if="s.na" :nom-avatar="s.na" type="avatar" editable @cv-changee="cvchangee"/>
+      <div v-if="s.naE" class="titre-md">Carte de visite du conjoint</div>
+      <identite-cv  v-if="s.naE" :nom-avatar="s.naE" type="avatar" invitable/>
     </q-card-section>
 
     <q-card-section>
       <div class="titre-md">Ardoise commune avec le contact</div>
-      <editeur-md class="height-8" v-model="state.ard" :texte="contact ? contact.ard : ''" editable modetxt/>
+      <editeur-md class="height-8" v-model="s.ard" :texte="s.ard ? s.ard : ''" editable modetxt/>
     </q-card-section>
 
     <q-card-section>
       <div class="titre-md">Commentaires personnels</div>
-      <editeur-md class="height-8" v-model="state.info" :texte="contact ? contact.info : ''" editable modetxt/>
+      <editeur-md class="height-8" v-model="s.info" :texte="s.info ? s.info : ''" editable modetxt/>
     </q-card-section>
 
     <q-card-section>
       <div class="titre-md">Mots clés qualifiant le contact</div>
-      <apercu-motscles :motscles="state.motscles" :src="state.mc" :args-click="{}" @click-mc="mcledit=true"/>
+      <apercu-motscles :motscles="s.motscles" :src="s.mc" :args-click="{}" @click-mc="mcledit=true"/>
     </q-card-section>
 
     <q-dialog v-model="mcledit">
-      <select-motscles :motscles="state.motscles" :src="state.mc" @ok="changermcl" :close="fermermcl"></select-motscles>
+      <select-motscles :motscles="s.motscles" :src="s.mc" @ok="changermcl" :close="fermermcl"></select-motscles>
     </q-dialog>
 
   </q-card>
 </template>
 <script>
-import { computed, reactive, watch } from 'vue'
+import { computed, reactive, watch, ref, toRef } from 'vue'
 import { useStore } from 'vuex'
-import { Motscles, equ8 } from '../app/util.mjs'
+import { Motscles, edvol } from '../app/util.mjs'
 import { data } from '../app/modele.mjs'
-import { MajContact } from '../app/operations.mjs'
-import ShowHtml from './ShowHtml.vue'
+import { MajContact, MajCv } from '../app/operations.mjs'
 import EditeurMd from './EditeurMd.vue'
 import ApercuMotscles from './ApercuMotscles.vue'
 import SelectMotscles from './SelectMotscles.vue'
+import IdentiteCv from './IdentiteCv.vue'
 import { retourInvitation } from '../app/page.mjs'
 
 export default ({
   name: 'PanelCouple',
 
-  components: { ShowHtml, EditeurMd, ApercuMotscles, SelectMotscles },
+  components: { EditeurMd, ApercuMotscles, SelectMotscles, IdentiteCv },
 
-  props: { close: Function },
+  props: { couple: Object, close: Function, suivant: Function, precedent: Function, index: Number, sur: Number },
 
-  computed: {
-    modif () {
-      const c = this.contact
-      if (!c) return false
-      const s = this.state
-      return c.info !== s.info || c.ard !== s.ard || !equ8(c.mc, s.mc) || s.aps !== (c.stx === 1)
-    }
-  },
+  computed: { },
 
   data () {
     return {
-      erreur: '',
-      mcledit: false
+      erreur: ''
     }
   },
 
   methods: {
+    async cvchangee (cv) {
+      await new MajCv().run(cv)
+    },
+    suiv () {
+      if (this.suivant) this.suivant()
+    },
+    prec () {
+      if (this.precedent) this.precedent()
+    },
     fermermcl () { this.mcledit = false },
-    changermcl (mc) { this.state.mc = mc },
+    changermcl (mc) { this.s.mc = mc },
     async valider () {
-      await new MajContact().run(this.contact, this.state)
+      await new MajContact().run(this.contact, this.s)
     },
     fermer () { if (this.close) this.close() },
     copier (c) {
@@ -95,43 +84,93 @@ export default ({
     }
   },
 
-  setup () {
+  setup (props) {
     const $store = useStore()
+    const sessionok = computed(() => { return $store.state.ui.sessionok })
+    const mcledit = ref(false)
+
     const diagnostic = computed({
       get: () => $store.state.ui.diagnostic,
       set: (val) => $store.commit('ui/majdiagnostic', val)
     })
-    const contact = computed(() => { return $store.state.db.contact })
+    const couple = toRef(props, 'couple')
     const mode = computed(() => $store.state.ui.mode)
     const prefs = computed(() => { return data.getPrefs() })
+    const cvs = computed(() => { return $store.state.db.cvs })
     const invitationattente = computed({
       get: () => $store.state.ui.invitationattente,
       set: (val) => $store.commit('ui/majinvitationattente', val)
     })
 
-    const state = reactive({
+    const s = reactive({
       motcles: null,
-      mc: null,
-      aps: false,
-      apsb: false,
-      info: '',
-      ard: ''
+      axvis: false, // l'identité de l'autre est visible
+      cvaxvis: false, // la carte de visite de l'autre est visible
+      dlvvis: false, // la dlv est visible
+      frvis: false, // les forfaits / ressources sont visibles
+      phcvis: false, // la phrase de contact est visible
+      maxEvis: false,
+      relstd: false, // relance standard autorisée
+      relpar: false, // relance de parrainage autorisée
+      relren: false, // relance de rencontre autorisée
+      dh: 0, // date-heure de l'ardoise
+      ard: '', // texte de l'ardoise
+      info: '', // commentaire personnel sur le couple
+      cvc: null, // carte de visite du couple
+      na: null, // na du couple
+      cvax: null, // carte de visite de l'autre
+      naax: null, // na de l'autre
+      mc: new Uint8Array([]), // mots clés attribués
+      maxI1: 0, // volumes max perso (I) et fixé par l'autre (E)
+      maxI2: 0,
+      maxE1: 0,
+      maxE2: 0,
+      f1: 0,
+      f2: 0,
+      r1: 0,
+      r2: 0,
+      v1: '',
+      v2: ''
     })
 
     const mc = reactive({ categs: new Map(), lcategs: [], st: { enedition: false, modifie: false } })
 
     function chargerMc () {
-      state.motscles = new Motscles(mc, 1, 0)
-      state.motscles.recharger()
+      s.motscles = new Motscles(mc, 1, 0)
+      s.motscles.recharger()
     }
 
     function initState () {
-      const c = contact.value
-      state.aps = c ? c.stx === 1 : false
-      state.apsb = c ? c.sty === 1 : false
-      state.info = c ? c.info : ''
-      state.ard = c ? c.ard : ''
-      state.mc = c ? c.mc : new Uint8Array([])
+      const c = couple.value
+      const p = c ? c.stp : 0
+      const e = c ? c.ste : 0
+      s.axvis = (p === 1 && (e === 1 || e === 4 || e === 7)) ||
+        (p === 2 && (e === 2 || e === 3 || e === 5 || e === 8)) || p >= 3
+      s.cvaxvis = (p === 1 && e === 1) || (p === 2 && (e === 2 || e === 3)) || p === 3 || p === 4
+      s.dlvvis = p === 1 && (e === 1 || e === 4 || e === 7)
+      s.frvis = e === 4 || e === 5 || e === 6
+      s.phcvis = e >= 4 && e <= 9
+      s.maxEvis = p === 3
+      s.relstd = (p === 2 && (e === 2 || e === 3)) || (p === 4 && e === 0)
+      s.relpar = p === 2 && (e === 5 || e === 6)
+      s.relren = p === 2 && (e === 8 || e === 9)
+      s.info = c ? c.info : ''
+      s.dh = c ? c.dh : ''
+      s.ard = c ? c.ard : ''
+      s.mc = c ? c.mc : new Uint8Array([])
+      s.dlv = s.dlvvis ? c.dlv : 0
+      s.maxE1 = c && s.maxEvis ? (c.avc ? c.mx11 : c.mx10) : 0
+      s.maxE2 = c && s.maxEvis ? (c.avc ? c.mx21 : c.mx20) : 0
+      s.f1 = c && s.frvis ? c.data.f1 : 0
+      s.f2 = c && s.frvis ? c.data.f2 : 0
+      s.r1 = c && s.frvis ? c.data.r1 : 0
+      s.r2 = c && s.frvis ? c.data.r2 : 0
+      s.v1 = c ? edvol(c.v1) : ''
+      s.v2 = c ? edvol(c.v2) : ''
+      s.cvc = c ? cvs.value[c.id] : null // carte de visite du couple
+      s.na = c ? c.na : null // na du couple
+      s.naE = c ? c.naE : null // na de l'autre
+      s.cvax = c && c.naE ? cvs.value[c.naE] : null // carte de visite de l'autre
     }
 
     initState()
@@ -141,15 +180,20 @@ export default ({
       chargerMc()
     })
 
-    watch(() => contact.value, (ap, av) => {
+    watch(() => couple.value, (ap, av) => {
       initState()
     })
 
+    watch(() => sessionok.value, (ap, av) => {
+      mcledit.value = false
+    })
+
     return {
+      mcledit,
+      sessionok,
       initState,
-      state,
+      s,
       diagnostic,
-      contact,
       mode,
       invitationattente
     }

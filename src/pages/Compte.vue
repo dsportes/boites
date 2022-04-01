@@ -4,8 +4,8 @@
     <q-expansion-item label="Sélectionner un des avatars du compte" default-opened
         header-class="expansion-header-class-1 titre-lg bg-primary text-white">
       <q-btn class="q-my-sm" size="md" icon="add" label="Nouvel avatar" color="primary" dense @click="nvav=true"/>
-      <div v-for="id in state.lst" :key="id" class="full-width">
-        <apercu-avatar editer :avatar-id="id" @click-apercu="toAvatar"/>
+      <div v-for="na in state.lst" :key="na.id" class="full-width">
+        <identite-cv :nom-avatar="na" type="avatar" invitable clickable @identite-click="toAvatar"/>
       </div>
     </q-expansion-item>
   </div>
@@ -40,7 +40,7 @@ import { onBoot, remplacePage } from '../app/page.mjs'
 import EditeurMd from '../components/EditeurMd.vue'
 import BoutonHelp from '../components/BoutonHelp.vue'
 import MotsCles from '../components/MotsCles.vue'
-import ApercuAvatar from '../components/ApercuAvatar.vue'
+import IdentiteCv from '../components/IdentiteCv.vue'
 import NomAvatar from '../components/NomAvatar.vue'
 import { Motscles } from '../app/util.mjs'
 import { crypt } from '../app/crypto.mjs'
@@ -49,16 +49,13 @@ import { serial } from '../app/schemas.mjs'
 
 export default ({
   name: 'Compte',
-  components: { EditeurMd, BoutonHelp, MotsCles, ApercuAvatar, NomAvatar },
-  data () {
-    return {
-    }
-  },
+  components: { EditeurMd, BoutonHelp, MotsCles, IdentiteCv, NomAvatar },
+  data () { return { } },
 
   methods: {
-    toAvatar (avid) {
+    toAvatar (na) {
       this.tabavatar = 'etc'
-      this.avatar = data.getAvatar(avid)
+      this.avatar = data.getAvatar(na.id)
       remplacePage('Avatar')
     },
     async okmc (mmc) {
@@ -103,7 +100,7 @@ export default ({
 
     function init1 () {
       if (sessionok.value) {
-        state.lst = compte.value.avatarIds()
+        state.lst = compte.value.avatarNas()
       }
     }
 

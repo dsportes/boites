@@ -10,7 +10,7 @@
 
     <q-expansion-item label="Carte de visite de l'avatar" group="groupeetc"
       header-class="expansion-header-class-1 titre-lg bg-secondary text-white">
-      <apercu-avatar class="maauto" editer :avatar-id="avatar.id"/>
+      <identite-cv :nom-avatar="avatar.na" type="avatar" invitable editable @cv-changee="cvchangee"/>
     </q-expansion-item>
     <q-separator/>
 
@@ -35,9 +35,9 @@ import { useStore } from 'vuex'
 import { onBoot } from '../app/page.mjs'
 import { Motscles } from '../app/util.mjs'
 import MotsCles from '../components/MotsCles.vue'
-import ApercuAvatar from '../components/ApercuAvatar.vue'
+import IdentiteCv from '../components/IdentiteCv.vue'
 import NouveauParrainage from '../components/NouveauParrainage.vue'
-import { PrefCompte } from '../app/operations.mjs'
+import { PrefCompte, MajCv } from '../app/operations.mjs'
 import TabSecrets from '../components/TabSecrets.vue'
 import TabCouples from '../components/TabCouples.vue'
 import TabGroupes from '../components/TabGroupes.vue'
@@ -48,13 +48,16 @@ import { serial } from '../app/schemas.mjs'
 export default ({
   name: 'Avatar',
 
-  components: { ApercuAvatar, MotsCles, TabSecrets, NouveauParrainage, TabCouples, TabGroupes },
+  components: { IdentiteCv, MotsCles, TabSecrets, NouveauParrainage, TabCouples, TabGroupes },
 
   computed: { },
 
   data () { return { } },
 
   methods: {
+    async cvchangee (cv) {
+      await new MajCv().run(cv)
+    },
     async okmc (mmc) {
       const datak = await crypt.crypter(data.clek, serial(mmc))
       await new PrefCompte().run('mc', datak)

@@ -16,7 +16,7 @@
           <q-item v-if="invitationattente" clickable v-close-popup @click="copier(c)">
             <q-item-section class="titre-lg text-bold text-grey-8 bg-yellow-4 q-mx-sm text-center">[Contact !]</q-item-section>
           </q-item>
-          <q-item clickable v-close-popup @click="afficher(c)">
+          <q-item clickable v-close-popup @click="afficher(c, idx)">
             <q-item-section>Afficher / éditer le couple</q-item-section>
           </q-item>
           <q-separator />
@@ -33,7 +33,10 @@
   </div>
 
   <q-dialog v-model="editcp" class="moyennelargeur">
-    <panel-couple :close="fermeredit"/>
+    <panel-couple :close="fermeredit" :couple="couple"
+      :suivant="state.idx < state.lst.length - 1 ? suiv : null"
+      :precedent="state.idx > 0 ? prec : null"
+      :index="state.idx" :sur="state.lst.length"/>
   </q-dialog>
 
   <q-dialog v-model="panelfiltre" position="left">
@@ -60,8 +63,7 @@ export default ({
 
   components: { PanelFiltreCouples, PanelCouple },
 
-  computed: {
-  },
+  computed: { },
 
   data () {
     return {
@@ -79,24 +81,15 @@ export default ({
       this.evtfiltresecrets = { cmd: 'nv', arg: c }
     },
 
-    afficher (c) {
-      this.couple = c
-      this.editcp = true
-    },
-
     copier (c) {
       retourInvitation(c)
     },
 
     fermeredit () { this.editcp = false },
 
-    fermerfiltre () {
-      this.panelfiltre = false
-    },
+    fermerfiltre () { this.panelfiltre = false },
 
-    rechercher (f) {
-      this.state.filtre = f
-    },
+    rechercher (f) { this.state.filtre = f },
 
     dkli (idx) { return this.$q.dark.isActive ? (idx ? 'sombre' + (idx % 2) : 'sombre0') : (idx ? 'clair' + (idx % 2) : 'clair0') }
   },
@@ -150,6 +143,8 @@ export default ({
       const l = []; state.lst.forEach(x => l.push(x))
       l.sort((a, b) => state.filtre.fntri(a, b))
       state.lst = l
+      state.idx = 0
+      if (couple.value) state.lst.forEach((x, n) => { if (x.id === couple.value.id) state.idx = n })
     }
 
     function latotale () {
@@ -184,6 +179,7 @@ export default ({
 
     const state = reactive({
       lst: [], // array des Couples répondant au filtre
+      idx: 0, // index du couple courant dans la liste
       filtre: new FiltreCp() // Filtre par défaut
     })
 
@@ -216,7 +212,26 @@ export default ({
       editcp.value = false
     })
 
+    function afficher (c, idx) {
+      couple.value = c
+      state.idx = idx
+      editcp.value = true
+    }
+
+    function suiv () {
+      if (state.idx < state.lst.length - 1) state.idx++
+      couple.value = state.lst[state.idx]
+    }
+
+    function prec () {
+      if (state.idx > 0) state.idx--
+      couple.value = state.lst[state.idx]
+    }
+
     return {
+      suiv,
+      prec,
+      afficher,
       sessionok,
       photo,
       nom,

@@ -863,10 +863,10 @@ schemas.forSchema({
 - `dlv` : date limite de validité éventuelle de (re)prise de contact.
 - `datac` : données cryptées par la clé `cc` du couple :
   - `x` : `[idc, nom, rnd], [idc, nom, rnd]` : id du compte, nom et clé d'accès à la carte de visite respectivement de A0 et A1. Quand l'un des deux est inconnu, le triplet est `null`.
-  - `phrase` : phrase de contact en phases 1-2 et 1-3 (qui nécessitent une phrase).
-  - `f1 f2` : en phase 1-2 (parrainage), forfaits attribués par le parrain A0 à son filleul A1.
-  - 'r1 r2' : en phase 1-2 (parrainage) et si le compte filleul est lui-même parrain, ressources attribuées.
-  - `infok0 infok1` : commentaires cryptés par leur clé K, respectivement de A0 et A1.
+  - `phrase` : phrase de contact en phases 1/4-7 (qui nécessitent une phrase).
+  - `f1 f2` : en phase 1/4 (parrainage), forfaits attribués par le parrain A0 à son filleul A1.
+  - 'r1 r2' : en phase 1/4 (parrainage) et si le compte filleul est lui-même parrain, ressources attribuées.
+- `infok0 infok1` : commentaires cryptés par leur clé K, respectivement de A0 et A1.
 - `mc0 mc1` : mots clé définis respectivement par A0 et A1.
 - `ardc` : ardoise commune cryptée par la clé cc. [dh, texte]
 - `vsh` :
