@@ -77,11 +77,12 @@
       <q-toolbar inset v-if="page === 'Avatar'">
         <div class="window-width font-cf">
           <q-tabs class="" v-model="tabavatar" inline-label no-caps dense>
-            <q-btn v-if="tabavatar==='secrets' && $q.screen.lt.md" size="md" dense icon="search" color="secondary" @click="optAvatar('recherche')"/>
+            <q-btn v-if="tabavatar==='secrets' && $q.screen.lt.md" size="md" dense icon="search" color="secondary" @click="optAvatarSc('recherche')"/>
             <q-tab name="secrets" label="Secrets" />
-            <q-btn v-if="tabavatar==='contacts' && $q.screen.lt.md" size="md" dense icon="search" color="secondary" @click="optAvatarCp('recherche')"/>
+            <q-btn v-if="tabavatar==='couples' && $q.screen.lt.md" size="md" dense icon="search" color="secondary" @click="avatarcprech = !avatarcprech"/>
+            <q-btn v-if="tabavatar==='couples'" size="md" dense :icon="avatarcpform ? 'view_headline' : 'wysiwyg'" color="secondary" @click="togglecpform"/>
             <q-tab name="couples" label="Couples" />
-            <q-btn v-if="tabavatar==='groupes' && $q.screen.lt.md" size="md" dense icon="search" color="secondary" @click="optAvatarGr('recherche')"/>
+            <q-btn v-if="tabavatar==='groupes' && $q.screen.lt.md" size="md" dense icon="search" color="secondary" @click="avatargrrech = !avatargrrech"/>
             <q-tab name="groupes" label="Groupes" />
             <q-tab name="etc" label="Etc." />
           </q-tabs>
@@ -227,9 +228,10 @@ export default {
     async reconnexion () { await reconnexion() },
 
     optAvatarSc (opt) { this.$store.commit('ui/majevtavatarsc', opt) },
-    optAvatarCp (opt) { this.$store.commit('ui/majevtavatarcp', opt) },
     optAvatarGr (opt) { this.$store.commit('ui/majevtavatargr', opt) },
-
+    togglecpform () {
+      this.avatarcpform = !this.avatarcpform
+    },
     toInvit () { retourInvitation(null) },
 
     stop () { data.stopOp() }
@@ -294,6 +296,14 @@ export default {
       get: () => $store.state.ui.tabavatar,
       set: (val) => $store.commit('ui/majtabavatar', val)
     })
+    const avatarcprech = computed({
+      get: () => $store.state.ui.avatarcprech,
+      set: (val) => $store.commit('ui/majavatarcprech', val)
+    })
+    const avatarcpform = computed({
+      get: () => $store.state.ui.avatarcpform,
+      set: (val) => $store.commit('ui/majavatarcpform', val)
+    })
 
     const invitationattente = computed(() => $store.state.ui.invitationattente)
 
@@ -337,6 +347,8 @@ export default {
       statutnet,
       statutidb,
       tabavatar,
+      avatarcprech,
+      avatarcpform,
       invitationattente,
 
       compte,

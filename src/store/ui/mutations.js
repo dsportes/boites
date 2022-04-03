@@ -79,6 +79,9 @@ export function majevtavatarsc (state, val) { state.evtavatarsc = { evt: val } }
 export function majevtavatarcp (state, val) { state.evtavatarcp = { evt: val } }
 export function majevtavatargr (state, val) { state.evtavatargr = { evt: val } }
 
+export function majavatarcprech (state, val) { state.avatarcprech = val }
+export function majavatarcpform (state, val) { state.avatarcpform = val }
+
 export function majinvitationattente (state, val) { state.invitationattente = val }
 export function majeditgr (state, val) { state.editgr = val }
 export function majclipboard (state, val) { state.clipboard = val }

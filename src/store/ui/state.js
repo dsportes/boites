@@ -59,6 +59,9 @@ export default function () {
     evtavatarcp: null,
     evtavatargr: null,
 
+    avatarcprech: false,
+    avatarcpform: false,
+
     evtfiltresecrets: null,
     evtfiltresecrets2: null,
     invitationattente: null,

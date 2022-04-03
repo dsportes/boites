@@ -29,14 +29,14 @@
       <div class="row">
         <q-btn-dropdown size="md" dense color="primary" label="Etat du contact / couple" v-model="menudd1">
           <div class="clair1 column">
-            <q-btn flat dense no-caps :label="labelaps['0']" @click="menudd1=false;state.a.phase=0"/>
-            <q-btn flat dense no-caps :label="labelaps['1']" @click="menudd1=false;state.a.phase=1"/>
-            <q-btn flat dense no-caps :label="labelaps['2']" @click="menudd1=false;state.a.phase=2"/>
-            <q-btn flat dense no-caps :label="labelaps['3']" @click="menudd1=false;state.a.phase=3"/>
-            <q-btn flat dense no-caps :label="labelaps['4']" @click="menudd1=false;state.a.phase=4"/>
+            <q-btn flat dense no-caps :label="labelphase['0']" @click="menudd1=false;state.a.phase=0"/>
+            <q-btn flat dense no-caps :label="labelphase['1']" @click="menudd1=false;state.a.phase=1"/>
+            <q-btn flat dense no-caps :label="labelphase['2']" @click="menudd1=false;state.a.phase=2"/>
+            <q-btn flat dense no-caps :label="labelphase['3']" @click="menudd1=false;state.a.phase=3"/>
+            <q-btn flat dense no-caps :label="labelphase['4']" @click="menudd1=false;state.a.phase=4"/>
           </div>
         </q-btn-dropdown>
-        <div class="q-pl-md">{{labelaps['' + state.a.aps]}}</div>
+        <div class="q-pl-md">{{labelphase['' + state.a.phase]}}</div>
       </div>
     </div>
     <q-separator/>

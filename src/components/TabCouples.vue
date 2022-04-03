@@ -1,50 +1,54 @@
 <template>
 <div v-if="sessionok" :class="$q.screen.gt.sm ? 'ml20' : 'q-pa-xs full-width'">
-  <div v-if="state.lst && state.lst.length" class="col">
-    <div v-for="(c, idx) in state.lst" :key="c.pkv"
-      :class="dkli(idx) + ' zone full-width row items-start q-py-xs cursor-pointer'">
-      <div class="col-auto column q-px-xs">
-        <img class="photomax" :src="photo(c)"/>
-        <q-btn size="md" color="primary" icon="menu" flat dense style="margin-top:-5px"/>
-      </div>
-      <q-icon class="col-auto q-pr-xs" size="sm" :color="c.stx<2?'primary':'warning'" :name="icone(c.stp)"/>
-      <div class="col-3 q-px-xs">{{nom(c)}}</div>
-      <div class="col-4 q-pr-xs">{{c.ard.substring(0,40)}}</div>
-      <div class="col-auto fs-sm">{{c.dhed}}</div>
-      <q-menu touch-position transition-show="scale" transition-hide="scale">
-        <q-list dense style="min-width: 10rem">
-          <q-item v-if="invitationattente" clickable v-close-popup @click="copier(c)">
-            <q-item-section class="titre-lg text-bold text-grey-8 bg-yellow-4 q-mx-sm text-center">[Contact !]</q-item-section>
-          </q-item>
-          <q-item clickable v-close-popup @click="afficher(c, idx)">
-            <q-item-section>Afficher / éditer le couple</q-item-section>
-          </q-item>
-          <q-separator />
-          <q-item clickable v-close-popup @click="voirsecrets(c)">
-            <q-item-section>Voir les secrets partagés</q-item-section>
-          </q-item>
-          <q-separator />
-          <q-item clickable v-close-popup @click="nouveausecret(c)">
-            <q-item-section>Nouveau secret partagé</q-item-section>
-          </q-item>
-        </q-list>
-      </q-menu>
-    </div>
-  </div>
+  <div v-if="!state.lst || !state.lst.length" class="titre-lg">Aucun couple ne correspond au critère de recherche</div>
 
-  <q-dialog v-model="editcp" class="moyennelargeur">
-    <panel-couple :close="fermeredit" :couple="couple"
+  <panel-couple v-if="avatarcpform && state.lst && state.lst.length" :couple="couple"
       :suivant="state.idx < state.lst.length - 1 ? suiv : null"
       :precedent="state.idx > 0 ? prec : null"
       :index="state.idx" :sur="state.lst.length"/>
-  </q-dialog>
 
-  <q-dialog v-model="panelfiltre" position="left">
+  <div v-if="!avatarcpform && state.lst && state.lst.length" class="col">
+    <div v-for="(c, idx) in state.lst" :key="c.pkv"
+      :class="dkli(idx) + ' zone full-width row items-start q-py-xs' + (idx === state.idx ? ' courant' : '')">
+      <div class="row full-width">
+        <div class="col row cursor-pointer" @click="afficher(c, idx)">
+          <img class="col-auto photomax" :src="photo(c)"/>
+          <q-icon class="col-auto q-pa-xs" size="sm" :color="c.stx<2?'primary':'warning'" :name="icone(c.stp)"/>
+          <div class="col-3 q-px-xs">{{nom(c)}}</div>
+          <div class="col q-pr-xs">{{c.ard.substring(0,80)}}</div>
+          <div class="col-auto fs-sm">{{dhstring(c.dhed)}}</div>
+        </div>
+
+        <q-btn class="col-auto" size="md" color="primary" icon="menu" flat dense style="margin-top:-5px">
+          <q-menu transition-show="scale" transition-hide="scale">
+            <q-list dense style="min-width: 10rem">
+              <q-item v-if="invitationattente" clickable v-close-popup @click="copier(c)">
+                <q-item-section class="titre-lg text-bold text-grey-8 bg-yellow-4 q-mx-sm text-center">[Contact !]</q-item-section>
+              </q-item>
+              <q-item clickable v-close-popup @click="afficher(c, idx)">
+                <q-item-section>Afficher / éditer le couple</q-item-section>
+              </q-item>
+              <q-separator />
+              <q-item clickable v-close-popup @click="voirsecrets(c)">
+                <q-item-section>Voir les secrets partagés</q-item-section>
+              </q-item>
+              <q-separator />
+              <q-item clickable v-close-popup @click="nouveausecret(c)">
+                <q-item-section>Nouveau secret partagé</q-item-section>
+              </q-item>
+            </q-list>
+          </q-menu>
+        </q-btn>
+    </div>
+      </div>
+  </div>
+
+  <q-dialog v-if="!$q.screen.gt.sm" v-model="avatarcprech" position="left">
     <panel-filtre-couples @ok="rechercher" :motscles="motscles" :etat-interne="recherche" :fermer="fermerfiltre"></panel-filtre-couples>
   </q-dialog>
 
   <q-page-sticky v-if="$q.screen.gt.sm" position="top-left" expand :offset="[5,5]">
-    <panel-filtre-couples @ok="rechercher" :motscles="motscles" :etat-interne="recherche" :fermer="fermerfiltre"></panel-filtre-couples>
+    <panel-filtre-couples @ok="rechercher" :motscles="motscles" :etat-interne="recherche"></panel-filtre-couples>
   </q-page-sticky>
 
 </div>
@@ -52,7 +56,7 @@
 <script>
 import { computed, reactive, watch, ref } from 'vue'
 import { useStore } from 'vuex'
-import { Motscles, FiltreCp, cfg } from '../app/util.mjs'
+import { Motscles, FiltreCp, cfg, dhstring } from '../app/util.mjs'
 import PanelFiltreCouples from './PanelFiltreCouples.vue'
 import PanelCouple from './PanelCouple.vue'
 import { data } from '../app/modele.mjs'
@@ -67,6 +71,7 @@ export default ({
 
   data () {
     return {
+      dhstring: dhstring
     }
   },
 
@@ -85,9 +90,9 @@ export default ({
       retourInvitation(c)
     },
 
-    fermeredit () { this.editcp = false },
+    fermeredit () { this.avatarcpform = false },
 
-    fermerfiltre () { this.panelfiltre = false },
+    fermerfiltre () { this.avatarcprech = false },
 
     rechercher (f) { this.state.filtre = f },
 
@@ -107,6 +112,14 @@ export default ({
       get: () => $store.state.db.couple,
       set: (val) => $store.commit('db/majcouple', val)
     })
+    const avatarcprech = computed({
+      get: () => $store.state.ui.avatarcprech,
+      set: (val) => $store.commit('ui/majavatarcprech', val)
+    })
+    const avatarcpform = computed({
+      get: () => $store.state.ui.avatarcpform,
+      set: (val) => $store.commit('ui/majavatarcpform', val)
+    })
     const invitationattente = computed({
       get: () => $store.state.ui.invitationattente,
       set: (val) => $store.commit('ui/majinvitationattente', val)
@@ -125,8 +138,6 @@ export default ({
 
     watch(() => prefs.value, (ap, av) => { motscles.recharger() })
 
-    const panelfiltre = ref(false)
-
     function getCouples () {
       const avi = avatar.value.id
       const f = state.filtre
@@ -143,8 +154,15 @@ export default ({
       const l = []; state.lst.forEach(x => l.push(x))
       l.sort((a, b) => state.filtre.fntri(a, b))
       state.lst = l
-      state.idx = 0
+      state.idx = -1
       if (couple.value) state.lst.forEach((x, n) => { if (x.id === couple.value.id) state.idx = n })
+      if (state.idx === -1) {
+        if (state.lst.length) {
+          state.idx = 0; couple.value = state.lst[0]
+        } else {
+          couple.value = null
+        }
+      }
     }
 
     function latotale () {
@@ -166,11 +184,6 @@ export default ({
     function icone (p) {
       return ['thumb_up', 'hourglass_empty', 'thumb_down', 'thumb_up', 'o_thumb_down'][p]
     }
-
-    const evtavatarct = computed(() => $store.state.ui.evtavatarct)
-    watch(() => evtavatarct.value, (ap) => {
-      if (ap.evt === 'recherche') panelfiltre.value = true
-    })
 
     const evtfiltresecrets = computed({ // secret courant
       get: () => $store.state.ui.evtfiltresecrets,
@@ -209,24 +222,26 @@ export default ({
     })
 
     watch(() => sessionok.value, (ap, av) => {
-      editcp.value = false
     })
 
     function afficher (c, idx) {
       couple.value = c
       state.idx = idx
-      editcp.value = true
+      avatarcpform.value = true
     }
 
-    function suiv () {
-      if (state.idx < state.lst.length - 1) state.idx++
+    function suiv (n) {
+      if (state.idx < state.lst.length - 1) state.idx = n ? state.idx + 1 : state.lst.length - 1
       couple.value = state.lst[state.idx]
     }
 
-    function prec () {
-      if (state.idx > 0) state.idx--
+    function prec (n) {
+      if (state.idx > 0) state.idx = n ? state.idx - 1 : 0
       couple.value = state.lst[state.idx]
     }
+
+    watch(() => avatarcpform.value, (ap) => {
+    })
 
     return {
       suiv,
@@ -241,10 +256,11 @@ export default ({
       couple,
       motscles,
       state,
-      panelfiltre,
       recherche,
       mode,
       evtfiltresecrets,
+      avatarcprech,
+      avatarcpform,
       invitationattente
     }
   }
@@ -254,6 +270,8 @@ export default ({
 
 <style lang="sass" scoped>
 @import '../css/app.sass'
+.courant
+  border-left: 4px solid $warning !important
 .photomax
   position: relative
   top: -5px

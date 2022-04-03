@@ -1,10 +1,12 @@
 <template>
-  <q-card v-if="sessionok" class="full-height moyennelargeur fs-md column">
+  <q-card v-if="sessionok" class="full-height full-width fs-md column">
     <q-toolbar class="col-auto bg-primary text-white maToolBar">
-      <q-btn flat round dense icon="close" size="md" class="q-mr-sm" @click="fermer" />
-      <q-btn :disable="!precedent" flat round dense icon="arrow_back_ios" size="md" class="q-mr-sm" @click="prec" />
+      <q-btn flat round dense icon="view_headline" size="md" class="q-mr-sm" @click="avatarcpform = false" />
+      <q-btn :disable="!precedent" flat round dense icon="first_page" size="md" class="q-mr-sm" @click="prec(0)" />
+      <q-btn :disable="!precedent" flat round dense icon="arrow_back_ios" size="md" class="q-mr-sm" @click="prec(1)" />
       <span class="q-pa-sm">{{index + 1}} sur {{sur}}</span>
-      <q-btn :disable="!suivant" flat round dense icon="arrow_forward_ios" size="md" class="q-mr-sm" @click="suiv" />
+      <q-btn :disable="!suivant" flat round dense icon="arrow_forward_ios" size="md" class="q-mr-sm" @click="suiv(1)" />
+      <q-btn :disable="!suivant" flat round dense icon="last_page" size="md" class="q-mr-sm" @click="suiv(0)" />
       <q-toolbar-title><div class="titre-md tit text-center">{{s.na ? s.na.nom : ''}}</div></q-toolbar-title>
     </q-toolbar>
 
@@ -53,7 +55,7 @@ export default ({
 
   components: { EditeurMd, ApercuMotscles, SelectMotscles, IdentiteCv },
 
-  props: { couple: Object, close: Function, suivant: Function, precedent: Function, index: Number, sur: Number },
+  props: { couple: Object, suivant: Function, precedent: Function, index: Number, sur: Number },
 
   computed: { },
 
@@ -67,18 +69,15 @@ export default ({
     async cvchangee (cv) {
       await new MajCv().run(cv)
     },
-    suiv () {
-      if (this.suivant) this.suivant()
-    },
-    prec () {
-      if (this.precedent) this.precedent()
-    },
+    suiv (n) { if (this.suivant) this.suivant(n) },
+    prec (n) { if (this.precedent) this.precedent(n) },
     fermermcl () { this.mcledit = false },
-    changermcl (mc) { this.s.mc = mc },
+    changermcl (mc) {
+      this.s.mc = mc
+    },
     async valider () {
       await new MajContact().run(this.contact, this.s)
     },
-    fermer () { if (this.close) this.close() },
     copier (c) {
       retourInvitation(c)
     }
@@ -97,6 +96,10 @@ export default ({
     const mode = computed(() => $store.state.ui.mode)
     const prefs = computed(() => { return data.getPrefs() })
     const cvs = computed(() => { return $store.state.db.cvs })
+    const avatarcpform = computed({
+      get: () => $store.state.ui.avatarcpform,
+      set: (val) => $store.commit('ui/majavatarcpform', val)
+    })
     const invitationattente = computed({
       get: () => $store.state.ui.invitationattente,
       set: (val) => $store.commit('ui/majinvitationattente', val)
@@ -189,6 +192,7 @@ export default ({
     })
 
     return {
+      avatarcpform,
       mcledit,
       sessionok,
       initState,
