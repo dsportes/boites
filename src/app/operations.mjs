@@ -1,4 +1,4 @@
-import { NomAvatar, store, post, get, affichermessage, cfg, sleep, affichererreur, appexc, difference, getfa, getJourJ, edvol, equ8 } from './util.mjs'
+import { NomAvatar, store, post, get, affichermessage, cfg, sleep, affichererreur, appexc, difference, getfa, getJourJ, edvol } from './util.mjs'
 import { remplacePage } from './page.mjs'
 import {
   deleteIDB, idbSidCompte, commitRows, getCompte, getCompta, getPrefs, getCvs,
@@ -1708,40 +1708,39 @@ export class RefusParrainage extends OperationUI {
 }
 
 /*********************************************************
- * MAJ Contact
- */
+ * MAJ d'un couple : (couple, arg) - ardoise / mot-clé / info / volumes max
+ * Arg : ard, info, mc, vmax
+Args : majCouple
+- sessionId
+- id: du couple
+- avc: 0 ou 1
+- ard:
+- infok
+- mc:
+- vmax: [v1, v2]
+Retour :
+- sessionId
+- dh
+A_SRV, '24-Couple non trouvé'
+*/
 
-export class MajContact extends OperationUI {
+export class MajCouple extends OperationUI {
   constructor () {
-    super('Mise à jour d\'un contact', OUI, SELONMODE)
+    super('Mise à jour d\'un couple', OUI, SELONMODE)
   }
 
-  /* arg :
-  - aps : accepte le partage de secret
-  - ard : ardoise
-  - mc : mots clés
-  - info
-  */
-  async run (contact, arg) {
+  async run (couple, arg) {
     try {
-      const compte = data.getCompte()
-      const nccc = arg.aps ? await crypt.crypter(contact.data.cc, '' + compte.id) : null
-      const ardc = arg.ard !== contact.ard
-        ? await crypt.crypter(contact.data.cc, serial([new Date().getTime(), arg.ard]))
-        : null
       const args = {
         sessionId: data.sessionId,
-        id: contact.id,
-        ic: contact.ic,
-        idb: contact.id2,
-        icb: contact.ic2,
-        nccc,
-        ardc,
-        infok: arg.info === contact.info ? null : await crypt.crypter(data.clek, arg.info),
-        mc: equ8(arg.mc, contact.mc) ? null : arg.mc
+        id: couple.id,
+        avc: couple.avc,
+        ardc: arg.ard ? await couple.toArdc(arg.ard) : null,
+        infok: arg.info ? await crypt.crypter(data.clek, arg.info) : null,
+        mc: arg.mc ? arg.mc : null,
+        vmax: arg.vmax ? arg.vmax : null
       }
-      const ret = await post(this, 'm1', 'majContact', args)
-      if (data.dh < ret.dh) data.dh = ret.dh
+      await post(this, 'm1', 'majCouple', args)
       this.finOK()
     } catch (e) {
       await this.finKO(e)

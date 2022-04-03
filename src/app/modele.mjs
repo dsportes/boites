@@ -997,10 +997,10 @@ export class Couple {
     this.ard = x[1]
     if (this.avc === 0) {
       this.mc = row.mc0 || new Uint8Array([])
-      this.info = row.info0k && data.clek ? await crypt.decrypterStr(data.clek, row.info0k) : ''
+      this.info = row.infok0 && data.clek ? await crypt.decrypterStr(data.clek, row.infok0) : ''
     } else {
       this.mc = row.mc1 || new Uint8Array([])
-      this.info = row.info1k && data.clek ? await crypt.decrypterStr(data.clek, row.info1k) : ''
+      this.info = row.infok1 && data.clek ? await crypt.decrypterStr(data.clek, row.infok1) : ''
     }
     this.dlvEtat()
     return this
@@ -1016,7 +1016,7 @@ export class Couple {
   }
 
   async toArdc (ard, cc) {
-    return await crypt.crypter(cc, serial([new Date().getTime(), ard]))
+    return await crypt.crypter(cc || this.cle, serial([new Date().getTime(), ard]))
   }
 
   get toIdb () {

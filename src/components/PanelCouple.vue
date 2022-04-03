@@ -18,13 +18,24 @@
     </q-card-section>
 
     <q-card-section>
+      <div class="bord1 q-pa-xs">
+        <div class="titre-md text-bold">Volumes occupés par les secrets: {{s.v1}} / {{s.v2}}</div>
+        <div class="titre-md text-italic">Volumes maximaux pour les secrets du couple</div>
+        <div class="titre-md text-italic">Fixés par moi</div>
+        <choix-forfaits v-model="vmaxI" :f1="s.maxI1" :f2="s.maxI2" label-valider="OK" @valider="changervmax"/>
+        <div v-if="s.maxEvis" class="titre-md">Fixés par {{s.naE.nom}}</div>
+        <choix-forfaits v-if="s.maxEvis" v-model="vmaxE" :f1="s.maxE1" :f2="s.maxE2" lecture/>
+      </div>
+    </q-card-section>
+
+    <q-card-section>
       <div class="titre-md">Ardoise commune avec le contact</div>
-      <editeur-md class="height-8" v-model="s.ard" :texte="s.ard ? s.ard : ''" editable modetxt/>
+      <editeur-md class="height-8" v-model="ardTemp" :texte="s.ard ? s.ard : ''" editable modetxt label-ok="OK" @ok="changerard"/>
     </q-card-section>
 
     <q-card-section>
       <div class="titre-md">Commentaires personnels</div>
-      <editeur-md class="height-8" v-model="s.info" :texte="s.info ? s.info : ''" editable modetxt/>
+      <editeur-md class="height-8" v-model="infoTemp" :texte="s.info ? s.info : ''" editable modetxt label-ok="OK" @ok="changerinfo"/>
     </q-card-section>
 
     <q-card-section>
@@ -33,7 +44,7 @@
     </q-card-section>
 
     <q-dialog v-model="mcledit">
-      <select-motscles :motscles="s.motscles" :src="s.mc" @ok="changermcl" :close="fermermcl"></select-motscles>
+      <select-motscles :motscles="s.motscles" :src="s.mc" @ok="changermc" :close="fermermcl"></select-motscles>
     </q-dialog>
 
   </q-card>
@@ -43,17 +54,18 @@ import { computed, reactive, watch, ref, toRef } from 'vue'
 import { useStore } from 'vuex'
 import { Motscles, edvol } from '../app/util.mjs'
 import { data } from '../app/modele.mjs'
-import { MajContact, MajCv } from '../app/operations.mjs'
+import { MajCv, MajCouple } from '../app/operations.mjs'
 import EditeurMd from './EditeurMd.vue'
 import ApercuMotscles from './ApercuMotscles.vue'
 import SelectMotscles from './SelectMotscles.vue'
+import ChoixForfaits from './ChoixForfaits.vue'
 import IdentiteCv from './IdentiteCv.vue'
 import { retourInvitation } from '../app/page.mjs'
 
 export default ({
   name: 'PanelCouple',
 
-  components: { EditeurMd, ApercuMotscles, SelectMotscles, IdentiteCv },
+  components: { EditeurMd, ApercuMotscles, SelectMotscles, IdentiteCv, ChoixForfaits },
 
   props: { couple: Object, suivant: Function, precedent: Function, index: Number, sur: Number },
 
@@ -61,23 +73,35 @@ export default ({
 
   data () {
     return {
-      erreur: ''
+      ardTemp: '',
+      infoTemp: '',
+      vmaxI: [],
+      vmaxE: []
     }
   },
 
   methods: {
+    fermermcl () { this.mcledit = false },
+
     async cvchangee (cv) {
       await new MajCv().run(cv)
     },
+    async changermc (mc) {
+      await new MajCouple().run(this.couple, { mc: mc })
+    },
+    async changerard (ard) {
+      await new MajCouple().run(this.couple, { ard: ard })
+    },
+    async changerinfo (info) {
+      await new MajCouple().run(this.couple, { info: info })
+    },
+    async changervmax (maxI) {
+      await new MajCouple().run(this.couple, { vmax: maxI })
+    },
+
     suiv (n) { if (this.suivant) this.suivant(n) },
     prec (n) { if (this.precedent) this.precedent(n) },
-    fermermcl () { this.mcledit = false },
-    changermcl (mc) {
-      this.s.mc = mc
-    },
-    async valider () {
-      await new MajContact().run(this.contact, this.s)
-    },
+
     copier (c) {
       retourInvitation(c)
     }
@@ -162,8 +186,10 @@ export default ({
       s.ard = c ? c.ard : ''
       s.mc = c ? c.mc : new Uint8Array([])
       s.dlv = s.dlvvis ? c.dlv : 0
-      s.maxE1 = c && s.maxEvis ? (c.avc ? c.mx11 : c.mx10) : 0
-      s.maxE2 = c && s.maxEvis ? (c.avc ? c.mx21 : c.mx20) : 0
+      s.maxI1 = c ? (c.avc === 0 ? c.mx10 : c.mx11) : 0
+      s.maxI2 = c ? (c.avc === 0 ? c.mx20 : c.mx21) : 0
+      s.maxE1 = c && s.maxEvis ? (c.avc === 0 ? c.mx11 : c.mx10) : 0
+      s.maxE2 = c && s.maxEvis ? (c.avc === 0 ? c.mx21 : c.mx20) : 0
       s.f1 = c && s.frvis ? c.data.f1 : 0
       s.f2 = c && s.frvis ? c.data.f2 : 0
       s.r1 = c && s.frvis ? c.data.r1 : 0
