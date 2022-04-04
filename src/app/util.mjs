@@ -644,7 +644,7 @@ export class Motscles {
   }
 }
 
-/** classes Phrase, MdpAdmin, Quotas ****************/
+/** classes Phrase, MdpAdmin, PhraseContact ****************/
 export class Phrase {
   async init (debut, fin) {
     this.pcb = await crypt.pbkfd(debut + '\n' + fin)
@@ -653,6 +653,17 @@ export class Phrase {
     this.dpbh = crypt.hashBin(await crypt.pbkfd(debut))
     this.debut = debut
     this.fin = fin
+  }
+}
+
+export class PhraseContact {
+  async init (texte) {
+    this.phrase = texte
+    this.clex = await crypt.pbkfd(texte)
+    let hx = ''
+    for (let i = 0; i < this.phrase.length; i = i + 2) hx += this.phrase.charAt(i)
+    this.phch = crypt.hash(hx)
+    return this
   }
 }
 

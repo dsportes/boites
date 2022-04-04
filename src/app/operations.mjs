@@ -1497,6 +1497,93 @@ export class PjSecret extends OperationUI {
 }
 
 /******************************************************************
+ProlongerCouple : args de m1/prolongerCouple
+- sessionId: data.sessionId,
+- rowCouple
+- rowContact
+Retour : dh
+X_SRV, '14-Cette phrase de parrainage est trop proche d\'une déjà enregistrée' + x
+*/
+
+export class ProlongerCouple extends OperationUI {
+  constructor () {
+    super('Prolonger une proposition de couple', OUI, SELONMODE)
+  }
+
+  async run (couple) {
+    try {
+      return this.finOK()
+    } catch (e) {
+      return await this.finKO(e)
+    }
+  }
+}
+
+/******************************************************************
+RelancerCouple : args de m1/prolongerCouple
+- sessionId: data.sessionId,
+- rowCouple
+Retour : dh
+X_SRV, '14-Cette phrase de parrainage est trop proche d\'une déjà enregistrée' + x
+*/
+
+export class RelancerCouple extends OperationUI {
+  constructor () {
+    super('Relancer un couple', OUI, SELONMODE)
+  }
+
+  async run (couple) {
+    try {
+      return this.finOK()
+    } catch (e) {
+      return await this.finKO(e)
+    }
+  }
+}
+/******************************************************************
+QuitterCouple : args de m1/quitterCouple
+- sessionId: data.sessionId,
+- rowCouple
+Retour : dh
+X_SRV, '14-Cette phrase de parrainage est trop proche d\'une déjà enregistrée' + x
+*/
+
+export class QuitterCouple extends OperationUI {
+  constructor () {
+    super('Quitter un couple', OUI, SELONMODE)
+  }
+
+  async run (couple) {
+    try {
+      return this.finOK()
+    } catch (e) {
+      return await this.finKO(e)
+    }
+  }
+}
+/******************************************************************
+SupprimerCouple : args de m1/supprimerCouple
+- sessionId: data.sessionId,
+- rowCouple
+Retour : dh
+X_SRV, '14-Cette phrase de parrainage est trop proche d\'une déjà enregistrée' + x
+*/
+
+export class SupprimerCouple extends OperationUI {
+  constructor () {
+    super('Supprimer un couple', OUI, SELONMODE)
+  }
+
+  async run (couple) {
+    try {
+      return this.finOK()
+    } catch (e) {
+      return await this.finKO(e)
+    }
+  }
+}
+
+/******************************************************************
 Parrainage : args de m1/nouveauParrainage
 - sessionId: data.sessionId,
 - rowCouple
@@ -1515,9 +1602,9 @@ export class NouveauParrainage extends OperationUI {
       - `lcck` : map : de avatar
         - _clé_ : `ni`, numéro pseudo aléatoire. Hash de (`cc` en hexa suivi de `0` ou `1`).
         - _valeur_ : clé `cc` cryptée par la clé K de l'avatar cible. Le hash d'une clé d'un couple donne son id.
-      pph: this.pph, // le hash de la clex (integer)
-      pp: this.phrase, // phrase de parrainage (string)
-      clex: this.clex, // PBKFD de pp (u8)
+      phch: // le hash de la clex (integer)
+      pp: // phrase de parrainage (string)
+      clex: // PBKFD de pp (u8)
       forfaits: this.forfaits,
       ressources: this.estParrain ? this.ressources : null,
       nomf: this.nom, // nom du filleul (string)
@@ -1546,7 +1633,7 @@ export class NouveauParrainage extends OperationUI {
       const couple = new Couple().nouveauP(nap, naf, cc, dlv, arg.mot, compte.id, idcf, arg.pp, arg.forfaits, arg.ressources)
       const rowCouple = await couple.toRow()
 
-      const contact = await new Contact().nouveau(arg.pph, arg.clex, dlv, cc, arg.nomf)
+      const contact = await new Contact().nouveau(arg.phch, arg.clex, dlv, cc, arg.nomf)
       const rowContact = contact.toRow()
 
       const args = { sessionId: data.sessionId, rowCouple, rowContact, ni, datak, id: nap.id }

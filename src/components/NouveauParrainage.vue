@@ -85,7 +85,7 @@ import NomAvatar from './NomAvatar.vue'
 import ChoixForfaits from './ChoixForfaits.vue'
 import EditeurMd from './EditeurMd.vue'
 import { NouveauParrainage } from '../app/operations.mjs'
-import { crypt } from '../app/crypto.mjs'
+import { PhraseContact } from '../app/util.mjs'
 import { data } from '../app/modele.mjs'
 
 export default ({
@@ -108,6 +108,7 @@ export default ({
       estParrain: false,
       nom: '',
       phrase: '',
+      pc: null,
       mot: '',
       diagmot: false,
       encours: false
@@ -125,18 +126,16 @@ export default ({
     crypterphrase () {
       if (!this.r1(this.phrase)) return
       this.encours = true
+      this.pc = new PhraseContact()
       setTimeout(async () => {
-        this.clex = await crypt.pbkfd(this.phrase)
-        let hx = ''
-        for (let i = 0; i < this.phrase.length; i = i + 2) hx += this.phrase.charAt(i)
-        this.pph = crypt.hash(hx)
+        await this.pc.init(this.phrase)
         this.encours = false
         this.step = 2
-        console.log(this.pph)
       }, 1)
     },
     razphrase () {
       this.phrase = ''
+      this.pc = null
       this.encours = false
     },
     oknom (nom) {
@@ -152,9 +151,9 @@ export default ({
     },
     async confirmer () {
       const arg = {
-        pph: this.pph, // le hash de la clex (integer)
-        pp: this.phrase, // phrase de parrainage (string)
-        clex: this.clex, // PBKFD de pp (u8)
+        phch: this.pc.phch, // le hash de la clex (integer)
+        pp: this.pc.phrase, // phrase de parrainage (string)
+        clex: this.pc.clex, // PBKFD de pp (u8)
         id: this.avatar.id,
         forfaits: this.forfaits,
         ressources: this.estParrain ? this.ressources : null,
@@ -166,9 +165,7 @@ export default ({
         this.mot = ''
         this.nom = ''
         this.forfaits = [1, 1]
-        this.pp = ''
-        this.clex = null
-        this.pph = 0
+        this.pc = null
         this.tabavatar = 'couples'
         if (this.close) this.close()
       } else {

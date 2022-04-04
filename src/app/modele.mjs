@@ -4,7 +4,7 @@ import { openIDB, closeIDB, getFadata, debutSessionSync, saveSessionSync } from 
 import { openWS, closeWS } from './ws.mjs'
 import {
   store, appexc, dlvDepassee, NomAvatar, gzip, ungzip, dhstring,
-  getJourJ, cfg, ungzipT, normpath, getfa, titreEd, titreCompte
+  getJourJ, cfg, ungzipT, normpath, getfa, titreEd, titreCompte, PhraseContact
 } from './util.mjs'
 import { remplacePage } from './page.mjs'
 import { EXPS, UNITEV1, UNITEV2, Compteurs, t0n } from './api.mjs'
@@ -913,6 +913,8 @@ export class Couple {
   get orig () { const x = this.data.x; return !x.phrase ? 0 : (x.f1 || x.f2 ? 1 : 0) }
 
   get nomf () { return normpath(this.nom) }
+
+  async phraseContact () { return !this.data.phrase ? null : new PhraseContact().init(this.data.phrase) }
 
   setRepE () { if (this.naE) data.repertoire.setAx(this.naE) }
 
