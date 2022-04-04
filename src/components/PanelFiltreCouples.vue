@@ -114,8 +114,8 @@ export default ({
 
     const labelphase = {
       0: 'Indifférent',
-      1: 'En attente',
-      2: 'Réfusé',
+      1: 'En attente de réponse',
+      2: 'Réfusé / hors délai',
       3: 'En couple',
       4: 'Séparé'
     }

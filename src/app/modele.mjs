@@ -909,6 +909,9 @@ export class Couple {
   get nom () { const x = this.data.x; return x[0][1] + '__' + x[1][1] }
   get nomE () { const x = this.data.x; return x[1][1] }
 
+  // origine du couple : 0) proposition standard à un contact connu, 1) parainage, 2) rencontre
+  get orig () { const x = this.data.x; return !x.phrase ? 0 : (x.f1 || x.f2 ? 1 : 0) }
+
   get nomf () { return normpath(this.nom) }
 
   setRepE () { if (this.naE) data.repertoire.setAx(this.naE) }

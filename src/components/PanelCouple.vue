@@ -1,47 +1,78 @@
 <template>
   <q-card v-if="sessionok" class="full-height full-width fs-md column">
-    <q-toolbar class="col-auto bg-primary text-white maToolBar">
-      <q-btn flat round dense icon="view_headline" size="md" class="q-mr-sm" @click="avatarcpform = false" />
+    <q-toolbar class="bg-primary text-white">
       <q-btn :disable="!precedent" flat round dense icon="first_page" size="md" class="q-mr-sm" @click="prec(0)" />
       <q-btn :disable="!precedent" flat round dense icon="arrow_back_ios" size="md" class="q-mr-sm" @click="prec(1)" />
       <span class="q-pa-sm">{{index + 1}} sur {{sur}}</span>
       <q-btn :disable="!suivant" flat round dense icon="arrow_forward_ios" size="md" class="q-mr-sm" @click="suiv(1)" />
       <q-btn :disable="!suivant" flat round dense icon="last_page" size="md" class="q-mr-sm" @click="suiv(0)" />
-      <q-toolbar-title><div class="titre-md tit text-center">{{s.na ? s.na.nom : ''}}</div></q-toolbar-title>
+      <q-toolbar-title></q-toolbar-title>
+      <q-btn size="md" color="white" icon="menu" flat dense>
+        <menu-couple/>
+      </q-btn>
+    </q-toolbar>
+    <q-toolbar inset class="bg-primary text-white">
+      <q-toolbar-title><div class="titre-md text-bold">{{s.stlib}}</div></q-toolbar-title>
     </q-toolbar>
 
-    <q-card-section>
-      <div v-if="s.na" class="titre-md">Carte de visite du couple</div>
-      <identite-cv  v-if="s.na" :nom-avatar="s.na" type="avatar" editable @cv-changee="cvchangee"/>
-      <div v-if="s.naE" class="titre-md">Carte de visite du conjoint</div>
-      <identite-cv  v-if="s.naE" :nom-avatar="s.naE" type="avatar" invitable/>
-    </q-card-section>
+    <div v-if="s.na" class="titre-md bg-secondary text-white">Carte de visite du couple</div>
+    <identite-cv  v-if="s.na" :nom-avatar="s.na" type="couple" editable @cv-changee="cvchangee"/>
+    <q-separator/>
+    <div v-if="s.cvaxvis" class="titre-md bg-secondary text-white">Carte de visite de {{s.naE.nom}}</div>
+    <identite-cv  v-if="s.cvaxvis" :nom-avatar="s.naE" type="avatar" invitable/>
+    <q-separator/>
 
-    <q-card-section>
-      <div class="bord1 q-pa-xs">
-        <div class="titre-md text-bold">Volumes occupés par les secrets: {{s.v1}} / {{s.v2}}</div>
-        <div class="titre-md text-italic">Volumes maximaux pour les secrets du couple</div>
-        <div class="titre-md text-italic">Fixés par moi</div>
-        <choix-forfaits v-model="vmaxI" :f1="s.maxI1" :f2="s.maxI2" label-valider="OK" @valider="changervmax"/>
-        <div v-if="s.maxEvis" class="titre-md">Fixés par {{s.naE.nom}}</div>
-        <choix-forfaits v-if="s.maxEvis" v-model="vmaxE" :f1="s.maxE1" :f2="s.maxE2" lecture/>
-      </div>
-    </q-card-section>
+    <q-expansion-item header-class="expansion-header-class-1 titre-md bg-secondary text-white">
+      <template v-slot:header>
+        <q-item-section>Volumes occupés par les secrets: {{s.v1}} / {{s.v2}}</q-item-section>
+      </template>
+      <q-card-section>
+        <div class="bord1 q-pa-xs">
+          <div class="titre-md text-italic">Volumes maximaux pour les secrets du couple</div>
+          <div class="titre-md text-italic">Fixés par moi</div>
+          <choix-forfaits v-model="vmaxI" :f1="s.maxI1" :f2="s.maxI2" label-valider="OK" @valider="changervmax"/>
+          <div v-if="s.maxEvis" class="titre-md">Fixés par {{s.naE.nom}}</div>
+          <choix-forfaits v-if="s.maxEvis" v-model="vmaxE" :f1="s.maxE1" :f2="s.maxE2" lecture/>
+        </div>
+      </q-card-section>
+    </q-expansion-item>
+    <q-separator/>
 
-    <q-card-section>
-      <div class="titre-md">Ardoise commune avec le contact</div>
-      <editeur-md class="height-8" v-model="ardTemp" :texte="s.ard ? s.ard : ''" editable modetxt label-ok="OK" @ok="changerard"/>
-    </q-card-section>
+    <q-expansion-item header-class="expansion-header-class-1 titre-md bg-secondary text-white">
+      <template v-slot:header>
+        <q-item-section>
+          Ardoise commune ({{!s.ard ? 'vide': s.ard.length + 'c'}}){{s.ard.length ? ' - ' + s.dh : ''}}
+        </q-item-section>
+      </template>
+      <q-card-section>
+        <editeur-md class="height-8" v-model="ardTemp" :texte="s.ard ? s.ard : ''" editable modetxt label-ok="OK" @ok="changerard"/>
+      </q-card-section>
+    </q-expansion-item>
+    <q-separator/>
 
-    <q-card-section>
-      <div class="titre-md">Commentaires personnels</div>
-      <editeur-md class="height-8" v-model="infoTemp" :texte="s.info ? s.info : ''" editable modetxt label-ok="OK" @ok="changerinfo"/>
-    </q-card-section>
+    <q-expansion-item header-class="expansion-header-class-1 titre-md bg-secondary text-white">
+      <template v-slot:header>
+        <q-item-section>Commentaires personnels ({{!s.info ? 'vide': s.info.length + 'c'}})</q-item-section>
+      </template>
+      <q-card-section>
+        <editeur-md class="height-8" v-model="infoTemp" :texte="s.info ? s.info : ''" editable modetxt label-ok="OK" @ok="changerinfo"/>
+      </q-card-section>
+    </q-expansion-item>
+    <q-separator/>
 
-    <q-card-section>
-      <div class="titre-md">Mots clés qualifiant le contact</div>
-      <apercu-motscles :motscles="s.motscles" :src="s.mc" :args-click="{}" @click-mc="mcledit=true"/>
-    </q-card-section>
+    <div class="titre-md bg-secondary text-white">Mots clés qualifiant le contact</div>
+    <apercu-motscles :motscles="s.motscles" :src="s.mc" :args-click="{}" @click-mc="mcledit=true"/>
+    <q-separator/>
+
+    <q-expansion-item header-class="expansion-header-class-1 titre-md bg-secondary text-white">
+      <template v-slot:header>
+        <q-item-section>Origine du couple - {{s.orig}}</q-item-section>
+      </template>
+      <q-card-section>
+        <editeur-md class="height-8" v-model="infoTemp" :texte="s.info ? s.info : ''" editable modetxt label-ok="OK" @ok="changerinfo"/>
+      </q-card-section>
+    </q-expansion-item>
+    <q-separator/>
 
     <q-dialog v-model="mcledit">
       <select-motscles :motscles="s.motscles" :src="s.mc" @ok="changermc" :close="fermermcl"></select-motscles>
@@ -52,7 +83,7 @@
 <script>
 import { computed, reactive, watch, ref, toRef } from 'vue'
 import { useStore } from 'vuex'
-import { Motscles, edvol } from '../app/util.mjs'
+import { Motscles, edvol, getJourJ, dhstring } from '../app/util.mjs'
 import { data } from '../app/modele.mjs'
 import { MajCv, MajCouple } from '../app/operations.mjs'
 import EditeurMd from './EditeurMd.vue'
@@ -60,12 +91,13 @@ import ApercuMotscles from './ApercuMotscles.vue'
 import SelectMotscles from './SelectMotscles.vue'
 import ChoixForfaits from './ChoixForfaits.vue'
 import IdentiteCv from './IdentiteCv.vue'
+import MenuCouple from './MenuCouple.vue'
 import { retourInvitation } from '../app/page.mjs'
 
 export default ({
   name: 'PanelCouple',
 
-  components: { EditeurMd, ApercuMotscles, SelectMotscles, IdentiteCv, ChoixForfaits },
+  components: { EditeurMd, MenuCouple, ApercuMotscles, SelectMotscles, IdentiteCv, ChoixForfaits },
 
   props: { couple: Object, suivant: Function, precedent: Function, index: Number, sur: Number },
 
@@ -120,27 +152,63 @@ export default ({
     const mode = computed(() => $store.state.ui.mode)
     const prefs = computed(() => { return data.getPrefs() })
     const cvs = computed(() => { return $store.state.db.cvs })
-    const avatarcpform = computed({
-      get: () => $store.state.ui.avatarcpform,
-      set: (val) => $store.commit('ui/majavatarcpform', val)
-    })
-    const invitationattente = computed({
-      get: () => $store.state.ui.invitationattente,
-      set: (val) => $store.commit('ui/majinvitationattente', val)
-    })
+
+    function libst (c) {
+      if (c.stp <= 2) {
+        return [
+          '',
+          `En attente [${c.dlv - getJourJ()} jour(s)] d'acceptation ou de refus de ${c.naE.nom}`,
+          `Proposition faite à ${c.naE.nom} caduque, sans réponse dans les délais`,
+          `Proposition faite à ${c.naE.nom} explicitement refusée`,
+          `En attente [${c.dlv - getJourJ()} jour(s)] d'acceptation ou de refus du parrainage du compte de ${c.naE.nom}`,
+          `Parrainage du compte de ${c.naE.nom} caduque, sans réponse dans les délais`,
+          `Parrainage du compte de ${c.naE.nom} explicitement refusée`,
+          `En attente [${c.dlv - getJourJ()} jour(s)] d'acceptation ou de refus de rencontre avec ${c.naE.nom}`,
+          `Proposition de rencontre faite à ${c.naE.nom} caduque, sans réponse dans les délais`,
+          `Proposition de rencontre faite à ${c.naE.nom} explicitement refusée`
+        ][c.ste]
+      } else if (c.stp === 3) {
+        return 'Couple établi'
+      } else { // stp = 4. Couple quitté par l'autre
+        return [
+          `${c.naE.nom} a quitté le couple. Continuation en solo`,
+          `${c.naE.nom} a quitté le couple et a été relancé pour y revenir: attente de sa décision`,
+          `${c.naE.nom} a quitté le couple, a été relancé pour y revenir mais n'a pas répondu dans les délais`,
+          `${c.naE.nom} a quitté le couple, a été relancé pour y revenir mais a explicitement refusé`
+        ][c.ste]
+      }
+    }
+
+    function liborig (c) {
+      if (c.orig === 0) {
+        return [
+          `Proposition faite à ${c.naE.nom} qui a accepté`,
+          `Proposition faite par ${c.naE.nom} et acceptée`
+        ][c.avc]
+      } else if (c.orig === 1) {
+        return [
+          `A l'occasion de la création du compte ${c.naE.nom} par parrainage`,
+          `Suite à l'acceptation du parrainage du compte par ${c.naE.nom}`
+        ][c.avc]
+      } else {
+        return [
+          `Rencontre proposée à ${c.naE.nom} qui a accepté`,
+          `Rencontre proposée par ${c.naE.nom} et acceptée`
+        ][c.avc]
+      }
+    }
 
     const s = reactive({
       motcles: null,
       axvis: false, // l'identité de l'autre est visible
       cvaxvis: false, // la carte de visite de l'autre est visible
-      dlvvis: false, // la dlv est visible
       frvis: false, // les forfaits / ressources sont visibles
-      phcvis: false, // la phrase de contact est visible
       maxEvis: false,
       relstd: false, // relance standard autorisée
       relpar: false, // relance de parrainage autorisée
       relren: false, // relance de rencontre autorisée
-      dh: 0, // date-heure de l'ardoise
+      stlib: '',
+      dh: '', // date-heure de l'ardoise
       ard: '', // texte de l'ardoise
       info: '', // commentaire personnel sur le couple
       cvc: null, // carte de visite du couple
@@ -157,7 +225,9 @@ export default ({
       r1: 0,
       r2: 0,
       v1: '',
-      v2: ''
+      v2: '',
+      origlib: '',
+      orig: 0
     })
 
     const mc = reactive({ categs: new Map(), lcategs: [], st: { enedition: false, modifie: false } })
@@ -174,18 +244,16 @@ export default ({
       s.axvis = (p === 1 && (e === 1 || e === 4 || e === 7)) ||
         (p === 2 && (e === 2 || e === 3 || e === 5 || e === 8)) || p >= 3
       s.cvaxvis = (p === 1 && e === 1) || (p === 2 && (e === 2 || e === 3)) || p === 3 || p === 4
-      s.dlvvis = p === 1 && (e === 1 || e === 4 || e === 7)
       s.frvis = e === 4 || e === 5 || e === 6
-      s.phcvis = e >= 4 && e <= 9
       s.maxEvis = p === 3
       s.relstd = (p === 2 && (e === 2 || e === 3)) || (p === 4 && e === 0)
       s.relpar = p === 2 && (e === 5 || e === 6)
       s.relren = p === 2 && (e === 8 || e === 9)
+      s.stlib = c ? libst(c) : ''
       s.info = c ? c.info : ''
-      s.dh = c ? c.dh : ''
+      s.dh = c ? dhstring(c.dh) : ''
       s.ard = c ? c.ard : ''
       s.mc = c ? c.mc : new Uint8Array([])
-      s.dlv = s.dlvvis ? c.dlv : 0
       s.maxI1 = c ? (c.avc === 0 ? c.mx10 : c.mx11) : 0
       s.maxI2 = c ? (c.avc === 0 ? c.mx20 : c.mx21) : 0
       s.maxE1 = c && s.maxEvis ? (c.avc === 0 ? c.mx11 : c.mx10) : 0
@@ -200,6 +268,8 @@ export default ({
       s.na = c ? c.na : null // na du couple
       s.naE = c ? c.naE : null // na de l'autre
       s.cvax = c && c.naE ? cvs.value[c.naE] : null // carte de visite de l'autre
+      s.orig = c ? c.orig : 0
+      s.origlib = c ? liborig(c) : ''
     }
 
     initState()
@@ -218,14 +288,12 @@ export default ({
     })
 
     return {
-      avatarcpform,
       mcledit,
       sessionok,
       initState,
       s,
       diagnostic,
-      mode,
-      invitationattente
+      mode
     }
   }
 })
@@ -234,4 +302,7 @@ export default ({
 @import '../css/app.sass'
 .bord1
   border:  1px solid $grey-5
+.q-toolbar
+  padding: 2px !important
+  min-height: 0 !important
 </style>

@@ -10,34 +10,17 @@
   <div v-if="!avatarcpform && state.lst && state.lst.length" class="col">
     <div v-for="(c, idx) in state.lst" :key="c.pkv"
       :class="dkli(idx) + ' zone full-width row items-start q-py-xs' + (idx === state.idx ? ' courant' : '')">
-      <div class="row full-width">
+      <div class="row items-start full-width">
         <div class="col row cursor-pointer" @click="afficher(c, idx)">
           <img class="col-auto photomax" :src="photo(c)"/>
           <q-icon class="col-auto q-pa-xs" size="sm" :color="c.stx<2?'primary':'warning'" :name="icone(c.stp)"/>
           <div class="col-3 q-px-xs">{{nom(c)}}</div>
           <div class="col q-pr-xs">{{c.ard.substring(0,80)}}</div>
-          <div class="col-auto fs-sm">{{dhstring(c.dhed)}}</div>
+          <div class="col-auto fs-sm">{{dhstring(c.dh)}}</div>
         </div>
 
-        <q-btn class="col-auto" size="md" color="primary" icon="menu" flat dense style="margin-top:-5px">
-          <q-menu transition-show="scale" transition-hide="scale">
-            <q-list dense style="min-width: 10rem">
-              <q-item v-if="invitationattente" clickable v-close-popup @click="copier(c)">
-                <q-item-section class="titre-lg text-bold text-grey-8 bg-yellow-4 q-mx-sm text-center">[Contact !]</q-item-section>
-              </q-item>
-              <q-item clickable v-close-popup @click="afficher(c, idx)">
-                <q-item-section>Afficher / éditer le couple</q-item-section>
-              </q-item>
-              <q-separator />
-              <q-item clickable v-close-popup @click="voirsecrets(c)">
-                <q-item-section>Voir les secrets partagés</q-item-section>
-              </q-item>
-              <q-separator />
-              <q-item clickable v-close-popup @click="nouveausecret(c)">
-                <q-item-section>Nouveau secret partagé</q-item-section>
-              </q-item>
-            </q-list>
-          </q-menu>
+        <q-btn class="col-auto btnmenu" size="md" color="white" icon="menu" flat dense>
+          <menu-couple :c="c" />
         </q-btn>
     </div>
       </div>
@@ -59,13 +42,13 @@ import { useStore } from 'vuex'
 import { Motscles, FiltreCp, cfg, dhstring } from '../app/util.mjs'
 import PanelFiltreCouples from './PanelFiltreCouples.vue'
 import PanelCouple from './PanelCouple.vue'
+import MenuCouple from './MenuCouple.vue'
 import { data } from '../app/modele.mjs'
-import { retourInvitation } from '../app/page.mjs'
 
 export default ({
   name: 'TabCouples',
 
-  components: { PanelFiltreCouples, PanelCouple },
+  components: { PanelFiltreCouples, PanelCouple, MenuCouple },
 
   computed: { },
 
@@ -76,22 +59,6 @@ export default ({
   },
 
   methods: {
-    voirsecrets (c) {
-      this.couple = c
-      this.evtfiltresecrets = { cmd: 'fs', arg: c }
-    },
-
-    nouveausecret (c) {
-      this.couple = c
-      this.evtfiltresecrets = { cmd: 'nv', arg: c }
-    },
-
-    copier (c) {
-      retourInvitation(c)
-    },
-
-    fermeredit () { this.avatarcpform = false },
-
     fermerfiltre () { this.avatarcprech = false },
 
     rechercher (f) { this.state.filtre = f },
@@ -120,10 +87,7 @@ export default ({
       get: () => $store.state.ui.avatarcpform,
       set: (val) => $store.commit('ui/majavatarcpform', val)
     })
-    const invitationattente = computed({
-      get: () => $store.state.ui.invitationattente,
-      set: (val) => $store.commit('ui/majinvitationattente', val)
-    })
+
     const couples = computed(() => { return avatar.value ? data.getCouple() : [] })
     const cvs = computed(() => { return $store.state.db.cvs })
 
@@ -154,6 +118,9 @@ export default ({
       const l = []; state.lst.forEach(x => l.push(x))
       l.sort((a, b) => state.filtre.fntri(a, b))
       state.lst = l
+    }
+
+    function indexer () {
       state.idx = -1
       if (couple.value) state.lst.forEach((x, n) => { if (x.id === couple.value.id) state.idx = n })
       if (state.idx === -1) {
@@ -169,6 +136,7 @@ export default ({
       if (!sessionok.value) return
       getCouples()
       trier()
+      indexer()
     }
 
     function photo (c) {
@@ -206,6 +174,7 @@ export default ({
       }
       if (chg >= 1) {
         trier()
+        indexer()
       }
     })
 
@@ -217,6 +186,10 @@ export default ({
       latotale()
     })
 
+    watch(() => couple.value, (ap, av) => {
+      indexer()
+    })
+
     watch(() => cvs.value, (ap, av) => {
       latotale()
     })
@@ -224,12 +197,13 @@ export default ({
     watch(() => sessionok.value, (ap, av) => {
     })
 
+    /*
     function afficher (c, idx) {
       couple.value = c
       state.idx = idx
       avatarcpform.value = true
     }
-
+    */
     function suiv (n) {
       if (state.idx < state.lst.length - 1) state.idx = n ? state.idx + 1 : state.lst.length - 1
       couple.value = state.lst[state.idx]
@@ -240,13 +214,10 @@ export default ({
       couple.value = state.lst[state.idx]
     }
 
-    watch(() => avatarcpform.value, (ap) => {
-    })
-
     return {
       suiv,
       prec,
-      afficher,
+      // afficher,
       sessionok,
       photo,
       nom,
@@ -260,8 +231,7 @@ export default ({
       mode,
       evtfiltresecrets,
       avatarcprech,
-      avatarcpform,
-      invitationattente
+      avatarcpform
     }
   }
 
@@ -272,10 +242,13 @@ export default ({
 @import '../css/app.sass'
 .courant
   border-left: 4px solid $warning !important
-.photomax
-  position: relative
-  top: -5px
 .ml20
   width: 100%
   padding: 0.2rem 0.2rem 0.2rem 23rem
+.btnmenu
+  position: relaive
+  top: -6px
+.photomax
+  position: relative
+  top: 3px
 </style>

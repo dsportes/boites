@@ -715,13 +715,13 @@ export class NomAvatar {
   }
 }
 
-/** Filtre des contacts *************************************/
+/** Filtre des couples *************************************/
 export class FiltreCp {
   constructor () {
     this.m1 = new Uint8Array([])
     this.m2 = new Uint8Array([])
     this.phase = 0 // 0:toutes phases, sinon numéro de phase (stp)
-    this.texte = '' // contacts dont le nom contient ce texte
+    this.texte = '' // couples dont le nom contient ce texte
     this.corps = false // true: rechercher le texte dans l'ardoise et l'info aussi
     /*
     2 : par date de dernière modification de l'ardoise

@@ -80,7 +80,7 @@
             <q-btn v-if="tabavatar==='secrets' && $q.screen.lt.md" size="md" dense icon="search" color="secondary" @click="optAvatarSc('recherche')"/>
             <q-tab name="secrets" label="Secrets" />
             <q-btn v-if="tabavatar==='couples' && $q.screen.lt.md" size="md" dense icon="search" color="secondary" @click="avatarcprech = !avatarcprech"/>
-            <q-btn v-if="tabavatar==='couples'" size="md" dense :icon="avatarcpform ? 'view_headline' : 'wysiwyg'" color="secondary" @click="togglecpform"/>
+            <q-btn v-if="tabavatar==='couples'" size="md" dense :icon="avatarcpform ? 'view_list' : 'wysiwyg'" color="secondary" @click="togglecpform"/>
             <q-tab name="couples" label="Couples" />
             <q-btn v-if="tabavatar==='groupes' && $q.screen.lt.md" size="md" dense icon="search" color="secondary" @click="avatargrrech = !avatargrrech"/>
             <q-tab name="groupes" label="Groupes" />
