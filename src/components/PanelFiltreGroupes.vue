@@ -1,7 +1,6 @@
 <template>
   <q-scroll-area style="height:80vh;width:22rem">
   <q-card class="shadow-8">
-    <q-btn class="q-ma-sm" dense icon="add" label="Créer un nouveau groupe" color="primary" @click="action(1)"/>
     <q-card-actions align="between">
       <q-btn v-if="$q.screen.lt.md" size="md" flat dense color="negative" icon="close" @click="fermeture" />
       <q-btn :disable="!modifie" size="md" flat dense color="primary" icon="undo" label="Annuler" @click="annuler" />

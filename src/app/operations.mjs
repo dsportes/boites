@@ -645,6 +645,7 @@ export class Operation {
     if (mapObj.membre) {
       for (const pk in mapObj.membre) {
         const mb = mapObj.membre[pk]
+        mb.setRepE()
         this.buf.setObj(mb)
         this.buf.putIDB(mb)
         const av = data.getMembre(mb.id, mb.im)
@@ -1161,8 +1162,8 @@ export class ConnexionCompte extends OperationUI {
     if (ret.rowItems.length) {
       const r = await compileToObject(deserialRowItems(ret.rowItems))
       if (r.secret) {
-        for (const pk in r) {
-          const s = r[pk]
+        for (const pk in r.secret) {
+          const s = r.secret[pk]
           if (s.suppr) {
             if (src[id] && src[id][s.ns]) delete src[id][s.ns]
             this.buf.supprIDB({ table: 'secret', id: id, id2: s.ns })
@@ -1184,10 +1185,10 @@ export class ConnexionCompte extends OperationUI {
     if (ret.rowItems.length) {
       const r = await compileToObject(deserialRowItems(ret.rowItems))
       if (r.membre) {
-        for (const pk in r) {
-          const m = r[pk]
+        for (const pk in r.membre) {
+          const m = r.membre[pk]
           let e = src[id]; if (!e) { e = {}; src[id] = e }
-          e[m.ns] = m
+          e[m.im] = m
           this.buf.putIDB(m)
         }
       }
@@ -1991,28 +1992,26 @@ export class CreationGroupe extends OperationUI {
 
   async run (avatar, nom, forfaits) { // arguments : nom (string), forfaits [f1, f2]
     try {
-      const im = crypt.rnd4()
-      const groupe = new Groupe().nouveau(nom, im, forfaits)
-      const na = groupe.na
+      const na = new NomAvatar(nom)
+      data.repertoire.setGr(na) // enregistrement de la clé / nom du groupe
+      const groupe = new Groupe().nouveau(na.id, forfaits)
       const rowGroupe = await groupe.toRow()
 
-      const membre = new Membre().nouveau(groupe.id, im, avatar.na)
+      const membre = new Membre().nouveau(groupe.id, 22, 1, avatar.na)
       const rowMembre = await membre.toRow()
-      const ni = membre.data.ni
 
-      const lgr = [na.nom, na.rnd, im]
+      const lgr = [na.nom, na.rnd, membre.im]
       const datak = await crypt.crypter(data.clek, serial(lgr))
 
       const args = {
         sessionId: data.sessionId,
         ida: avatar.id,
-        ni,
+        ni: membre.data.ni,
         datak,
         rowGroupe,
         rowMembre
       }
-      const ret = await post(this, 'm1', 'creationGroupe', args)
-      if (data.dh < ret.dh) data.dh = ret.dh
+      await post(this, 'm1', 'creationGroupe', args)
       this.finOK()
     } catch (e) {
       await this.finKO(e)

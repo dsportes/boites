@@ -61,6 +61,8 @@ export default function () {
 
     avatarcprech: false,
     avatarcpform: false,
+    avatargrrech: false,
+    avatargrform: false,
 
     evtfiltresecrets: null,
     evtfiltresecrets2: null,

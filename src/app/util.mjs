@@ -709,10 +709,24 @@ export class NomAvatar {
     this.id = !id ? crypt.hashBin(this.rnd) : id
   }
 
+  clone () {
+    return new NomAvatar(this.nom, this.rnd, this.id)
+  }
+
   get nomc () { return this.nom + '@' + this.sid.substring(this.sid.length - 3, this.sid.length) }
   get nomf () { return normpath(this.nomc) }
   get sid () { return crypt.idToSid(this.id) }
   get cle () { return this.rnd }
+  get photo () {
+    const cv = data.getCv(this.id)
+    return !cv || !cv[0] ? '' : cv[0]
+  }
+
+  get info () {
+    const cv = data.getCv(this.id)
+    return !cv || !cv[1] ? '' : cv[1]
+  }
+
   get noml () {
     const cv = data.getCv(this.id)
     if (!cv) return this.nomc

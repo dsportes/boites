@@ -83,6 +83,7 @@
             <q-btn v-if="tabavatar==='couples'" size="md" dense :icon="avatarcpform ? 'view_list' : 'wysiwyg'" color="secondary" @click="togglecpform"/>
             <q-tab name="couples" label="Couples" />
             <q-btn v-if="tabavatar==='groupes' && $q.screen.lt.md" size="md" dense icon="search" color="secondary" @click="avatargrrech = !avatargrrech"/>
+            <q-btn v-if="tabavatar==='groupes'" size="md" dense :icon="avatargrform ? 'view_list' : 'wysiwyg'" color="secondary" @click="togglegrform"/>
             <q-tab name="groupes" label="Groupes" />
             <q-tab name="etc" label="Etc." />
           </q-tabs>
@@ -228,10 +229,9 @@ export default {
     async reconnexion () { await reconnexion() },
 
     optAvatarSc (opt) { this.$store.commit('ui/majevtavatarsc', opt) },
-    optAvatarGr (opt) { this.$store.commit('ui/majevtavatargr', opt) },
-    togglecpform () {
-      this.avatarcpform = !this.avatarcpform
-    },
+
+    togglecpform () { this.avatarcpform = !this.avatarcpform },
+    togglegrform () { this.avatargrform = !this.avatargrform },
     toInvit () { retourInvitation(null) },
 
     stop () { data.stopOp() }
@@ -304,6 +304,14 @@ export default {
       get: () => $store.state.ui.avatarcpform,
       set: (val) => $store.commit('ui/majavatarcpform', val)
     })
+    const avatargrrech = computed({
+      get: () => $store.state.ui.avatargrrech,
+      set: (val) => $store.commit('ui/majavatargrrech', val)
+    })
+    const avatargrform = computed({
+      get: () => $store.state.ui.avatargrform,
+      set: (val) => $store.commit('ui/majavatargrform', val)
+    })
 
     const invitationattente = computed(() => $store.state.ui.invitationattente)
 
@@ -349,6 +357,8 @@ export default {
       tabavatar,
       avatarcprech,
       avatarcpform,
+      avatargrrech,
+      avatargrform,
       invitationattente,
 
       compte,

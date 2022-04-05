@@ -2,16 +2,18 @@
 <div v-if="sessionok" :class="$q.screen.gt.sm ? 'ml20' : 'q-pa-xs full-width'">
   <div v-if="!state.lst || !state.lst.length" class="titre-lg">Aucun couple ne correspond au critère de recherche</div>
 
-  <panel-couple v-if="avatarcpform && state.lst && state.lst.length" :couple="couple"
-      :suivant="state.idx < state.lst.length - 1 ? suiv : null"
-      :precedent="state.idx > 0 ? prec : null"
-      :index="state.idx" :sur="state.lst.length"/>
+  <panel-couple v-if="avatarcpform && state.lst && state.lst.length"
+    :class="$q.screen.gt.sm ? 'ml20' : 'q-pa-xs full-width'"
+    :couple="couple"
+    :suivant="state.idx < state.lst.length - 1 ? suiv : null"
+    :precedent="state.idx > 0 ? prec : null"
+    :index="state.idx" :sur="state.lst.length"/>
 
-  <div v-if="!avatarcpform && state.lst && state.lst.length" class="col">
+  <div v-if="!avatarcpform && state.lst && state.lst.length">
     <div v-for="(c, idx) in state.lst" :key="c.pkv"
       :class="dkli(idx) + ' zone full-width row items-start q-py-xs' + (idx === state.idx ? ' courant' : '')">
       <div class="row items-start full-width">
-        <div class="col row cursor-pointer" @click="afficher(c, idx)">
+        <div class="col row cursor-pointer" @click="afficher(idx)">
           <img class="col-auto photomax" :src="photo(c)"/>
           <q-icon class="col-auto q-pa-xs" size="sm" :color="c.stx<2?'primary':'warning'" :name="icone(c.stp)"/>
           <div class="col-3 q-px-xs">{{nom(c)}}</div>
@@ -22,16 +24,16 @@
         <q-btn class="col-auto btnmenu" size="md" color="white" icon="menu" flat dense>
           <menu-couple :c="c" />
         </q-btn>
-    </div>
       </div>
+    </div>
   </div>
 
-  <q-dialog v-if="!$q.screen.gt.sm" v-model="avatarcprech" position="left">
-    <panel-filtre-couples @ok="rechercher" :motscles="motscles" :etat-interne="recherche" :fermer="fermerfiltre"></panel-filtre-couples>
+  <q-dialog v-if="!$q.screen.gt.sm && sessionok" v-model="avatarcprech" position="left">
+    <panel-filtre-couples @ok="rechercher" :motscles="motscles" :etat-interne="recherche" :fermer="fermerfiltre"/>
   </q-dialog>
 
   <q-page-sticky v-if="$q.screen.gt.sm" position="top-left" expand :offset="[5,5]">
-    <panel-filtre-couples @ok="rechercher" :motscles="motscles" :etat-interne="recherche"></panel-filtre-couples>
+    <panel-filtre-couples @ok="rechercher" :motscles="motscles" :etat-interne="recherche"/>
   </q-page-sticky>
 
 </div>
@@ -197,13 +199,12 @@ export default ({
     watch(() => sessionok.value, (ap, av) => {
     })
 
-    /*
-    function afficher (c, idx) {
-      couple.value = c
+    function afficher (idx) {
       state.idx = idx
+      couple.value = state.lst[state.idx]
       avatarcpform.value = true
     }
-    */
+
     function suiv (n) {
       if (state.idx < state.lst.length - 1) state.idx = n ? state.idx + 1 : state.lst.length - 1
       couple.value = state.lst[state.idx]
@@ -217,7 +218,7 @@ export default ({
     return {
       suiv,
       prec,
-      // afficher,
+      afficher,
       sessionok,
       photo,
       nom,

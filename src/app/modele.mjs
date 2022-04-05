@@ -685,6 +685,17 @@ export class Avatar {
     this.mcc = new Map() // clé: ni, val: clé cc
   }
 
+  /* Retourne LE membre de l'avatar du compte pour un groupe d'id donné */
+  membre (idg) {
+    const x = this.m2gr.get(idg)
+    return x ? data.getMembre(idg, x[0]) : null
+  }
+
+  im (idg) {
+    const x = this.m2gr.get(idg)
+    return x ? x[0] : 0
+  }
+
   groupeIds (s) {
     const s1 = new Set()
     this.m1gr.forEach(e => { if (s) s.add(e.na.id); else s1.add(e.na.id) })
@@ -1172,7 +1183,7 @@ export class Groupe {
     let mx = 0
     for (const im in data.getMembre(this.id)) {
       const m = data.getMembre(this.id, im)
-      if (m.estAvc && m.stp > mx) mx = m.stp
+      if (m.estAc && m.stp > mx) mx = m.stp
     }
     return mx
   }
@@ -1184,15 +1195,14 @@ export class Groupe {
     return i === -1 ? { c: '', n: s } : { c: s.substring(0, i), n: s.substring(i + 1) }
   }
 
-  nouveau (nom, imh, forfaits) {
-    const na = data.setNa(nom)
-    this.id = na.id
+  nouveau (id, forfaits) {
+    this.id = id
     this.v = 0
     this.dfh = 0
     this.st = 10
     this.mxim = 1
     this.idh = data.getCompte().id
-    this.imh = imh
+    this.imh = 1
     this.v1 = 0
     this.v2 = 0
     this.f1 = forfaits[0]
@@ -1283,19 +1293,16 @@ export class Membre {
   get stp () { return this.st < 0 ? -1 : this.st % 10 }
 
   // De l'avatar membre
-  get estAvc () { return data.repertoire.estAc(this.namb.id) }
-  get cv () { return data.getCv(this.namb.id) }
-  get photo () { const cv = this.cv; return cv ? cv.photo : '' }
-  get info () { const cv = this.cv; return cv ? cv.info : '' }
-
-  get rep () { return data.repertoire.get(this.namb.id) }
-  get cle () { return this.rep.cle }
-  get nom () { return this.rep.nom }
-  get nomEd () { return titreEd(this.nom || '', this.info) }
+  get estAc () { return data.repertoire.estAc(this.namb.id) }
+  get cvm () { return data.getCv(this.namb.id) }
+  get photom () { const cv = this.cvm; return cv ? cv.photo : '' }
+  get infom () { const cv = this.cvm; return cv ? cv.info : '' }
+  get clem () { return data.repertoire.cle(this.namb.id) }
+  get nomEd () { return titreEd(this.namb.nom || '', this.info) }
 
   get titre () {
-    const i = this.info.indexOf('\n')
-    const t1 = i === -1 ? this.info : this.info.substring(0, i)
+    const i = this.infom.indexOf('\n')
+    const t1 = i === -1 ? this.infom : this.infom.substring(0, i)
     const t = t1.length <= 16 ? t1 : t1.substring(0, 13) + '...'
     return t ? t + ' [' + this.namb.titre + ']' : this.namb.titre
   }
@@ -1304,18 +1311,25 @@ export class Membre {
   get cvg () { return data.getCv(this.id) }
   get photog () { const cv = this.cv; return cv ? cv.photo : '' }
   get infog () { const cv = this.cv; return cv ? cv.info : '' }
-  get repg () { return data.repertoire.get(this.namb.id) }
-  get cleg () { return this.repg.cle }
-  get nomg () { return this.repg.nom }
-  get nomEdg () { return titreEd(this.nomg || '', this.infog) }
+  get cleg () { return data.repertoire.cle(this.id) }
+  get na () { return data.repertoire.na(this.id) }
+  get nomEdg () { return titreEd(this.na.nom || '', this.infog) }
 
   get dhed () { return dhstring(this.dh) }
 
-  nouveau (id, im, na, idi) {
+  setRepE () {
+    if (!this.estAc) {
+      data.repertoire.setAx(this.namb)
+    }
+  }
+
+  nouveau (id, st, im, na, idi) {
+    /* id du groupe, statut, indice membre,
+    NomAvatar du membre, id de l'invitant (fac, sinon c'est le membre lui-même */
     this.id = id
     this.im = im
     this.v = 0
-    this.st = 22
+    this.st = st
     this.vote = 0
     this.mc = new Uint8Array([])
     this.info = ''
@@ -1327,7 +1341,7 @@ export class Membre {
       ni: crypt.rnd6(),
       idi: idi || na.id
     }
-    this.namb = new NomAvatar(this.data.nom, this.data.rnd)
+    this.namb = na
     this.vsh = 0
     return this
   }
@@ -1357,7 +1371,7 @@ export class Membre {
     const r = { ...this }
     r.datag = await crypt.crypter(this.cleg, serial(this.data))
     r.ardg = this.ard ? await crypt.crypter(this.cleg, serial([this.dh, this.ard])) : null
-    r.infok = this.estAvc && this.info ? await crypt.crypter(data.clek, this.info) : null
+    r.infok = this.estAc && this.info ? await crypt.crypter(data.clek, this.info) : null
     return schemas.serialize('rowmembre', r)
   }
 

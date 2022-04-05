@@ -26,7 +26,7 @@ import { useStore } from 'vuex'
 import { watch, toRef, reactive, computed, ref } from 'vue'
 import CarteVisite from './CarteVisite.vue'
 import ShowHtml from './ShowHtml.vue'
-import { data, Cv } from '../app/modele.mjs'
+import { Cv } from '../app/modele.mjs'
 import { retourInvitation } from '../app/page.mjs'
 import { cfg } from '../app/util.mjs'
 export default ({
@@ -57,7 +57,11 @@ export default ({
         this.$emit('cv-changee', cv)
       }
     },
-    copier () { if (this.typeN === 'avatar') retourInvitation(data.getAvatars(this.a.na.id)) }
+    copier () {
+      if (this.typeN === 'avatar') {
+        retourInvitation(this.a.na)
+      }
+    }
   },
 
   setup (props) {

@@ -103,17 +103,17 @@ export async function remplacePage (page) {
   await $router.replace(x)
 }
 
-export function retourInvitation (clipboard) {
+export function retourInvitation (nacopie) {
+  if (!nacopie) return
   const $store = store()
   const ctx = $store.state.ui.invitationattente
   $store.commit('db/majavatar', data.getAvatar(ctx.avid))
   remplacePage('Avatar')
   $store.commit('ui/majtabavatar', 'groupes')
   const g = data.getGroupe(ctx.grid)
-  const m = data.getMembre(ctx.grid, ctx.im)
-  $store.commit('db/majgroupeplus', { g, m })
+  $store.commit('db/majgroupe', g)
   $store.commit('ui/majeditgr', true)
   $store.commit('ui/majpanelinvit', true)
   $store.commit('ui/majinvitationattente', null)
-  $store.commit('ui/majclipboard', clipboard)
+  $store.commit('ui/majclipboard', nacopie.clone())
 }
