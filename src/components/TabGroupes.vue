@@ -236,7 +236,8 @@ export default ({
       const f = state.filtre
       f.debutFiltre()
       const lst = []
-      for (const idg in refMembres) {
+      for (const x in refMembres) {
+        const idg = parseInt(x)
         const m = refMembres[idg]
         const g = data.getGroupe(idg)
         if (!g) continue

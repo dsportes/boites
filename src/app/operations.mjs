@@ -2176,6 +2176,7 @@ export class MajvmaxGroupe extends OperationUI {
 /* Nouveau contact d'un groupe ****************************************
 args :
 - sessionId
+- mxim : dernier im attribué par le groupe
 - rowMembre : objet membre
 Retour: sessionId, dh
 A_SRV, '18-Groupe non trouvé'
@@ -2185,14 +2186,28 @@ export class ContactGroupe extends OperationUI {
     super('Nouveau contact d\'un groupe', OUI, SELONMODE)
   }
 
-  async run (g, id, idi) {
+  async run (idg, na, idi) { // id du groupe, na du membre, id de l'invitant
     try {
-      const m = new Membre().nouveau(g.id, crypt.rnd4(), data.getNa(id), idi)
-      m.st = 0
-      const rowMembre = await m.toRow()
-      const args = { sessionId: data.sessionId, rowMembre }
-      const ret = await post(this, 'm1', 'contactGroupe', args)
-      if (data.dh < ret.dh) data.dh = ret.dh
+      let n = 0
+      while (true) {
+        const g = data.getGroupe(idg)
+        const lmb = data.getMembre(idg)
+        for (const im in lmb) {
+          const m = lmb[im]
+          if (m.namb.id === na.id) throw new AppExc(F_BRO, '101-Avatar déjà cité dans le groupe, ne pas pas être inscrit à nouveau')
+        }
+        const mxim = g.mxim + 1
+        const m = new Membre().nouveau(g.id, 0, mxim, na, idi)
+        const rowMembre = await m.toRow()
+        const args = { sessionId: data.sessionId, mxim, rowMembre }
+        const ret = await post(this, 'm1', 'contactGroupe', args)
+        if (ret.statut === 1) {
+          affichermessage('(' + n++ + ')-Petit incident, nouvel essai en cours, merci d\'attendre', true)
+          await sleep(2000)
+        } else {
+          break
+        }
+      }
       this.finOK()
     } catch (e) {
       await this.finKO(e)

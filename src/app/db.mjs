@@ -209,7 +209,7 @@ export async function getMembres () {
     await data.db.membre.each(async (idb) => {
       const x = new Membre().fromIdb(await crypt.decrypter(data.clek, idb.data))
       let e = r[x.id]; if (!e) { e = {}; r[x.id] = e }
-      e[x.ns] = x
+      e[x.im] = x
       const v1 = v[x.id]
       if (!v1 || v1 < x.v) v[x.id] = x.v
     })

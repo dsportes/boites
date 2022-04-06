@@ -457,7 +457,7 @@ export class Motscles {
   }
 
   edit (u8, court, groupeId) {
-    if (!u8) return ''
+    if (!u8 || !u8.length) return ''
     const gr = groupeId ? data.getGroupe(groupeId) : null
     const l = []
     for (let i = 0; i < u8.length; i++) {

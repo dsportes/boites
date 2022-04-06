@@ -1,5 +1,5 @@
 <template>
-<q-card v-if="sessionok && nomAvatar" class="full-width fs-md shadow-8">
+<q-card v-if="sessionok && nomAvatar" :class="dkli(idx) + ' full-width fs-md shadow-8'">
   <div class="row justify-between items-center full-width">
     <div :class="'col row justify-start items-center full-width' + (clickable ? ' ligne cursor-pointer' : '')" @click="click">
       <img class="col-auto photomax" :src="a.photo"/>
@@ -10,7 +10,7 @@
     <q-btn class="col-auto" v-if="editable" flat dense size="md" color="primary" icon="edit" @click="cvloc=true"/>
   </div>
   <div v-if="a.info" class="full-width overflow-y-auto height-2 shadow-8">
-    <show-html :texte="a.info"/>
+    <show-html :texte="a.info" :idx="idx"/>
   </div>
   <q-btn v-if="invitable && nomAvatar && typeN === 'avatar' && invitationattente" class="titre-lg text-bold text-grey-8 bg-yellow-4 q-mx-sm"
     label="[Contact !]" dense flat @click="copier"/>
@@ -37,7 +37,8 @@ export default ({
     type: String, // 'avatar' (par défaut), 'groupe', 'couple'
     editable: Boolean,
     clickable: Boolean,
-    invitable: Boolean
+    invitable: Boolean,
+    idx: Number
   },
 
   components: { ShowHtml, CarteVisite },
@@ -49,6 +50,7 @@ export default ({
   data () { return { } },
 
   methods: {
+    dkli (idx) { return this.$q.dark.isActive ? (idx ? 'sombre' + (idx % 2) : 'sombre0') : (idx ? 'clair' + (idx % 2) : 'clair0') },
     click () { if (this.clickable && this.a && this.a.na) this.$emit('identite-click', this.a.na) },
     closedialog () { this.cvloc = false },
     cvchangee (res) {

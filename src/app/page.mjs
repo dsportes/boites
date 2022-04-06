@@ -1,5 +1,5 @@
 import { useRouter, useRoute } from 'vue-router'
-import { cfg, store } from './util.mjs'
+import { cfg, store, NomAvatar } from './util.mjs'
 import { data } from './modele.mjs'
 
 let bootfait = false
@@ -115,5 +115,5 @@ export function retourInvitation (nacopie) {
   $store.commit('ui/majeditgr', true)
   $store.commit('ui/majpanelinvit', true)
   $store.commit('ui/majinvitationattente', null)
-  $store.commit('ui/majclipboard', nacopie.clone())
+  $store.commit('ui/majclipboard', nacopie instanceof NomAvatar ? nacopie.clone() : 'KO')
 }

@@ -102,7 +102,7 @@
         </transition>
       </router-view>
       <q-page-sticky v-if="invitationattente" position="bottom-right" :offset="[2, 2]">
-        <q-btn label="Invitation en attente" color="accent" icon-right="arrow_forward" @click="toInvit"/>
+        <q-btn label="Cliquer pour annuler l\'invitation en cours" color="accent" icon-right="arrow_forward" @click="toInvit"/>
       </q-page-sticky>
     </q-page-container>
 
@@ -232,7 +232,7 @@ export default {
 
     togglecpform () { this.avatarcpform = !this.avatarcpform },
     togglegrform () { this.avatargrform = !this.avatargrform },
-    toInvit () { retourInvitation(null) },
+    toInvit () { retourInvitation('KO') },
 
     stop () { data.stopOp() }
   },
