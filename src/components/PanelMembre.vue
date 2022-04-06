@@ -34,15 +34,15 @@
   </div>
 
   <q-btn class="col-auto q-ml-sm" size="md" icon="menu" flat dense>
-    <q-menu touch-position transition-show="scale" transition-hide="scale">
+    <q-menu transition-show="scale" transition-hide="scale">
       <q-list dense class="bord1">
         <q-item v-if="invitationattente" clickable v-ripple v-close-popup @click="copier">
           <q-item-section class="titre-lg text-bold text-grey-8 bg-yellow-4 q-mx-sm text-center">[Contact !]</q-item-section>
         </q-item>
-        <q-separator v-if="m.stx === 0 && g.maxStp() === 2"/>
+        <q-separator v-if="invitationattente && m.stx === 0 && g.maxStp() === 2"/>
         <q-item v-if="m.stx === 0 && g.maxStp() === 2" clickable v-ripple v-close-popup @click="ouvririnvitcontact(m)">
           <q-item-section avatar>
-            <q-icon dense name="check" color="primary" size="md"/>
+            <q-icon dense name="open_in_new" color="primary" size="md"/>
           </q-item-section>
           <q-item-section>Inviter ce contact</q-item-section>
         </q-item>
@@ -51,17 +51,24 @@
           <q-item-section avatar>
             <q-icon dense name="check" color="primary" size="md"/>
           </q-item-section>
-          <q-item-section>Accepter / Refuser l'invitation</q-item-section>
+          <q-item-section>Accepter l'invitation</q-item-section>
         </q-item>
-        <q-separator v-if="!m.estAvec && m.stp === 2" />
-        <q-item v-if="!m.estAvec && m.stp === 2" clickable v-ripple v-close-popup @click="resilier()">
+        <q-separator v-if="m.stx === 1" />
+        <q-item v-if="m.stx === 1" clickable v-ripple v-close-popup @click="refuserinvit()">
+          <q-item-section avatar>
+            <q-icon dense name="not_interested" color="primary" size="md"/>
+          </q-item-section>
+          <q-item-section>Refuser l'invitation</q-item-section>
+        </q-item>
+        <q-separator v-if="g.maxStp() === 2 && m.stx === 2" />
+        <q-item v-if="g.maxStp() === 2 && m.stx === 2" clickable v-ripple v-close-popup @click="resilier()">
           <q-item-section avatar>
             <q-icon dense name="close" color="warning" size="sm"/>
           </q-item-section>
           <q-item-section>Résilier du groupe</q-item-section>
         </q-item>
-        <q-separator v-if="m.estAvec"/>
-        <q-item v-if="m.estAvec" clickable v-ripple v-close-popup @click="autoresilier()">
+        <q-separator v-if="m.stp === 2"/>
+        <q-item v-if="m.stx === 2" clickable v-ripple v-close-popup @click="autoresilier()">
           <q-item-section avatar>
             <q-icon dense name="close" color="warning" size="sm"/>
           </q-item-section>
@@ -72,20 +79,29 @@
   </q-btn>
 
   <q-dialog v-if="sessionok" v-model="ardedit">
-    <q-card-section class="petitelargeur shadow-8">
-      <div class="titre-md">Ardoise commune avec le groupe</div>
-      <editeur-md class="height-8" v-model="mbcard" :texte="m.ard" editable @ok="changerardmbc" label-ok="OK" :close="fermermajard"/>
-    </q-card-section>
+    <q-card class="petitelargeur shadow-8">
+      <q-card-section>
+        <div class="row justify-between items-start q-yb-md">
+          <div class="titre-md">Ardoise commune avec le groupe</div>
+          <q-btn class="col-auto q-ml-sm btn1" flat round dense icon="close" color="negative" size="md" @click="ardedit = false" />
+        </div>
+        <editeur-md class="height-8" v-model="mbcard" :texte="m.ard"
+          :editable="g.maxStp() > 0" @ok="changerardmbc" label-ok="OK" :close="fermermajard"/>
+      </q-card-section>
+    </q-card>
   </q-dialog>
 
   <q-dialog v-if="sessionok" v-model="infoedit">
-    <q-card-section class="petitelargeur shadow-8">
-      <div class="row justify-between align-start">
-        <div class="col titre-md">Commentaires personnels à propos du groupe</div>
-        <q-btn class="col-auto q-ml-sm" flat round dense icon="close" color="negative" size="md" @click="infoedit = false" />
-      </div>
-      <editeur-md class="height-8" v-model="mbcinfo" :texte="m.info" editable @ok="changerinfombc" label-ok="OK" :close="fermermajinfo"/>
-    </q-card-section>
+    <q-card class="petitelargeur shadow-8">
+      <q-card-section>
+        <div class="row justify-between items-start q-yb-md">
+          <div class="col titre-md">Commentaires personnels à propos du groupe</div>
+          <q-btn class="col-auto q-ml-sm btn1" flat round dense icon="close" color="negative" size="md" @click="infoedit = false" />
+        </div>
+        <editeur-md class="height-8" v-model="mbcinfo" :texte="m.info"
+          editable @ok="changerinfombc" label-ok="OK" :close="fermermajinfo"/>
+      </q-card-section>
+    </q-card>
   </q-dialog>
 
   <q-dialog v-if="sessionok" v-model="mcledit">
@@ -94,28 +110,28 @@
 
   <q-dialog v-if="sessionok" v-model="invitcontact">
     <q-card class="petitelargeur shadow-8">
-    <q-card-section>
-      <div class="titre-lg">Invitation d'un contact à être membre du groupe</div>
-    </q-card-section>
-    <q-separator/>
-    <q-card-section>
-      <div class="titre-lg">Contact sélectionné : {{m.nom}}</div>
-      <div class="q-my-sm row">
-        <img class="col-auto photomax" :src="m.na.photo || phdefa"/>
-        <show-html class="col q-ml-md bord1 height-6" :texte="m.na.info || ''"/>
-      </div>
-    </q-card-section>
-    <q-card-section>
-      <div class="q-gutter-md q-ma-sm">
-        <q-radio dense v-model="laa" :val="0" label="Lecteur" />
-        <q-radio dense v-model="laa" :val="1" label="Auteur" />
-        <q-radio dense v-model="laa" :val="2" label="Animateur" />
-      </div>
-    </q-card-section>
-    <q-card-actions align="center" vertical>
-      <q-btn flat dense color="primary" icon="close" label="Annuler" @click="invitcontact=false"/>
-      <q-btn dense color="warning" label="Inviter ce contact" @click="inviter"/>
-    </q-card-actions>
+      <q-card-section>
+        <div class="titre-lg">Invitation d'un contact à être membre du groupe</div>
+      </q-card-section>
+      <q-separator/>
+      <q-card-section>
+        <div class="titre-lg">Contact sélectionné : {{m.namb.nom}}</div>
+        <div class="q-my-sm row">
+          <img class="col-auto photomax" :src="m.namb.photo || phdefa"/>
+          <show-html class="col q-ml-md bord1 height-6" :texte="m.namb.info || ''"/>
+        </div>
+      </q-card-section>
+      <q-card-section>
+        <div class="q-gutter-md q-ma-sm">
+          <q-radio dense v-model="laa" :val="0" label="Lecteur" />
+          <q-radio dense v-model="laa" :val="1" label="Auteur" />
+          <q-radio dense v-model="laa" :val="2" label="Animateur" />
+        </div>
+      </q-card-section>
+      <q-card-actions align="center" vertical>
+        <q-btn flat dense color="primary" icon="close" label="Annuler" @click="invitcontact=false"/>
+        <q-btn dense color="warning" label="Inviter ce contact" @click="inviter"/>
+      </q-card-actions>
     </q-card>
   </q-dialog>
 
@@ -132,7 +148,7 @@ import IdentiteCv from './IdentiteCv.vue'
 import SelectMotscles from './SelectMotscles.vue'
 import ApercuMotscles from './ApercuMotscles.vue'
 import EditeurMd from './EditeurMd.vue'
-import { MajBIGroupe, MajMcMembre, MajArdMembre, MajInfoMembre, InviterGroupe } from '../app/operations.mjs'
+import { MajMcMembre, MajArdMembre, MajInfoMembre, InviterGroupe } from '../app/operations.mjs'
 import { retourInvitation } from '../app/page.mjs'
 
 export default ({
@@ -165,6 +181,7 @@ export default ({
 
     async changermcmbc (mc) {
       await new MajMcMembre().run(this.m, mc)
+      this.mcledit = false
     },
     async changerardmbc (texte) {
       await new MajArdMembre().run(this.m, texte)
@@ -175,27 +192,22 @@ export default ({
       this.infoedit = false
     },
 
-    async bloquer () {
-      await new MajBIGroupe().run(this.g, true)
-    },
-    async debloquer () {
-      await new MajBIGroupe().run(this.g, false)
-    },
-
     copier () {
       retourInvitation(this.m.namb)
     },
 
     async inviter () {
-      await new InviterGroupe().run(this.g, this.m, this.laa)
+      await new InviterGroupe().run(this.g.na, this.m, this.laa)
       this.invitcontact = false
     },
     // TODO
-    autoresilier (m) {
+    autoresilier () {
     },
-    resilier (m) {
+    resilier () {
     },
-    accepterinvit (m) {
+    accepterinvit () {
+    },
+    refuserinvit () {
     }
   },
 
@@ -283,6 +295,9 @@ export default ({
 </script>
 <style lang="sass" scoped>
 @import '../css/app.sass'
+.btn1
+  position: relative
+  top: -5px
 .bord1
   border:  1px solid $grey-5
   min-width: 20rem

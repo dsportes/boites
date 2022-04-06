@@ -11,12 +11,6 @@ import { EXPS, UNITEV1, UNITEV2, Compteurs, t0n } from './api.mjs'
 
 export const MODES = ['inconnu', 'synchronisé', 'incognito', 'avion', 'visio']
 
-export async function traitInvitGr (row) {
-  const cpriv = data.avc(row.id).cpriv
-  const x = deserial(await crypt.decrypterRSA(cpriv, row.datap))
-  return { id: row.id, ni: row.ni, datak: crypt.crypter(data.clek, x) }
-}
-
 /* Compile en objet tous les rows de la structure de rows désérialisée mr
 La structure de sortie mapObj est identique. Elle peut être fourni en entrée
 ce qui provoque une mise à jour par les versions postérieures de chaque objet
@@ -1101,7 +1095,7 @@ export class Contact {
 /*
 - `id` : id du membre invité.
 - `ni` : numéro d'invitation.
-- `datap` : crypté par la clé publique du membre invité.
+- `datap` : crypté par la clé publique du membre invité (recrypté en datak par la clé k)
   - `nom rnd im` : nom complet du groupe (donne sa clé).
 Jamais stocké en IDB : dès réception, le row avatar correspondant est "régularisé"
 */
@@ -1112,9 +1106,9 @@ export class Invitgr {
   async fromRow (row) {
     this.id = row.id
     this.ni = row.ni
-    const cpriv = data.avc(row.id).cpriv
+    const cpriv = data.getCompte().av(row.id).cpriv
     const x = deserial(await crypt.decrypterRSA(cpriv, row.datap))
-    this.idg = crypt.hashBin(x[1]) // utilité ???
+    this.idg = crypt.hashBin(x[1]) // pour le traitement de régularisation (abonnement au groupe)
     this.datak = await crypt.crypter(data.clek, serial(x))
     return this
   }
@@ -1359,13 +1353,13 @@ export class Membre {
     const [d, t] = row.ardg ? deserial(await crypt.decrypter(this.cleg, row.ardg)) : [0, '']
     this.ard = t
     this.dh = d
-    this.info = row.infok && this.estAvc ? await crypt.decrypterStr(data.clek, row.infok) : ''
+    this.info = row.infok && this.estAc ? await crypt.decrypterStr(data.clek, row.infok) : ''
     this.mc = row.mc
     return this
   }
 
   async toArdg (ard) {
-    return ard ? await crypt.crypter(this.cleg, serial([Math.floor(new Date().getTime() / 1000), ard])) : null
+    return ard ? await crypt.crypter(this.cleg, serial([new Date().getTime(), ard])) : null
   }
 
   async toRow () {

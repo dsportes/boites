@@ -139,8 +139,8 @@ import { useQuasar } from 'quasar'
 import { Motscles, cfg, FiltreMbr, getJourJ } from '../app/util.mjs'
 import { data } from '../app/modele.mjs'
 import {
-  MajMcGroupe, MajArchGroupe, MajBIGroupe, MajMcMembre, MajArdMembre, MajInfoMembre, FinHebGroupe, DebHebGroupe, MajvmaxGroupe,
-  ContactGroupe, InviterGroupe, MajCv
+  MajMcGroupe, MajArchGroupe, MajBIGroupe, FinHebGroupe, DebHebGroupe, MajvmaxGroupe,
+  ContactGroupe, MajCv
 } from '../app/operations.mjs'
 import ShowHtml from './ShowHtml.vue'
 import IdentiteCv from './IdentiteCv.vue'
@@ -159,25 +159,11 @@ export default ({
     anim () { return this.state.maxstp === 2 }
   },
 
-  data () {
-    return {
-      erreur: '',
-      mbcard: '',
-      mbcinfo: '',
-      laa: 0,
-      mbc: null // membre courant
-    }
-  },
+  data () { return { } },
 
   methods: {
     dkli (idx) { return this.$q.dark.isActive ? (idx ? 'sombre' + (idx % 2) : 'sombre0') : (idx ? 'clair' + (idx % 2) : 'clair0') },
     nbj (j) { return j - getJourJ() },
-    fermermajard () { this.ardedit = false },
-    fermermajinfo () { this.infoedit = false },
-    ouvmajinfo (m) { this.infoedit = true; this.mbc = m; this.mbcinfo = m.info },
-    ouvmajard (m) { this.ardedit = true; this.mbc = m; this.mbcard = m.ard },
-    ouvrirmc (m) { this.mcledit = true; this.mbc = m },
-    fermermcl () { this.mcledit = false },
 
     voirsecrets () {
       this.evtfiltresecrets = { cmd: 'fsg', arg: this.groupe }
@@ -199,17 +185,6 @@ export default ({
     async debloquer () {
       await new MajBIGroupe().run(this.state.g, false)
     },
-    async changermcmbc (mc) {
-      await new MajMcMembre().run(this.mbc, mc)
-    },
-    async changerardmbc (texte) {
-      await new MajArdMembre().run(this.mbc, texte)
-      this.ardedit = false
-    },
-    async changerinfombc (texte) {
-      await new MajInfoMembre().run(this.mbc, texte)
-      this.infoedit = false
-    },
 
     suiv (n) { if (this.suivant) this.suivant(n) },
     prec (n) { if (this.precedent) this.precedent(n) },
@@ -222,6 +197,7 @@ export default ({
       const grid = this.state.g.id
       this.invitationattente = { avid, grid }
     },
+
     fermerPanelInvit () {
       this.clipboard = null
       this.state.nacopie = null
@@ -247,17 +223,6 @@ export default ({
       this.invitationattente = null
       await new ContactGroupe().run(this.state.g.id, na, this.avatar.id)
       this.panelinvit = false
-    },
-    async inviter () {
-      await new InviterGroupe().run(this.state.g, this.mbc, this.laa)
-      this.invitcontact = false
-    },
-    // TODO
-    autoresilier (m) {
-    },
-    resilier (m) {
-    },
-    accepterinvit (m) {
     }
   },
 

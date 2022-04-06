@@ -6,6 +6,7 @@
       <q-btn class="q-my-sm" size="md" icon="add" label="Nouvel avatar" color="primary" dense @click="nvav=true"/>
       <div v-for="na in state.lst" :key="na.id" class="full-width">
         <identite-cv :nom-avatar="na" type="avatar" invitable clickable @identite-click="toAvatar"/>
+        <q-separator class="q-ma-sm"/>
       </div>
     </q-expansion-item>
   </div>

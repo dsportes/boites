@@ -2032,8 +2032,7 @@ export class MajMcMembre extends OperationUI {
   async run (m, mc) {
     try {
       const args = { sessionId: data.sessionId, id: m.id, im: m.im, mc }
-      const ret = await post(this, 'm1', 'majmcMembre', args)
-      if (data.dh < ret.dh) data.dh = ret.dh
+      await post(this, 'm1', 'majmcMembre', args)
       this.finOK()
     } catch (e) {
       await this.finKO(e)
@@ -2042,7 +2041,7 @@ export class MajMcMembre extends OperationUI {
 }
 
 /* Mise à jour de l'ardoise d'un membre d'un groupe ****************************************
-- sessionId, id, im, texte
+- sessionId, id, im, ardg
 Retour :
 - sessionId, dh
 */
@@ -2055,8 +2054,7 @@ export class MajArdMembre extends OperationUI {
     try {
       const ardg = await m.toArdg(texte)
       const args = { sessionId: data.sessionId, id: m.id, im: m.im, ardg }
-      const ret = await post(this, 'm1', 'majardMembre', args)
-      if (data.dh < ret.dh) data.dh = ret.dh
+      await post(this, 'm1', 'majardMembre', args)
       this.finOK()
     } catch (e) {
       await this.finKO(e)
@@ -2078,8 +2076,7 @@ export class MajInfoMembre extends OperationUI {
     try {
       const infok = await crypt.crypter(data.clek, texte)
       const args = { sessionId: data.sessionId, id: m.id, im: m.im, infok }
-      const ret = await post(this, 'm1', 'majinfoMembre', args)
-      if (data.dh < ret.dh) data.dh = ret.dh
+      await post(this, 'm1', 'majinfoMembre', args)
       this.finOK()
     } catch (e) {
       await this.finKO(e)
@@ -2227,7 +2224,7 @@ export class InviterGroupe extends OperationUI {
     super('Inviter un contact d\'un groupe', OUI, SELONMODE)
   }
 
-  async run (g, m, laa) {
+  async run (nag, m, laa) {
     try {
       const clepub = await get('m1', 'getclepub', { sessionId: data.sessionId, sid: m.namb.sid })
       if (!clepub) throw new AppExc(E_BRO, '23-Cle RSA publique d\'avatar non trouvé')
@@ -2241,12 +2238,10 @@ export class InviterGroupe extends OperationUI {
       */
       invitgr.id = m.namb.id
       invitgr.ni = m.data.ni
-      const na = g.na
-      invitgr.data = [na.nom, na.rnd, m.im]
+      invitgr.data = [nag.nom, nag.rnd, m.im]
       const rowInvitgr = await invitgr.toRow(clepub)
       const args = { sessionId: data.sessionId, rowInvitgr, id: m.id, im: m.im, st: 10 + laa }
-      const ret = await post(this, 'm1', 'inviterGroupe', args)
-      if (data.dh < ret.dh) data.dh = ret.dh
+      await post(this, 'm1', 'inviterGroupe', args)
       this.finOK()
     } catch (e) {
       await this.finKO(e)
