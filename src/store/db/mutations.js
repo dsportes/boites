@@ -225,7 +225,7 @@ export function setTousAx (state, disparus) {
       const m1 = state[e]
       for (const im in m1) {
         const mb = m1[im] // m.id : id du groupe
-        if (!mb.estAvc) {
+        if (!mb.estAc) {
           let y = mapx[mb.namb.id]
           if (!y) {
             y = { na: mb.namb, c: new Set(), m: new Set() }

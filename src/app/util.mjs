@@ -1088,7 +1088,7 @@ export class FiltreMbr {
   }
 
   filtre (m) {
-    if (m.estAvc) return true
+    if (m.estAc) return true
     if (this.lstEtats.indexOf(etats[0]) !== -1) return true
     if (this.lstEtats.indexOf(etats[4]) !== -1 && m.stp > 2) return true
     if (this.lstEtats.indexOf(etats[istx[m.stx]]) !== -1) return true
@@ -1106,8 +1106,8 @@ export class FiltreMbr {
   tri2 (a, b) { return this.asc ? (a.dh < b.dh ? -1 : (a.dh > b.dh ? 1 : 0)) : (a.dh < b.dh ? 1 : (a.dh > b.dh ? -1 : 0)) }
 
   fntri (a, b) {
-    if (a.estAvc) return 1
-    if (b.estAvc) return 1
+    if (a.estAc) return -1
+    if (b.estAc) return 1
     return this.tri === 1 ? this.tri1(a, b) : this.tri2(a, b)
   }
 

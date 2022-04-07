@@ -328,7 +328,7 @@ export default ({
 
     function trier () {
       const l = []; state.lst.forEach(x => l.push(x))
-      l.sort((a, b) => state.filtre.fntri(a, b))
+      l.sort((a, b) => { return state.filtre.fntri(a, b) })
       state.lst = l
     }
 
