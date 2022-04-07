@@ -40,35 +40,42 @@
           <q-item-section class="titre-lg text-bold text-grey-8 bg-yellow-4 q-mx-sm text-center">[Contact !]</q-item-section>
         </q-item>
         <q-separator v-if="invitationattente && m.stx === 0 && g.maxStp() === 2"/>
-        <q-item v-if="m.stx === 0 && g.maxStp() === 2" clickable v-ripple v-close-popup @click="ouvririnvitcontact(m)">
+        <q-item v-if="m.stx === 0 && g.maxStp() === 2" clickable v-ripple v-close-popup @click="ouvririnvitcontact">
           <q-item-section avatar>
             <q-icon dense name="open_in_new" color="primary" size="md"/>
           </q-item-section>
           <q-item-section>Inviter ce contact</q-item-section>
         </q-item>
-        <q-separator v-if="m.stx === 1"/>
-        <q-item v-if="m.stx === 1" clickable v-ripple v-close-popup @click="accepterinvit()">
+        <q-separator v-if="m.stx === 1 && m.estAc"/>
+        <q-item v-if="m.stx === 1 && m.estAc" clickable v-ripple v-close-popup @click="accepterinvit">
           <q-item-section avatar>
             <q-icon dense name="check" color="primary" size="md"/>
           </q-item-section>
           <q-item-section>Accepter l'invitation</q-item-section>
         </q-item>
-        <q-separator v-if="m.stx === 1" />
-        <q-item v-if="m.stx === 1" clickable v-ripple v-close-popup @click="refuserinvit()">
+        <q-separator v-if="m.stx === 1 && m.estAc" />
+        <q-item v-if="m.stx === 1 && m.estAc" clickable v-ripple v-close-popup @click="refuserinvit">
           <q-item-section avatar>
             <q-icon dense name="not_interested" color="primary" size="md"/>
           </q-item-section>
           <q-item-section>Refuser l'invitation</q-item-section>
         </q-item>
-        <q-separator v-if="g.maxStp() === 2 && m.stx === 2" />
-        <q-item v-if="g.maxStp() === 2 && m.stx === 2" clickable v-ripple v-close-popup @click="resilier()">
+        <q-separator v-if="g.maxStp() === 2 && m.stx >= 1 && m.stx <= 2 && m.stp < 2" />
+        <q-item v-if="g.maxStp() === 2 && m.stx >= 1 && m.stx <= 2 && m.stp < 2" clickable v-ripple v-close-popup @click="resilier">
           <q-item-section avatar>
             <q-icon dense name="close" color="warning" size="sm"/>
           </q-item-section>
           <q-item-section>Résilier du groupe</q-item-section>
         </q-item>
-        <q-separator v-if="m.stp === 2"/>
-        <q-item v-if="m.stx === 2" clickable v-ripple v-close-popup @click="autoresilier()">
+        <q-separator v-if="g.maxStp() === 2 && m.stx >= 1 && m.stx <= 2 && (m.stp < 2 || m.estAc)" />
+        <q-item v-if="g.maxStp() === 2 && m.stx >= 1 && m.stx <= 2 && (m.stp < 2 || m.estAc)" clickable v-ripple v-close-popup @click="changerlaa">
+          <q-item-section avatar>
+            <q-icon dense name="close" color="warning" size="sm"/>
+          </q-item-section>
+          <q-item-section>Changer le niveau d'habilitation</q-item-section>
+        </q-item>
+        <q-separator v-if="m.stp === 2 && m.estAc"/>
+        <q-item v-if="m.stx === 2 && m.estAc" clickable v-ripple v-close-popup @click="autoresilier">
           <q-item-section avatar>
             <q-icon dense name="close" color="warning" size="sm"/>
           </q-item-section>
@@ -135,6 +142,34 @@
     </q-card>
   </q-dialog>
 
+  <q-dialog v-if="sessionok" v-model="modiflaa">
+    <q-card class="petitelargeur shadow-8">
+      <q-card-section>
+        <div class="titre-lg">Modification du niveau d'habilitation</div>
+      </q-card-section>
+      <q-separator/>
+      <q-card-section>
+        <div class="titre-lg">Membre sélectionné : {{m.namb.nom}}</div>
+        <div class="q-my-sm row">
+          <img class="col-auto photomax" :src="m.namb.photo || phdefa"/>
+          <show-html class="col q-ml-md bord1 height-6" :texte="m.namb.info || ''"/>
+        </div>
+      </q-card-section>
+      <q-card-section>
+        <div class="q-gutter-md q-ma-sm">
+          <q-radio dense v-model="laa" :val="0" label="Lecteur" />
+          <q-radio dense v-model="laa" :val="1" label="Auteur" />
+          <q-radio dense v-model="laa" :val="2" label="Animateur" />
+        </div>
+      </q-card-section>
+      <q-card-actions align="center" vertical>
+        <q-btn flat dense color="primary" icon="close" label="Annuler" @click="modiflaa=false"/>
+        <q-btn dense color="warning" label="Modifier le niveau"
+          :disable="laa === m.stp" @click="modifierlaa"/>
+      </q-card-actions>
+    </q-card>
+  </q-dialog>
+
 </q-card>
 </template>
 <script>
@@ -148,7 +183,7 @@ import IdentiteCv from './IdentiteCv.vue'
 import SelectMotscles from './SelectMotscles.vue'
 import ApercuMotscles from './ApercuMotscles.vue'
 import EditeurMd from './EditeurMd.vue'
-import { MajMcMembre, MajArdMembre, MajInfoMembre, InviterGroupe } from '../app/operations.mjs'
+import { AcceptInvitGroupe, RefusInvitGroupe, MajMcMembre, MajArdMembre, MajInfoMembre, InviterGroupe } from '../app/operations.mjs'
 import { retourInvitation } from '../app/page.mjs'
 
 export default ({
@@ -177,7 +212,8 @@ export default ({
     fermermajard () { this.ardedit = false },
     ouvmajinfo () { this.infoedit = true; this.mbcinfo = this.m.info },
     fermermajinfo () { this.infoedit = false },
-    ouvririnvitcontact (m) { this.laa = 0; this.invitcontact = true },
+    ouvririnvitcontact () { this.laa = 0; this.invitcontact = true },
+    changerlaa () { this.laa = this.m.stp; this.modiflaa = true },
 
     async changermcmbc (mc) {
       await new MajMcMembre().run(this.m, mc)
@@ -205,9 +241,13 @@ export default ({
     },
     resilier () {
     },
-    accepterinvit () {
+    async accepterinvit () {
+      await new AcceptInvitGroupe().run(this.m)
     },
-    refuserinvit () {
+    async refuserinvit () {
+      await new RefusInvitGroupe().run(this.m, this.avatar)
+    },
+    modifierlaa () {
     }
   },
 
@@ -219,6 +259,7 @@ export default ({
     const ardedit = ref(false)
     const infoedit = ref(false)
     const invitcontact = ref(false)
+    const modiflaa = ref(false)
 
     const g = toRef(props, 'groupe')
     const m = toRef(props, 'membre')
@@ -271,6 +312,7 @@ export default ({
         ardedit.value = false
         infoedit.value = false
         invitcontact.value = false
+        modiflaa.value = false
       }
     })
 
@@ -288,7 +330,8 @@ export default ({
       mcledit,
       ardedit,
       infoedit,
-      invitcontact
+      invitcontact,
+      modiflaa
     }
   }
 })

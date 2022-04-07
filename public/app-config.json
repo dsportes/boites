@@ -6,7 +6,8 @@
     "urlserveur1": "https://localhost:8443",
     "phrases" : [
       ["leszsanglotszLONGSz", "garezauzGORILLEz"],
-      ["auzvillagezSANSz", "jaizmauvaisezREPUTATIONz"]
+      ["auzvillagezSANSz", "jaizmauvaisezREPUTATIONz"],
+      ["emilieemilieemilie", "emilieemilieemilie"]
     ],
     "forfaits" : { "Aucun": 0, "XXS": 1, "XS": 2, "SM": 4, "MD": 8, "LG": 16, "XL": 32, "XXL": 64 },
     "mdpadmin" : "motdepassedugrandargentier",

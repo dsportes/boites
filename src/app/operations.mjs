@@ -2084,6 +2084,55 @@ export class MajInfoMembre extends OperationUI {
   }
 }
 
+/* Accepter une invitation à un groupe ****************************************
+args :
+- sessionId
+- id, im : id du membre
+Retour: sessionId, dh
+A_SRV, '19-Membre non trouvé
+*/
+export class AcceptInvitGroupe extends OperationUI {
+  constructor () {
+    super('Accepter l\'invitation à un groupe', OUI, SELONMODE)
+  }
+
+  async run (m) { // membre
+    try {
+      const args = { sessionId: data.sessionId, id: m.id, im: m.im }
+      await post(this, 'm1', 'acceptInvitGroupe', args)
+      this.finOK()
+    } catch (e) {
+      await this.finKO(e)
+    }
+  }
+}
+
+/* Refuser une invitation à un groupe ****************************************
+args :
+- sessionId
+- id, im : id du membre
+- ida: id de l'avatar
+- ni: numéro d'invitation au groupe
+Retour: sessionId, dh
+A_SRV, '19-Membre non trouvé
+A_SRV, '17-Avatar non trouvé
+*/
+export class RefusInvitGroupe extends OperationUI {
+  constructor () {
+    super('Refuser l\'invitation à un groupe', OUI, SELONMODE)
+  }
+
+  async run (m, a) { // membre, avatar
+    try {
+      const args = { sessionId: data.sessionId, id: m.id, im: m.im, ida: a.id, ni: a.ni(m.id) }
+      await post(this, 'm1', 'refusInvitGroupe', args)
+      this.finOK()
+    } catch (e) {
+      await this.finKO(e)
+    }
+  }
+}
+
 /* Fin d'hébergement d'un groupe ****************************************
 args :
 - sessionId

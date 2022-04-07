@@ -687,7 +687,14 @@ export class Avatar {
 
   im (idg) {
     const x = this.m2gr.get(idg)
-    return x ? x[0] : 0
+    if (!x) return 0
+    return typeof x[0] === 'string' ? parseInt(x[0]) : x[0]
+  }
+
+  ni (idg) {
+    const x = this.m2gr.get(idg)
+    if (!x) return 0
+    return typeof x[1] === 'string' ? parseInt(x[1]) : x[1]
   }
 
   groupeIds (s) {
