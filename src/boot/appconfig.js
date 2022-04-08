@@ -54,6 +54,7 @@ export default boot(async ({ app, router, store /* Vue */ }) => {
   cfg.avatar = require('../assets/avatar.txt').default
   cfg.groupe = require('../assets/groupe.txt').default
   cfg.couple = require('../assets/couple.txt').default
+  cfg.disparu = require('../assets/disparu.txt').default
   cfg.idb = idb
   cfg.isDev = process.env.DEV
   for (const org in cfg.orgs) {

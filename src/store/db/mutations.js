@@ -212,7 +212,7 @@ export function majfaidx (state, lst) { // lst : array de { id, ns, cle, hv }
   if (b) state.faidx = { ...st }
 }
 
-/* Recalcul la liste des avatars externes avaec pour chacun :
+/* Recalcul la liste des avatars externes avec pour chacun :
 - na : son na
 - x : si true, c'est un disparu
 - c : set des ids des couples dont il est avatar externe
@@ -231,6 +231,7 @@ export function setTousAx (state, disparus) {
             y = { na: mb.namb, c: new Set(), m: new Set() }
             mapx[mb.namb.id] = y
           }
+          if (mb.stx === 5) y.x = 1 // disparu
           y.m.add([mb.id, mb.im])
         }
       }
@@ -245,6 +246,7 @@ export function setTousAx (state, disparus) {
         y = { na: c.naE, c: new Set(), m: new Set() }
         mapx[c.idE] = y
       }
+      if (c.stp === 5) y.x = 1 // disparu
       y.c.add(c.id)
     }
   }

@@ -922,7 +922,7 @@ export class Couple {
   get nomE () { const x = this.data.x; return x[1][1] }
 
   // origine du couple : 0) proposition standard à un contact connu, 1) parainage, 2) rencontre
-  get orig () { const x = this.data.x; return !x.phrase ? 0 : (x.f1 || x.f2 ? 1 : 0) }
+  get orig () { return !this.data.phrase ? 0 : (this.data.f1 || this.data.f2 ? 1 : 2) }
 
   get nomf () { return normpath(this.nom) }
 
@@ -1154,6 +1154,7 @@ export class Groupe {
   get table () { return 'groupe' }
   get sid () { return crypt.idToSid(this.id) }
   get pk () { return this.sid }
+  get estZombi () { return this.dfh === 99999 }
 
   get cv () { return data.getCv(this.id) }
   get photo () { const cv = this.cv; return cv ? cv.photo : '' }
@@ -1219,15 +1220,27 @@ export class Groupe {
     this.id = row.id
     this.v = row.v
     this.dfh = row.dfh
-    this.st = row.st
-    this.mxim = row.mxim
-    this.mc = row.mcg ? deserial(await crypt.decrypter(this.cle, row.mcg)) : {}
-    this.idh = row.idhg ? parseInt(await crypt.decrypterStr(this.cle, row.idhg)) : 0
-    this.imh = row.imh
-    this.v1 = row.v1
-    this.v2 = row.v2
-    this.f1 = row.f1
-    this.f2 = row.f2
+    if (!this.estZombi) {
+      this.st = row.st
+      this.mxim = row.mxim
+      this.mc = row.mcg ? deserial(await crypt.decrypter(this.cle, row.mcg)) : {}
+      this.idh = row.idhg ? parseInt(await crypt.decrypterStr(this.cle, row.idhg)) : 0
+      this.imh = row.imh
+      this.v1 = row.v1
+      this.v2 = row.v2
+      this.f1 = row.f1
+      this.f2 = row.f2
+    } else { // utilité ? a du être fait par le GC
+      this.st = 0
+      this.mxim = 0
+      this.mc = null
+      this.idh = 0
+      this.imh = 0
+      this.v1 = 0
+      this.v2 = 0
+      this.f1 = 0
+      this.f2 = 0
+    }
     return this
   }
 

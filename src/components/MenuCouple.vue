@@ -16,6 +16,10 @@
         <q-item-section>Prolonger la proposition faite à {{nom}}</q-item-section>
       </q-item>
       <q-separator v-if="p" />
+      <q-item  v-if="r" clickable v-close-popup @click="relancer">
+        <q-item-section>Relancer une proposition pour {{nom}}</q-item-section>
+      </q-item>
+      <q-separator v-if="r" />
       <q-item v-if="s" clickable v-close-popup @click="supprimer">
         <q-item-section>Supprimer le couple</q-item-section>
       </q-item>
@@ -24,10 +28,6 @@
         <q-item-section>Quitter le couple</q-item-section>
       </q-item>
       <q-separator v-if="q" />
-      <q-item  v-if="r" clickable v-close-popup @click="relancer">
-        <q-item-section>Relancer une proposition pour {{nom}}</q-item-section>
-      </q-item>
-      <q-separator v-if="r" />
       <q-item clickable v-close-popup @click="voirsecrets">
         <q-item-section>Voir les secrets partagés</q-item-section>
       </q-item>

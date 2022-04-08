@@ -29,9 +29,9 @@ class OpBuf {
   constructor () {
     this.lmaj = [] // objets à modifier / insérer en IDB
     this.lsuppr = [] // objets (du moins {table id (id2))} à supprimer de IDB
-    this.lav = null // set des ids des avatars à purger
-    this.lcc = null // set des ids des couples à purger
-    this.lgr = null // set des ids des groupes à purger
+    this.lav = new Set() // set des ids des avatars à purger
+    this.lcc = new Set() // set des ids des couples à purger
+    this.lgr = new Set() // set des ids des groupes à purger
 
     this.lobj = [] // objets en attente d'être rangés en store/db : en synchro permet d'effectuer une validation cohérente
     this.compte = null
@@ -246,20 +246,47 @@ export class Operation {
     }
   }
 
-  async membresDisparus (disp) {
-    for (let i = 0; i < disp.length; i++) {
-      const args = { sessionId: data.sessionId, id: disp[i][0], im: disp[i][1] }
-      this.tr(await post(this, 'm1', 'membreDisparu', args))
+  /* Retrait des groupes détectés zombis
+  des listes des groupes accédés par les avatars du compte
+  */
+  async groupesZombis (lgr) {
+    if (lgr.size) {
+      for (const id of data.getCompte().avatarIds()) {
+        const a = data.getAvatar(id)
+        for (const idg of a.groupeIds()) {
+          if (lgr.has(idg)) {
+            const args = { sessionId: data.sessionId, id: a.id, ni: a.ni(idg) }
+            this.tr(await post(this, 'm1', 'supprAccesGrAv', args))
+          }
+        }
+      }
     }
   }
 
+  async membresDisparus (disp) {
+    /* ce n'est pas le membre qui disparaît mais son statut qui indique 5 (disparu) */
+    const lst = []
+    for (let i = 0; i < disp.length; i++) {
+      const args = { sessionId: data.sessionId, id: disp[i][0], im: disp[i][1] }
+      const ret = this.tr(await post(this, 'm1', 'membreDisparu', args))
+      const r = await compileToObject(deserialRowItems(ret.rowItems))
+      if (r.membre) for (const pk of r.membre) lst.push(r.membre[pk])
+    }
+    return lst
+  }
+
   async couplesDisparus (disp) {
+    /* ce n'est pas le couple qui disparaît mais son statut qui indique 5000 (disparu) */
+    const lst = []
     for (let i = 0; i < disp.length; i++) {
       const id = disp[i]
       const c = data.getCouple(id)
       const args = { sessionId: data.sessionId, id, idx: c.avc ? 1 : 0 }
-      this.tr(await post(this, 'm1', 'coupleDisparu', args))
+      const ret = this.tr(await post(this, 'm1', 'coupleDisparu', args))
+      const r = await compileToObject(deserialRowItems(ret.rowItems))
+      if (r.couple) for (const pk of r.couple) lst.push(r.couple[pk])
     }
+    return lst
   }
 
   /* Recharge depuis le serveur tous les membres d'id de groupe donnée et de version postérieure à v
@@ -620,9 +647,15 @@ export class Operation {
     if (mapObj.groupe) {
       for (const pk in mapObj.groupe) {
         const gr = mapObj.groupe[pk]
-        this.buf.setObj(gr)
-        this.buf.putIDB(gr)
+        if (!gr.estZombi) {
+          this.buf.setObj(gr)
+          this.buf.putIDB(gr)
+        } else {
+          this.buf.supprIDB({ table: 'groupe', id: gr.id })
+          this.buf.lgr.add(gr.id)
+        }
       }
+      if (this.buf.lgr.size) await this.groupesZombis(this.buf.lgr)
     }
 
     // Couples : mise à jour des données et potentiellement un Ax en plus ou en moins
@@ -755,26 +788,24 @@ export class Operation {
         const e = data.getGroupe(sc.id)
         if (!e) store().commit('db/setSecret', null)
       }
-      const gp = store().state.db.groupeplus
-      if (gp) {
-        const eg = data.getGroupe(gp[0])
-        if (!eg) {
-          store().commit('db/majgroupeplus', null)
-        } else {
-          const em = data.getMembre(gp[1].id, gp[1].im)
-          if (!em) store().commit('db/majgroupeplus', null)
-        }
-      }
     }
 
     /* Notification au serveur des membres détectés disparus et des couples détectés disparus
       pour changements de leurs statuts
     */
     if (this.coupleIdsDisp.size) {
-      await this.couplesDisparus(Array.from(this.coupleIdsDisp))
+      const lst = await this.couplesDisparus(Array.from(this.coupleIdsDisp))
+      lst.forEach(obj => {
+        this.buf.putIDB(obj)
+        this.buf.setObj(obj)
+      })
     }
     if (this.membreIdsDisp.size) {
-      await this.membresDisparus(Array.from(this.membreIdsDisp))
+      const lst = await this.membresDisparus(Array.from(this.membreIdsDisp))
+      lst.forEach(obj => {
+        this.buf.putIDB(obj)
+        this.buf.setObj(obj)
+      })
     }
 
     /* commits finaux */
@@ -1114,11 +1145,13 @@ export class ConnexionCompte extends OperationUI {
     const grentrop = difference(setidbgr, grrequis) // groupes en IDB NON requis (à supprimer de IDB)
     grentrop.forEach(id => {
       this.buf.supprIDB({ table: 'groupe', id: id })
+      this.buf.lgr.add(id)
       delete this.groupes[id]
     })
     const cpentrop = difference(setidbcp, cprequis) // couples en IDB NON requis (à supprimer de IDB)
     cpentrop.forEach(id => {
       this.buf.supprIDB({ table: 'couple', id: id })
+      this.buf.lcc.add(id)
       delete this.couples[id]
     })
 
@@ -1132,7 +1165,17 @@ export class ConnexionCompte extends OperationUI {
 
     const [grnouveaux, cpnouveaux] = x
     // grnouveaux contient tous les groupes ayant une version plus récente que celle (éventuellement) obtenue de IDB
-    for (const pk in grnouveaux) { const gr = grnouveaux[pk]; this.buf.putIDB(gr); this.groupes[gr.id] = gr }
+    for (const pk in grnouveaux) {
+      const gr = grnouveaux[pk]
+      if (!gr.estZombi) {
+        this.buf.putIDB(gr)
+        this.groupes[gr.id] = gr
+      } else {
+        this.buf.supprIDB({ table: 'groupe', id: gr.id })
+        this.buf.lgr.add(gr.id)
+      }
+    }
+    if (this.buf.lgr.size) await this.groupesZombis(this.buf.lgr)
     // groupes contient la version au top des objets groupes du compte requis par ses avatars et seulement eux
     const lgr = Object.values(this.groupes)
     data.setGroupes(lgr) // mis en store/db
@@ -1259,9 +1302,18 @@ export class ConnexionCompte extends OperationUI {
     const tousAx = data.setTousAx() // Calcul de la liste des avatars externes
     const cvIds = new Set()
     let nb = 0
-    for (const id in tousAx) { cvIds.add(parseInt(id)); nb++ }
+    for (const id in tousAx) {
+      const ax = tousAx[id]
+      if (!ax.x) {
+        cvIds.add(parseInt(id))
+        nb++
+      }
+    }
     for (const id in data.getAvatar()) { cvIds.add(parseInt(id)); nb++ }
-    for (const id in data.getGroupe()) { cvIds.add(parseInt(id)); nb++ }
+    for (const id in data.getGroupe()) {
+      const gr = data.getGroupe(id)
+      if (!gr.estZombi) { cvIds.add(parseInt(id)); nb++ }
+    }
     for (const id in data.getCouple()) { cvIds.add(parseInt(id)); nb++ }
     let msg = 'Cartes de visite : ' + nb + ' requise(s)'
     data.setSyncItem('20', 0, msg)
@@ -1307,8 +1359,16 @@ export class ConnexionCompte extends OperationUI {
         data.setTousAx(axdisparus) // Il faut recalculer tousAx
       }
       // Traitement des chgt de statut dans membres et couples
-      if (mbdisp.length) await this.membresDisparus(mbdisp)
-      if (cpdisp.length) await this.couplesDisparus(cpdisp)
+      if (mbdisp.length) {
+        const lst = await this.membresDisparus(mbdisp)
+        lst.forEach(obj => { this.buf.putIDB(obj) })
+        data.setMembres(lst)
+      }
+      if (cpdisp.length) {
+        const lst = await this.couplesDisparus(cpdisp)
+        lst.forEach(obj => { this.buf.putIDB(obj) })
+        data.setCouples(lst)
+      }
     }
     data.setCvs(Object.values(cvs))
     if (data.dbok) { // liste des ids des CV resynchronisées

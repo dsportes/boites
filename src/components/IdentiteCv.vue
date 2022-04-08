@@ -71,6 +71,7 @@ export default ({
     const type = toRef(props, 'type')
     const typeN = type.value === 'groupe' ? 'groupe' : (type.value === 'couple' ? 'couple' : 'avatar')
     const phdef = cfg()[typeN]
+    const disparu = cfg().disparu
     const sessionok = computed(() => $store.state.ui.sessionok)
     const cvloc = ref(false)
 
@@ -85,9 +86,8 @@ export default ({
 
     function init () {
       if (!sessionok.value || !na.value) return
-      const cv = cvs.value[na.value.id]
-      a.photo = cv && cv[0] ? cv[0] : phdef
-      a.info = cv && cv[1] ? cv[1] : ''
+      a.photo = na.value.photo || (na.value.disparu ? disparu : phdef)
+      a.info = na.value.info || ''
       a.na = na.value
     }
 

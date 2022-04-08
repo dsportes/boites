@@ -713,16 +713,20 @@ export class NomAvatar {
     return new NomAvatar(this.nom, this.rnd, this.id)
   }
 
-  get nomc () { return this.nom + '@' + this.sid.substring(this.sid.length - 3, this.sid.length) }
+  // get nomc () { return this.nom + '@' + this.sid.substring(this.sid.length - 3, this.sid.length) + (this.disparu ? '[DISPARU]' : '') }
+  get nomc () { return this.nom + '@ ' + this.id + (this.disparu ? '[DISPARU]' : '') }
   get nomf () { return normpath(this.nomc) }
   get sid () { return crypt.idToSid(this.id) }
+  get disparu () { return data.repertoire.disparu(this.id) }
   get cle () { return this.rnd }
   get photo () {
+    if (this.disparu) return $cfg.disparu
     const cv = data.getCv(this.id)
     return !cv || !cv[0] ? '' : cv[0]
   }
 
   get info () {
+    if (this.disparu) return 'DISPARU'
     const cv = data.getCv(this.id)
     return !cv || !cv[1] ? '' : cv[1]
   }

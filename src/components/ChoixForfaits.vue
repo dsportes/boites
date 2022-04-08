@@ -11,7 +11,7 @@
     <div v-if="diag1 !== ''" class="text-warning text-bold">{{diag1}}</div>
     <div v-if="diag2 !== ''" class="text-warning text-bold">{{diag2}}</div>
   </q-card-section>
-  <q-card-actions>
+  <q-card-actions v-if="!lecture">
     <q-btn flat dense icon="undo" label="Annuler" @click="undo" :disable="!modif"/>
     <q-btn v-if="labelValider" flat dense color="warning" icon="check" :label="labelValider" @click="valider"
       :disable="!modif || diag1 !== '' || diag2 !== ''"/>

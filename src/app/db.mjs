@@ -316,7 +316,7 @@ export async function commitRows (opBuf) {
 
       for (let i = 0; i < lidbs.length; i++) {
         const x = lidbs[i]
-        if (x.row.id2) {
+        if (x.id2) {
           await data.db[x.table].where({ id: x.id, id2: x.id2 }).delete()
         } else {
           await data.db[x.table].where({ id: x.id }).delete()

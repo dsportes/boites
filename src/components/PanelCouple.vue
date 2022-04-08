@@ -64,12 +64,16 @@
     <apercu-motscles :motscles="s.motscles" :src="s.mc" :args-click="{}" @click-mc="mcledit=true"/>
     <q-separator/>
 
-    <q-expansion-item header-class="expansion-header-class-1 titre-md bg-secondary text-white">
+    <q-expansion-item v-if="s.orig === 1" header-class="expansion-header-class-1 titre-md bg-secondary text-white">
       <template v-slot:header>
-        <q-item-section>Origine du couple - {{s.orig}}</q-item-section>
+        <q-item-section>Couple créé par parrainage du compte de {{s.naE.nom}}</q-item-section>
       </template>
       <q-card-section>
-        <editeur-md class="height-8" v-model="infoTemp" :texte="s.info ? s.info : ''" editable modetxt label-ok="OK" @ok="changerinfo"/>
+        <div>Phrase de parrainage : <span class="text-italic">{{s.phrase}}</span></div>
+        <div>Forfaits attribués au compte :</div>
+        <choix-forfaits v-model="pf" :f1="s.f1" :f2="s.f2" lecture/>
+        <div v-if="s.r1 || s.r2" >Réserve attribuée pour parrainage d'autres comptes :</div>
+        <choix-forfaits v-if="s.r1 || s.r2" v-model="pr" :f1="s.r1" :f2="s.r2" lecture/>
       </q-card-section>
     </q-expansion-item>
     <q-separator/>
@@ -108,7 +112,9 @@ export default ({
       ardTemp: '',
       infoTemp: '',
       vmaxI: [],
-      vmaxE: []
+      vmaxE: [],
+      pr: [],
+      pf: []
     }
   },
 
@@ -169,14 +175,14 @@ export default ({
         ][c.ste]
       } else if (c.stp === 3) {
         return 'Couple établi'
-      } else { // stp = 4. Couple quitté par l'autre
+      } else if (c.stp === 4) { // stp = 4. Couple quitté par l'autre
         return [
           `${c.naE.nom} a quitté le couple. Continuation en solo`,
           `${c.naE.nom} a quitté le couple et a été relancé pour y revenir: attente de sa décision`,
           `${c.naE.nom} a quitté le couple, a été relancé pour y revenir mais n'a pas répondu dans les délais`,
           `${c.naE.nom} a quitté le couple, a été relancé pour y revenir mais a explicitement refusé`
         ][c.ste]
-      }
+      } return `${c.naE.nom} a disparu. Continuation en solo`
     }
 
     function liborig (c) {
@@ -202,7 +208,6 @@ export default ({
       motcles: null,
       axvis: false, // l'identité de l'autre est visible
       cvaxvis: false, // la carte de visite de l'autre est visible
-      frvis: false, // les forfaits / ressources sont visibles
       maxEvis: false,
       relstd: false, // relance standard autorisée
       relpar: false, // relance de parrainage autorisée
@@ -244,7 +249,7 @@ export default ({
       s.axvis = (p === 1 && (e === 1 || e === 4 || e === 7)) ||
         (p === 2 && (e === 2 || e === 3 || e === 5 || e === 8)) || p >= 3
       s.cvaxvis = (p === 1 && e === 1) || (p === 2 && (e === 2 || e === 3)) || p === 3 || p === 4
-      s.frvis = e === 4 || e === 5 || e === 6
+      s.frvis = c && c.orig === 1
       s.maxEvis = p === 3
       s.relstd = (p === 2 && (e === 2 || e === 3)) || (p === 4 && e === 0)
       s.relpar = p === 2 && (e === 5 || e === 6)
@@ -258,6 +263,7 @@ export default ({
       s.maxI2 = c ? (c.avc === 0 ? c.mx20 : c.mx21) : 0
       s.maxE1 = c && s.maxEvis ? (c.avc === 0 ? c.mx11 : c.mx10) : 0
       s.maxE2 = c && s.maxEvis ? (c.avc === 0 ? c.mx21 : c.mx20) : 0
+      s.phrase = c && c.orig > 0 ? c.data.phrase : ''
       s.f1 = c && s.frvis ? c.data.f1 : 0
       s.f2 = c && s.frvis ? c.data.f2 : 0
       s.r1 = c && s.frvis ? c.data.r1 : 0

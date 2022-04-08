@@ -27,13 +27,14 @@
     <q-separator/>
     <div class="q-pa-sm colmun justify-start">
       <div class="row">
-        <q-btn-dropdown size="md" dense color="primary" label="Etat du contact / couple" v-model="menudd1">
+        <q-btn-dropdown size="md" dense color="primary" label="Etat du couple" v-model="menudd1">
           <div class="clair1 column">
             <q-btn flat dense no-caps :label="labelphase['0']" @click="menudd1=false;state.a.phase=0"/>
             <q-btn flat dense no-caps :label="labelphase['1']" @click="menudd1=false;state.a.phase=1"/>
             <q-btn flat dense no-caps :label="labelphase['2']" @click="menudd1=false;state.a.phase=2"/>
             <q-btn flat dense no-caps :label="labelphase['3']" @click="menudd1=false;state.a.phase=3"/>
             <q-btn flat dense no-caps :label="labelphase['4']" @click="menudd1=false;state.a.phase=4"/>
+            <q-btn flat dense no-caps :label="labelphase['5']" @click="menudd1=false;state.a.phase=5"/>
           </div>
         </q-btn-dropdown>
         <div class="q-pl-md">{{labelphase['' + state.a.phase]}}</div>
@@ -117,7 +118,8 @@ export default ({
       1: 'En attente de réponse',
       2: 'Réfusé / hors délai',
       3: 'En couple',
-      4: 'Séparé'
+      4: 'Séparé',
+      5: 'Disparu'
     }
     const labeltri = {
       p0: 'Ne pas trier les contacts',

@@ -188,9 +188,12 @@ export default ({
       if (avatar.value) {
         const av = avatar.value
         av.groupeIds().forEach(idg => {
-          const im = av.im(idg)
-          refMembres[idg] = computed(() => data.getMembre(idg, im))
-          refGroupes[idg] = computed(() => data.getGroupe(idg))
+          const g = data.getGroupe(idg)
+          if (!g.estZombi) {
+            const im = av.im(idg)
+            refMembres[idg] = computed(() => data.getMembre(idg, im))
+            refGroupes[idg] = computed(() => data.getGroupe(idg))
+          }
         })
         watchStopm = watch(() => { return { ...refMembres } }, () => {
           getGroupes()

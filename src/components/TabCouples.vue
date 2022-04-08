@@ -144,15 +144,14 @@ export default ({
     function photo (c) {
       const cv = cvs.value[c.id]
       if (cv && cv[0]) return cv[0]
-      const cvE = c.idE && cvs.value[c.idE]
-      if (cvE && cvE[0]) return cvE[0]
+      if (c.naE) return c.naE.photo || phdef
       return phdef
     }
 
     function nom (c) { return c.naE ? c.naE.noml : c.na.nom }
 
     function icone (p) {
-      return ['thumb_up', 'hourglass_empty', 'thumb_down', 'thumb_up', 'o_thumb_down'][p]
+      return ['thumb_up', 'hourglass_empty', 'thumb_down', 'thumb_up', 'o_thumb_down', 'person_off'][p]
     }
 
     const evtfiltresecrets = computed({ // secret courant
