@@ -1,5 +1,5 @@
 <template>
-  <q-card v-if="sessionok" class="full-height full-width fs-md column">
+  <q-card v-if="sessionok" class="full-height fs-md column">
     <q-toolbar class="bg-primary text-white">
       <q-btn :disable="!precedent" flat round dense icon="first_page" size="md" class="q-mr-sm" @click="prec(0)" />
       <q-btn :disable="!precedent" flat round dense icon="arrow_back_ios" size="md" class="q-mr-sm" @click="prec(1)" />

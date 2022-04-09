@@ -81,6 +81,8 @@ export function majavatarcprech (state, val) { state.avatarcprech = val }
 export function majavatarcpform (state, val) { state.avatarcpform = val }
 export function majavatargrrech (state, val) { state.avatargrrech = val }
 export function majavatargrform (state, val) { state.avatargrform = val }
+export function majavatarscrech (state, val) { state.avatarscrech = val }
+export function majavatarscform (state, val) { state.avatarscform = val }
 
 export function majinvitationattente (state, val) { state.invitationattente = val }
 export function majeditgr (state, val) { state.editgr = val }

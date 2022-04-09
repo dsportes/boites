@@ -90,16 +90,6 @@ export default ({
       set: (val) => $store.commit('ui/majtabavatar', val)
     })
 
-    // watch(() => avatar.value, (ap, av) => { })
-
-    const evtfiltresecrets = computed(() => $store.state.ui.evtfiltresecrets)
-    watch(() => evtfiltresecrets.value, (ap) => {
-      tabavatar.value = 'secrets'
-      setTimeout(() => {
-        $store.commit('ui/majevtfiltresecrets2', ap)
-      }, 100)
-    })
-
     watch(() => sessionok.value, (ap, av) => {
       nvpar.value = false
     })

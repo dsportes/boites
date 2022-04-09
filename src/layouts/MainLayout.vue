@@ -77,7 +77,8 @@
       <q-toolbar inset v-if="page === 'Avatar'">
         <div class="window-width font-cf">
           <q-tabs class="" v-model="tabavatar" inline-label no-caps dense>
-            <q-btn v-if="tabavatar==='secrets' && $q.screen.lt.md" size="md" dense icon="search" color="secondary" @click="optAvatarSc('recherche')"/>
+            <q-btn v-if="tabavatar==='secrets' && $q.screen.lt.md" size="md" dense icon="search" color="secondary" @click="avatarscrech = !avatarscrech"/>
+            <q-btn v-if="tabavatar==='secrets'" size="md" dense :icon="avatarcpform ? 'view_list' : 'wysiwyg'" color="secondary" @click="togglescform"/>
             <q-tab name="secrets" label="Secrets" />
             <q-btn v-if="tabavatar==='couples' && $q.screen.lt.md" size="md" dense icon="search" color="secondary" @click="avatarcprech = !avatarcprech"/>
             <q-btn v-if="tabavatar==='couples'" size="md" dense :icon="avatarcpform ? 'view_list' : 'wysiwyg'" color="secondary" @click="togglecpform"/>
@@ -232,6 +233,7 @@ export default {
 
     togglecpform () { this.avatarcpform = !this.avatarcpform },
     togglegrform () { this.avatargrform = !this.avatargrform },
+    togglescform () { this.avatarscform = !this.avatarscform },
     toInvit () { retourInvitation('KO') },
 
     stop () { data.stopOp() }
@@ -312,6 +314,14 @@ export default {
       get: () => $store.state.ui.avatargrform,
       set: (val) => $store.commit('ui/majavatargrform', val)
     })
+    const avatarscrech = computed({
+      get: () => $store.state.ui.avatarscrech,
+      set: (val) => $store.commit('ui/majavatarscrech', val)
+    })
+    const avatarscform = computed({
+      get: () => $store.state.ui.avatarscform,
+      set: (val) => $store.commit('ui/majavatarscform', val)
+    })
 
     const invitationattente = computed(() => $store.state.ui.invitationattente)
 
@@ -359,6 +369,8 @@ export default {
       avatarcpform,
       avatargrrech,
       avatargrform,
+      avatarscrech,
+      avatarscform,
       invitationattente,
 
       compte,

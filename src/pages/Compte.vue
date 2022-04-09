@@ -55,7 +55,6 @@ export default ({
 
   methods: {
     toAvatar (na) {
-      this.tabavatar = 'etc'
       this.avatar = data.getAvatar(na.id)
       remplacePage('Avatar')
     },

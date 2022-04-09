@@ -74,12 +74,18 @@ export default ({
 
     voirsecrets () {
       if (this.c) this.couple = this.c
-      this.evtfiltresecrets = { cmd: 'fs', arg: this.c ? this.c : this.couple }
+      this.tabavatar = 'secrets'
+      setTimeout(() => {
+        this.evtfiltresecrets = { cmd: 'fsc', arg: this.c ? this.c : this.couple }
+      }, 100)
     },
 
     nouveausecret () {
       if (this.c) this.couple = this.c
-      this.evtfiltresecrets = { cmd: 'nv', arg: this.c ? this.c : this.couple }
+      this.tabavtar = 'secrets'
+      setTimeout(() => {
+        this.evtfiltresecrets = { cmd: 'nvc', arg: this.c ? this.c : this.couple }
+      })
     },
 
     copier () {
@@ -90,6 +96,10 @@ export default ({
     const $store = useStore()
     const $q = useQuasar()
     const c = toRef(props, 'c')
+    const tabavatar = computed({
+      get: () => $store.state.ui.tabavatar,
+      set: (val) => $store.commit('ui/majtabavatar', val)
+    })
     const avatarcpform = computed({
       get: () => $store.state.ui.avatarcpform,
       set: (val) => $store.commit('ui/majavatarcpform', val)
@@ -204,6 +214,7 @@ export default ({
       couple,
       avatarcpform,
       evtfiltresecrets,
+      tabavatar,
       invitationattente
     }
   }

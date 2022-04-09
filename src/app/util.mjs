@@ -837,8 +837,8 @@ export class Filtre {
   constructor (avId) {
     this.avId = avId
     this.perso = true
-    this.contactId = 0 // 0: pas de secrets de contacts, -1:tous les secrets de contacts, n:secrets du contact d'id N seulement (id2 du secret)
-    this.groupeId = 0 // 0:pas de secrets de groupe, -1: secrets partagés avec tous les groupes, n: secrets partagés seulement avec le groupe N (id du secret)
+    this.coupleId = 0 // 0: pas de secrets de couple, -1:tous les secrets de couples, n:secrets partagés seulement avec le couple d'id N
+    this.groupeId = 0 // 0:pas de secrets de groupe, -1: secrets partagés avec tous les groupes, n: secrets partagés seulement avec le groupe N
     this.m1 = new Uint8Array([])
     this.m2 = new Uint8Array([])
     this.perm = true // sélectionner les permanents
@@ -865,7 +865,7 @@ export class Filtre {
     const f = this
     const a = {
       perso: f.perso,
-      ct: f.contactId,
+      cp: f.coupleId,
       gr: f.groupeId,
       mc1: f.m1,
       mc2: f.m2,
@@ -882,7 +882,7 @@ export class Filtre {
   depuisEtat (a) {
     const f = this
     f.perso = a.perso
-    f.contactId = a.ct
+    f.coupleId = a.cp
     f.groupeId = a.gr
     f.m1 = a.mc1
     f.m2 = a.mc2
@@ -910,8 +910,9 @@ export class Filtre {
   }
 
   filtre (s) {
+    if (!s.v) return true // secret en création jamais filtré, toujours en tête
     if (s.ts === 0 && !this.perso) return false
-    if (s.ts === 1 && (this.contactId === 0 || (this.contactId !== -1 && this.contactId !== s.id))) return false
+    if (s.ts === 1 && (this.coupleId === 0 || (this.coupleId !== -1 && this.coupleId !== s.id))) return false
     if (s.ts === 2 && (this.groupeId === 0 || (this.groupeId !== -1 && this.groupeId !== s.id))) return false
     const im = s.ts !== 2 || !this.m2gr ? 0 : this.m2gr.get(s.id)[0]
     let mcs = im === 0 ? s.mc : s.mc[im]
@@ -952,6 +953,8 @@ export class Filtre {
   tri3 (a, b) { return this.asc ? (a.txt.t < b.txt.t ? -1 : (a.txt.t > b.txt.t ? 1 : 0)) : (a.txt.t < b.txt.t ? 1 : (a.txt.t > b.txt.t ? -1 : 0)) }
 
   fntri (a, b) {
+    if (!a.v) return -1 // ceux en création sont toujours en tête
+    if (!b.v) return 1
     return this.tri === 1 ? this.tri1(a, b) : (this.tri === 2 ? this.tri2(a, b) : this.tri3(a, b))
   }
 

@@ -166,11 +166,17 @@ export default ({
     nbj (j) { return j - getJourJ() },
 
     voirsecrets () {
-      this.evtfiltresecrets = { cmd: 'fsg', arg: this.groupe }
+      this.tabavtar = 'secrets'
+      setTimeout(() => {
+        this.evtfiltresecrets = { cmd: 'fsg', arg: this.groupe }
+      }, 100)
     },
 
     nouveausecret () {
-      this.evtfiltresecrets = { cmd: 'nvg', arg: this.groupe }
+      this.tabavtar = 'secrets'
+      setTimeout(() => {
+        this.evtfiltresecrets = { cmd: 'nvg', arg: this.groupe }
+      })
     },
 
     async cvchangee (cv) {

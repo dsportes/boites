@@ -2,12 +2,12 @@
   <q-scroll-area style="height:80vh;width:22rem">
   <q-card class="shadow-8">
     <q-card-actions vertical>
-      <q-btn flat dense color="primary" size="md" icon="add" label="Nouveau secret personnel" @click="action(1)"/>
-      <q-btn v-if="contact" flat dense size="md" color="primary" icon="add" :label="'Nouveau secret partagé avec ' +  contact.nom" @click="action(2)"/>
-      <q-btn v-if="groupe" flat dense size="md" color="primary" icon="add" :label="'Nouveau secret du groupe ' +  groupe.nom" @click="action(3)"/>
+      <q-btn flat dense color="primary" size="md" icon="add" label="Nouveau secret personnel" @click="action(0)"/>
+      <q-btn v-if="couple" flat dense size="md" color="primary" icon="add" :label="'Nouveau secret du couple ' +  couple.nom" @click="action(1)"/>
+      <q-btn v-if="groupe" flat dense size="md" color="primary" icon="add" :label="'Nouveau secret du groupe ' +  groupe.nom" @click="action(2)"/>
       <div class="row justify-center">
         <q-input flat dense label="Port d'upload local" style="width:5rem" v-model="port" />
-        <q-btn class="q-ml-sm" flat dense icon="save" label="Upload local" @click="action(4, port)" />
+        <q-btn class="q-ml-sm" flat dense icon="save" label="Upload local" @click="action(3, port)" />
       </div>
     </q-card-actions>
     <q-separator/>
@@ -19,7 +19,7 @@
     <q-separator/>
     <div class="q-pa-sm column justify-start ful-width">
         <q-checkbox v-model="state.a.perso" dense size="md" label="Secrets personnels" />
-        <q-option-group :options="contact ? optionsct2 : optionsct1" dense v-model="state.a.ct"/>
+        <q-option-group :options="couple ? optionscp2 : optionscp1" dense v-model="state.a.cp"/>
         <q-option-group :options="groupe ? optionsgr2 : optionsgr1" dense v-model="state.a.gr"/>
     </div>
     <q-separator/>
@@ -157,7 +157,7 @@ export default ({
     const $store = useStore()
     const avatar = computed(() => { return $store.state.db.avatar })
     const mode = computed(() => $store.state.ui.mode)
-    const contact = computed(() => { return $store.state.db.contact })
+    const couple = computed(() => { return $store.state.db.couple })
     const groupe = computed(() => { return $store.state.db.groupe })
     const state = toRef(props, 'etatInterne')
     toRef(props, 'motscles')
@@ -180,13 +180,13 @@ export default ({
       p3: 'Ordre alphabétique du titre',
       m3: 'Ordre alphabétique inverse du titre'
     }
-    const optionsct1 = [
-      { label: 'Aucun secret partagé avec un contact', value: 0 },
-      { label: 'Secrets partagés avec n\'importe quel contact', value: -1 }
+    const optionscp1 = [
+      { label: 'Aucun secret partagé en couple', value: 0 },
+      { label: 'Secrets partagés en couple avec n\'importe qui', value: -1 }
     ]
-    const optionsct2 = [
-      { label: 'Aucun secret partagé avec un contact', value: 0 },
-      { label: 'Secrets partagés avec n\'importe quel contact', value: -1 }
+    const optionscp2 = [
+      { label: 'Aucun secret partagé en couple', value: 0 },
+      { label: 'Secrets partagés en couple avec n\'importe qui', value: -1 }
     ]
     const optionsgr1 = [
       { label: 'Aucun secret partagé avec un groupe', value: 0 },
@@ -200,27 +200,31 @@ export default ({
     watch(() => groupe.value, (ap, av) => {
       optionsgr2.splice(2, 1, { label: 'Secrets partagés avec le groupe ' + groupe.value.nom, value: groupe.value.id })
     })
-    watch(() => contact.value, (ap, av) => {
-      optionsct2.splice(2, 1, { label: 'Secrets partagés avec ' + contact.value.nom, value: contact.value.id })
+    watch(() => couple.value, (ap, av) => {
+      optionscp2.splice(2, 1, { label: 'Secrets partagés avec ' + couple.value.nom, value: couple.value.id })
     })
 
-    if (contact.value) {
-      optionsct2.splice(2, 1, { label: 'Secrets partagés avec ' + contact.value.nom, value: contact.value.id })
+    if (couple.value) {
+      optionscp2.splice(2, 1, { label: 'Secrets partagés avec ' + couple.value.nom, value: couple.value.id })
     }
     if (groupe.value) {
       optionsgr2.splice(2, 1, { label: 'Secrets partagés avec le groupe ' + groupe.value.nom, value: groupe.value.id })
     }
 
+    watch(() => state.value, (ap, av) => {
+      console.log(ap.a.coupleId)
+    })
+
     return {
       avatar,
       mode,
-      contact,
+      couple,
       groupe,
       labelm,
       labelt,
       labeltri,
-      optionsct1,
-      optionsct2,
+      optionscp1,
+      optionscp2,
       optionsgr1,
       optionsgr2,
       state

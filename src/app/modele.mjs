@@ -1182,6 +1182,14 @@ export class Groupe {
     return 0
   }
 
+  membreParId (id) {
+    for (const im in data.getMembre(this.id)) {
+      const m = data.getMembre(this.id, im)
+      if (m.namb.id === id) return m
+    }
+    return null
+  }
+
   maxStp () {
     let mx = 0
     for (const im in data.getMembre(this.id)) {
@@ -1425,7 +1433,8 @@ export class Membre {
   - `l` : liste des auteurs (pour un secret de couple ou de groupe).
   - `t` : texte gzippé ou non
 - `mfas` : sérialisation de la map des fichiers attachés.
-- `refs` : couple `[id, ns]` crypté par la clé du secret référençant un autre secret (référence de voisinage qui par principe, lui, n'aura pas de `refs`).
+- `refs` : couple `[id, ns]` crypté par la clé du secret référençant un autre secret
+(référence de voisinage qui par principe, lui, n'aura pas de `refs`).
 - `vsh`
 
 **Map des fichiers attachés :**
@@ -1453,6 +1462,8 @@ export class Secret {
   get horsLimite () { return this.st < 0 || this.st >= 99999 ? false : dlvDepassee(this.st) }
 
   get ts () { return this.ns % 3 } // 0:personnel 1:couple 2:groupe
+  get exclu () { return Math.floor(this.xp / 10) }
+  get protect () { return this.xp % 10 }
   get titre () { return titreEd(null, this.txt.t) }
   get nbj () { return this.st <= 0 || this.st === 99999 ? 0 : (this.st - getJourJ()) }
   get dh () { return dhstring(new Date(this.txt.d * 1000)) }
@@ -1475,40 +1486,35 @@ export class Secret {
     return 'Partagé avec ' + this.groupe.nom
   }
 
-  nouveauP (id, ref) {
+  nouveau (id, ref) {
     this.id = id
     this.v = 0
-    this.ns = (Math.floor(crypt.rnd4() / 3) * 3)
     this.st = getJourJ() + cfg().limitesjour.secrettemp
     this.xp = 0
-    this.mc = new Uint8Array([])
     this.txt = { t: '', d: Math.floor(new Date().getTime() / 1000) }
     this.ref = ref || null
+  }
+
+  nouveauP (id, ref) {
+    this.nouveau(id, ref)
+    this.ns = (Math.floor(crypt.rnd4() / 3) * 3)
+    this.mc = new Uint8Array([])
     return this
   }
 
-  nouveauC (id, ref) {
-    this.id = id
+  nouveauC (id, ref, im) { // im : 0 ou 1 (couple.avc)
+    this.nouveau(id, ref)
     this.ns = (Math.floor(crypt.rnd4() / 3) * 3) + 1
-    this.v = 0
-    this.st = getJourJ() + cfg().limitesjour.secrettemp
-    this.xp = 0
-    this.mc = new Uint8Array([])
-    this.txt = { t: '', l: new Uint8Array([]), d: Math.floor(new Date().getTime() / 1000) }
-    this.ref = ref || null
+    this.mc = { 0: new Uint8Array([]) }
+    if (im) this.mc[im] = new Uint8Array([])
     return this
   }
 
   nouveauG (id, ref, im) {
-    this.id = id
+    this.nouveau(id, ref)
     this.ns = (Math.floor(crypt.rnd4() / 3) * 3) + 2
-    this.v = 0
-    this.xp = 0
     this.mc = { 0: new Uint8Array([]) }
-    this.mc[im] = new Uint8Array([])
-    this.st = getJourJ() + cfg().limitesjour.secrettemp
-    this.txt = { t: '', l: new Uint8Array([]), d: Math.floor(new Date().getTime() / 1000) }
-    this.ref = ref || null
+    if (im) this.mc[im] = new Uint8Array([])
     return this
   }
 
@@ -1519,7 +1525,7 @@ export class Secret {
       this.txt.l.forEach(t => { if (t !== im) nl.push(t) })
       x.l = new Uint8Array(nl)
     }
-    return await crypt.crypter(this.cles, serial(x))
+    return await crypt.crypter(this.cle, serial(x))
   }
 
   async fromRow (row) {
@@ -1603,7 +1609,7 @@ export class Secret {
 
   get secidfa () { return crypt.idToSid(this.id) + '@' + crypt.idToSid(this.ns) }
 
-  async idc (fa) { return crypt.u8ToB64(await crypt.crypter(this.cles, this.nomc(fa), 1), true) }
+  async idc (fa) { return crypt.u8ToB64(await crypt.crypter(this.cle, this.nomc(fa), 1), true) }
 
   async datafa (fa, raw) {
     const y = data.getFaidx({ id: this.id, ns: this.ns, cle: fa.cle })

@@ -20,7 +20,7 @@
 <script>
 import ShowHtml from './ShowHtml.vue'
 import { VuemojiPicker } from 'vuemoji-picker'
-import { ref, toRef, watch /*, onMounted */ } from 'vue'
+import { ref, toRef, watch } from 'vue'
 import { affidbmsg } from '../app/util.mjs'
 
 export default ({

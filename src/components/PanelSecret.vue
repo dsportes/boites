@@ -1,18 +1,28 @@
 <template>
-  <q-card class="full-height moyennelargeur fs-md column">
-    <q-toolbar class="col-auto bg-primary text-white maToolBar">
-      <q-btn flat round dense icon="close" size="md" class="q-mr-sm" @click="fermer" />
-      <q-toolbar-title><div class="titre-md tit text-center">{{state.titre}}</div></q-toolbar-title>
-      <q-btn v-if="mode <= 2" :disable="!modif" class="q-ml-sm" flat dense color="white" icon="undo" @click="undo"/>
-      <q-btn v-if="mode <= 2" :disable="!modif || erreur !== ''" class="q-my-sm" flat dense color="white" :label="state.encreation?'Créer':'Valider'" icon="check" @click="valider"/>
-      <q-btn icon="more_vert" flat dense color="white" @click="plusinfo"/>
+  <q-card class="full-height full-width fs-md column">
+    <q-toolbar class="bg-primary text-white maToolBar">
+      <q-btn flat round dense icon="view_list" size="md" class="q-mr-sm" @click="retourliste" />
+      <q-btn :disable="!precedent" flat round dense icon="first_page" size="md" class="q-mr-sm" @click="prec(0)" />
+      <q-btn :disable="!precedent" flat round dense icon="arrow_back_ios" size="md" class="q-mr-sm" @click="prec(1)" />
+      <span class="q-pa-sm">{{index + 1}} sur {{sur}}</span>
+      <q-btn :disable="!suivant" flat round dense icon="arrow_forward_ios" size="md" class="q-mr-sm" @click="suiv(1)" />
+      <q-btn :disable="!suivant" flat round dense icon="last_page" size="md" class="q-mr-sm" @click="suiv(0)" />
+      <q-toolbar-title></q-toolbar-title>
+      <q-btn size="md" color="white" icon="menu" flat dense>
+      </q-btn>
     </q-toolbar>
     <q-toolbar inset class="col-auto bg-primary text-white maToolBar">
+      <q-toolbar-title><div class="titre-md tit text-center">{{state.titre}}</div></q-toolbar-title>
+      <q-btn v-if="mode <= 2" :disable="!modif()" class="q-ml-sm" flat dense color="white" icon="undo" @click="undo"/>
+      <q-btn v-if="mode <= 2" :disable="!modif() || (erreur !== '')" class="q-my-sm" flat dense color="white" :label="state.encreation?'Créer':'Valider'" icon="check" @click="valider"/>
+      <q-btn icon="more_vert" flat dense color="white" @click="plusinfo"/>
+    </q-toolbar>
+    <q-toolbar inset class="col-auto bg-secondary text-white maToolBar">
       <div class="full-width font-cf">
         <q-tabs v-model="tabsecret" inline-label no-caps dense>
           <q-tab name="texte" label="Détail du secret" />
-          <q-tab name="pj" label="Pièces Jointes" />
-          <q-tab name="voisins" label="Secrets Voisins" />
+          <q-tab name="fa" label="Fichiers attachés" />
+          <q-tab name="voisins" label="Secrets voisins" />
         </q-tabs>
       </div>
     </q-toolbar>
@@ -21,30 +31,36 @@
       <div class="col-auto q-pa-xs full-width row justify-between items-center">
         <div class="col">
           <span v-if="nonmod" class="bg-warning q-pr-sm">[NON éditable]</span>
-          <span v-if="state.oralocal===1000">Protection d'écriture</span>
-          <span v-if="state.oralocal>1000">Protection d'écriture ET exclusité</span>
-          <span v-if="state.oralocal===0">Pas de protection d'écriture</span>
-          <span v-if="state.oralocal>0 && state.oralocal<1000">Pas de protection d'écriture MAIS exclusivité</span>
+          <span v-if="state.plocal">Protection d'écriture</span>
+          <span v-else>Pas de protection d'écriture</span>
         </div>
         <q-btn :disable="mode > 2" class="col-auto" size="md" flat dense color="primary" label="Protection d'écriture" @click="protection"/>
-        <q-btn class="col-auto" :disable="!modifora" size="sm" dense push icon="undo" color="primary" @click="undoora"/>
+        <q-btn class="col-auto" :disable="!modifp()" size="sm" dense push icon="undo" color="primary" @click="undop"/>
       </div>
+      <div v-if="state.ts !== 0" class="col-auto q-pa-xs full-width row justify-between items-center">
+        <div class="col">
+          <span v-if="state.xlocal">Exclusité d'écriture</span>
+          <span v-else>Pas d'exclusité d'écriture </span>
+        </div>
+        <q-btn :disable="mode > 2" class="col-auto" size="md" flat dense color="primary" label="Exclusivité d'écriture" @click="protection"/>
+        <q-btn class="col-auto" :disable="!modifx()" size="sm" dense push icon="undo" color="primary" @click="undox"/>
+     </div>
       <div class="col-auto q-pa-xs full-width row justify-between items-center">
         <apercu-motscles class="col" :motscles="state.motscles" :src="state.mclocal"/>
         <q-btn class="col-auto" :disable="state.ro !== 0" color="primary" flat dense label="Mots clés personnels" @click="ouvrirmcl"/>
-        <q-btn class="col-auto" v-if="!state.ro" :disable="!modifmcl" size="sm" dense push icon="undo" color="primary" @click="undomcl"/>
+        <q-btn class="col-auto" v-if="!state.ro" :disable="!modifmcl()" size="sm" dense push icon="undo" color="primary" @click="undomcl"/>
       </div>
       <div v-if="state.ts === 2" class="col-auto q-pa-xs full-width row justify-between items-center">
         <apercu-motscles class="col" :motscles="state.motscles" :src="mcglocal"/>
         <q-btn class="col-auto" :disable="state.ro !== 0" flat dense color="primary" label="Mots clés du groupe" @click="ouvrirmcg"/>
-        <q-btn class="col-auto" v-if="!state.ro" :disable="!modifmcg" size="sm" dense push icon="undo" color="primary" @click="undomcg"/>
+        <q-btn class="col-auto" v-if="!state.ro" :disable="!modifmcg()" size="sm" dense push icon="undo" color="primary" @click="undomcg"/>
       </div>
 
       <div class="col-auto q-pa-xs full-width row justify-between items-center">
         <div class="col">{{msgtemp}}</div>
         <q-btn v-if="state.templocal" :disable="state.ro !== 0" class="col-auto" flat dense color="primary" label="Le rendre 'PERMANENT'" @click="state.templocal=false"/>
         <q-btn v-if="!state.templocal" :disable="state.ro !== 0" class="col-auto" flat dense color="primary" label="Le rendre 'TEMPORAIRE'"  @click="state.templocal=true"/>
-        <q-btn v-if="!state.ro" :disable="!modiftp" class="col-auto" size="sm" dense push icon="undo" color="primary" @click="undotp"/>
+        <q-btn v-if="!state.ro" :disable="!modiftp()" class="col-auto" size="sm" dense push icon="undo" color="primary" @click="undotp"/>
       </div>
 
       <editeur-texte-secret class="col" v-model="state.textelocal" :texte-ref="secret.txt.t" :editable="!state.ro" :erreur="erreur" :apropos="secret.dh"/>
@@ -89,7 +105,7 @@
 
     </div>
 
-    <div v-if="tabok==='pj'" class='col column items-center'>
+    <div v-if="tabok==='fa'" class='col column items-center'>
       <q-btn :disable="state.ro !== 0" flat dense color="primary" class="q-mt-sm" size="md" icon="add" label="Ajouter une pièce jointe" @click="nompj='';saisiefichier=true"/>
       <div v-if="mode === 3" class="bg-yellow text-bold text-negative text-center">
         En mode avion, le secret est en lecture seule. Seules les pièces jointes déclarées accessibles dans ce mode peuvent visualisées (mais ni créées, ni modifiées).</div>
@@ -171,14 +187,14 @@
 </template>
 
 <script>
-import { toRef, reactive, watch, computed } from 'vue'
+import { reactive, watch, computed, ref } from 'vue'
 import { useStore } from 'vuex'
 import ApercuMotscles from './ApercuMotscles.vue'
 import PieceJointe from './PieceJointe.vue'
 import SelectMotscles from './SelectMotscles.vue'
 import EditeurTexteSecret from './EditeurTexteSecret.vue'
 import ShowHtml from './ShowHtml.vue'
-import { equ8, getJourJ, cfg, Motscles, dhstring, gzipT } from '../app/util.mjs'
+import { equ8, getJourJ, cfg, Motscles, dhstring, gzipT, afficherdiagnostic } from '../app/util.mjs'
 import { NouveauSecret, Maj1Secret, PjSecret } from '../app/operations.mjs'
 import { data, Secret } from '../app/modele.mjs'
 import { crypt } from '../app/crypto.mjs'
@@ -191,17 +207,11 @@ export default ({
 
   components: { ApercuMotscles, SelectMotscles, EditeurTexteSecret, ShowHtml, PieceJointe },
 
-  props: { close: Function },
+  // props: { close: Function },
+  props: { sec: Object, suivant: Function, precedent: Function, index: Number, sur: Number },
 
   computed: {
     tbclass () { return this.$q.dark.isActive ? ' sombre' : ' clair' },
-    modifmcl () { return !equ8(this.state.mclocal, this.secret.ts === 2 ? this.secret.mc[this.state.im] : this.secret.mc) },
-    modifmcg () { return this.secret.ts === 2 && !equ8(this.state.mcglocal, this.secret.mc[0]) },
-    modifora () { return this.state.oralocal !== this.secret.ora },
-    modiftx () { return this.state.textelocal !== this.secret.txt.t },
-    modiftp () { return this.state.templocal !== (this.secret.st >= 0 && this.secret.st < 99999) },
-    modif () { return this.secret && (this.modifmcl || this.modifmcg || this.modiftx || this.modiftp || this.modifora) },
-    erreur () { return this.state.ro || this.state.textelocal.length > 9 ? '' : 'Le texte doit contenir au moins 10 signes' },
     msgtemp () {
       if (this.state.templocal) {
         const n = this.secret.st === 99999 ? this.limjours : this.secret.st - this.jourJ
@@ -209,17 +219,13 @@ export default ({
       }
       return 'Secret permanent'
     },
-    nonmod () {
-      const s = this.state
-      return (s.ora >= 1000) || (s.ora > 0 && s.ora < 1000 && s.ora !== s.im) || (s.ts === 2 && s.membre.stp === 0) || (s.ts === 2 && s.groupe.sty === 0)
-    }
+    nonmod () { return this.state.ro }
   },
 
   data () {
     return {
       row: {},
       tabsecret: 'texte',
-      tabok: 'texte',
       plus: false,
       mcledit: false,
       mcgedit: false,
@@ -240,10 +246,10 @@ export default ({
       ],
       labelro: [
         '',
-        'secret "archivé"',
-        'seul le propriétaire exclusif peut l\'éditer',
+        'secret protégé contre l\'ècriture',
+        'exclusivité d\'écriture accordée à un autre membre / conjoint',
         'non modifiable par les membres du groupe de niveau "lecteur"',
-        'groupe "archivé"',
+        'groupe protégé contre l\'ècriture',
         'mode avion ou visio'
       ],
       labelp: [
@@ -255,17 +261,6 @@ export default ({
       titrep: '',
       actions: {},
       protect: false
-    }
-  },
-
-  watch: {
-    tabsecret (ap, av) {
-      if (av === 'texte' && this.modif) {
-        this.diagnostic = 'Des modifications ont été faites. Avant de changer d\'onglet, soit les "Annuler", soit les "Valider"'
-        setTimeout(() => { this.tabsecret = 'texte' }, 50)
-      } else {
-        this.tabok = ap
-      }
     }
   },
 
@@ -321,7 +316,7 @@ export default ({
       if (c && c.accepteNouveauSecret) {
         this.ouvrirvoisin(new Secret().nouveauC(s.id, c, ref))
       } else {
-        this.diagnostic = 'Le contact ' + (c ? c.nom : '?') + ' n\'est pas en état d\'accepter le partage de nouveaux secrets.'
+        afficherdiagnostic('Le contact ' + (c ? c.nom : '?') + ' n\'est pas en état d\'accepter le partage de nouveaux secrets.')
       }
     },
     action3 (gx) {
@@ -329,17 +324,17 @@ export default ({
       const ref = s.ref ? s.ref : [s.id, s.ns]
       const g = gx || this.groupecourant
       if (!g) {
-        this.diagnostic = 'Le groupe ? n\'est pas en état d\'accepter le partage de nouveaux secrets.'
+        afficherdiagnostic('Le groupe ? n\'est pas en état d\'accepter le partage de nouveaux secrets.')
         return
       }
       if (g.sty === 0) {
-        this.diagnostic = 'Le groupe ' + g.nom + ' est "archivé", création et modification de secrets impossible.'
+        afficherdiagnostic('Le groupe ' + g.nom + ' est "archivé", création et modification de secrets impossible.')
         return
       }
       const im = g.imDeId(this.avatar.id)
       const membre = im ? data.getMembre(g.id, im) : null
       if (!membre || !membre.stp) {
-        this.diagnostic = 'Seuls les membres de niveau "auteur" et "animateur" du groupe ' + g.nom + ' peuvent créer ou modifier des secrets.'
+        afficherdiagnostic('Seuls les membres de niveau "auteur" et "animateur" du groupe ' + g.nom + ' peuvent créer ou modifier des secrets.')
         return
       }
       this.ouvrirvoisin(new Secret().nouveauG(s.id, g, ref))
@@ -347,16 +342,6 @@ export default ({
     plusinfo () { // liste des auteurs, mots clés des membres du groupe, etc. dans un dialogue
       this.plus = true
     },
-    fermer () {
-      if (this.modif) {
-        this.diagnostic = 'Des modifications ont été faites. Avant de fermer ce secret, soit les "Annuler", soit les "Valider"'
-      } else {
-        this.avantFermeture()
-        this.secret = null
-        if (this.close) this.close()
-      }
-    },
-
     fermerpj () { this.saisiefichier = false },
 
     async urlDe (pj, b) {
@@ -371,7 +356,7 @@ export default ({
       if (urlpj) {
         setTimeout(() => { this.wop(urlpj) }, 500)
       } else {
-        this.diagnostic = 'Contenu de la pièce jointe non disponible (corrompu ? effacé ?)'
+        afficherdiagnostic('Contenu de la pièce jointe non disponible (corrompu ? effacé ?)')
       }
     },
 
@@ -380,7 +365,7 @@ export default ({
       if (blob) {
         saveAs(blob, pj.nom)
       } else {
-        this.diagnostic = 'Contenu de la pièce jointe non disponible (corrompu ? effacé ?)'
+        afficherdiagnostic('Contenu de la pièce jointe non disponible (corrompu ? effacé ?)')
       }
     },
 
@@ -447,16 +432,18 @@ export default ({
     changermcl (mc) { this.state.mclocal = mc },
     changermcg (mc) { this.state.mcglocal = mc },
 
-    setprotP () { this.state.oralocal = 1000; this.protect = false },
-    resetprotP () { this.state.oralocal = 0; this.protect = false },
+    setprotP () {
+      this.state.plocal = 1
+      this.protect = false
+    },
+    resetprotP () { this.state.plocal = 0; this.protect = false },
 
     protection () {
       const s = this.secret
-      const ora = this.state.oralocal
+      const ex = this.state.xlocal
+      const pr = this.state.plocal
       const m = []
       const a = {}
-      const pr = Math.floor(ora / 1000) !== 0
-      const ex = ora % 1000
       if (this.mode > 2) {
         m.push('Les secrets ne sont pas éditables en mode avion ou dégradé visio')
         a.jailu = true
@@ -465,8 +452,8 @@ export default ({
         m.push(!pr ? 'Pas de protection d\'écriture' : 'Protection contre les écritures')
         if (!pr) a.setprotP = true; else a.resetprotP = true
       } else if (s.ts === 1) {
-        const n = this.state.contact.nom
-        this.titrep = 'Secret partagé avec le contact' + n
+        const n = this.state.couple.nom
+        this.titrep = 'Secret partagé en couple ' + n
         m.push(pr ? 'Pas de protection d\'écriture' : 'Protection contre les écritures')
         if (ex === 0) {
           a.donnerexmoictc = n
@@ -477,8 +464,7 @@ export default ({
           a.donnerexctc = n
           a.ok = true
         } else {
-          m.push(n + ' a l\'exclusité d\'écriture')
-          m.push('Ce contact est le seul à pouvoir changer le statut de protection du secret')
+          m.push(n + ' a l\'exclusité d\'écriture et est le seul à pouvoir changer le statut de protection du secret')
           a.jailu = true
         }
       } else if (s.ts === 2) {
@@ -486,10 +472,10 @@ export default ({
         const p = this.state.membre.stp
         m.push(this.labelp[p])
         if (this.state.groupe.sty === 1) {
-          m.push('Le groupe est "archivé" : il est figé, les secrets ne sont pas éditables. Seul un animateur peut le remettre en activité')
+          m.push('Le groupe est "protégé contre l\'écriture" : il est figé, les secrets ne sont pas éditables. Seul un animateur peut le remettre en activité')
           a.jailu = true
         } else if (p === 0) {
-          m.push('En tant que simple lecteur vous ne pouvez pas changer les protections d\'écriture')
+          m.push('Un simple lecteur ne peut pas changer les protections d\'écriture')
           a.jailu = true
         } else {
           m.push(pr ? 'Pas de protection d\'écriture' : 'Protection contre les écritures')
@@ -526,28 +512,27 @@ export default ({
 
     async valider () {
       const s = this.secret
+      const xploc = this.state.plocal + (10 * this.state.xlocal)
       if (s.v) {
         // maj
         const txts = this.state.textelocal === s.txt.t ? null : await s.toRowTxt(this.state.textelocal, this.state.im)
         let mc = null, mcg = null
-        if (s.ts !== 2) {
+        if (s.ts === 0) {
           mc = equ8(this.state.mclocal, s.mc) ? null : this.state.mclocal
         } else {
           mc = equ8(this.state.mclocal, s.mc[this.state.im]) ? null : this.state.mclocal
-          mcg = equ8(this.state.mcglocal, s.mc[0]) ? null : this.state.mcglocal
+          if (s.ts === 2) {
+            mcg = equ8(this.state.mcglocal, s.mc[0]) ? null : this.state.mcglocal
+          }
         }
         const v1 = this.v && this.state.textelocal === s.txt.t ? null : this.state.textelocal.length
         const tempav = this.secret.st > 0 && this.secret.st !== 99999
         const temp = tempav === this.state.templocal ? null : (this.state.templocal ? this.jourJ + this.limjours : 99999)
-        const ora = this.state.oralocal === s.ora ? null : this.state.oralocal
-        const arg = { ts: s.ts, id: s.id, ns: s.ns, mc, txts, v1, ora, temp }
-        if (s.ts === 2) { // im requis pour mettre à jour les motsclés de l'avatar
-          arg.mcg = mcg
+        const xp = xploc === s.xp ? null : xploc
+        const arg = { ts: s.ts, id: s.id, ns: s.ns, mc, txts, v1, xp, temp }
+        if (s.ts !== 0) { // im requis pour mettre à jour les motsclés de l'avatar
+          if (s.ts === 2) arg.mcg = mcg
           arg.im = this.state.im
-        }
-        if (s.ts === 1) { // pour éviter une relecture inutile au serveur (qui aurait pu les trouver lui-même)
-          arg.id2 = s.id2
-          arg.ns2 = s.ns2
         }
         await new Maj1Secret().run(arg)
       } else {
@@ -556,34 +541,37 @@ export default ({
         const mc = this.state.mclocal
         const v1 = this.state.textelocal.length
         const st = this.state.templocal ? this.jourJ + this.limjours : 99999
-        const ora = this.state.oralocal
-        const arg = { ts: s.ts, id: s.id, ns: s.ns, ic: s.ic, mc, txts, v1, ora, st }
+        const xp = xploc
+        const arg = { ts: s.ts, id: s.id, ns: s.ns, ic: s.ic, mc, txts, v1, xp, st }
         if (s.ts === 2) {
           arg.mcg = this.state.mcglocal
           arg.im = this.state.im
         }
-        if (s.ts === 1) {
-          arg.id2 = s.id2
-          arg.ns2 = s.ns2
-          arg.ic2 = s.ic2
-          arg.dups = await crypt.crypter(s.cles, serial([arg.id2, arg.ns2]))
-          arg.dups2 = await crypt.crypter(s.cles, serial([arg.id, arg.ns]))
-        }
         arg.refs = s.ref ? await crypt.crypter(s.cles, serial(s.ref)) : null
         await new NouveauSecret().run(arg)
       }
-    }
+    },
+
+    // n == 0, premier / dernier, n == 1 suivant / précédent
+    suiv (n) { if (this.suivant) this.suivant(n) },
+    prec (n) { if (this.precedent) this.precedent(n) }
   },
 
   setup (props) {
     const $store = useStore()
+    const tabok = ref('texte')
+    const erreur = ref('')
     const diagnostic = computed({
       get: () => $store.state.ui.diagnostic,
       set: (val) => $store.commit('ui/majdiagnostic', val)
     })
+    const avatarscform = computed({
+      get: () => $store.state.ui.avatarscform,
+      set: (val) => $store.commit('ui/majavatarscform', val)
+    })
     const prefs = computed(() => { return data.getPrefs() })
     const avatar = computed(() => { return $store.state.db.avatar })
-    const pjidx = computed(() => { return $store.state.db.pjidx })
+    const faidx = computed(() => { return $store.state.db.faidx })
     const contactcourant = computed(() => { return $store.state.db.contact })
     const groupecourant = computed(() => { return $store.state.db.groupe })
     const mode = computed(() => $store.state.ui.mode)
@@ -606,8 +594,6 @@ export default ({
       return $store.state.db['voisins@' + pk]
     })
 
-    toRef(props, 'close')
-
     const state = reactive({
       motcles: null,
       contact: null,
@@ -622,7 +608,8 @@ export default ({
       textelocal: '',
       mclocal: null,
       mcglocal: null,
-      oralocal: null,
+      xlocal: 0,
+      plocal: 0,
       templocal: null,
       dhlocal: 0,
       listevoisins: [],
@@ -644,7 +631,7 @@ export default ({
       return lst
     }
 
-    function undomcl () { const s = secret.value; if (s) { state.mclocal = s.ts === 2 ? s.mc[state.im] : s.mc } }
+    function undomcl () { const s = secret.value; if (s) { state.mclocal = s.ts >= 1 ? s.mc[state.im] : s.mc } }
 
     function undomcg () { const s = secret.value; if (s) { state.mcglocal = s.ts === 2 ? s.mc[0] : null } }
 
@@ -652,9 +639,33 @@ export default ({
 
     function undotx () { const s = secret.value; if (s) { state.textelocal = s.txt.t; state.dhlocal = s.txt.d } }
 
-    function undoora () { const s = secret.value; if (s) { state.oralocal = s.ora } }
+    function undox () { const s = secret.value; if (s) { state.xlocal = s.exclu } }
 
-    function undo () { undomcl(); undomcg(); undotp(); undotx(); undoora() }
+    function undop () { const s = secret.value; if (s) { state.plocal = s.protect } }
+
+    function undo () { undomcl(); undomcg(); undotp(); undotx(); undox(); undop() }
+
+    function modifmcl () {
+      return !equ8(state.mclocal, secret.value.ts === 2 ? secret.value.mc[state.im] : secret.value.mc)
+    }
+    function modifmcg () {
+      return secret.value.ts === 2 && !equ8(state.mcglocal, secret.value.mc[0])
+    }
+    function modifx () {
+      return state.xlocal !== secret.value.exclu
+    }
+    function modifp () {
+      return state.plocal !== secret.value.protect
+    }
+    function modiftx () {
+      return state.textelocal !== secret.value.txt.t
+    }
+    function modiftp () {
+      return state.templocal !== (secret.value.st >= 0 && secret.value.st < 99999)
+    }
+    function modif () {
+      return secret.value && (modifmcl() || modifmcg() || modiftx() || modiftp() || modifx() || modifp())
+    }
 
     function initState () {
       const s = secret.value
@@ -663,46 +674,46 @@ export default ({
         state.ts = s.ts
         state.avatar = s.ts === 0 ? avatar : null
         state.groupe = s.ts === 2 ? data.getGroupe(s.id) : null
-        state.contact = s.ts === 1 ? data.getContact(s.id, s.ic) : null
+        state.couple = s.ts === 1 ? data.getCouple(s.id) : null
         state.voisins = voisins
-        state.im = s.ts === 2 ? state.groupe.imDeId(avid) : (s.ts === 1 ? (state.contact.na.id > avid ? 1 : 2) : 0)
+        state.im = s.ts === 2 ? state.groupe.imDeId(avid) : (s.ts === 1 ? state.couple.avc + 1 : 0)
         state.membre = s.ts === 2 && state.im ? data.getMembre(state.groupe.id, state.im) : null
         state.encreation = s.v === 0
         state.ro = 0
         state.listevoisins = lstvoisins(voisins.value)
-        if (s.ts === 2) {
+        if (s.ts >= 1) {
           if (!s.mc[state.im]) s.mc[state.im] = new Uint8Array([])
           if (!s.mc[0]) s.mc[0] = new Uint8Array([])
         } else {
           if (!s.mc) s.mc = new Uint8Array([])
         }
         if (!state.encreation) {
-          if (s.ora >= 1000) { // archivé
-            state.ro = 1
-          } else if (s.ora > 0 && s.ora < 1000 && s.ora !== state.im) {
-            state.ro = 2 // pas exclusif
+          if (s.protect) {
+            state.ro = 1 // protégé en écriture
+          } else if (s.exclu && s.exclu !== state.im) {
+            state.ro = 2 // exclusivité accordée à un autre membre
           } else if (s.ts === 2 && state.membre.stp === 0) {
             state.ro = 3 // lecteur
           } else if (s.ts === 2 && state.groupe.sty === 0) {
-            state.ro = 4 // groupe archivé
+            state.ro = 4 // groupe protégé en écriture
           } else if (mode.value > 2) {
-            state.ro = 5
+            state.ro = 5 // mode sans mise à jour
           }
         }
         switch (secret.value.ts) {
           case 0 : { state.titre = 'Secret personnel'; break }
-          case 1 : { state.titre = 'Partagé avec ' + state.contact.nom; break }
+          case 1 : { state.titre = 'Partagé avec ' + state.couple.nom; break }
           case 2 : { state.titre = 'Partagé avec ' + state.groupe.nom; break }
         }
         undo()
       }
     }
 
-    function setPjloc () {
+    function setFaloc () {
       const s = secret.value
       if (!s || mode.value === 2 || mode.value === 4) { state.avion = {}; return } // En mode incognito/visio, c'est indéterminé (pas d'accès à IDB)
       const avion = {}
-      const lst = data.getPjidx({ id: s.id, ns: s.ns })
+      const lst = data.getFaidx({ id: s.id, ns: s.ns })
       if (s.nbpj) {
         for (const cle in s.mpj) {
           avion[cle] = false
@@ -714,26 +725,48 @@ export default ({
       state.avion = avion
     }
 
-    initState()
-    chargerMc()
-    setPjloc()
-
     watch(() => prefs.value, (ap, av) => {
       chargerMc()
     })
 
     watch(() => secret.value, (ap, av) => {
       initState()
-      setPjloc()
+      setFaloc()
+      check()
       if (ap && (!av || av.pk !== ap.pk)) chargerMc() // le nouveau peut avoir un autre groupe
+    })
+
+    function check () {
+      erreur.value = state.ro || state.textelocal.length > 10 ? '' : 'Le texte doit contenir au moins 10 signes'
+    }
+
+    watch(() => state.textelocal, (ap, av) => {
+      check()
     })
 
     watch(() => voisins.value, (ap, av) => {
       state.listevoisins = lstvoisins(ap)
     })
 
-    watch(() => pjidx.value, (ap, av) => {
-      setPjloc()
+    watch(() => faidx.value, (ap, av) => {
+      setFaloc()
+    })
+
+    watch(() => avatarscform.value, (ap, av) => {
+      if (!ap && modif()) {
+        afficherdiagnostic('Des modifications ont été faites. Avant de fermer ce secret, soit les "Annuler", soit les "Valider"')
+        setTimeout(() => { avatarscform.value = true; tabok.value = 'texte' }, 50)
+      } else {
+        avantFermeture()
+        // ??? this.secret = null
+      }
+    })
+
+    watch(() => tabok.value, (ap, av) => {
+      if (av === 'texte' && modif()) {
+        afficherdiagnostic('Des modifications ont été faites. Avant de changer d\'onglet, soit les "Annuler", soit les "Valider"')
+        setTimeout(() => { tabok.value = 'texte' }, 50)
+      }
     })
 
     function avantFermeture () {
@@ -743,10 +776,18 @@ export default ({
       }
     }
 
-    // watch(() => state.textelocal, (ap, av) => { console.log(av, '\n', ap) })
+    function retourliste () {
+      avatarscform.value = false
+    }
+
+    initState()
+    chargerMc()
+    setFaloc()
+    check()
 
     return {
       diagnostic,
+      tabok,
       contactcourant,
       groupecourant,
       secret,
@@ -761,8 +802,18 @@ export default ({
       undomcg,
       undotp,
       undotx,
-      undoora,
-      avantFermeture
+      undox,
+      undop,
+      modifmcl,
+      modifmcg,
+      modifx,
+      modifp,
+      modiftx,
+      modiftp,
+      modif,
+      erreur,
+      avantFermeture,
+      retourliste
     }
   }
 })

@@ -90,7 +90,7 @@
     <panel-filtre-groupes @ok="rechercher" :motscles="motscles" :etat-interne="recherche" :fermer="fermerfiltre"/>
   </q-dialog>
 
-  <q-page-sticky v-if="$q.screen.gt.sm" position="top-left" expand :offset="[5,5]">
+  <q-page-sticky v-if="$q.screen.gt.sm && sessionok" position="top-left" expand :offset="[5,5]">
     <panel-filtre-groupes @ok="rechercher" :motscles="motscles" :etat-interne="recherche"/>
   </q-page-sticky>
 </div>

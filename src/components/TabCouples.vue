@@ -32,7 +32,7 @@
     <panel-filtre-couples @ok="rechercher" :motscles="motscles" :etat-interne="recherche" :fermer="fermerfiltre"/>
   </q-dialog>
 
-  <q-page-sticky v-if="$q.screen.gt.sm" position="top-left" expand :offset="[5,5]">
+  <q-page-sticky v-if="$q.screen.gt.sm && sessionok" position="top-left" expand :offset="[5,5]">
     <panel-filtre-couples @ok="rechercher" :motscles="motscles" :etat-interne="recherche"/>
   </q-page-sticky>
 
@@ -154,11 +154,6 @@ export default ({
       return ['thumb_up', 'hourglass_empty', 'thumb_down', 'thumb_up', 'o_thumb_down', 'person_off'][p]
     }
 
-    const evtfiltresecrets = computed({ // secret courant
-      get: () => $store.state.ui.evtfiltresecrets,
-      set: (val) => $store.commit('ui/majevtfiltresecrets', val)
-    })
-
     const state = reactive({
       lst: [], // array des Couples répondant au filtre
       idx: 0, // index du couple courant dans la liste
@@ -229,7 +224,6 @@ export default ({
       state,
       recherche,
       mode,
-      evtfiltresecrets,
       avatarcprech,
       avatarcpform
     }
