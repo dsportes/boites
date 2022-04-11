@@ -760,10 +760,9 @@ export class Operation {
       data.setTousAx(this.axDisparus)
     }
 
-    /* Mise à nul des "courants" qui contiennt des objets obsolètes
+    /* Mise à nul des "courants" qui contiendraient des objets obsolètes
       avatar: null, // avatar courant
       groupe: null, // groupe courant
-      groupeplus: null, // couple courant [groupe, membre] ou membre est celui de l'avatar courant
       couple: null, // couple courant
       secret: null, // secret courant
     */
@@ -771,22 +770,22 @@ export class Operation {
       const av = store().state.db.avatar
       if (av) {
         const e = data.getAvatar(av.id)
-        if (!e) store().commit('db/setAvatar', null)
+        if (!e) store().commit('db/majavatar', null)
       }
       const gr = store().state.db.groupe
       if (gr) {
         const e = data.getGroupe(gr.id)
-        if (!e) store().commit('db/setGroupe', null)
+        if (!e) store().commit('db/majgroupe', null)
       }
       const cp = store().state.db.couple
       if (cp) {
         const e = data.getCouple(cp.id)
-        if (!e) store().commit('db/setCouple', null)
+        if (!e) store().commit('db/majcouple', null)
       }
       const sc = store().state.db.secret
       if (sc) {
-        const e = data.getGroupe(sc.id)
-        if (!e) store().commit('db/setSecret', null)
+        const e = data.getSecret(sc.id, sc.im)
+        if (!e) store().commit('db/majsecret', null)
       }
     }
 

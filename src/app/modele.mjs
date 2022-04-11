@@ -1464,7 +1464,7 @@ export class Secret {
 
   get vk () { return this.pk + '@' + this.v }
 
-  get suppr () { return this.st < 0 }
+  get suppr () { return this.x > 0 }
   get horsLimite () { return this.st < 0 || this.st >= 99999 ? false : dlvDepassee(this.st) }
 
   get ts () { return this.ns % 3 } // 0:personnel 1:couple 2:groupe
@@ -1532,6 +1532,10 @@ export class Secret {
       x.l = new Uint8Array(nl)
     }
     return await crypt.crypter(this.cle, serial(x))
+  }
+
+  async toRowRef () {
+    return this.ref ? await crypt.crypter(this.cle, serial(this.ref)) : null
   }
 
   async fromRow (row) {

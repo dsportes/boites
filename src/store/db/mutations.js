@@ -144,24 +144,29 @@ export function setPrefs (state, obj) { state.prefs = obj }
 /* Enregistrement de toutes les cv d'un coup */
 export function commitRepertoire (state, repertoire) { state.repertoire = { ...repertoire } }
 
-/* Entrée d'un objet à 2 niveaux */
-function setEntree (state, table, id) {
-  let e = state[table + 's@' + id]
-  if (!e) { e = {}; state[table + 's@' + id] = e }
-  return e
+/* initialise une entrée de voisinage s'il elle ne l'a pas déjà été */
+export function initVoisins (state, secret) {
+  if (!secret.ref) {
+    const pk = secret.pk
+    const st = state['voisins@' + pk] || {}
+    st[pk] = secret
+    state['voisins@' + pk] = { ...st }
+  } else {
+    const pkref = secret.pkref
+    const st = state['voisins@' + pkref] || {}
+    st[secret.pk] = secret
+    // recherche du secret de référence
+    const st2 = state['secrets@' + secret.ref[0]]
+    if (st2) {
+      const secref = st2[secret.ref[1]]
+      if (secref) st[secref.pk] = secref
+    } // sinon le secret de référence est inconnu dans la session
+    state['voisins@' + pkref] = { ...st }
+  }
 }
 
-/* Force à créer une entrée de voisinage pour un secret de référence
-AVANT insertion (éventuelle) d'un voisin en création et qui POURRAIT être validée */
-export function setRefVoisin (state, secret) {
-  const pk = secret.pk
-  const st = setEntree(state, 'voisin', pk)
-  st[pk] = secret
-  state['voisins@' + pk] = { ...st }
-}
-
-/* Supprime une entrée voisin à condition qu'elle soit vide ou ne contienne que lui */
-export function unsetRefVoisin (state, pkref) {
+/* Supprime une entrée "voisins" à condition qu'elle soit vide ou ne contienne que le secret de référence */
+export function cleanVoisins (state, pkref) {
   const st = state['voisins@' + pkref]
   if (st) {
     const l = Object.keys(st).length
@@ -188,7 +193,7 @@ function majvoisin (state, secret) {
   } else {
     const pkref = secret.pkref
     // enregistrement du secret voisin
-    const st = setEntree(state, 'voisin', pkref)
+    const st = state['voisins@' + pkref] || {}
     st[pk] = secret
     // recherche du secret de référence
     const st2 = state['secrets@' + secret.ref[0]]

@@ -27,7 +27,7 @@
       </div>
     </q-toolbar>
 
-    <div v-if="tabok==='texte'" class='col column'>
+    <div v-if="tabsecret==='texte'" class='col column'>
       <div class="col-auto q-pa-xs full-width row justify-between items-center">
         <div class="col">
           <span v-if="nonmod" class="bg-warning q-pr-sm">[NON éditable]</span>
@@ -105,7 +105,7 @@
 
     </div>
 
-    <div v-if="tabok==='fa'" class='col column items-center'>
+    <div v-if="tabsecret==='fa'" class='col column items-center'>
       <q-btn :disable="state.ro !== 0" flat dense color="primary" class="q-mt-sm" size="md" icon="add" label="Ajouter une pièce jointe" @click="nompj='';saisiefichier=true"/>
       <div v-if="mode === 3" class="bg-yellow text-bold text-negative text-center">
         En mode avion, le secret est en lecture seule. Seules les pièces jointes déclarées accessibles dans ce mode peuvent visualisées (mais ni créées, ni modifiées).</div>
@@ -135,17 +135,17 @@
       </div>
     </div>
 
-    <div v-if="tabok==='voisins'" class='col'>
+    <div v-if="tabsecret==='voisins'" class='col'>
       <q-btn flat dense color="primary" size="md" icon="add" label="Nouveau secret voisin personnel" @click="action1()"/>
-      <q-btn v-if="contactcourant" flat dense size="md" color="primary" icon="add" :label="'Nouveau secret voisin partagé avec ' +  contactcourant.nom" @click="action2()"/>
-      <q-btn v-if="groupecourant" flat dense size="md" color="primary" icon="add" :label="'Nouveau secret voisin du groupe ' +  groupecourant.nom" @click="action3()"/>
+      <q-btn v-if="contactcourant" flat dense size="md" color="primary" icon="add" :label="'Nouveau secret voisin partagé avec ' +  contact.nom" @click="action2()"/>
+      <q-btn v-if="groupecourant" flat dense size="md" color="primary" icon="add" :label="'Nouveau secret voisin du groupe ' +  groupe.nom" @click="action3()"/>
       <div v-for="(s, idx) in state.listevoisins" :key="s.vk" :class="dkli(idx) + ' full-width row items-start q-py-xs'" style="position:relative">
         <div class="col-auto column">
           <q-btn class="q-mx-sm" dense push size="sm" :icon="'expand_'+(!row[s.vk]?'less':'more')"
             color="primary" @click="togglerow(s.vk)"/>
           <q-btn class="q-mx-sm" dense push size="sm" color="warning" icon="add" @click="nouveauvoisin=true;srcvoisin=s"/>
         </div>
-        <div class="secretcourant col cursor-pointer" @click="ouvrirvoisin(s)">
+        <div class="zone col cursor-pointer" @click="ouvrirvoisin(s)">
           <show-html v-if="row[s.vk]" class="height-8 full-width overlay-y-auto bottomborder" :texte="s.txt.t" :idx="idx"/>
           <div v-else class="full-width text-bold">{{s.titre}}</div>
           <div class="full-width row items-center">
@@ -198,7 +198,6 @@ import { equ8, getJourJ, cfg, Motscles, dhstring, gzipT, afficherdiagnostic } fr
 import { NouveauSecret, Maj1Secret, PjSecret } from '../app/operations.mjs'
 import { data, Secret } from '../app/modele.mjs'
 import { crypt } from '../app/crypto.mjs'
-import { serial } from '../app/schemas.mjs'
 import { putFa } from '../app/db.mjs'
 import { saveAs } from 'file-saver'
 
@@ -225,7 +224,6 @@ export default ({
   data () {
     return {
       row: {},
-      tabsecret: 'texte',
       plus: false,
       mcledit: false,
       mcgedit: false,
@@ -294,50 +292,34 @@ export default ({
     ouvrirvoisin (s) {
       this.secret = s
       this.tabsecret = 'texte'
-      this.tabok = 'secret'
-    },
-    listevoisins () {
-      const lst = []
-      for (const pk in this.voisins) lst.push(this.voisins[pk])
-      lst.sort((a, b) => {
-        return !a.ref ? 1 : (a.titre > b.titre ? 1 : (a.titre < b.titre ? -1 : 0))
-      })
-      return lst
     },
     action1 () {
       const s = this.secret
       const ref = s.ref ? s.ref : [s.id, s.ns]
       this.ouvrirvoisin(new Secret().nouveauP(s.id, ref))
     },
-    action2 (cx) {
+    action2 () {
       const s = this.secret
       const ref = s.ref ? s.ref : [s.id, s.ns]
-      const c = cx || this.contactcourant
-      if (c && c.accepteNouveauSecret) {
-        this.ouvrirvoisin(new Secret().nouveauC(s.id, c, ref))
-      } else {
-        afficherdiagnostic('Le contact ' + (c ? c.nom : '?') + ' n\'est pas en état d\'accepter le partage de nouveaux secrets.')
-      }
+      const c = this.couple
+      if (c) this.ouvrirvoisin(new Secret().nouveauC(s.id, ref, c.avc))
     },
-    action3 (gx) {
+    action3 () {
       const s = this.secret
       const ref = s.ref ? s.ref : [s.id, s.ns]
-      const g = gx || this.groupecourant
-      if (!g) {
-        afficherdiagnostic('Le groupe ? n\'est pas en état d\'accepter le partage de nouveaux secrets.')
-        return
+      const g = this.groupe
+      if (g) {
+        if (g.sty === 0) {
+          afficherdiagnostic('Le groupe ' + g.nom + ' est "protégé en écriture", création et modification de secrets impossible.')
+          return
+        }
+        const m = g.membreParId(this.avatar.id)
+        if (!m || !m.stp) {
+          afficherdiagnostic('Seuls les membres de niveau "auteur" et "animateur" du groupe ' + g.nom + ' peuvent créer ou modifier des secrets.')
+          return
+        }
+        this.ouvrirvoisin(new Secret().nouveauG(s.id, ref, m.im))
       }
-      if (g.sty === 0) {
-        afficherdiagnostic('Le groupe ' + g.nom + ' est "archivé", création et modification de secrets impossible.')
-        return
-      }
-      const im = g.imDeId(this.avatar.id)
-      const membre = im ? data.getMembre(g.id, im) : null
-      if (!membre || !membre.stp) {
-        afficherdiagnostic('Seuls les membres de niveau "auteur" et "animateur" du groupe ' + g.nom + ' peuvent créer ou modifier des secrets.')
-        return
-      }
-      this.ouvrirvoisin(new Secret().nouveauG(s.id, g, ref))
     },
     plusinfo () { // liste des auteurs, mots clés des membres du groupe, etc. dans un dialogue
       this.plus = true
@@ -538,7 +520,7 @@ export default ({
         if (s.ts === 2) arg.mcg = this.mcglocal
         // im requis pour mettre à jour les motsclés de l'avatar
         if (s.ts !== 0) arg.im = this.state.im
-        arg.refs = s.ref ? await crypt.crypter(s.cles, serial(s.ref)) : null
+        arg.refs = await s.toRowRef()
         await new NouveauSecret().run(arg)
       }
     },
@@ -550,7 +532,7 @@ export default ({
 
   setup (props) {
     const $store = useStore()
-    const tabok = ref('texte')
+    const tabsecret = ref('texte')
     const erreur = ref('')
     const diagnostic = computed({
       get: () => $store.state.ui.diagnostic,
@@ -566,7 +548,7 @@ export default ({
     const contactcourant = computed(() => { return $store.state.db.contact })
     const groupecourant = computed(() => { return $store.state.db.groupe })
     const mode = computed(() => $store.state.ui.mode)
-    const secret = computed({
+    const secret = computed({ // secret courant
       get: () => $store.state.db.secret,
       set: (val) => $store.commit('db/majsecret', val)
     })
@@ -577,17 +559,14 @@ export default ({
     SI c'est un secret SANS ref, il peut devenir de référence au cours de la vie
     du composant, il n'est pas enregistré dans les voisins, il faut donc le forcer.
     */
-    if (secret.value && !secret.value.ref) $store.commit('db/setRefVoisin', secret.value)
     const voisins = computed(() => {
       const s = secret.value
-      if (!s) return {}
-      const pk = s.ref ? s.pkref : s.pk
-      return $store.state.db['voisins@' + pk]
+      return s ? $store.state.db['voisins@' + s.ref ? s.pkref : s.pk] : {}
     })
 
     const state = reactive({
       motcles: null,
-      contact: null,
+      couple: null,
       groupe: null,
       avatar: null,
       membre: null,
@@ -616,9 +595,7 @@ export default ({
     function lstvoisins (mapv) {
       const lst = []
       for (const pk in mapv) lst.push(mapv[pk])
-      lst.sort((a, b) => {
-        return !a.ref ? 1 : (a.titre > b.titre ? 1 : (a.titre < b.titre ? -1 : 0))
-      })
+      lst.sort((a, b) => { return !a.ref ? -1 : (a.titre > b.titre ? 1 : (a.titre < b.titre ? -1 : 0)) })
       return lst
     }
 
@@ -662,16 +639,16 @@ export default ({
       const s = secret.value
       const avid = avatar.value ? avatar.value.id : 0 // avatar null après déconnexion
       if (s) { // propriétés immuables pour un secret
+        $store.commit('db/initVoisins', secret.value) // initialise (si besoin est, nouveau secret par exemple) l'entrée des voisins
         state.ts = s.ts
         state.avatar = s.ts === 0 ? avatar : null
         state.groupe = s.ts === 2 ? data.getGroupe(s.id) : null
         state.couple = s.ts === 1 ? data.getCouple(s.id) : null
-        state.voisins = voisins
         state.im = s.ts === 2 ? state.groupe.imDeId(avid) : (s.ts === 1 ? state.couple.avc + 1 : 0)
         state.membre = s.ts === 2 && state.im ? data.getMembre(state.groupe.id, state.im) : null
         state.encreation = s.v === 0
         state.ro = 0
-        state.listevoisins = lstvoisins(voisins.value)
+        state.listevoisins = lstvoisins($store.state.db['voisins@' + (s.ref ? s.pkref : s.pk)])
         if (s.ts >= 1) {
           if (!s.mc[state.im]) s.mc[state.im] = new Uint8Array([])
           if (!s.mc[0]) s.mc[0] = new Uint8Array([])
@@ -721,6 +698,7 @@ export default ({
     })
 
     watch(() => secret.value, (ap, av) => {
+      if (av) cleanVoisins(av)
       initState()
       setFaloc()
       check()
@@ -735,9 +713,11 @@ export default ({
       check()
     })
 
+    /*
     watch(() => voisins.value, (ap, av) => {
       state.listevoisins = lstvoisins(ap)
     })
+    */
 
     watch(() => faidx.value, (ap, av) => {
       setFaloc()
@@ -746,25 +726,21 @@ export default ({
     watch(() => avatarscform.value, (ap, av) => {
       if (!ap && modif()) {
         afficherdiagnostic('Des modifications ont été faites. Avant de fermer ce secret, soit les "Annuler", soit les "Valider"')
-        setTimeout(() => { avatarscform.value = true; tabok.value = 'texte' }, 50)
+        setTimeout(() => { avatarscform.value = true; tabsecret.value = 'texte' }, 50)
       } else {
-        avantFermeture()
-        // ??? this.secret = null
+        cleanVoisins(secret.value)
       }
     })
 
-    watch(() => tabok.value, (ap, av) => {
+    watch(() => tabsecret.value, (ap, av) => {
       if (av === 'texte' && modif()) {
         afficherdiagnostic('Des modifications ont été faites. Avant de changer d\'onglet, soit les "Annuler", soit les "Valider"')
-        setTimeout(() => { tabok.value = 'texte' }, 50)
+        setTimeout(() => { tabsecret.value = 'texte' }, 50)
       }
     })
 
-    function avantFermeture () {
-      if (secret.value) {
-        const pkref = secret.value.ref ? secret.value.pkref : secret.value.pk
-        $store.commit('db/unsetRefVoisin', pkref)
-      }
+    function cleanVoisins (s) {
+      if (s) $store.commit('db/cleanVoisins', s.ref ? s.pkref : s.pk)
     }
 
     function retourliste () {
@@ -778,7 +754,7 @@ export default ({
 
     return {
       diagnostic,
-      tabok,
+      tabsecret,
       contactcourant,
       groupecourant,
       secret,
@@ -803,7 +779,6 @@ export default ({
       modiftp,
       modif,
       erreur,
-      avantFermeture,
       retourliste
     }
   }
@@ -824,8 +799,6 @@ export default ({
   border: 1px solid grey
 .bottomborder
   border-bottom: 1px solid $grey-5
-.secretcourant:hover
-  background-color: rgba(130, 130, 130, 0.5)
 .addnv
   position: absolute
   top: 5px

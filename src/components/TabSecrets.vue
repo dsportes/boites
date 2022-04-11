@@ -1,5 +1,17 @@
 <template>
 <div v-if="sessionok" :class="$q.screen.gt.sm ? 'ml20' : 'q-pa-xs full-width'">
+  <q-card  v-if="!avatarscform && (mode === 1 || mode === 2)" class="shadow-8">
+    <q-card-actions vertical>
+      <q-btn flat dense color="primary" size="md" icon="add" label="Nouveau secret personnel" @click="action(0)"/>
+      <q-btn v-if="couple" flat dense size="md" color="primary" icon="add" :label="'Nouveau secret du couple ' +  couple.nom" @click="action(1)"/>
+      <q-btn v-if="groupe" flat dense size="md" color="primary" icon="add" :label="'Nouveau secret du groupe ' +  groupe.nom" @click="action(2)"/>
+      <div class="row justify-center">
+        <q-input flat dense label="Port d'upload local" style="width:8rem" v-model="port" />
+        <q-btn class="q-ml-sm" flat dense icon="save" label="Upload local" @click="action(3, port)" />
+      </div>
+    </q-card-actions>
+  </q-card>
+
   <div v-if="!state.lst || !state.lst.length" class="titre-lg text-italic">Aucun secret trouvé répondant à ce filtre</div>
 
   <panel-secret v-if="avatarscform && state.lst && state.lst.length"
@@ -65,7 +77,8 @@ export default ({
 
   data () {
     return {
-      row: { }
+      row: { },
+      port: 8000
     }
   },
 
@@ -93,7 +106,7 @@ export default ({
     },
 
     async action (n, p) {
-      if (n === 4) {
+      if (n === 3) {
         await this.upload(p)
       } else {
         this.nvsecret(n)
@@ -362,11 +375,7 @@ export default ({
         nouveausecret(new Secret().nouveauP(avatar.value.id))
       } else if (n === 1) {
         const c = couple.value
-        if (c && c.accepteNouveauSecret) {
-          nouveausecret(new Secret().nouveauC(c.id))
-        } else {
-          afficherdiagnostic('Le couple ' + (c ? c.nom : '?') + ' n\'est pas en état d\'accepter le partage de nouveaux secrets.')
-        }
+        if (c) nouveausecret(new Secret().nouveauC(c.id, null, c.avc))
       } else if (n === 2) {
         const g = groupe.value
         if (!g) {
@@ -406,6 +415,7 @@ export default ({
       avatar,
       secret,
       couple,
+      groupe,
       motscles,
       state,
       nvsecret,
