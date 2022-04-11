@@ -1,4 +1,4 @@
-import { NomAvatar, store, post, get, affichermessage, cfg, sleep, affichererreur, appexc, difference, getfa, getJourJ, edvol } from './util.mjs'
+import { NomAvatar, store, post, get, affichermessage, cfg, sleep, affichererreur, appexc, difference, getfa, getJourJ, edvol, afficherdiagnostic } from './util.mjs'
 import { remplacePage } from './page.mjs'
 import {
   deleteIDB, idbSidCompte, commitRows, getCompte, getCompta, getPrefs, getCvs,
@@ -1487,19 +1487,30 @@ export class MajCv extends OperationUI {
 
 /******************************************************
 Création d'un nouveau secret P
-X_SRV, '12-Forfait dépassé'
+Nouveau secret personnel
+Args :
+- sessionId
+- ts, id, ns, mc, txts, v1, xp, st, varg, mcg, im, refs
+  - varg : {id (du secret), ts, idc, idc2, dv1, dv2, im}
+ Retour :
+- sessionId
+- dh
+- info : array des lignes d'information
+Exceptions
 */
 export class NouveauSecret extends OperationUI {
   constructor () {
     super('Création d\'un nouveau secret', OUI, SELONMODE)
   }
 
-  // arg = { ts, id, ns, ic, st, ora, v1, mcg, mc, im, txts, dups, refs, id2, ns2, ic2, dups2 }
+  // arg = ts, id, ns, mc, txts, v1, xp, st, varg, mcg, im, refs
   async run (arg) {
     try {
       const args = { sessionId: data.sessionId, ...arg }
       const ret = await post(this, 'm1', 'nouveauSecret', args)
-      if (data.dh < ret.dh) data.dh = ret.dh
+      if (ret.info && ret.info.length) {
+        afficherdiagnostic(ret.info.join('<br>'))
+      }
       this.finOK()
     } catch (e) {
       await this.finKO(e)
@@ -1517,11 +1528,14 @@ export class Maj1Secret extends OperationUI {
     super('Mise à jour d\'un secret', OUI, SELONMODE)
   }
 
-  async run (arg) { // arg = ts, id, ns, v1, mc, im, mcg, txts, ora, temp, id2, ns2
+  // arg = ts, id, ns, mc, txts, v1, xp, st, varg, mcg, im
+  async run (arg) {
     try {
       const args = { sessionId: data.sessionId, ...arg }
       const ret = await post(this, 'm1', 'maj1Secret', args)
-      if (data.dh < ret.dh) data.dh = ret.dh
+      if (ret.info && ret.info.length) {
+        afficherdiagnostic(ret.info.join('<br>'))
+      }
       this.finOK()
     } catch (e) {
       await this.finKO(e)

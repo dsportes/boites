@@ -921,6 +921,12 @@ export class Couple {
   get nom () { const x = this.data.x; return x[0][1] + '__' + x[1][1] }
   get nomE () { const x = this.data.x; return x[1][1] }
 
+  // id du compte du conjoint (quand il y a conjoint)
+  get idc2 () { return this.stp !== 3 ? 0 : (this.avc === 0 ? this.data.x[1][0] : this.data.x[0][0]) }
+
+  // id du compte de l'avatar
+  get idc () { return this.avc === 0 ? this.data.x[0][0] : this.data.x[1][0] }
+
   // origine du couple : 0) proposition standard à un contact connu, 1) parainage, 2) rencontre
   get orig () { return !this.data.phrase ? 0 : (this.data.f1 || this.data.f2 ? 1 : 2) }
 
@@ -1597,6 +1603,20 @@ export class Secret {
       }
     }
     return this
+  }
+
+  volarg () {
+    const a = { id: this.id, ts: this.ts, dv1: 0, dv2: 0, idc2: null }
+    if (this.ts === 0) {
+      a.idc = data.getCompte().id
+    } else if (this.ts === 1) {
+      a.idc = this.couple.idc
+      a.idc2 = this.couple.idc2
+      a.im = this.couple.avc
+    } else {
+      a.idc = this.groupe.idh
+    }
+    return a
   }
 
   hv (fa) { return crypt.hash(this.nomc(fa), false, true) }

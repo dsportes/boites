@@ -438,7 +438,7 @@ export default ({
     },
     resetprotP () { this.state.plocal = 0; this.protect = false },
 
-    protection () {
+    protection () { // paramétrage du dialogue de gestion des exclusivité / protection
       const s = this.secret
       const ex = this.state.xlocal
       const pr = this.state.plocal
@@ -516,24 +516,16 @@ export default ({
       if (s.v) {
         // maj
         const txts = this.state.textelocal === s.txt.t ? null : await s.toRowTxt(this.state.textelocal, this.state.im)
-        let mc = null, mcg = null
-        if (s.ts === 0) {
-          mc = equ8(this.state.mclocal, s.mc) ? null : this.state.mclocal
-        } else {
-          mc = equ8(this.state.mclocal, s.mc[this.state.im]) ? null : this.state.mclocal
-          if (s.ts === 2) {
-            mcg = equ8(this.state.mcglocal, s.mc[0]) ? null : this.state.mcglocal
-          }
-        }
-        const v1 = this.v && this.state.textelocal === s.txt.t ? null : this.state.textelocal.length
+        const chgmc = s.ts === 0 ? !equ8(this.state.mclocal, s.mc) : !equ8(this.state.mclocal, s.mc[this.state.im])
+        const mc = chgmc ? this.state.mclocal : null
+        const v1 = this.state.textelocal === s.txt.t ? null : this.state.textelocal.length
         const tempav = this.secret.st > 0 && this.secret.st !== 99999
-        const temp = tempav === this.state.templocal ? null : (this.state.templocal ? this.jourJ + this.limjours : 99999)
+        const st = tempav === this.state.templocal ? null : (this.state.templocal ? this.jourJ + this.limjours : 99999)
         const xp = xploc === s.xp ? null : xploc
-        const arg = { ts: s.ts, id: s.id, ns: s.ns, mc, txts, v1, xp, temp }
-        if (s.ts !== 0) { // im requis pour mettre à jour les motsclés de l'avatar
-          if (s.ts === 2) arg.mcg = mcg
-          arg.im = this.state.im
-        }
+        const arg = { ts: s.ts, id: s.id, ns: s.ns, mc, txts, v1, xp, st, varg: s.volarg() }
+        if (s.ts === 2) arg.mcg = equ8(this.state.mcglocal, s.mc[0]) ? null : this.state.mcglocal
+        // im requis pour mettre à jour les motsclés de l'avatar
+        if (s.ts !== 0) arg.im = this.state.im
         await new Maj1Secret().run(arg)
       } else {
         // création
@@ -542,11 +534,10 @@ export default ({
         const v1 = this.state.textelocal.length
         const st = this.state.templocal ? this.jourJ + this.limjours : 99999
         const xp = xploc
-        const arg = { ts: s.ts, id: s.id, ns: s.ns, ic: s.ic, mc, txts, v1, xp, st }
-        if (s.ts === 2) {
-          arg.mcg = this.state.mcglocal
-          arg.im = this.state.im
-        }
+        const arg = { ts: s.ts, id: s.id, ns: s.ns, mc, txts, v1, xp, st, varg: s.volarg() }
+        if (s.ts === 2) arg.mcg = this.mcglocal
+        // im requis pour mettre à jour les motsclés de l'avatar
+        if (s.ts !== 0) arg.im = this.state.im
         arg.refs = s.ref ? await crypt.crypter(s.cles, serial(s.ref)) : null
         await new NouveauSecret().run(arg)
       }
