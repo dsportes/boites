@@ -12,19 +12,43 @@
     </q-card-actions>
   </q-card>
 
-  <div v-if="!state.lst || !state.lst.length" class="titre-lg text-italic">Aucun secret trouvé répondant à ce filtre</div>
+  <div v-if="!state.lst || !state.nbs" class="titre-lg text-italic">Aucun secret trouvé répondant à ce filtre</div>
 
-  <panel-secret v-if="avatarscform && state.lst && state.lst.length"
+  <panel-secret v-if="avatarscform && state.lst && state.nbs"
     :class="$q.screen.gt.sm ? 'ml20' : 'q-pa-xs full-width'"
-    :suivant="state.idx < state.lst.length - 1 ? suiv : null"
+    :suivant="state.idx < state.nbs - 1 ? suiv : null"
     :precedent="state.idx > 0 ? prec : null"
-    :index="state.idx" :sur="state.lst.length"/>
+    :supprcreation="supprcreation"
+    :index="state.idx" :sur="state.nbs"/>
 
-  <div v-if="!avatarscform && state.lst && state.lst.length" class="col">
+  <div v-if="!avatarscform && state.lst && state.nbs" class="col">
     <div v-for="(s, idx) in state.lst" :key="s.vk"
       :class="dkli(idx) + ' zone full-width row items-start q-py-xs'">
-      <q-btn class="col-auto q-mr-sm" dense push size="sm" :icon="'expand_'+(!row[s.vk]?'less':'more')"
-        color="primary" @click="togglerow(s.vk)"/>
+      <div class="col-auto column q-mr-sm">
+        <q-btn dense push size="sm" :icon="'expand_'+(!row[s.vk]?'less':'more')"
+          color="primary" @click="togglerow(s.vk)"/>
+        <q-btn dense push size="sm" color="warning" icon="add">
+          <q-menu transition-show="scale" transition-hide="scale">
+            <q-list dense style="min-width: 10rem">
+              <q-item>
+                <q-item-section class="text-italic">Nouveau secret voisin ...</q-item-section>
+              </q-item>
+              <q-separator />
+              <q-item clickable v-close-popup @click="action(0, s)">
+                <q-item-section>...personnel</q-item-section>
+              </q-item>
+              <q-separator />
+              <q-item v-if="s.couple" clickable v-close-popup @click="action(1, s)">
+                <q-item-section>...partagé avec {{s.couple.nom}}</q-item-section>
+              </q-item>
+              <q-separator v-if="s.groupe" />
+              <q-item v-if="s.groupe" clickable v-close-popup @click="action(2, s)">
+                <q-item-section>...partagé avec {{s.groupe.nom}}</q-item-section>
+              </q-item>
+            </q-list>
+          </q-menu>
+        </q-btn>
+      </div>
       <div class="col cursor-pointer" @click="afficherform(idx)">
         <show-html v-if="row[s.vk]" class="height-8 full-width overlay-y-auto bottomborder" :texte="s.txt.t" :idx="idx"/>
         <div v-else class="full-width text-bold">{{s.titre}}</div>
@@ -109,7 +133,7 @@ export default ({
       if (n === 3) {
         await this.upload(p)
       } else {
-        this.nvsecret(n)
+        this.nvsecret(n, p) // p : secret voisin
       }
     },
 
@@ -229,6 +253,7 @@ export default ({
       }
       if (state.secretencreation) lst.push(state.secretencreation)
       state.lst = lst
+      state.nbs = state.lst.length
     }
 
     function trier () {
@@ -239,7 +264,9 @@ export default ({
 
     function indexer () {
       state.idx = -1
-      if (secret.value) state.lst.forEach((x, n) => { if (x.id === secret.value.id) state.idx = n })
+      if (secret.value) {
+        state.lst.forEach((x, n) => { if (x.pk === secret.value.pk) state.idx = n })
+      }
       if (state.idx === -1) {
         if (state.lst.length) {
           state.idx = 0; secret.value = state.lst[0]
@@ -276,6 +303,7 @@ export default ({
       idx: 0,
       secretencreation: null,
       lst: [], // array des SECRETS des références ci-dessous répondant au filtre
+      nbs: 0, // nombre de secrets (lst.length mais reactive)
       filtre: new Filtre(avatar.value ? avatar.value.id : 0), // Filtre par défaut
       contacts: []
     })
@@ -366,16 +394,27 @@ export default ({
       secret.value = state.lst[state.idx]
     }
 
-    function nvsecret (n) {
+    function supprcreation () {
+      const s = state.lst[0]
+      if (s.v !== 0) return // n'était pas en création. Etrange !
+      $store.commit('db/cleanVoisins', s.ref ? s.pkref : s.pk)
+      state.lst.splice(0, 1)
+      state.nbs--
+      state.secretencreation = null
+      secret.value = state.lst.length > 0 ? state.lst[0] : null
+    }
+
+    function nvsecret (n, voisin) {
       if (state.secretencreation) {
         afficherdiagnostic('Il ne peut y avoir qu\'un seul secret en création à un instant donné')
         return
       }
+      const ref = !voisin ? null : (voisin.ref ? voisin.ref : [voisin.id, voisin.ns])
       if (n === 0) { // secret personnel
-        nouveausecret(new Secret().nouveauP(avatar.value.id))
+        nouveausecret(new Secret().nouveauP(avatar.value.id, ref))
       } else if (n === 1) {
         const c = couple.value
-        if (c) nouveausecret(new Secret().nouveauC(c.id, null, c.avc))
+        if (c) nouveausecret(new Secret().nouveauC(c.id, ref, c.avc))
       } else if (n === 2) {
         const g = groupe.value
         if (!g) {
@@ -391,7 +430,7 @@ export default ({
           afficherdiagnostic('Seuls les membres de niveau "auteur" et "animateur" du groupe ' + g.nom + ' peuvent créer ou modifier des secrets.')
           return
         }
-        nouveausecret(new Secret().nouveauG(g.id, null, membre.im))
+        nouveausecret(new Secret().nouveauG(g.id, ref, membre.im))
       }
     }
 
@@ -399,6 +438,7 @@ export default ({
       state.secretencreation = sec
       secret.value = sec
       state.lst.push(sec)
+      state.nbs++
       trier()
       indexer()
       avatarscform.value = true
@@ -409,6 +449,7 @@ export default ({
       afficherform,
       suiv,
       prec,
+      supprcreation,
       avatarscrech,
       avatarscform,
       fermerfiltre,

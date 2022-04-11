@@ -1488,8 +1488,8 @@ export class Secret {
 
   get partage () {
     if (this.ts === 0) return 'Secret personnel'
-    if (this.ts === 1) return 'Partagé avec ' + this.couple.nomf
-    return 'Partagé avec ' + this.groupe.nom
+    if (this.ts === 1) return 'Secret partagé avec ' + this.couple.nomf
+    return 'Secret partagé avec ' + this.groupe.nom
   }
 
   nouveau (id, ref) {

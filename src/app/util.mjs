@@ -953,7 +953,7 @@ export class Filtre {
   tri3 (a, b) { return this.asc ? (a.txt.t < b.txt.t ? -1 : (a.txt.t > b.txt.t ? 1 : 0)) : (a.txt.t < b.txt.t ? 1 : (a.txt.t > b.txt.t ? -1 : 0)) }
 
   fntri (a, b) {
-    if (!a.v) return -1 // ceux en création sont toujours en tête
+    if (!a.v) return -1 // celui en création est toujours en tête
     if (!b.v) return 1
     return this.tri === 1 ? this.tri1(a, b) : (this.tri === 2 ? this.tri2(a, b) : this.tri3(a, b))
   }
