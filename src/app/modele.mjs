@@ -845,7 +845,7 @@ export class Cv {
     return this
   }
 
-  async toRow (photo, info) { // seulement la cv (photo, info)
+  async toRow (_photo, _info) { // seulement la cv (photo, info)
     return await crypt.crypter(this.cle, serial(this.cv))
   }
 
@@ -1443,11 +1443,11 @@ export class Membre {
 (référence de voisinage qui par principe, lui, n'aura pas de `refs`).
 - `vsh`
 
-**Map des fichiers attachés :**
-- _clé_ : hash (court) de `nom.ext` en base64 URL. Permet d'effectuer des remplacements par une version ultérieure.
-- _valeur_ : `[idc, taille]`
-  - `idc` : id complète du fichier (`nom.ext|type|dh$`), cryptée par la clé du secret et en base64 URL.
-  - `taille` : en bytes, avant gzip éventuel.
+**Map `mfas` des fichiers attachés dans un secret:**
+- _clé_ `idf`: identifiant du fichier en base64.
+- _valeur_ : couple `[lg, data]`
+  - `lg` : taille du fichier, en clair afin que le serveur puisse toujours recalculer la taille totale v2 d'un secret.
+  - `data` : sérialisation cryptée par la clé S du secret de : `{ nom, info, dh, type, gz, lg, sha }`.
 */
 
 schemas.forSchema({
@@ -1538,6 +1538,14 @@ export class Secret {
     return this.ref ? await crypt.crypter(this.cle, serial(this.ref)) : null
   }
 
+  async toRowMfa (idf) {
+    const e = this.mfa[idf]
+    if (!e) return null
+    const lg = e.lg
+    const x = await crypt.crypter(this.cle, serial(e))
+    return serial([lg, x])
+  }
+
   async fromRow (row) {
     this.vsh = row.vsh || 0
     this.id = row.id
@@ -1565,20 +1573,10 @@ export class Secret {
       this.nbfa = 0
       if (this.v2) {
         const map = row.mpjs ? deserial(row.mfas) : {}
-        for (const cfa in map) {
-          const x = map[cfa]
-          let nomc = await crypt.decrypterStr(cle, crypt.b64ToU8(x[0]))
-          let gz = false
-          if (nomc.endsWith('$')) {
-            gz = true
-            nomc = nomc.substring(0, nomc.length - 1)
-          }
-          const i = nomc.indexOf('|')
-          const j = nomc.lastIndexOf('|')
+        for (const idf in map) {
+          const x = deserial(map[idf])
+          this.mfa[idf] = deserial(await crypt.decrypter(cle, x[1]))
           this.nbfa++
-          const fa = { cle: cfa, nom: nomc.substring(0, i), type: nomc.substring(i + 1, j), dh: parseInt(nomc.substring(j + 1)), size: x[1], gz: gz }
-          fa.hv = this.hv(fa)
-          this.mfa[cfa] = fa
         }
       }
       this.ref = row.refs ? deserial(await crypt.decrypter(cle, row.refs)) : null
@@ -1598,17 +1596,20 @@ export class Secret {
     schemas.deserialize('idbSecret', idb, this)
     this.txt.t = ungzip(this.txt.t)
     this.nbfa = 0
-    if (this.v2) {
-      // eslint-disable-next-line no-unused-vars
-      for (const cfa in this.mfa) {
-        const fa = this.mpj[cfa]
-        fa.hv = this.hv(fa)
-        this.nbfa++
-      }
-    }
+    // eslint-disable-next-line no-unused-vars
+    if (this.v2) for (const idf in this.mfa) this.nbfa++
     return this
   }
 
+  /* argument arg pour la gestion des volumes v1 et v2 lors de la création
+  et maj des secrets (texte et fichier attaché):
+  - id : id de l'avatar / couple / groupe
+  - ts : type de secret 0 1 2
+  - dv1 dv2 : delta de volume v1 et v2 (preset à 0)
+  - idc : id du compte hébergeur du secret (avatar, couple (de l'avatar du compte), groupe)
+  - idc2 : pour un couple seulement, id du second compte hébergeur du secret pour un couple (de l'avatar externe -s'il existe-))
+  - im : pour un couple seulement, 0 ou 1 (position de l'avatar du compte dans le couple)
+  */
   volarg () {
     const a = { id: this.id, ts: this.ts, dv1: 0, dv2: 0, idc2: null }
     if (this.ts === 0) {
@@ -1622,6 +1623,8 @@ export class Secret {
     }
     return a
   }
+
+  /** ********* A perdre */
 
   hv (fa) { return crypt.hash(this.nomc(fa), false, true) }
 
