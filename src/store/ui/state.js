@@ -72,6 +72,8 @@ export default function () {
     invitationattente: null,
     editgr: false,
     clipboard: null,
-    panelinvit: false
+    panelinvit: false,
+
+    etapefichier: 0
   }
 }

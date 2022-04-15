@@ -171,7 +171,7 @@ export async function readFile (file, bin) {
   return new Promise((resolve, reject) => {
     const image = { size: file.size, name: file.name }
     if (!file.type) {
-      image.type = file.name.endsWith('.md') ? 'text/markdown' : 'application/octet-stream'
+      image.type = file.name.endsWith('.md') || file.name.endsWith('.markdown') ? 'text/markdown' : 'application/octet-stream'
     } else image.type = file.type
 
     const reader = new FileReader()
@@ -419,6 +419,24 @@ export async function upload (port, path, data) {
     const u = 'http://localhost:' + port + '/upload/' + $store.state.ui.org + '/' + path
     const par = { method: 'post', url: u, data: data }
     await axios(par)
+  } catch (e) {
+    throw e.toString()
+  }
+}
+
+export async function putData (url, data) {
+  try {
+    const r = await axios({ method: 'put', url, data: data })
+    return r.status
+  } catch (e) {
+    throw e.toString()
+  }
+}
+
+export async function getData (url) {
+  try {
+    const r = await axios({ method: 'get', url, responseType: 'arraybuffer' })
+    return new Uint8Array(r.data)
   } catch (e) {
     throw e.toString()
   }

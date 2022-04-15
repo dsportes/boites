@@ -89,6 +89,8 @@ export function majeditgr (state, val) { state.editgr = val }
 export function majclipboard (state, val) { state.clipboard = val }
 export function majpanelinvit (state, val) { state.panelinvit = val }
 
+export function majetapefichier (state, val) { state.etapefichier = val }
+
 export function pushhelp (state, page) {
   if (state.helpstack.length === 0) state.dialoguehelp = true
   state.helpstack.push(page)

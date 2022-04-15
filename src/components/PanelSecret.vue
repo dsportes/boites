@@ -107,33 +107,32 @@
     </div>
 
     <div v-if="tabsecret==='fa'" class='col column items-center'>
-      <q-btn :disable="state.ro !== 0" flat dense color="primary" class="q-mt-sm" size="md" icon="add" label="Ajouter une pièce jointe" @click="nompj='';saisiefichier=true"/>
+      <q-btn :disable="state.ro !== 0" flat dense color="primary" class="q-mt-sm" size="md" icon="add"
+        label="Ajouter un fichier" @click="nomfic='';saisiefichier=true"/>
       <div v-if="mode === 3" class="bg-yellow text-bold text-negative text-center">
-        En mode avion, le secret est en lecture seule. Seules les pièces jointes déclarées accessibles dans ce mode peuvent visualisées (mais ni créées, ni modifiées).</div>
+        En mode avion, le secret est en lecture seule. Seuls les fichiers de nom déclaré accessible dans en mode avion peuvent visualisés (ni ajouts, ni suppressions).</div>
       <div v-if="mode === 4" class="bg-yellow text-bold text-negative text-center">
-        En mode dégradé visio, le secret est en lecture seule et les pièces jointes ne peuvent pas être visualisées, ni créées, ni modifiées.</div>
+        En mode dégradé visio, le secret est en lecture seule et les fichiers sont inaccessibles.</div>
       <div v-if="mode < 3 && state.ro !== 0" class="bg-yellow text-bold text-negative text-center">
-        Le secret est en lecture seule, les pièces jointes peuvent visualisées mais ni créées, ni modifiées.</div>
-      <div v-if="secret && secret.mpj" class="q-mt-sm row justify-around items-start">
-        <q-card v-for="pj in secret.mpj" :key="pj.nom" class="cardpj q-pa-sm">
-          <q-card-section class="ma-qcard-section">
-            <div>Nom : {{pj.nom}}</div>
-            <div>Type : {{pj.type}}</div>
-            <div>Taille : {{pj.size}}</div>
-            <div>Date : {{dhstring(pj.dh)}}</div>
-            <div style="margin-left:-0.8rem">
-              <q-toggle v-model="state.avion[pj.cle]" :disable="!stpj3()" size="md" :color="state.avion[pj.cle] ? 'green' : 'grey'"
-                label="Consultable en mode avion" @update:model-value="chgAvion(pj)"/>
-            </div>
-          </q-card-section>
-          <q-card-actions class="ma-qcard-section" align="left">
-            <q-btn :disable="!stpj1(pj.cle)" flat dense color="primary" icon="visibility" label="Afficher" @click="affpj(pj)"/>
-            <q-btn :disable="!stpj1(pj.cle)" flat dense color="primary" icon="save" label="Enregistrer" @click="enregpj(pj)"/>
-            <q-btn :disable="!stpj2()" flat dense color="primary" icon="refresh" label="Remplacer" @click="majpj(pj)"/>
-            <q-btn :disable="!stpj2()" flat dense color="warning" icon="delete" label="Supprimer" @click="supprpj(pj)"/>
-          </q-card-actions>
-        </q-card>
-      </div>
+        Le secret est en lecture seule, les fichiers peuvent visualisés (ni ajout, ni suppression).</div>
+      <q-card v-for="f in state.listefic" :key="f.idf" class="full-width q-pa-sm">
+        <q-card-section class="ma-qcard-section">
+          <div class="row justify-between">
+            <div class="col text-bold">{{f.nom}} # {{f.info}}</div>
+            <div class="col-auto font-mono fs-sm">{{dhed(f)}}</div>
+          </div>
+          <div class="row justify-between q-ml-lg items-center">
+            <div class="col">{{vol(f)}} - {{f.type}} - <span class="font-mono fs-sm">{{f.idf}}</span></div>
+            <q-toggle class="col-auto" size="sm" v-model="state.avion[f.nom]" :disable="!stf3()" :color="state.avion[f.nom] ? 'green' : 'grey'"
+              label="Consultable en mode avion" @update:model-value="chgAvion(f)"/>
+          </div>
+          <div class="row justify-end q-gutter-xs">
+            <q-btn :disable="!stf1(f)" size="sm" dense color="primary" icon="visibility" label="Afficher" @click="aff(f)"/>
+            <q-btn :disable="!stf1(f)" size="sm" dense color="primary" icon="save" label="Enregistrer" @click="enreg(f)"/>
+            <q-btn :disable="!stf2()" size="sm" dense color="warning" icon="delete" label="Supprimer" @click="suppr(f)"/>
+          </div>
+        </q-card-section>
+      </q-card>
     </div>
 
     <div v-if="tabsecret==='voisins'" class='col'>
@@ -183,7 +182,7 @@
     </div>
 
     <q-dialog v-model="saisiefichier">
-      <piece-jointe :nom="nompj" :close="fermerpj" @ok="okpj"/>
+      <fichier-attache :secret="secret" :close="fermerfa"/>
     </q-dialog>
 
   </q-card>
@@ -193,12 +192,12 @@
 import { reactive, watch, computed, ref } from 'vue'
 import { useStore } from 'vuex'
 import ApercuMotscles from './ApercuMotscles.vue'
-import PieceJointe from './PieceJointe.vue'
+import FichierAttache from './FichierAttache.vue'
 import SelectMotscles from './SelectMotscles.vue'
 import EditeurTexteSecret from './EditeurTexteSecret.vue'
 import ShowHtml from './ShowHtml.vue'
-import { equ8, getJourJ, cfg, Motscles, dhstring, gzipT, afficherdiagnostic } from '../app/util.mjs'
-import { NouveauSecret, Maj1Secret, PjSecret } from '../app/operations.mjs'
+import { equ8, getJourJ, cfg, Motscles, dhstring, afficherdiagnostic, edvol } from '../app/util.mjs'
+import { NouveauSecret, Maj1Secret } from '../app/operations.mjs'
 import { data, Secret } from '../app/modele.mjs'
 import { crypt } from '../app/crypto.mjs'
 import { putFa } from '../app/db.mjs'
@@ -207,7 +206,7 @@ import { saveAs } from 'file-saver'
 export default ({
   name: 'PanelSecret',
 
-  components: { ApercuMotscles, SelectMotscles, EditeurTexteSecret, ShowHtml, PieceJointe },
+  components: { ApercuMotscles, SelectMotscles, EditeurTexteSecret, ShowHtml, FichierAttache },
 
   props: { sec: Object, suivant: Function, precedent: Function, supprcreation: Function, index: Number, sur: Number },
 
@@ -231,7 +230,7 @@ export default ({
       mcgedit: false,
       protect: false,
       saisiefichier: false,
-      nompj: '',
+      nomfic: '',
       msg: [],
       titrep: '',
       actions: {}
@@ -239,18 +238,20 @@ export default ({
   },
 
   methods: {
-    stpj1 (cle) { // visibilité d'une pièce jointe
+    vol (f) { return edvol(f.lg) },
+    dhed (f) { return dhstring(f.dh) },
+    stf1 (f) { // visibilité d'un fichier
       if (this.mode < 3) return true
       if (this.mode === 4) return false
-      return this.state.avion[cle] // mode avion
+      return this.state.avion[f.nom] // mode avion
     },
 
-    stpj2 () { // mise à jour d'une pièce jointe
+    stf2 () { // suppression d'une pièce jointe
       if (this.mode > 2) return false
       return this.state.ro === 0
     },
 
-    stpj3 () { // peut basculer accessible en mode avion
+    stf3 () { // peut basculer accessible en mode avion
       return this.mode === 1 || this.mode === 3
     },
 
@@ -300,30 +301,30 @@ export default ({
     plusinfo () { // liste des auteurs, mots clés des membres du groupe, etc. dans un dialogue
       this.plus = true
     },
-    fermerpj () { this.saisiefichier = false },
+    fermerfa () { this.saisiefichier = false },
 
-    async urlDe (pj, b) {
-      const buf3 = await this.secret.datapj(pj)
-      if (!buf3) return null
-      const blob = new Blob([buf3], { type: pj.type })
+    async blobde (f, b) {
+      const buf = await this.secret.getFichier(f.idf)
+      if (!buf || !buf.length) return null
+      const blob = new Blob([buf], { type: f.type })
       return b ? blob : URL.createObjectURL(blob)
     },
 
-    async affpj (pj) {
-      const urlpj = await this.urlDe(pj)
-      if (urlpj) {
-        setTimeout(() => { this.wop(urlpj) }, 500)
+    async aff (f) {
+      const url = await this.blobde(f)
+      if (url) {
+        setTimeout(() => { this.wop(url) }, 500)
       } else {
-        afficherdiagnostic('Contenu de la pièce jointe non disponible (corrompu ? effacé ?)')
+        afficherdiagnostic('Contenu du fichier non disponible (corrompu ? effacé ?)')
       }
     },
 
-    async enregpj (pj) {
-      const blob = await this.urlDe(pj)
+    async enreg (f) {
+      const blob = await this.blobde(f, true)
       if (blob) {
-        saveAs(blob, pj.nom)
+        saveAs(blob, this.secret.nomFichier(f.idf))
       } else {
-        afficherdiagnostic('Contenu de la pièce jointe non disponible (corrompu ? effacé ?)')
+        afficherdiagnostic('Contenu du fichier non disponible (corrompu ? effacé ?)')
       }
     },
 
@@ -332,13 +333,13 @@ export default ({
       window.open(url, '_blank')
     },
 
-    async chgAvion (pj) {
+    async chgAvion (f) {
       const s = this.secret
-      const ap = this.state.avion[pj.cle]
-      const x = { id: s.id, ns: s.ns, cle: pj.cle, hv: pj.hv }
+      const ap = this.state.avion[f.cle]
+      const x = { id: s.id, ns: s.ns, cle: f.cle, hv: f.hv }
       if (ap) {
         // dispo en mode avion
-        const buf = await s.datapj(pj, true)
+        const buf = await s.datapj(f, true)
         await putFa(x, buf) // en IDB
         data.setPjidx([x]) // lst : array de { id, ns, cle, hv } - Dans le store
       } else {
@@ -361,25 +362,7 @@ export default ({
         arg.ns2 = s.ns2
         arg.id2 = s.id2
       }
-      await new PjSecret().run(arg)
-      this.saisiefichier = false
-    },
-
-    async okpj (pj) {
-      const s = this.secret
-      const cle = crypt.hash(pj.nompj, false, true)
-      pj.gz = pj.type.startsWith('text/')
-      const x = pj.nompj + '|' + pj.type + '|' + new Date().getTime() + (pj.gz ? '$' : '')
-      // console.log(pj.nompj, pj.size, pj.type)
-      const idc = crypt.u8ToB64(await crypt.crypter(s.cles, x, 1), true)
-      const b = pj.gz ? gzipT(pj.u8) : pj.u8
-      const buf = await crypt.crypter(s.cles, b)
-      const arg = { ts: s.ts, id: s.id, ns: s.ns, cle, idc, lg: pj.size, buf }
-      if (s.ts === 1) {
-        arg.ns2 = s.ns2
-        arg.id2 = s.id2
-      }
-      await new PjSecret().run(arg)
+      // await new PjSecret().run(arg)
       this.saisiefichier = false
     },
 
@@ -509,7 +492,7 @@ export default ({
     }
   },
 
-  setup (props) {
+  setup () {
     const $store = useStore()
     const tabsecret = ref('texte')
     const erreur = ref('')
@@ -547,6 +530,7 @@ export default ({
       templocal: null,
       dhlocal: 0,
       listevoisins: [],
+      listefic: [],
       avion: {}
     })
     const mc = reactive({ categs: new Map(), lcategs: [], st: { enedition: false, modifie: false } })
@@ -598,7 +582,12 @@ export default ({
     function modif () {
       return secret.value && (modifmcl() || modifmcg() || modiftx() || modiftp() || modifx() || modifp())
     }
-
+    function listefichiers (s) {
+      const lst = []
+      for (const idf in s.mfa) lst.push({ ...s.mfa[idf] })
+      lst.sort((a, b) => { return a.nom < b.nom ? -1 : (a.nom > b.nom ? 1 : (a.dh < b.dh ? 1 : (a.dh > b.dh ? -1 : 0))) })
+      return lst
+    }
     function initState () {
       const s = secret.value
       const avid = avatar.value ? avatar.value.id : 0 // avatar null après déconnexion
@@ -637,6 +626,7 @@ export default ({
           case 1 : { state.titre = 'Partagé avec ' + state.couple.nom; break }
           case 2 : { state.titre = 'Partagé avec ' + state.groupe.nom; break }
         }
+        state.listefic = listefichiers(s)
         undo()
       }
     }
@@ -773,8 +763,6 @@ export default ({
   position: absolute
   top: 5px
   right: 5px
-.cardpj
-  width: 18rem
 .ma-qcard-section
   padding: 0 !important
 </style>

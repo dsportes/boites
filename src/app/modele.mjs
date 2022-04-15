@@ -8,6 +8,7 @@ import {
 } from './util.mjs'
 import { remplacePage } from './page.mjs'
 import { EXPS, UNITEV1, UNITEV2, Compteurs, t0n } from './api.mjs'
+import { DownloadFichier } from './operations.mjs'
 
 export const MODES = ['inconnu', 'synchronisé', 'incognito', 'avion', 'visio']
 
@@ -1538,12 +1539,9 @@ export class Secret {
     return this.ref ? await crypt.crypter(this.cle, serial(this.ref)) : null
   }
 
-  async toRowMfa (idf) {
-    const e = this.mfa[idf]
-    if (!e) return null
-    const lg = e.lg
-    const x = await crypt.crypter(this.cle, serial(e))
-    return serial([lg, x])
+  async toRowMfa (fic) {
+    const x = await crypt.crypter(this.cle, serial(fic))
+    return [fic.lg, x]
   }
 
   async fromRow (row) {
@@ -1572,10 +1570,10 @@ export class Secret {
       this.mfa = {}
       this.nbfa = 0
       if (this.v2) {
-        const map = row.mpjs ? deserial(row.mfas) : {}
+        const map = row.mfas ? deserial(row.mfas) : {}
         for (const idf in map) {
-          const x = deserial(map[idf])
-          this.mfa[idf] = deserial(await crypt.decrypter(cle, x[1]))
+          this.mfa[idf] = deserial(await crypt.decrypter(cle, map[idf][1]))
+          this.mfa[idf].idf = parseInt(idf)
           this.nbfa++
         }
       }
@@ -1606,12 +1604,13 @@ export class Secret {
   - id : id de l'avatar / couple / groupe
   - ts : type de secret 0 1 2
   - dv1 dv2 : delta de volume v1 et v2 (preset à 0)
+  - vt : volume transféré (fichiers). Si vt est non 0, il est imputé à idc. Utiliser en download (opération getUrl)
   - idc : id du compte hébergeur du secret (avatar, couple (de l'avatar du compte), groupe)
   - idc2 : pour un couple seulement, id du second compte hébergeur du secret pour un couple (de l'avatar externe -s'il existe-))
   - im : pour un couple seulement, 0 ou 1 (position de l'avatar du compte dans le couple)
   */
   volarg () {
-    const a = { id: this.id, ts: this.ts, dv1: 0, dv2: 0, idc2: null }
+    const a = { id: this.id, ts: this.ts, dv1: 0, dv2: 0, vt: 0, idc2: null }
     if (this.ts === 0) {
       a.idc = data.getCompte().id
     } else if (this.ts === 1) {
@@ -1624,7 +1623,25 @@ export class Secret {
     return a
   }
 
-  /** ********* A perdre */
+  async getFichier (idf, raw) {
+    const buf = await new DownloadFichier().run(this, idf)
+    if (!buf) return null
+    if (raw) return buf
+    const buf2 = await crypt.decrypter(this.cle, buf)
+    const f = this.mfa[idf]
+    const buf3 = f.gz ? ungzipT(buf2) : buf2
+    return buf3
+  }
+
+  nomFichier (idf) {
+    const f = this.mfa[idf]
+    if (!f) return idf
+    const i = f.nom.lastIndexOf('.')
+    const ext = i === -1 ? '' : f.nom.substring(i)
+    return f.nom + '#' + f.info + '@' + crypt.idToSid(idf) + ext
+  }
+
+  /** ********* A perdre
 
   hv (fa) { return crypt.hash(this.nomc(fa), false, true) }
 
@@ -1649,6 +1666,7 @@ export class Secret {
     const buf3 = fa.gz ? ungzipT(buf2) : buf2
     return buf3
   }
+  */
 }
 
 /*****************************************************/

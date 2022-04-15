@@ -1,4 +1,4 @@
-import { NomAvatar, store, post, get, affichermessage, cfg, sleep, affichererreur, appexc, difference, getfa, getJourJ, edvol, afficherdiagnostic } from './util.mjs'
+import { NomAvatar, store, post, get, affichermessage, cfg, sleep, affichererreur, appexc, difference, getfa, getJourJ, edvol, afficherdiagnostic, gzipT, putData, getData } from './util.mjs'
 import { remplacePage } from './page.mjs'
 import {
   deleteIDB, idbSidCompte, commitRows, getCompte, getCompta, getPrefs, getCvs,
@@ -14,6 +14,8 @@ import { schemas, serial } from './schemas.mjs'
 const OUI = 1
 const NON = 0
 const SELONMODE = 2
+
+const dec = new TextDecoder()
 
 async function deconnexion () { await data.deconnexion() }
 
@@ -1563,6 +1565,104 @@ export class PjSecret extends OperationUI {
       const args = { sessionId: data.sessionId, ...arg }
       const ret = await post(this, 'm1', 'pjSecret', args)
       if (data.dh < ret.dh) data.dh = ret.dh
+      this.finOK()
+    } catch (e) {
+      await this.finKO(e)
+    }
+  }
+}
+
+/******************************************************
+Download fichier
+*/
+
+export class DownloadFichier extends OperationUI {
+  constructor () {
+    super('Ajout d\'un fichier à un secret', OUI, SELONMODE)
+  }
+
+  async run (secret, idf) {
+    try {
+      /*****************************************
+      !!GET!! getUrl : retourne l'URL de get d'un fichier
+      args :
+      - sessionId
+      - id : id du secret
+      - idf : id du fichier
+      - idc : id du compte demandeur
+      - vt : volume du fichier (pour compta des volumes v2 transférés)
+      */
+      const vt = secret.mfa[idf].lg
+      const args = { sessionId: data.sessionId, id: secret.id, ts: secret.ts, idf, idc: data.getCompte().id, vt }
+      const r = await get('m1', 'getUrl', args)
+      if (!r) return null
+      const url = dec.decode(r)
+      const buf = await getData(url)
+      this.finOK()
+      return buf || null
+    } catch (e) {
+      await this.finKO(e)
+    }
+  }
+}
+/******************************************************
+Pièce jointe d'un secret P : txt, mc, perm
+A_SRV, '13-Secret inexistant'
+X_SRV, '12-Forfait dépassé'
+*/
+export class NouveauFichier extends OperationUI {
+  constructor () {
+    super('Ajout d\'un fichier à un secret', OUI, SELONMODE)
+  }
+
+  setEtf (val) { store().commit('ui/majetapefichier', val) }
+
+  async run (secret, fic, u8) {
+    /* fic : { nom, info, type, lg} - à ajouter: gz, dh, sha
+    */
+    try {
+      fic.sha = crypt.sha256(u8)
+      fic.dh = new Date().getTime()
+      fic.gz = fic.type.startsWith('text/')
+      const buf = await crypt.crypter(secret.cle, fic.gz ? gzipT(u8) : u8)
+      const volarg = secret.volarg()
+      volarg.dv2 = fic.lg
+
+      this.setEtf(2)
+      /* Put URL ****************************************
+      args :
+      - sessionId
+      - volarg : contrôle de volume
+      Retour: sessionId, dh
+      - idf : identifiant alloué du fichier
+      - url : url à passer sur le PUT de son contenu
+      Exceptions : volume en excédent
+      */
+      const args = { sessionId: data.sessionId, volarg }
+      const ret = await post(this, 'm1', 'putUrl', args)
+      const idf = ret.idf
+      const url = ret.putUrl
+      const st = await putData(url, buf)
+      if (st !== 200) throw new AppExc(E_WS, 'Echec du transfert du fichier')
+      this.setEtf(3)
+
+      /* validerUpload ****************************************
+      args :
+      - sessionId
+      - id, ns : du secret
+      - volarg : contrôle de volume
+      - idf : identifiant du fichier
+      - emap : entrée (de clé idf) de la map des fichiers attachés [lg, data]
+      Retour: sessionId, dh
+      Exceptions :
+      - A_SRV, '25-Secret non trouvé'
+      - volume en excédent
+      */
+      const emap = await secret.toRowMfa(fic)
+      const args2 = { sessionId: data.sessionId, volarg, id: secret.id, ns: secret.ns, idf, emap }
+      await post(this, 'm1', 'validerUpload', args2)
+      this.setEtf(4)
+      await sleep(1000)
       this.finOK()
     } catch (e) {
       await this.finKO(e)
