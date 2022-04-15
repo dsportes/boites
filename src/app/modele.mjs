@@ -1,10 +1,10 @@
 import { schemas, serial, deserial } from './schemas.mjs'
 import { crypt } from './crypto.mjs'
-import { openIDB, closeIDB, getFadata, debutSessionSync, saveSessionSync } from './db.mjs'
+import { openIDB, closeIDB, debutSessionSync, saveSessionSync } from './db.mjs'
 import { openWS, closeWS } from './ws.mjs'
 import {
   store, appexc, dlvDepassee, NomAvatar, gzip, ungzip, dhstring,
-  getJourJ, cfg, ungzipT, normpath, getfa, titreEd, titreCompte, PhraseContact
+  getJourJ, cfg, ungzipT, normpath, titreEd, titreCompte, PhraseContact
 } from './util.mjs'
 import { remplacePage } from './page.mjs'
 import { EXPS, UNITEV1, UNITEV2, Compteurs, t0n } from './api.mjs'
