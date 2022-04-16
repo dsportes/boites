@@ -1545,34 +1545,6 @@ export class Maj1Secret extends OperationUI {
 }
 
 /******************************************************
-Pièce jointe d'un secret P : txt, mc, perm
-A_SRV, '13-Secret inexistant'
-X_SRV, '12-Forfait dépassé'
-*/
-export class PjSecret extends OperationUI {
-  constructor () {
-    super('Mise à jour d\'une pièce jointe d\'un secret', OUI, SELONMODE)
-  }
-
-  async run (arg) {
-    /* { ts, id: s.id, ns: s.ns, cle, idc, buf, lg, id2, ns2}
-    - `cle` : hash court en base64 URL de nom.ext
-    - `idc` : id complète de la pièce jointe (nom/type/dh), cryptée par la clé du secret et en base64 URL.
-    - buf : contenu binaire crypté
-    - lg : taille de la pièce jointe d'origine (non gzippée, non cryptée)
-    */
-    try {
-      const args = { sessionId: data.sessionId, ...arg }
-      const ret = await post(this, 'm1', 'pjSecret', args)
-      if (data.dh < ret.dh) data.dh = ret.dh
-      this.finOK()
-    } catch (e) {
-      await this.finKO(e)
-    }
-  }
-}
-
-/******************************************************
 Download fichier
 */
 
@@ -1605,8 +1577,9 @@ export class DownloadFichier extends OperationUI {
     }
   }
 }
+
 /******************************************************
-Pièce jointe d'un secret P : txt, mc, perm
+Nouveau fichier attaché à un secret
 A_SRV, '13-Secret inexistant'
 X_SRV, '12-Forfait dépassé'
 */
@@ -1663,6 +1636,44 @@ export class NouveauFichier extends OperationUI {
       await post(this, 'm1', 'validerUpload', args2)
       this.setEtf(4)
       await sleep(1000)
+      this.finOK()
+    } catch (e) {
+      await this.finKO(e)
+    }
+  }
+}
+
+/******************************************************
+Suppression d'un fichier attaché à un secret
+A_SRV, '13-Secret inexistant'
+X_SRV, '12-Forfait dépassé'
+*/
+export class SupprFichier extends OperationUI {
+  constructor () {
+    super('Suppression d\'un fichier attaché à un secret', OUI, SELONMODE)
+  }
+
+  async run (secret, idf) {
+    /* fic : { nom, info, type, lg} - à ajouter: gz, dh, sha
+    */
+    try {
+      /* supprFichier ****************************************
+      args :
+      - sessionId
+      - id, ns : du secret
+      - volarg : contrôle de volume
+      - idf : identifiant du fichier
+      Retour: sessionId, dh, info
+      Exceptions :
+      - A_SRV, '25-Secret non trouvé'
+      */
+      const volarg = secret.volarg()
+      const args = { sessionId: data.sessionId, id: secret.id, ns: secret.ns, idf, volarg }
+      const ret = await post(this, 'm1', 'supprFichier', args)
+      if (ret.info && ret.info.length) {
+        const msg = ret.info.join('<br>')
+        afficherdiagnostic(msg)
+      }
       this.finOK()
     } catch (e) {
       await this.finKO(e)

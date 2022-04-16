@@ -115,24 +115,58 @@
         En mode dégradé visio, le secret est en lecture seule et les fichiers sont inaccessibles.</div>
       <div v-if="mode < 3 && state.ro !== 0" class="bg-yellow text-bold text-negative text-center">
         Le secret est en lecture seule, les fichiers peuvent visualisés (ni ajout, ni suppression).</div>
-      <q-card v-for="f in state.listefic" :key="f.idf" class="full-width q-pa-sm">
-        <q-card-section class="ma-qcard-section">
-          <div class="row justify-between">
-            <div class="col text-bold">{{f.nom}} # {{f.info}}</div>
-            <div class="col-auto font-mono fs-sm">{{dhed(f)}}</div>
-          </div>
-          <div class="row justify-between q-ml-lg items-center">
-            <div class="col">{{vol(f)}} - {{f.type}} - <span class="font-mono fs-sm">{{f.idf}}</span></div>
-            <q-toggle class="col-auto" size="sm" v-model="state.avion[f.nom]" :disable="!stf3()" :color="state.avion[f.nom] ? 'green' : 'grey'"
-              label="Consultable en mode avion" @update:model-value="chgAvion(f)"/>
-          </div>
-          <div class="row justify-end q-gutter-xs">
-            <q-btn :disable="!stf1(f)" size="sm" dense color="primary" icon="visibility" label="Afficher" @click="aff(f)"/>
-            <q-btn :disable="!stf1(f)" size="sm" dense color="primary" icon="save" label="Enregistrer" @click="enreg(f)"/>
-            <q-btn :disable="!stf2()" size="sm" dense color="warning" icon="delete" label="Supprimer" @click="suppr(f)"/>
-          </div>
-        </q-card-section>
-      </q-card>
+      <div v-for="it in state.listefic" :key="it.nom" class="full-width">
+        <q-expansion-item group="fnom" class="full-width"
+          header-class="expansion-header-class-1 titre-md bg-secondary text-white">
+          <template v-slot:header>
+            <q-item-section>
+              <div class="row justify-between items-center">
+                <div class="col titre-lg text-bold">{{it.n}}</div>
+                <div class="col-auto row items-center">
+                  <div class="col fs-md q-mr-md">{{it.l.length}} version(s)</div>
+                  <q-btn class="col-auto" dense flat size="md" icon="airplanemode_active" color="grey">
+                    <q-menu transition-show="scale" transition-hide="scale">
+                      <q-list dense style="min-width: 15rem">
+                        <q-item>
+                          <q-item-section class="text-italic">La version la plus récente est chargée localement pour être lisible en mode avion ...</q-item-section>
+                        </q-item>
+                        <q-separator />
+                        <q-item clickable v-close-popup>
+                          <q-item-section>Arrêter cette possibilité</q-item-section>
+                        </q-item>
+                        <q-item clickable v-close-popup>
+                          <q-item-section>Toujours charger la version la plus récente localement pour qu'elle soit lisible en mode avion</q-item-section>
+                        </q-item>
+                      </q-list>
+                    </q-menu>
+                  </q-btn>
+                </div>
+              </div>
+            </q-item-section>
+          </template>
+          <q-card-section v-for="f in it.l" :key="f.idf" class="ma-qcard-section">
+            <div class="row justify-between items-center">
+              <div class="col">
+                <span class="text-bold q-pr-lg">{{f.info}}</span>
+                <span class="fs-md">{{vol(f)}} - {{f.type}} - </span>
+                <span class="font-mono fs-sm">{{f.sidf}}</span>
+              </div>
+              <div class="col-auto font-mono fs-sm">{{dhed(f)}}</div>
+            </div>
+            <div class="row justify-between items-center">
+              <q-toggle class="col-auto" size="sm" v-model="state.avion[f.nom]" :disable="!stf3()"
+                :color="state.avion[f.nom] ? 'green' : 'grey'"
+                label="Lisible en mode avion" @update:model-value="chgAvion(f)"/>
+              <div class="row justify-end q-gutter-xs">
+                <q-btn :disable="!stf1(f)" size="sm" dense color="primary" icon="visibility" label="Aff." @click="affFic(f)"/>
+                <q-btn :disable="!stf1(f)" size="sm" dense color="primary" icon="save" label="Enreg." @click="enregFic(f)"/>
+                <q-btn :disable="!stf2()" size="sm" dense color="warning" icon="delete" label="Suppr." @click="supprFic(f)"/>
+              </div>
+            </div>
+          </q-card-section>
+        </q-expansion-item>
+        <q-separator size="2px"/>
+      </div>
     </div>
 
     <div v-if="tabsecret==='voisins'" class='col'>
@@ -197,7 +231,7 @@ import SelectMotscles from './SelectMotscles.vue'
 import EditeurTexteSecret from './EditeurTexteSecret.vue'
 import ShowHtml from './ShowHtml.vue'
 import { equ8, getJourJ, cfg, Motscles, dhstring, afficherdiagnostic, edvol } from '../app/util.mjs'
-import { NouveauSecret, Maj1Secret } from '../app/operations.mjs'
+import { NouveauSecret, Maj1Secret, SupprFichier } from '../app/operations.mjs'
 import { data, Secret } from '../app/modele.mjs'
 import { crypt } from '../app/crypto.mjs'
 import { putFa } from '../app/db.mjs'
@@ -310,7 +344,12 @@ export default ({
       return b ? blob : URL.createObjectURL(blob)
     },
 
-    async aff (f) {
+    wop (url) { // L'appel direct de wndow.open ne semble pas marcher dans une fonction async. Etrange !
+      // console.log(url)
+      window.open(url, '_blank')
+    },
+
+    async affFic (f) {
       const url = await this.blobde(f)
       if (url) {
         setTimeout(() => { this.wop(url) }, 500)
@@ -319,7 +358,7 @@ export default ({
       }
     },
 
-    async enreg (f) {
+    async enregFic (f) {
       const blob = await this.blobde(f, true)
       if (blob) {
         saveAs(blob, this.secret.nomFichier(f.idf))
@@ -328,9 +367,8 @@ export default ({
       }
     },
 
-    wop (url) { // L'appel direct de wndow.open ne semble pas marcher dans une fonction async. Etrange !
-      // console.log(url)
-      window.open(url, '_blank')
+    async supprFic (f) {
+      await new SupprFichier().run(this.secret, f.idf)
     },
 
     async chgAvion (f) {
@@ -347,23 +385,6 @@ export default ({
         await putFa(x, null) // suppr en IDB
         data.setPjidx([x])
       }
-    },
-
-    majpj (pj) {
-      this.nompj = pj.nom
-      this.saisiefichier = true
-    },
-
-    async supprpj (pj) {
-      const cle = crypt.hash(pj.nom, false, true)
-      const s = this.secret
-      const arg = { ts: s.ts, id: s.id, ns: s.ns, cle, idc: null, lg: 0, buf: null }
-      if (s.ts === 1) {
-        arg.ns2 = s.ns2
-        arg.id2 = s.id2
-      }
-      // await new PjSecret().run(arg)
-      this.saisiefichier = false
     },
 
     ouvrirmcl () { this.mcledit = true },
@@ -584,9 +605,20 @@ export default ({
     }
     function listefichiers (s) {
       const lst = []
-      for (const idf in s.mfa) lst.push({ ...s.mfa[idf] })
-      lst.sort((a, b) => { return a.nom < b.nom ? -1 : (a.nom > b.nom ? 1 : (a.dh < b.dh ? 1 : (a.dh > b.dh ? -1 : 0))) })
-      return lst
+      const mnom = {}
+      for (const idf in s.mfa) {
+        const f = s.mfa[idf]
+        let e = mnom[f.nom]; if (!e) { e = []; mnom[f.nom] = e; lst.push(f.nom) }
+        e.push({ ...f, sidf: crypt.idToSid(f.idf) })
+      }
+      lst.sort((a, b) => { return a < b ? -1 : (a > b ? 1 : 0) })
+      const res = []
+      lst.forEach(n => {
+        const l = mnom[n]
+        l.sort((a, b) => { return a.dh < b.dh ? 1 : (a.dh > b.dh ? -1 : 0) })
+        res.push({ n, l })
+      })
+      return res
     }
     function initState () {
       const s = secret.value

@@ -9,7 +9,7 @@
     <q-separator />
     <q-card-section class="column justify-start">
       <q-file v-model="fileList" label="Choisir un fichier (50Mo max)" max-file-size="50000000" max-file="1"/>
-      <div>{{file.name}} - {{file.type}} - {{file.size}}o</div>
+      <div v-if="file.name" class="font-mono fs-sm">{{file.name}} - {{file.type}} - {{file.size}}o</div>
     </q-card-section>
     <q-card-section class="column justify-start">
       <div>Les caractères <span class="q-px-sm text-negative bg-yellow text-bold">{{interdits}}</span>
