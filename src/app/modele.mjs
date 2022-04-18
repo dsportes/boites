@@ -1605,6 +1605,17 @@ export class Secret {
     return this
   }
 
+  // fichier le plus récent portant le nom donné
+  dfDeNom (nom) {
+    let f = null
+    for (const idf in this.mfa) {
+      const x = this.mfa[idf]
+      if (x.nom !== nom) continue
+      if (!f || f.dh < x.dh) f = x
+    }
+    return f
+  }
+
   /* argument arg pour la gestion des volumes v1 et v2 lors de la création
   et maj des secrets (texte et fichier attaché):
   - id : id de l'avatar / couple / groupe
@@ -1656,33 +1667,6 @@ export class Secret {
     const ext = i === -1 ? '' : f.nom.substring(i)
     return f.nom + '#' + f.info + '@' + crypt.idToSid(idf) + ext
   }
-
-  /** ********* A perdre
-
-  hv (fa) { return crypt.hash(this.nomc(fa), false, true) }
-
-  nomc (fa) { return fa.nom + '|' + fa.type + '|' + fa.dh + (fa.gz ? '$' : '') }
-
-  clefa (fa) { return crypt.hash(fa.nom, false, true) }
-
-  sidfa (cle) { return this.secidfa + '@' + cle }
-
-  get secidfa () { return crypt.idToSid(this.id) + '@' + crypt.idToSid(this.ns) }
-
-  async idc (fa) { return crypt.u8ToB64(await crypt.crypter(this.cle, this.nomc(fa), 1), true) }
-
-  async datafa (fa, raw) {
-    const y = data.getFaidx({ id: this.id, ns: this.ns, cle: fa.cle })
-    let buf = null
-    if (y.length) buf = await getFadata({ id: this.id, ns: this.ns, cle: fa.cle })
-    if (!buf) buf = await getfa(this.secidpj, fa.cle + '@' + (await this.idc(fa)))
-    if (!buf) return null
-    if (raw) return buf
-    const buf2 = await crypt.decrypter(this.cles, buf)
-    const buf3 = fa.gz ? ungzipT(buf2) : buf2
-    return buf3
-  }
-  */
 }
 
 /*****************************************************/

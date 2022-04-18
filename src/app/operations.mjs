@@ -40,7 +40,7 @@ class OpBuf {
     this.prefs = null
     this.compta = null
     this.lcvs = []
-    this.lstSec = [] // pour traitement final des fichiers locaux
+    this.mapSec = {} // pour traitement final des fichiers locaux
   }
 
   putIDB (obj) { this.lmaj.push(obj) }
@@ -52,7 +52,7 @@ class OpBuf {
   setPrefs (obj) { this.prefs = obj }
   setCv (obj) { this.lcvs.push(obj) }
   setObj (obj) {
-    if (obj.table === 'secret' && data.mode === 1) this.lstSec.push(obj)
+    if (obj.table === 'secret' && data.mode === 1) this.mapSec[obj.pk] = obj
     this.lobj.push(obj)
   }
 
@@ -65,11 +65,11 @@ class OpBuf {
   }
 
   async gestionFichierSync () {
-    await gestionFichierSync(this.lstSec)
+    await gestionFichierSync(this.mapSec)
   }
 
   async gestionFichierCnx () {
-    await gestionFichierCnx(this.lstSec)
+    await gestionFichierCnx(this.mapSec)
   }
 }
 
@@ -1306,7 +1306,9 @@ export class ConnexionCompte extends OperationUI {
       for (const ns in mx) ls.push(mx[ns])
     }
     data.setSecrets(ls)
-    if (data.mode === 1) this.buf.lstSec = ls // Pour gestion des fichiers
+    if (data.mode === 1) {
+      for (const s of ls) this.buf.mapSec[s.pk] = s // Pour gestion des fichiers
+    }
     data.setMembres(lm)
   }
 

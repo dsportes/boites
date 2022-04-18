@@ -145,7 +145,7 @@ schemas.forSchema({
 
 schemas.forSchema({
   name: 'idbAvSecret',
-  cols: ['id', 'ns', 'lidf', 'mnom']
+  cols: ['id', 'ns', 'v', 'lidf', 'mnom']
 })
 
 schemas.forSchema({

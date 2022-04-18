@@ -1,7 +1,7 @@
 /* eslint-disable func-call-spacing */
 import Dexie from 'dexie'
 import { Avatar, Compte, Prefs, Compta, Couple, Groupe, Membre, Secret, ListeCvIds, SessionSync, data, Cv } from './modele.mjs'
-import { store, Sid } from './util.mjs'
+import { store, Sid, difference } from './util.mjs'
 import { schemas } from './schemas.mjs'
 import { crypt } from './crypto.mjs'
 import { AppExc, E_DB, t0n } from './api.mjs'
@@ -389,8 +389,8 @@ export async function gestionFichierSync (lst) {
 
 }
 
-/* Fin de connexion en mode synchronisé : liste de tous les secrets existants */
-export async function gestionFichierCnx (lst) {
+/* Fin de connexion en mode synchronisé : secrets, map par pk de tous les secrets existants */
+export async function gestionFichierCnx (secrets) {
   const fetats = {}
   await getFetats(fetats)
   const avsecrets = {}
@@ -398,8 +398,29 @@ export async function gestionFichierCnx (lst) {
   const faToDel = new Set()
   const nvFa = []
   const nvAVS = []
+  const supprAVS = []
+  /* Parcours des AvSecret existants : ils peuvent,
+  - soit être détruits : le secret correspondant n'existe plusn ou n'a plus de fichiers
+  - soit être inchangés : le secret correspondant a la même version ou est complètement compatible
+  - soit être "mis à jour"" : des fichiers sont à supprimer, d'autres (cités dans mnom) ont une nouvelle version
+  voire le cas échéant réduits au point de disparaître.
+  */
+  for (const pk in avsecrets) {
+    const avs = avsecrets[pk]
+    const s = secrets[pk]
+    if (s && s.v === avs.v) continue // inchangé
+    if (!s) { supprAVS.push(avs); continue }
+    const nv = avs.diff(s) // nouvel AVS compte tenu du nouveau s
+    if (nv === false) { supprAVS.push(avs); continue } // désormais vide
+    nvAVS.push(nv) // changé, au moins la version : il y a peut-être, des idfs en plus et en moins
+    if (nv.faToDel) for (const idf of nv.faToDel) faToDel.add(idf)
+    if (nv.nvFa) for (const idf of nv.nvFa) nvFa.push(nv.nvFa[idf])
+  }
   //
   if (faToDel.size || nvFa.length || nvAVS.length) commitFic(nvAVS, nvFa, faToDel)
+  // TODO
+  // dans commitFic : liste des AVS à supprimer
+  // liste des chargements à effectuer et lancement du démon
 }
 
 /* Session UI : MAJ des fichiers off-line pour un secret */
@@ -441,7 +462,7 @@ class AvSecret {
   get id2 () { return this.ns }
 
   nouveau (secret) {
-    this.id = secret.id; this.ns = secret.ns; this.lidf = []; this.mnom = []
+    this.id = secret.id; this.ns = secret.ns; this.v = secret.v; this.lidf = []; this.mnom = []
   }
 
   get estVide () { return !this.lidf.length && !Object.keys(this.mnom).length }
@@ -453,6 +474,52 @@ class AvSecret {
   async fromIdb (idb) {
     schemas.deserialize('idbAvSecret', idb, this)
     return this
+  }
+
+  /* s est la mise à jour du secret. diff retourne :
+  - false : si avsecret est à supprimer
+  - nv : le nouvel avsecret de même id/ns qui remplace l'ancien. Dans ce cas obj a 2 propriétés :
+    - nv.faToDel : le set des idf des Fetat / Fdata qui disparaissent (ou null)
+    - nv.nvFa : la liste des nouveaux Fetat (ou null)
+  */
+  diff (s) {
+    const idfs = new Set(this.lidf) // set des idf actuels
+    for (const nom in this.mnom) idfs.add(this.mnom[nom])
+    // clone
+    const nv = new AvSecret().nouveau(s)
+    const nvidf = new Set()
+    for (const idf of this.lidf) {
+      const f = s.mfa[idf]
+      if (!f) {
+        nv.faToDel.push(idf)
+      } else {
+        nv.lidf.push(idf)
+        nvidf.add(idf)
+      }
+    }
+    let n1 = 0, n2 = 0
+    for (const nom in this.mnom) {
+      n1++
+      const idf = this.mnom[nom]
+      const f = s.dfDeNom(nom)
+      if (f) { nv.mnom[nom] = idf; n2++ }
+    }
+    if (!n2 && !nv.lidf.length) return false
+    const idfs2 = new Set(nv.lidf)
+    for (const nom in this.mnom) idfs2.add(nv.mnom[nom])
+    // difference (setA, setB) { // element de A pas dans B
+    const x1 = difference(idfs, idfs2) // idf disparus
+    const x2 = difference(idfs2, idfs) // nouveaux, version de nom plus récente
+    if (!x1.size && !x2.size && n1 === n2) return true // inchangé
+    nv.faToDel = x1.size ? Array.from(x1) : null
+    nv.nvFa = x2.size ? [] : null
+    if (x2.size) {
+      for (const idf of x2) {
+        const f = s.mfa[idf]
+        nv.nvFa.push(new Fetat().nouveau(idf, new Date().getTime(), f.lg, f.nom, f.info))
+      }
+    }
+    return nv
   }
 }
 
