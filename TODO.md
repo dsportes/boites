@@ -1,5 +1,5 @@
 ## Gestion des fichiers disponibles en mode avion
-- Chaque fichier est identifié par idf (grand nombre aléatoire).
+- Chaque fichier est identifié par `idf` (grand nombre aléatoire).
 - Chaque fichier est attaché à un **secret** identifié par `id ns`, ne peut en changer et est immuable.
 - Un fichier peut être détruit, pas mis à jour.
 
@@ -7,7 +7,7 @@
 Deux tables gèrent ce stockage en IDB :
 - `fdata` : colonnes `idj, data`. Seulement insertion et suppression
   - `data` est crypté par la clé K du compte (pas la clé `idf`)
-- `fetat` : colonnes `idf, data : {dhd, dhc, lg, nom info}`. Insertion, suppression et mise à jour.
+- `fetat` : colonnes `idf, data : {dhd, dhc, lg, nom, info}`. Insertion, suppression et mise à jour.
   - `dhd` : date-heure de demande de chargement.
   - `dhc` : date-heure de chargement.
   - `lg` : taille du fichier (source, son v2).
@@ -34,7 +34,7 @@ Dans db/store, le state `dispofichiers` est synchronisé avec db/secret (le secr
 - en mode _synchronisé_ ceci indique si son affichage est _gratuit_ (et immédiat).
 
 ## Objets Secret et AvSsecret
-Les objets `Secret` sont ceux de classe `Secret` disponible dans le store/db.
+Les objets `Secret` sont ceux de classe `Secret` disponibles dans le store/db.
 - Identifiant : `[id, ns]`
 - Propriété `mfa` : c'est une map,
   - _clé_ : `idf`, l'identifiant d'un fichier attaché,

@@ -346,6 +346,12 @@ class Session {
   getSecret (id, ns) { return store().getters['db/secret'](id, ns) }
   setSecrets (lobj) { store().commit('db/setObjets', lobj) }
 
+  getFetat (idf) { return store().getters['db/fetat'](idf) }
+  setFetats (lobj) { store().commit('db/setObjets', lobj) }
+
+  getAvSecret (id, ns) { return store().getters['db/avsecret'](id, ns) }
+  setAvSecrets (lobj) { store().commit('db/setObjets', lobj) }
+
   setObjets (lobj) { store().commit('db/setObjets', lobj) }
 
   purgeAvatars (lav) { if (lav.size) return store().commit('db/purgeAvatars', lav) }
@@ -1623,14 +1629,24 @@ export class Secret {
     return a
   }
 
-  async getFichier (idf, raw) {
+  async downloadFichier (idf) { // fichier décrypté mais pas dézippé
     const buf = await new DownloadFichier().run(this, idf)
     if (!buf) return null
-    if (raw) return buf
-    const buf2 = await crypt.decrypter(this.cle, buf)
+    return await crypt.decrypter(this.cle, buf)
+  }
+
+  async getFichier (idf) { // Obtenu localement ou par download. Fichier décrypté ET dézippé
+    const fetat = data.getFetat(idf)
+    let buf
+    if (fetat && fetat.estCharge) {
+      buf = await fetat.getFichier()
+    } else {
+      buf = await this.downloadFichier(idf)
+    }
+    if (!buf) return null
     const f = this.mfa[idf]
-    const buf3 = f.gz ? ungzipT(buf2) : buf2
-    return buf3
+    const buf2 = f.gz ? ungzipT(buf) : buf
+    return buf2
   }
 
   nomFichier (idf) {

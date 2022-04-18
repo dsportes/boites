@@ -2,7 +2,7 @@
 import Dexie from 'dexie'
 import { Avatar, Compte, Prefs, Compta, Couple, Groupe, Membre, Secret, ListeCvIds, SessionSync, data, Cv } from './modele.mjs'
 import { store, Sid } from './util.mjs'
-import { deserial, serial } from './schemas.mjs'
+import { schemas } from './schemas.mjs'
 import { crypt } from './crypto.mjs'
 import { AppExc, E_DB, t0n } from './api.mjs'
 
@@ -17,9 +17,10 @@ const STORES = {
   groupe: 'id',
   membre: '[id+id2]', // im
   secret: '[id+id2]', // ns
+  avsecret: '[id+id2]', // ns
   cv: 'id',
-  faidx: 'id',
-  fadata: 'id'
+  fetat: 'id',
+  fdata: 'id'
 }
 
 const TABLES = []
@@ -347,55 +348,165 @@ export async function commitRows (opBuf) {
   }
 }
 
-/*
-  Gestion des fichiers attachés
-  Table fadata : id, data
-  - id : identifiant b64 crypté par la clé K du fichier attaché. sid@sid2@cle
-  - data : contenu (éventuellement gzippé) crypté par la clé K du fichier attaché. Comme en stockage serveur.
-  Table faidx : id, hv
-  - id : le même que fadata
-  - data : { id, ns, cle, hv } sérialisé, crypté par la clé k
-*/
+/* Gestion des fichiers hors-ligne ************************************/
 
-export async function getFaidx () {
-  // retourne une liste de { id, ns, cle, hv }
+async function getFetats (map) {
   go()
   try {
-    const r = []
-    await data.db.faidx.each(async (idb) => {
-      const x = deserial(await crypt.decrypter(data.clek, idb.data))
-      r.push(x)
+    await data.db.fetat.each(async (idb) => {
+      const x = new Fetat().fromIdb(await crypt.decrypter(data.clek, idb.data))
+      map[x.id] = x
     })
-    return r
   } catch (e) {
     throw data.setErDB(EX2(e))
   }
 }
 
-export async function getFadata ({ id, ns, cle }) {
-  /* retourne le contenu (gzippé crypté) de la pièce jointe clé du secret */
+async function getFichier (idf) {
+  try {
+    const id = crypt.u8ToB64(await crypt.crypter(data.clek, Sid(idf), 1), true)
+    const idb = await data.db.fdata.where({ id: id }).first()
+    return !idb ? null : await crypt.decrypter(data.clek, idb.data)
+  } catch (e) {
+    throw data.setErDB(EX2(e))
+  }
+}
+
+async function getAvSecrets (map) {
   go()
   try {
-    const sidpj = crypt.idToSid(id) + '@' + crypt.idToSid(ns) + '@' + cle
-    const idk = crypt.u8ToB64((await crypt.crypter(data.clek, sidpj, 1)))
-    const row = await data.db.fadata.get(idk)
-    return row ? row.data : null
+    await data.db.avsecret.each(async (idb) => {
+      const x = new AvSecret().fromIdb(await crypt.decrypter(data.clek, idb.data))
+      map[x.id] = x
+    })
   } catch (e) {
     throw data.setErDB(EX2(e))
   }
 }
 
-export async function putFa ({ id, ns, cle, hv }, buf) { // buf est gzippé / crypté. Si null, c'est une suppression
-  const sidpj = crypt.idToSid(id) + '@' + crypt.idToSid(ns) + '@' + cle
-  const idk = crypt.u8ToB64((await crypt.crypter(data.clek, sidpj, 1)))
-  const bufk = buf ? await crypt.crypter(data.clek, serial({ id, ns, cle, hv })) : null
-  await data.db.transaction('rw', TABLES, async () => {
-    if (buf) {
-      await data.db.faidx.put({ id: idk, data: bufk })
-      await data.db.fadata.put({ id: idk, data: buf })
-    } else {
-      await data.db.faidx.delete(idk)
-      await data.db.fadata.delete(idk)
+/* Fin de synchronisation : liste des secrets notifiés */
+export async function gestionFichierSync (lst) {
+
+}
+
+/* Fin de connexion en mode synchronisé : liste de tous les secrets existants */
+export async function gestionFichierCnx (lst) {
+  const fetats = {}
+  await getFetats(fetats)
+  const avsecrets = {}
+  await getAvSecrets(avsecrets)
+  const faToDel = new Set()
+  const nvFa = []
+  const nvAVS = []
+  //
+  if (faToDel.size || nvFa.length || nvAVS.length) commitFic(nvAVS, nvFa, faToDel)
+}
+
+/* Session UI : MAJ des fichiers off-line pour un secret */
+export async function GestionFichierMaj (secret, arg) {
+
+}
+
+class Fetat {
+  get table () { return 'fetat' }
+
+  get estCharge () { return this.dhc !== 0 }
+
+  nouveau (id, dhd, lg, nom, info) {
+    this.id = id; this.dhd = dhd; this.dhc = 0; this.lg = lg; this.nom = nom; this.info = info
+  }
+
+  async toIdb () {
+    schemas.serialize('idbFetat', this)
+  }
+
+  async fromIdb (idb) {
+    schemas.deserialize('idbFetat', idb, this)
+    return this
+  }
+
+  async finChargement (buf) {
+    this.dhc = new Date().getTime()
+    await setFa(this, buf)
+  }
+
+  async getFichier () { // fichier décrypté mais pas dézippé (s'il l'est)
+    return await getFichier(this.id)
+  }
+}
+
+class AvSecret {
+  get table () { return 'avsecret' }
+
+  get id2 () { return this.ns }
+
+  nouveau (secret) {
+    this.id = secret.id; this.ns = secret.ns; this.lidf = []; this.mnom = []
+  }
+
+  get estVide () { return !this.lidf.length && !Object.keys(this.mnom).length }
+
+  async toIdb () {
+    schemas.serialize('idbAvSecret', this)
+  }
+
+  async fromIdb (idb) {
+    schemas.deserialize('idbAvSecret', idb, this)
+    return this
+  }
+}
+
+/* Fin de chargement d'un fichier : maj conjointe de fetat (pour dhc) et insertion de fdata */
+async function setFa (fetat, buf) { // buf : contenu du fichier non crypté
+  try {
+    const row1 = {}
+    row1.id = crypt.u8ToB64(await crypt.crypter(data.clek, Sid(fetat.id), 1), true)
+    row1.data = await crypt.crypter(data.clek, fetat.toIdb)
+    const row2 = { id: row1.id }
+    row2.data = await crypt.crypter(data.clek, buf)
+    await data.db.transaction('rw', TABLES, async () => {
+      await data.db.fetat.put(row1)
+      await data.db.fdata.put(row2)
+    })
+  } catch (e) {
+    throw data.setErDB(EX2(e))
+  }
+}
+
+/* Commit des MAJ de fetat et avsecret */
+async function commitFic (lstAvSecrets, lstFetats, idfsToDel) { // lst : array / set d'idfs
+  go()
+  try {
+    const x = []
+    for (const obj of lstFetats) {
+      const row = {}
+      row.id = crypt.u8ToB64(await crypt.crypter(data.clek, Sid(obj.id), 1), true)
+      row.data = await crypt.crypter(data.clek, obj.toIdb)
+      x.push(row)
     }
-  })
+
+    const y = []
+    for (const id of idfsToDel) y.push(crypt.u8ToB64(await crypt.crypter(data.clek, Sid(id), 1), true))
+
+    const z = []
+    for (const obj of lstAvSecrets) {
+      const row = {}
+      row.id = crypt.u8ToB64(await crypt.crypter(data.clek, Sid(obj.id), 1), true)
+      row.id2 = crypt.u8ToB64(await crypt.crypter(data.clek, Sid(obj.id2), 1), true)
+      row.data = await crypt.crypter(data.clek, obj.toIdb)
+      z.push(row)
+    }
+
+    await data.db.transaction('rw', TABLES, async () => {
+      for (const row of x) {
+        await data.db.fetat.put(row)
+      }
+      for (const id of y) {
+        await data.db.fetat.where({ id: id }).delete()
+        await data.db.fdata.where({ id: id }).delete()
+      }
+    })
+  } catch (e) {
+    throw data.setErDB(EX2(e))
+  }
 }

@@ -1,9 +1,9 @@
-import { NomAvatar, store, post, get, affichermessage, cfg, sleep, affichererreur, appexc, difference, getfa, getJourJ, edvol, afficherdiagnostic, gzipT, putData, getData } from './util.mjs'
+import { NomAvatar, store, post, get, affichermessage, cfg, sleep, affichererreur, appexc, difference, getJourJ, edvol, afficherdiagnostic, gzipT, putData, getData } from './util.mjs'
 import { remplacePage } from './page.mjs'
 import {
   deleteIDB, idbSidCompte, commitRows, getCompte, getCompta, getPrefs, getCvs,
   getAvatars, getGroupes, getCouples, getMembres, getSecrets,
-  openIDB, enregLScompte, getVIdCvs, putFa, saveListeCvIds
+  openIDB, enregLScompte, getVIdCvs, saveListeCvIds, gestionFichierSync, gestionFichierCnx
 } from './db.mjs'
 import { Compte, Avatar, deserialRowItems, compileToObject, data, Prefs, Contact, Invitgr, Compta, Groupe, Membre, Cv, Couple } from './modele.mjs'
 import { AppExc, EXBRK, EXPS, F_BRO, E_BRO, X_SRV, E_WS, MC } from './api.mjs'
@@ -40,6 +40,7 @@ class OpBuf {
     this.prefs = null
     this.compta = null
     this.lcvs = []
+    this.lstSec = [] // pour traitement final des fichiers locaux
   }
 
   putIDB (obj) { this.lmaj.push(obj) }
@@ -50,7 +51,10 @@ class OpBuf {
   setCompta (obj) { this.compta = obj }
   setPrefs (obj) { this.prefs = obj }
   setCv (obj) { this.lcvs.push(obj) }
-  setObj (obj) { this.lobj.push(obj) }
+  setObj (obj) {
+    if (obj.table === 'secret' && data.mode === 1) this.lstSec.push(obj)
+    this.lobj.push(obj)
+  }
 
   commitStore () {
     if (this.compte) data.setCompte(this.compte)
@@ -58,6 +62,14 @@ class OpBuf {
     if (this.prefs) data.setPrefs(this.prefs)
     if (this.lobj.length) data.setObjets(this.lobj)
     if (this.lcvs.length) data.setCvs(this.lcvs)
+  }
+
+  async gestionFichierSync () {
+    await gestionFichierSync(this.lstSec)
+  }
+
+  async gestionFichierCnx () {
+    await gestionFichierCnx(this.lstSec)
   }
 }
 
@@ -356,10 +368,9 @@ export class Operation {
   data.repertoire.commit() // un seul à la fin
   return vcv
 }
-*/
 
   async syncPjs () { // A REPRENDRE
-    /* Vérification que toutes les PJ accessibles en avion sont, a) encore utiles, b) encore à jour */
+    // Vérification que toutes les PJ accessibles en avion sont, a) encore utiles, b) encore à jour
     let nbp = 0
     let vol = 0
     const st = store().state.pjidx
@@ -391,8 +402,9 @@ export class Operation {
     if (maj.length) data.setFaidx(maj) // MAJ du store
     return [nbp, vol]
   }
+  */
 
-  /* Recharge depuis le serveur les secrets d'un avatar et s'abonner à l'avatar
+  /* Recharge depuis le serveur les secrets d'un avatar et s'abonne à l'avatar
     Remplit aussi la liste des membres à mettre à jour en IDB et store/db
   */
   async chargerAS (id, mapObj) {
@@ -603,12 +615,10 @@ export class Operation {
     }
 
     /* Phase 2 : détection des avatars disparus et ajoutés, détection des couples et groupes disparus et ajoutés
-      Abonnements aux Plus ???
     */
     if (nvcompte || nvavatars) await this.processCA(nvcompte, nvavatars)
 
     /* Phase 3 : récupération des manquants depuis le serveur et abonnements
-      Abonnements aux Plus ???
     */
     const mapObj = {}
     for (const id of this.avatarIdsP) await this.chargerAS(id, mapObj)
@@ -812,6 +822,7 @@ export class Operation {
     /* commits finaux */
     if (data.dbok && data.netok) await this.buf.commitIDB()
     data.setDhSync(this.dh)
+    await this.buf.gestionFichierSync()
   }
 }
 
@@ -1295,6 +1306,7 @@ export class ConnexionCompte extends OperationUI {
       for (const ns in mx) ls.push(mx[ns])
     }
     data.setSecrets(ls)
+    if (data.mode === 1) this.buf.lstSec = ls // Pour gestion des fichiers
     data.setMembres(lm)
   }
 
@@ -1435,6 +1447,7 @@ export class ConnexionCompte extends OperationUI {
 
       // Finalisation en une seule fois, commit en IDB
       if (data.dbok && data.netok) await this.buf.commitIDB()
+      if (data.mode === 1 || data.mode === 3) await this.buf.gestionFichierCnx()
       await data.finConnexion(this.dh)
       console.log('Connexion compte : ' + data.getCompte().id)
       this.finOK()

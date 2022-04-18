@@ -14,6 +14,7 @@ export default function () {
     groupes: {}, // Tous les groupes listés sur les avatars
     couples: {}, // Tous les couples listés sur les avatars
     cvs: {}, // Toutes les cartes de visite
+    fetats: {}, // Tous les Fetat
 
     tousAx: {},
     /* Map par leur id de tous les avatars externes : { na, x, c, m }
@@ -27,7 +28,7 @@ export default function () {
 
     /*
     Groupés par sid de groupe : membres@sid
-    Groupés par sid d'avatar ou de groupe ou de couple : secrets@sid
+    Groupés par sid d'avatar ou de groupe ou de couple : secrets@sid avsecrets@sid
     */
   }
 }

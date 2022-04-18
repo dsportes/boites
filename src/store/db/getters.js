@@ -1,6 +1,10 @@
 import { crypt } from '../../app/crypto.mjs'
 import { Sid } from '../../app/util.mjs'
 
+export const fetat = (state) => (id) => {
+  return id ? state.fetats[id] : state.fetats
+}
+
 export const avatar = (state) => (id) => {
   return id ? state.avatars[id] : state.avatars
 }
@@ -33,6 +37,11 @@ export const membreParId = (state) => (idg, idm) => {
 
 export const secret = (state) => (id, ns) => {
   const lc = state['secrets@' + id]
+  return !ns ? lc || {} : lc ? lc[Sid(ns)] : null
+}
+
+export const avsecret = (state) => (id, ns) => {
+  const lc = state['avsecrets@' + id]
   return !ns ? lc || {} : lc ? lc[Sid(ns)] : null
 }
 
