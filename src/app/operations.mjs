@@ -1565,7 +1565,7 @@ Download fichier
 
 export class DownloadFichier extends OperationUI {
   constructor () {
-    super('Ajout d\'un fichier à un secret', OUI, SELONMODE)
+    super('Téléchargement d\'un fichier d\'un secret', OUI, SELONMODE)
   }
 
   async run (secret, idf) {

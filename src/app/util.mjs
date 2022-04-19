@@ -388,6 +388,7 @@ export async function testEcho (to) { // to : timeout
   }
 }
 
+/*
 export async function getBinPub (path) {
   try {
     return (await axios.get('./' + path, { responseType: 'arraybuffer' })).data
@@ -395,6 +396,7 @@ export async function getBinPub (path) {
     return null
   }
 }
+*/
 
 export async function getJsonPub (path) {
   try {

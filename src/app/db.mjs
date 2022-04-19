@@ -1,7 +1,7 @@
 /* eslint-disable func-call-spacing */
 import Dexie from 'dexie'
 import { Avatar, Compte, Prefs, Compta, Couple, Groupe, Membre, Secret, ListeCvIds, SessionSync, data, Cv } from './modele.mjs'
-import { store, Sid, difference } from './util.mjs'
+import { store, Sid, difference, dhstring, get, getData, appexc, ungzipT } from './util.mjs'
 import { schemas } from './schemas.mjs'
 import { crypt } from './crypto.mjs'
 import { AppExc, E_DB, t0n } from './api.mjs'
@@ -386,7 +386,19 @@ async function getAvSecrets (map) {
 
 /* Fin de synchronisation : liste des secrets notifiés */
 export async function gestionFichierSync (lst) {
-
+  const supprAVS = []
+  const faToDel = new Set()
+  const nvFa = []
+  const nvAVS = []
+  for (const s of lst) {
+    const avs = data.getAvSecrets(s.id, s.ns)
+    if (!avs || avs.v >= s.v) continue // pas d'avsecret associé ou déjà à jour (??)
+    const nv = avs.diff(s) // nouvel AVS compte tenu du nouveau s
+    if (nv === false) { supprAVS.push(avs); continue } // désormais vide
+    nvAVS.push(nv) // changé, au moins la version : il y a peut-être, des idfs en plus et en moins
+    if (nv.faToDel) for (const idf of nv.faToDel) faToDel.add(idf)
+    if (nv.nvFa) for (const idf of nv.nvFa) nvFa.push(nv.nvFa[idf])
+  }
 }
 
 /* Fin de connexion en mode synchronisé : secrets, map par pk de tous les secrets existants */
@@ -399,6 +411,7 @@ export async function gestionFichierCnx (secrets) {
   const nvFa = []
   const nvAVS = []
   const supprAVS = []
+  const lavs = []
   /* Parcours des AvSecret existants : ils peuvent,
   - soit être détruits : le secret correspondant n'existe plusn ou n'a plus de fichiers
   - soit être inchangés : le secret correspondant a la même version ou est complètement compatible
@@ -408,19 +421,30 @@ export async function gestionFichierCnx (secrets) {
   for (const pk in avsecrets) {
     const avs = avsecrets[pk]
     const s = secrets[pk]
-    if (s && s.v === avs.v) continue // inchangé
+    if (s && s.v === avs.v) { lavs.push(avs); continue } // inchangé
     if (!s) { supprAVS.push(avs); continue }
     const nv = avs.diff(s) // nouvel AVS compte tenu du nouveau s
     if (nv === false) { supprAVS.push(avs); continue } // désormais vide
     nvAVS.push(nv) // changé, au moins la version : il y a peut-être, des idfs en plus et en moins
+    lavs.push(nv)
     if (nv.faToDel) for (const idf of nv.faToDel) faToDel.add(idf)
     if (nv.nvFa) for (const idf of nv.nvFa) nvFa.push(nv.nvFa[idf])
   }
-  //
-  if (faToDel.size || nvFa.length || nvAVS.length) commitFic(nvAVS, nvFa, faToDel)
-  // TODO
-  // dans commitFic : liste des AVS à supprimer
+  // Liste des fetat utiles et mise en db/store
+  for (const idf of faToDel) delete fetats[idf]
+  for (const fetat of nvFa) fetats[fetat.idf] = fetat
+  data.setFetats(Object.values(fetats))
+  // Mise en db/store des AvSecret
+  data.setAvSecrets(lavs)
+  // Mise à jour de IDB (fetat / fdata et avsecret)
+  if (faToDel.size || nvFa.length || nvAVS.length || supprAVS.length) commitFic(nvAVS, supprAVS, nvFa, faToDel)
   // liste des chargements à effectuer et lancement du démon
+  for (const idf in fetats) {
+    const e = fetats[idf]
+    if (e.dhc === 0) chargementsEnCours.push(e)
+  }
+  chargementsEnCours.sort((a, b) => { return a.dhd < b.dhd ? -1 : (a.dhd > b.dhd ? 1 : 0) })
+  startDemon()
 }
 
 /* Session UI : MAJ des fichiers off-line pour un secret */
@@ -437,11 +461,11 @@ class Fetat {
     this.id = id; this.dhd = dhd; this.dhc = 0; this.lg = lg; this.nom = nom; this.info = info
   }
 
-  async toIdb () {
+  get toIdb () {
     schemas.serialize('idbFetat', this)
   }
 
-  async fromIdb (idb) {
+  fromIdb (idb) {
     schemas.deserialize('idbFetat', idb, this)
     return this
   }
@@ -449,6 +473,14 @@ class Fetat {
   async finChargement (buf) {
     this.dhc = new Date().getTime()
     await setFa(this, buf)
+  }
+
+  echecChargement (err) {
+    const e = new Fetat().fromIdb(this.toIdb)
+    e.dhx = new Date().getTime()
+    e.err = err ? err.toString() : '?'
+    store().commit('ui/majechecs', [...echecs, e])
+    console.log(`Echec de chargement : ${Sid(e.idf)} ${e.nom}#${e.info} ${dhstring(e.dhx)} ${e.err}`)
   }
 
   async getFichier () { // fichier décrypté mais pas dézippé (s'il l'est)
@@ -541,7 +573,7 @@ async function setFa (fetat, buf) { // buf : contenu du fichier non crypté
 }
 
 /* Commit des MAJ de fetat et avsecret */
-async function commitFic (lstAvSecrets, lstFetats, idfsToDel) { // lst : array / set d'idfs
+async function commitFic (lstAvSecrets, lstsuppravs, lstFetats, idfsToDel) { // lst : array / set d'idfs
   go()
   try {
     const x = []
@@ -564,6 +596,15 @@ async function commitFic (lstAvSecrets, lstFetats, idfsToDel) { // lst : array /
       z.push(row)
     }
 
+    const t = []
+    for (const obj of lstsuppravs) {
+      const row = {}
+      row.id = crypt.u8ToB64(await crypt.crypter(data.clek, Sid(obj.id), 1), true)
+      row.id2 = crypt.u8ToB64(await crypt.crypter(data.clek, Sid(obj.id2), 1), true)
+      row.data = await crypt.crypter(data.clek, obj.toIdb)
+      t.push(row)
+    }
+
     await data.db.transaction('rw', TABLES, async () => {
       for (const row of x) {
         await data.db.fetat.put(row)
@@ -572,8 +613,55 @@ async function commitFic (lstAvSecrets, lstFetats, idfsToDel) { // lst : array /
         await data.db.fetat.where({ id: id }).delete()
         await data.db.fdata.where({ id: id }).delete()
       }
+      for (const row of z) {
+        await data.db.avsecret.put(row)
+      }
+      for (const row of t) {
+        await data.db.avsecret.where({ id: row.id, id2: row.id2 }).delete()
+      }
     })
   } catch (e) {
     throw data.setErDB(EX2(e))
+  }
+}
+
+let demon = false
+const chargementsEnCours = []
+const echecs = []
+
+function startDemon () {
+  if (!demon) {
+    setTimeout(async () => {
+      while (demon) {
+        const e = chargementsEnCours.shift()
+        if (!e) { demon = false; return }
+        try {
+          const s = data.getSecret(e.id, e.ns)
+          const ret = download(s, e.idf)
+          if (ret instanceof AppExc) throw ret
+          await e.finChargement(ret)
+          store().commit('ui/majchargements', [...chargementsEnCours])
+        } catch (ex) {
+          e.echecChargement(ex)
+        }
+      }
+    }, 10)
+  }
+}
+
+const dec = new TextDecoder()
+
+async function download (secret, idf) {
+  try {
+    const vt = secret.mfa[idf].lg
+    const args = { sessionId: data.sessionId, id: secret.id, ts: secret.ts, idf, idc: data.getCompte().id, vt }
+    const r = await get('m1', 'getUrl', args)
+    if (!r) return null
+    const url = dec.decode(r)
+    const buf = await getData(url)
+    const f = secret.mfa[idf]
+    return f.gz ? ungzipT(buf) : buf
+  } catch (e) {
+    return appexc(e)
   }
 }

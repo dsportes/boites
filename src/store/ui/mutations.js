@@ -115,3 +115,11 @@ export function setsyncitem (state, { k, st, label }) {
 }
 
 export function razsyncitems (state) { state.syncitems = { } }
+
+export function majchargements (state, val) {
+  state.chargements = val
+}
+
+export function majechecss (state, val) {
+  state.echecs = val
+}

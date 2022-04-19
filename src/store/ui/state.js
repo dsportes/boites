@@ -74,6 +74,9 @@ export default function () {
     clipboard: null,
     panelinvit: false,
 
-    etapefichier: 0
+    etapefichier: 0,
+
+    chargements: [],
+    echecs: []
   }
 }
