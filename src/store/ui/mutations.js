@@ -116,10 +116,29 @@ export function setsyncitem (state, { k, st, label }) {
 
 export function razsyncitems (state) { state.syncitems = { } }
 
-export function majchargements (state, val) {
-  state.chargements = val
+export function initchargements (state, val) { state.chargements = val }
+export function ajoutchargements (state, val) {
+  // en queue et sauf ceux supprimés (qui sont retirés)
+  const plus = []
+  const moins = new Set()
+  const nv = []
+  for (const f of state.chargements) {
+    if (f.suppr) moins.add(f.idf); else plus.push(f)
+  }
+  for (const f of val) if (!moins.has(f.idf)) nv.push(f)
+  state.chargements = [...nv, ...plus]
 }
-
-export function majechecss (state, val) {
-  state.echecs = val
+export function okchargement (state) {
+  if (state.chargements.length !== 0) {
+    const s = state.chargements.slice(1)
+    state.chargements = [...s]
+  }
 }
+export function kochargement (state, e) {
+  if (state.chargements.length !== 0) {
+    const s = state.chargements.slice(1)
+    state.chargements = [...s]
+  }
+  state.echecs = [e, ...state.echecs]
+}
+export function majdemon (state, val) { state.demon = val }

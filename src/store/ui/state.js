@@ -77,6 +77,7 @@ export default function () {
     etapefichier: 0,
 
     chargements: [],
-    echecs: []
+    echecs: [],
+    demon: false
   }
 }

@@ -1,4 +1,3 @@
-import { crypt } from '../../app/crypto.mjs'
 import { t1n, t2n } from '../../app/api.mjs'
 
 /*
@@ -203,18 +202,6 @@ function majvoisin (state, secret) {
     } // sinon le secret de référence est inconnu dans la session
     state['voisins@' + pkref] = { ...st }
   }
-}
-
-/* Fichiers attachés */
-export function majfaidx (state, lst) { // lst : array de { id, ns, cle, hv }
-  const st = state.faidx
-  let b = false
-  lst.forEach(x => {
-    const k = crypt.idToSid(x.id) + '@' + crypt.idToSid(x.ns) + '@' + x.cle
-    if (x.hv) st[k] = x; else delete st[k]
-    b = true
-  })
-  if (b) state.faidx = { ...st }
 }
 
 /* Recalcul la liste des avatars externes avec pour chacun :

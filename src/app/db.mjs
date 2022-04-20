@@ -386,19 +386,25 @@ async function getAvSecrets (map) {
 
 /* Fin de synchronisation : liste des secrets notifiés */
 export async function gestionFichierSync (lst) {
-  const supprAVS = []
-  const faToDel = new Set()
   const nvFa = []
-  const nvAVS = []
+  const nvAvs = []
   for (const s of lst) {
     const avs = data.getAvSecrets(s.id, s.ns)
     if (!avs || avs.v >= s.v) continue // pas d'avsecret associé ou déjà à jour (??)
-    const nv = avs.diff(s) // nouvel AVS compte tenu du nouveau s
-    if (nv === false) { supprAVS.push(avs); continue } // désormais vide
-    nvAVS.push(nv) // changé, au moins la version : il y a peut-être, des idfs en plus et en moins
-    if (nv.faToDel) for (const idf of nv.faToDel) faToDel.add(idf)
-    if (nv.nvFa) for (const idf of nv.nvFa) nvFa.push(nv.nvFa[idf])
+    const [nv, nvf] = avs.diff(s) // nouvel AvSecret compte tenu du nouveau s
+    nvAvs.push(nv) // changé, au moins la version : il y a peut-être, des idfs en plus et en moins
+    if (nvf) for (const idf of nvf) nvFa.push(nvf[idf])
   }
+  // Mise en db/store des fetat créés / supprimés
+  data.setFetats(nvFa)
+
+  // Mise en db/store des AvSecret créés / modifiés / supprimés
+  data.setAvSecrets(nvAvs)
+
+  // Mise à jour de IDB (fetat / fdata et avsecret)
+  if (nvFa.length || nvAvs.length) commitFic(nvAvs, nvFa)
+  store().commit('ui/ajoutchargements', nvFa)
+  startDemon()
 }
 
 /* Fin de connexion en mode synchronisé : secrets, map par pk de tous les secrets existants */
@@ -407,14 +413,13 @@ export async function gestionFichierCnx (secrets) {
   await getFetats(fetats)
   const avsecrets = {}
   await getAvSecrets(avsecrets)
-  const faToDel = new Set()
-  const nvFa = []
-  const nvAVS = []
-  const supprAVS = []
-  const lavs = []
+
+  const nvFa = [] // les fetat créés ou supprimés
+  const lavs = [] //  Tous les AvSecret (existant et conservé, ou créé, ou modifié)
+  const nvAvs = [] // Les AvSecrets créés / modifiés / supprimés
   /* Parcours des AvSecret existants : ils peuvent,
-  - soit être détruits : le secret correspondant n'existe plusn ou n'a plus de fichiers
-  - soit être inchangés : le secret correspondant a la même version ou est complètement compatible
+  - soit être détruits : le secret correspondant n'existe plus ou n'a plus de fichiers
+  - soit être inchangés : le secret correspondant a la même version
   - soit être "mis à jour"" : des fichiers sont à supprimer, d'autres (cités dans mnom) ont une nouvelle version
   voire le cas échéant réduits au point de disparaître.
   */
@@ -422,34 +427,50 @@ export async function gestionFichierCnx (secrets) {
     const avs = avsecrets[pk]
     const s = secrets[pk]
     if (s && s.v === avs.v) { lavs.push(avs); continue } // inchangé
-    if (!s) { supprAVS.push(avs); continue }
-    const nv = avs.diff(s) // nouvel AVS compte tenu du nouveau s
-    if (nv === false) { supprAVS.push(avs); continue } // désormais vide
-    nvAVS.push(nv) // changé, au moins la version : il y a peut-être, des idfs en plus et en moins
-    lavs.push(nv)
-    if (nv.faToDel) for (const idf of nv.faToDel) faToDel.add(idf)
-    if (nv.nvFa) for (const idf of nv.nvFa) nvFa.push(nv.nvFa[idf])
+    const [nv, nvf] = avs.diff(s) // nouvel AVS compte tenu du nouveau s ou de son absence (peut-être à supprimer)
+    if (!nv.suppr) lavs.push(nv) // ceux utiles seulement, pas les supprimés
+    nvAvs.push(nv) // changé, au moins la version : il y a peut-être, des idfs en plus et en moins
+    if (nvf) for (const idf of nvf) nvFa.push(nvf[idf])
   }
-  // Liste des fetat utiles et mise en db/store
-  for (const idf of faToDel) delete fetats[idf]
-  for (const fetat of nvFa) fetats[fetat.idf] = fetat
+
+  // Liste des fetat utiles et mise en db/store ou delete
+  for (const fetat of nvFa) {
+    if (fetat.suppr) delete fetats[fetat.idf]; else fetats[fetat.idf] = fetat
+  }
   data.setFetats(Object.values(fetats))
+
   // Mise en db/store des AvSecret
   data.setAvSecrets(lavs)
+
   // Mise à jour de IDB (fetat / fdata et avsecret)
-  if (faToDel.size || nvFa.length || nvAVS.length || supprAVS.length) commitFic(nvAVS, supprAVS, nvFa, faToDel)
+  if (nvFa.length || nvAvs.length) commitFic(nvAvs, nvFa)
+
   // liste des chargements à effectuer et lancement du démon
+  const chec = []
   for (const idf in fetats) {
     const e = fetats[idf]
-    if (e.dhc === 0) chargementsEnCours.push(e)
+    if (e.dhc === 0) chec.push(e)
   }
-  chargementsEnCours.sort((a, b) => { return a.dhd < b.dhd ? -1 : (a.dhd > b.dhd ? 1 : 0) })
+  chec.sort((a, b) => { return a.dhd < b.dhd ? -1 : (a.dhd > b.dhd ? 1 : 0) })
+  store().commit('ui/initchargements', chec)
+  store().commit('ui/majdemon', false)
   startDemon()
 }
 
 /* Session UI : MAJ des fichiers off-line pour un secret */
-export async function GestionFichierMaj (secret, arg) {
+export async function GestionFichierMaj (secret, plus, idf, nom) {
+  const avs = data.getAvSecrets(secret.id, secret.ns) || new AvSecret().nouveau(secret)
+  const [nvAvs, nvFa] = avs.maj(secret, plus, idf, nom)
+  // Mise en db/store des fetat créés / supprimés
+  data.setFetats(nvFa)
 
+  // Mise en db/store des AvSecret créés / modifiés / supprimés
+  if (nvAvs) data.setAvSecrets([nvAvs])
+
+  // Mise à jour de IDB (fetat / fdata et avsecret)
+  if (nvFa.length || nvAvs) commitFic(nvAvs ? [nvAvs] : [], nvFa)
+  store().commit('ui/ajoutchargements', nvFa)
+  startDemon()
 }
 
 class Fetat {
@@ -479,8 +500,8 @@ class Fetat {
     const e = new Fetat().fromIdb(this.toIdb)
     e.dhx = new Date().getTime()
     e.err = err ? err.toString() : '?'
-    store().commit('ui/majechecs', [...echecs, e])
     console.log(`Echec de chargement : ${Sid(e.idf)} ${e.nom}#${e.info} ${dhstring(e.dhx)} ${e.err}`)
+    return e
   }
 
   async getFichier () { // fichier décrypté mais pas dézippé (s'il l'est)
@@ -489,13 +510,12 @@ class Fetat {
 }
 
 class AvSecret {
+  constructor () { this.lidf = []; this.mnom = []; this.v = 0 }
   get table () { return 'avsecret' }
 
   get id2 () { return this.ns }
 
-  nouveau (secret) {
-    this.id = secret.id; this.ns = secret.ns; this.v = secret.v; this.lidf = []; this.mnom = []
-  }
+  nouveau (secret) { this.id = secret.id; this.ns = secret.ns; this.v = 0 }
 
   get estVide () { return !this.lidf.length && !Object.keys(this.mnom).length }
 
@@ -513,45 +533,65 @@ class AvSecret {
   - nv : le nouvel avsecret de même id/ns qui remplace l'ancien. Dans ce cas obj a 2 propriétés :
     - nv.faToDel : le set des idf des Fetat / Fdata qui disparaissent (ou null)
     - nv.nvFa : la liste des nouveaux Fetat (ou null)
+    SI PAS de s : idfs à enlever (les fetat / fdata associés)
   */
   diff (s) {
     const idfs = new Set(this.lidf) // set des idf actuels
     for (const nom in this.mnom) idfs.add(this.mnom[nom])
-    // clone
-    const nv = new AvSecret().nouveau(s)
-    const nvidf = new Set()
-    for (const idf of this.lidf) {
-      const f = s.mfa[idf]
-      if (!f) {
-        nv.faToDel.push(idf)
-      } else {
-        nv.lidf.push(idf)
-        nvidf.add(idf)
+    const idfs2 = new Set() // nouvelle liste des idf
+
+    let n = 0
+    const nv = new AvSecret().nouveau(this) // clone minimal de this
+    if (s) {
+      for (const idf of this.lidf) {
+        const f = s.mfa[idf]
+        if (f) {
+          nv.lidf.push(idf)
+          idfs2.add(idf)
+        }
+      }
+      for (const nom in this.mnom) {
+        const idf = this.mnom[nom]
+        const f = s.dfDeNom(nom)
+        if (f) { nv.mnom[nom] = idf; idfs2.add(idf); n++ }
       }
     }
-    let n1 = 0, n2 = 0
-    for (const nom in this.mnom) {
-      n1++
-      const idf = this.mnom[nom]
-      const f = s.dfDeNom(nom)
-      if (f) { nv.mnom[nom] = idf; n2++ }
-    }
-    if (!n2 && !nv.lidf.length) return false
-    const idfs2 = new Set(nv.lidf)
-    for (const nom in this.mnom) idfs2.add(nv.mnom[nom])
+    if (!n && !nv.lidf.length) nv.suppr = true // AvSecret à détruire (plus aucun idf n'existe dans s, s'il y a un s)
+
     // difference (setA, setB) { // element de A pas dans B
     const x1 = difference(idfs, idfs2) // idf disparus
     const x2 = difference(idfs2, idfs) // nouveaux, version de nom plus récente
-    if (!x1.size && !x2.size && n1 === n2) return true // inchangé
-    nv.faToDel = x1.size ? Array.from(x1) : null
-    nv.nvFa = x2.size ? [] : null
+    const nvFa = x2.size || x1.size ? [] : null
+    if (x1.size) {
+      for (const idf of x1) {
+        const e = new Fetat(); e.id = idf; e.suppr = true
+        nvFa.push(e)
+      }
+    }
     if (x2.size) {
       for (const idf of x2) {
         const f = s.mfa[idf]
-        nv.nvFa.push(new Fetat().nouveau(idf, new Date().getTime(), f.lg, f.nom, f.info))
+        nvFa.push(new Fetat().nouveau(idf, new Date().getTime(), f.lg, f.nom, f.info))
       }
     }
-    return nv
+    return [nv, nvFa]
+  }
+
+  maj (s, plus, idf, nom) {
+    /* plus : true: ajout de idf ou d'un nom, false: enlève un idf ou un nom
+      soit un idf, soit un nom
+    */
+    const idfs = new Set(this.lidf) // set des idf actuels
+    for (const nom in this.mnom) idfs.add(this.mnom[nom])
+    const idfs2 = new Set() // nouvelle liste des idf
+    const nv = new AvSecret().nouveau(this) // clone minimal de this
+    if (idf) {
+      if (plus) {
+        const f = s.mfa[idf]
+        if (f) { }
+      }
+    } else {
+    }
   }
 }
 
@@ -573,51 +613,40 @@ async function setFa (fetat, buf) { // buf : contenu du fichier non crypté
 }
 
 /* Commit des MAJ de fetat et avsecret */
-async function commitFic (lstAvSecrets, lstsuppravs, lstFetats, idfsToDel) { // lst : array / set d'idfs
-  go()
+async function commitFic (lstAvSecrets, lstFetats) { // lst : array / set d'idfs
   try {
     const x = []
-    for (const obj of lstFetats) {
-      const row = {}
-      row.id = crypt.u8ToB64(await crypt.crypter(data.clek, Sid(obj.id), 1), true)
-      row.data = await crypt.crypter(data.clek, obj.toIdb)
-      x.push(row)
-    }
-
-    const y = []
-    for (const id of idfsToDel) y.push(crypt.u8ToB64(await crypt.crypter(data.clek, Sid(id), 1), true))
-
-    const z = []
     for (const obj of lstAvSecrets) {
       const row = {}
       row.id = crypt.u8ToB64(await crypt.crypter(data.clek, Sid(obj.id), 1), true)
       row.id2 = crypt.u8ToB64(await crypt.crypter(data.clek, Sid(obj.id2), 1), true)
-      row.data = await crypt.crypter(data.clek, obj.toIdb)
-      z.push(row)
+      row.data = obj.suppr ? null : await crypt.crypter(data.clek, obj.toIdb)
+      x.push(row)
     }
 
-    const t = []
-    for (const obj of lstsuppravs) {
+    const y = []
+    for (const obj of lstFetats) {
       const row = {}
       row.id = crypt.u8ToB64(await crypt.crypter(data.clek, Sid(obj.id), 1), true)
-      row.id2 = crypt.u8ToB64(await crypt.crypter(data.clek, Sid(obj.id2), 1), true)
-      row.data = await crypt.crypter(data.clek, obj.toIdb)
-      t.push(row)
+      row.data = obj.suppr ? null : await crypt.crypter(data.clek, obj.toIdb)
+      y.push(row)
     }
 
     await data.db.transaction('rw', TABLES, async () => {
       for (const row of x) {
-        await data.db.fetat.put(row)
+        if (row.data) {
+          await data.db.avsecret.put(row)
+        } else {
+          await data.db.avsecret.where({ id: row.id, id2: row.id2 }).delete()
+        }
       }
-      for (const id of y) {
-        await data.db.fetat.where({ id: id }).delete()
-        await data.db.fdata.where({ id: id }).delete()
-      }
-      for (const row of z) {
-        await data.db.avsecret.put(row)
-      }
-      for (const row of t) {
-        await data.db.avsecret.where({ id: row.id, id2: row.id2 }).delete()
+      for (const row of y) {
+        if (row.data) {
+          await data.db.fetat.put(row)
+        } else {
+          await data.db.fetat.where({ id: row.id }).delete()
+          await data.db.fdata.where({ id: row.id }).delete()
+        }
       }
     })
   } catch (e) {
@@ -625,24 +654,22 @@ async function commitFic (lstAvSecrets, lstsuppravs, lstFetats, idfsToDel) { // 
   }
 }
 
-let demon = false
-const chargementsEnCours = []
-const echecs = []
-
 function startDemon () {
-  if (!demon) {
+  if (!store().state.ui.demon) {
+    store().commit('ui/majdemon', true)
     setTimeout(async () => {
-      while (demon) {
-        const e = chargementsEnCours.shift()
-        if (!e) { demon = false; return }
+      while (store().state.ui.demon) {
+        const e = store().state.ui.chargements[0]
+        if (!e) { store().commit('ui/majdemon', false); return }
         try {
           const s = data.getSecret(e.id, e.ns)
           const ret = download(s, e.idf)
           if (ret instanceof AppExc) throw ret
           await e.finChargement(ret)
-          store().commit('ui/majchargements', [...chargementsEnCours])
+          store().commit('ui/okchargement')
         } catch (ex) {
-          e.echecChargement(ex)
+          const x = e.echecChargement(ex)
+          store().commit('ui/kochargement', x)
         }
       }
     }, 10)
