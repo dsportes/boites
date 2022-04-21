@@ -733,8 +733,8 @@ export class NomAvatar {
     return new NomAvatar(this.nom, this.rnd, this.id)
   }
 
-  // get nomc () { return this.nom + '@' + this.sid.substring(this.sid.length - 3, this.sid.length) + (this.disparu ? '[DISPARU]' : '') }
-  get nomc () { return this.nom + '@ ' + this.id + (this.disparu ? '[DISPARU]' : '') }
+  get nomc () { return this.nom + '@' + this.sid.substring(this.sid.length - 3, this.sid.length) + (this.disparu ? '[DISPARU]' : '') }
+  // get nomc () { return this.nom + '@ ' + this.id + (this.disparu ? '[DISPARU]' : '') }
   get nomf () { return normpath(this.nomc) }
   get sid () { return crypt.idToSid(this.id) }
   get disparu () { return data.repertoire.disparu(this.id) }

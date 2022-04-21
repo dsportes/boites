@@ -29,7 +29,9 @@
     </q-toolbar>
 
     <div v-if="tabsecret==='texte'" class='col column'>
-      <div class="col-auto q-pa-xs full-width row justify-between items-center">
+      <editeur-texte-secret class="col" v-model="state.textelocal" :texte-ref="secret.txt.t" :editable="!state.ro" :erreur="erreur" :apropos="secret.dh"/>
+
+      <div class="col-auto q-px-xs full-width row justify-between items-center">
         <div class="col">
           <span v-if="nonmod" class="bg-warning q-pr-sm">[NON éditable]</span>
           <span v-if="state.plocal">Protection d'écriture</span>
@@ -38,7 +40,7 @@
         <q-btn :disable="mode > 2" class="col-auto" size="md" flat dense color="primary" label="Protection d'écriture" @click="protection"/>
         <q-btn class="col-auto" :disable="!modifp()" size="sm" dense push icon="undo" color="primary" @click="undop"/>
       </div>
-      <div v-if="state.ts !== 0" class="col-auto q-pa-xs full-width row justify-between items-center">
+      <div v-if="state.ts !== 0" class="col-auto q-px-xs full-width row justify-between items-center">
         <div class="col">
           <span v-if="state.xlocal">Exclusité d'écriture</span>
           <span v-else>Pas d'exclusité d'écriture </span>
@@ -46,25 +48,23 @@
         <q-btn :disable="mode > 2" class="col-auto" size="md" flat dense color="primary" label="Exclusivité d'écriture" @click="protection"/>
         <q-btn class="col-auto" :disable="!modifx()" size="sm" dense push icon="undo" color="primary" @click="undox"/>
      </div>
-      <div class="col-auto q-pa-xs full-width row justify-between items-center">
+      <div class="col-auto q-px-xs full-width row justify-between items-center">
         <apercu-motscles class="col" :motscles="state.motscles" :src="state.mclocal"/>
         <q-btn class="col-auto" :disable="state.ro !== 0" color="primary" flat dense label="Mots clés personnels" @click="ouvrirmcl"/>
         <q-btn class="col-auto" v-if="!state.ro" :disable="!modifmcl()" size="sm" dense push icon="undo" color="primary" @click="undomcl"/>
       </div>
-      <div v-if="state.ts === 2" class="col-auto q-pa-xs full-width row justify-between items-center">
+      <div v-if="state.ts === 2" class="col-auto q-px-xs full-width row justify-between items-center">
         <apercu-motscles class="col" :motscles="state.motscles" :src="mcglocal"/>
         <q-btn class="col-auto" :disable="state.ro !== 0" flat dense color="primary" label="Mots clés du groupe" @click="ouvrirmcg"/>
         <q-btn class="col-auto" v-if="!state.ro" :disable="!modifmcg()" size="sm" dense push icon="undo" color="primary" @click="undomcg"/>
       </div>
 
-      <div class="col-auto q-pa-xs full-width row justify-between items-center">
+      <div class="col-auto q-px-xs full-width row justify-between items-center">
         <div class="col">{{msgtemp}}</div>
         <q-btn v-if="state.templocal" :disable="state.ro !== 0" class="col-auto" flat dense color="primary" label="Le rendre 'PERMANENT'" @click="state.templocal=false"/>
         <q-btn v-if="!state.templocal" :disable="state.ro !== 0" class="col-auto" flat dense color="primary" label="Le rendre 'TEMPORAIRE'"  @click="state.templocal=true"/>
         <q-btn v-if="!state.ro" :disable="!modiftp()" class="col-auto" size="sm" dense push icon="undo" color="primary" @click="undotp"/>
       </div>
-
-      <editeur-texte-secret class="col" v-model="state.textelocal" :texte-ref="secret.txt.t" :editable="!state.ro" :erreur="erreur" :apropos="secret.dh"/>
 
       <q-dialog v-model="mcledit">
         <select-motscles :motscles="state.motscles" :src="state.mclocal" @ok="changermcl" :close="fermermcl"></select-motscles>
@@ -116,55 +116,84 @@
       <div v-if="mode < 3 && state.ro !== 0" class="bg-yellow text-bold text-negative text-center">
         Le secret est en lecture seule, les fichiers peuvent visualisés (ni ajout, ni suppression).</div>
       <div v-for="it in state.listefic" :key="it.nom" class="full-width">
-        <q-expansion-item group="fnom" class="full-width"
-          header-class="expansion-header-class-1 titre-md bg-secondary text-white">
-          <template v-slot:header>
-            <q-item-section>
+        <div class="row">
+          <q-expansion-item group="fnom" class="col" switch-toggle-side
+            header-class="expansion-header-class-1 titre-md bg-secondary text-white">
+            <template v-slot:header>
+              <q-item-section>
+                <div class="row justify-between items-center">
+                  <div class="col titre-lg text-bold">{{it.n}}</div>
+                  <div class="col-auto row items-center">
+                    <div class="col fs-md q-mr-md">{{it.l.length}} version(s)</div>
+                  </div>
+                </div>
+              </q-item-section>
+            </template>
+            <q-card-section v-for="f in it.l" :key="f.idf" class="ma-qcard-section">
               <div class="row justify-between items-center">
-                <div class="col titre-lg text-bold">{{it.n}}</div>
-                <div class="col-auto row items-center">
-                  <div class="col fs-md q-mr-md">{{it.l.length}} version(s)</div>
-                  <q-btn class="col-auto" dense flat size="md" icon="airplanemode_active" color="grey">
+                <div class="col">
+                  <span class="text-bold q-pr-lg">{{f.info}}</span>
+                  <span class="fs-md">{{vol(f)}} - {{f.type}} - </span>
+                  <span class="font-mono fs-sm">{{f.sidf}}</span>
+                </div>
+                <div class="col-auto">
+                  <span class="btnav2 font-mono fs-sm q-mr-sm">{{dhed(f)}}</span>
+                  <q-btn class="btnav2 btnav col-auto" dense size="md" icon="airplanemode_active" :color="f.av ? 'warning' : 'primary'">
                     <q-menu transition-show="scale" transition-hide="scale">
                       <q-list dense style="min-width: 15rem">
-                        <q-item>
-                          <q-item-section class="text-italic">La version la plus récente est chargée localement pour être lisible en mode avion ...</q-item-section>
+                        <q-item v-if="f.av === 0">
+                          <q-item-section class="text-italic">Cette version N'EST PAS chargée localement, elle N'EST PAS lisible en mode avion ...</q-item-section>
                         </q-item>
-                        <q-separator />
-                        <q-item clickable v-close-popup>
-                          <q-item-section>Arrêter cette possibilité</q-item-section>
+                        <q-item v-if="f.av === 1">
+                          <q-item-section class="text-italic">Cette version est chargée localement pour être lisible en mode avion ...</q-item-section>
                         </q-item>
-                        <q-item clickable v-close-popup>
-                          <q-item-section>Toujours charger la version la plus récente localement pour qu'elle soit lisible en mode avion</q-item-section>
+                        <q-item v-if="f.av === 2">
+                          <q-item-section class="text-italic">Cette version est chargée localement pour être lisible en mode avion
+                            parce que c'est la plus récente, PAS en tant que telle</q-item-section>
+                        </q-item>
+                        <q-item v-if="f.av === 3">
+                          <q-item-section class="text-italic">Cette version, en tant que telle,est chargée localement pour être lisible en mode avion.
+                            Elle l'est DE PLUS parce que c'est la plus récente portant ce nom</q-item-section>
+                        </q-item>
+                        <q-separator/>
+                        <q-item v-if="f.av === 1" clickable v-close-popup @click="avidf(false, f.idf)">
+                          <q-item-section>Ne plus garder CETTE version localement</q-item-section>
+                        </q-item>
+                        <q-item v-if="f.av !== 1" clickable v-close-popup @click="avidf(true, f.idf)">
+                          <q-item-section>Rendre CETTE version lisible en mode avion</q-item-section>
                         </q-item>
                       </q-list>
                     </q-menu>
                   </q-btn>
                 </div>
               </div>
-            </q-item-section>
-          </template>
-          <q-card-section v-for="f in it.l" :key="f.idf" class="ma-qcard-section">
-            <div class="row justify-between items-center">
-              <div class="col">
-                <span class="text-bold q-pr-lg">{{f.info}}</span>
-                <span class="fs-md">{{vol(f)}} - {{f.type}} - </span>
-                <span class="font-mono fs-sm">{{f.sidf}}</span>
-              </div>
-              <div class="col-auto font-mono fs-sm">{{dhed(f)}}</div>
-            </div>
-            <div class="row justify-between items-center">
-              <q-toggle class="col-auto" size="sm" v-model="state.avion[f.nom]" :disable="!stf3()"
-                :color="state.avion[f.nom] ? 'green' : 'grey'"
-                label="Lisible en mode avion" @update:model-value="chgAvion(f)"/>
               <div class="row justify-end q-gutter-xs">
                 <q-btn :disable="!stf1(f)" size="sm" dense color="primary" icon="visibility" label="Aff." @click="affFic(f)"/>
                 <q-btn :disable="!stf1(f)" size="sm" dense color="primary" icon="save" label="Enreg." @click="enregFic(f)"/>
                 <q-btn :disable="!stf2()" size="sm" dense color="warning" icon="delete" label="Suppr." @click="supprFic(f)"/>
               </div>
-            </div>
-          </q-card-section>
-        </q-expansion-item>
+            </q-card-section>
+          </q-expansion-item>
+          <q-btn class="col-auto btnav" dense icon="airplanemode_active" :color="it.av ? 'warning' : 'primary'">
+            <q-menu transition-show="scale" transition-hide="scale">
+              <q-list dense style="min-width: 15rem">
+                <q-item v-if="it.av">
+                  <q-item-section class="text-italic">La version la plus récente est chargée localement pour être lisible en mode avion ...</q-item-section>
+                </q-item>
+                <q-item v-if="!it.av">
+                  <q-item-section class="text-italic">La version la plus récente N'EST PAS chargée localement, elle N'EST PAS lisible en mode avion ...</q-item-section>
+                </q-item>
+                <q-separator />
+                <q-item v-if="it.av" clickable v-close-popup @click="avnom(false, it.n)">
+                  <q-item-section>Ne plus la garder localement</q-item-section>
+                </q-item>
+                <q-item v-if="!it.av" clickable v-close-popup @click="avnom(true, it.n)">
+                  <q-item-section>La rendre lisible en mode avion</q-item-section>
+                </q-item>
+              </q-list>
+            </q-menu>
+          </q-btn>
+        </div>
         <q-separator size="2px"/>
       </div>
     </div>
@@ -233,8 +262,8 @@ import ShowHtml from './ShowHtml.vue'
 import { equ8, getJourJ, cfg, Motscles, dhstring, afficherdiagnostic, edvol } from '../app/util.mjs'
 import { NouveauSecret, Maj1Secret, SupprFichier } from '../app/operations.mjs'
 import { data, Secret } from '../app/modele.mjs'
+import { gestionFichierMaj } from '../app/db.mjs'
 import { crypt } from '../app/crypto.mjs'
-import { putFa } from '../app/db.mjs'
 import { saveAs } from 'file-saver'
 
 export default ({
@@ -371,20 +400,16 @@ export default ({
       await new SupprFichier().run(this.secret, f.idf)
     },
 
-    async chgAvion (f) {
-      const s = this.secret
-      const ap = this.state.avion[f.cle]
-      const x = { id: s.id, ns: s.ns, cle: f.cle, hv: f.hv }
-      if (ap) {
-        // dispo en mode avion
-        const buf = await s.datapj(f, true)
-        await putFa(x, buf) // en IDB
-        data.setPjidx([x]) // lst : array de { id, ns, cle, hv } - Dans le store
-      } else {
-        x.hv = null
-        await putFa(x, null) // suppr en IDB
-        data.setPjidx([x])
-      }
+    avnom (plus, nom) {
+      setTimeout(() => {
+        gestionFichierMaj(this.secret, plus, null, nom)
+      }, 50)
+    },
+
+    avidf (plus, idf) {
+      setTimeout(() => {
+        gestionFichierMaj(this.secret, plus, idf, null)
+      }, 50)
     },
 
     ouvrirmcl () { this.mcledit = true },
@@ -523,10 +548,10 @@ export default ({
     })
     const prefs = computed(() => { return data.getPrefs() })
     const avatar = computed(() => { return $store.state.db.avatar })
-    const faidx = computed(() => { return $store.state.db.faidx })
     const couple = computed(() => { return $store.state.db.couple })
     const groupe = computed(() => { return $store.state.db.groupe })
     const mode = computed(() => $store.state.ui.mode)
+    const avsecrets = computed(() => $store.state.db.avsecrets)
     const secret = computed({ // secret courant
       get: () => $store.state.db.secret,
       set: (val) => $store.commit('db/majsecret', val)
@@ -552,7 +577,7 @@ export default ({
       dhlocal: 0,
       listevoisins: [],
       listefic: [],
-      avion: {}
+      avsecret: null
     })
     const mc = reactive({ categs: new Map(), lcategs: [], st: { enedition: false, modifie: false } })
 
@@ -603,27 +628,29 @@ export default ({
     function modif () {
       return secret.value && (modifmcl() || modifmcg() || modiftx() || modiftp() || modifx() || modifp())
     }
-    function listefichiers (s) {
+    function listefichiers (s, avs) {
       const lst = []
       const mnom = {}
       for (const idf in s.mfa) {
         const f = s.mfa[idf]
         let e = mnom[f.nom]; if (!e) { e = []; mnom[f.nom] = e; lst.push(f.nom) }
-        e.push({ ...f, sidf: crypt.idToSid(f.idf) })
+        e.push({ ...f, sidf: crypt.idToSid(f.idf), av: avs ? avs.aIdf(f.idf) : 0 })
       }
       lst.sort((a, b) => { return a < b ? -1 : (a > b ? 1 : 0) })
       const res = []
       lst.forEach(n => {
         const l = mnom[n]
         l.sort((a, b) => { return a.dh < b.dh ? 1 : (a.dh > b.dh ? -1 : 0) })
-        res.push({ n, l })
+        res.push({ n, l, av: avs && avs.mnom[n] })
       })
       return res
     }
+
     function initState () {
-      const s = secret.value
       const avid = avatar.value ? avatar.value.id : 0 // avatar null après déconnexion
+      const s = secret.value
       if (s) { // propriétés immuables pour un secret
+        state.avs = data.getAvSecret(s.id, s.ns)
         $store.commit('db/initVoisins', secret.value) // initialise (si besoin est, nouveau secret par exemple) l'entrée des voisins
         state.ts = s.ts
         state.avatar = s.ts === 0 ? avatar : null
@@ -658,35 +685,22 @@ export default ({
           case 1 : { state.titre = 'Partagé avec ' + state.couple.nom; break }
           case 2 : { state.titre = 'Partagé avec ' + state.groupe.nom; break }
         }
-        state.listefic = listefichiers(s)
+        state.listefic = listefichiers(s, state.avs)
         undo()
       }
-    }
-
-    function setFaloc () {
-      const s = secret.value
-      if (!s || mode.value === 2 || mode.value === 4) { state.avion = {}; return } // En mode incognito/visio, c'est indéterminé (pas d'accès à IDB)
-      const avion = {}
-      const lst = data.getFaidx({ id: s.id, ns: s.ns })
-      if (s.nbpj) {
-        for (const cle in s.mpj) {
-          avion[cle] = false
-        }
-      }
-      if (lst && lst.length) {
-        lst.forEach(x => { avion[x.cle] = true })
-      }
-      state.avion = avion
     }
 
     watch(() => prefs.value, (ap, av) => {
       chargerMc()
     })
 
+    watch(() => avsecrets.value, (ap, av) => {
+      initState()
+    })
+
     watch(() => secret.value, (ap, av) => {
       if (av) cleanVoisins(av)
       initState()
-      setFaloc()
       check()
       if (ap && (!av || av.pk !== ap.pk)) chargerMc() // le nouveau peut avoir un autre groupe
     })
@@ -697,10 +711,6 @@ export default ({
 
     watch(() => state.textelocal, (ap, av) => {
       check()
-    })
-
-    watch(() => faidx.value, (ap, av) => {
-      setFaloc()
     })
 
     watch(() => avatarscform.value, (ap, av) => {
@@ -743,7 +753,6 @@ export default ({
 
     initState()
     chargerMc()
-    setFaloc()
     check()
 
     return {
@@ -797,4 +806,10 @@ export default ({
   right: 5px
 .ma-qcard-section
   padding: 0 !important
+.btnav
+  height: 1.8rem
+  width:  1.8rem
+.btnav2
+  position: relative
+  right: -1.8rem
 </style>

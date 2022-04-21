@@ -27,7 +27,7 @@ Normalement quand une entrée existe il n'y a pas que le secret de référence d
 const l1 = new Set(['compte', 'compta', 'prefs', 'avatar', 'groupe', 'couple', 'secret'])
 
 // objets multiples à un seul niveau représenté par une map
-const l2 = new Set(['avatars', 'groupes', 'couples', 'cvs', 'faidx'])
+const l2 = new Set(['avatars', 'groupes', 'couples', 'cvs', 'fetats', 'avsecrets'])
 
 export function raz (state) {
   for (const e in state) if (l1.has(e)) state[e] = null; else if (l2.has(e)) state[e] = {}; else delete state[e]
@@ -109,11 +109,12 @@ export function setObjets (state, lobj) { // lobj : array d'objets
       const n = obj.table + 's'
       let st = sta[n]; if (!st) { st = state[n]; sta[n] = st }
       const oc = state[obj.table] && state[obj.table].id === obj.id
+      const ix = obj.table === 'avsecret' ? obj.id + '/' + obj.ns : obj.id
       if (obj.suppr) {
-        delete st[obj.id]
+        delete st[ix]
         if (oc) state[obj.table] = null
       } else {
-        st[obj.id] = obj
+        st[ix] = obj
         if (oc) state[obj.table] = obj
       }
     }

@@ -121,12 +121,10 @@ export function ajoutchargements (state, val) {
   // en queue et sauf ceux supprimés (qui sont retirés)
   const plus = []
   const moins = new Set()
-  const nv = []
-  for (const f of state.chargements) {
-    if (f.suppr) moins.add(f.idf); else plus.push(f)
-  }
-  for (const f of val) if (!moins.has(f.idf)) nv.push(f)
-  state.chargements = [...nv, ...plus]
+  for (const f of val) if (f.suppr) moins.add(f.idf)
+  for (const f of state.chargements) if (!f.suppr && !moins.has(f.idf)) plus.push(f)
+  for (const f of val) if (!f.suppr) plus.push(f)
+  state.chargements = plus
 }
 export function okchargement (state) {
   if (state.chargements.length !== 0) {

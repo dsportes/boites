@@ -1,4 +1,4 @@
-import { NomAvatar, store, post, get, affichermessage, cfg, sleep, affichererreur, appexc, difference, getJourJ, edvol, afficherdiagnostic, gzipT, putData, getData } from './util.mjs'
+import { NomAvatar, store, post, get, affichermessage, cfg, sleep, affichererreur, appexc, difference, getJourJ, afficherdiagnostic, gzipT, putData, getData } from './util.mjs'
 import { remplacePage } from './page.mjs'
 import {
   deleteIDB, idbSidCompte, commitRows, getCompte, getCompta, getPrefs, getCvs,
@@ -320,89 +320,6 @@ export class Operation {
     }
     return chg
   }
-  /*
-  if (mapObj.secret) {
-    data.setSecrets(mapObj.secret)
-    // il peut y avoir des secrets ayant un changement de FA
-    const lst = []
-    const st = store().state.db.faidx
-    for (let i = 0; i < mapObj.secret.length; i++) {
-      const secret = mapObj.secret[i]
-      for (const cle in secret.mfa) {
-        const fa = secret.mfa[cle]
-        const x = st ? st[secret.sidpj(cle)] : null
-        if (x && fa.hv !== x.hv) { // fa locale pas à jour
-          try {
-            const data = await getfa(secret.sid + '@' + secret.sid2, x.cle) // rechargement du contenu du serveur
-            x.hv = fa.hv
-            putFa(x, data) // store en IDB
-            lst.push(x)
-          } catch (e) {
-            console.log(e.toString())
-            x.hv = null
-            lst.push(x)
-            data.setFaPerdues(x)
-          }
-        }
-      }
-    }
-    if (lst.length) data.setFaidx(lst)
-    push('secret')
-  }
-
-  // Il peut y avoir des FA non référencées, avatar / groupe disparu, FA disparue
-  {
-    const lst = []
-    const st = store().state.db.faidx
-    for (const k in st) {
-      const x = st[k]
-      const secret = data.getSecret(x.id, x.ns)
-      if (secret && secret.nbpj) {
-        const fa = secret.mpj[x.cle]
-        if (!fa) { x.hv = null; lst.push(x) }
-      } else { x.hv = null; lst.push(x) }
-    }
-    if (lst.length) data.setFaidx(lst)
-  }
-
-  data.repertoire.commit() // un seul à la fin
-  return vcv
-}
-
-  async syncPjs () { // A REPRENDRE
-    // Vérification que toutes les PJ accessibles en avion sont, a) encore utiles, b) encore à jour
-    let nbp = 0
-    let vol = 0
-    const st = store().state.pjidx
-    const maj = []
-    for (const sidpj in st) {
-      const x = { ...st[sidpj] }
-      const secret = data.getSecret(x.id, x.ns)
-      if (secret) {
-        const pj = secret.mpj[x.cle]
-        if (pj) {
-          if (pj.hv !== x.hv) { // pj locale pas à jour
-            x.hv = pj.hv
-            // rechargement du contenu
-            const data = await getfa(secret.sid + '@' + secret.sid2, x.cle) // du serveur
-            nbp++
-            vol += data.length
-            await putFa(x, data) // store en IDB
-            maj.push(x)
-          }
-        } else { // PJ n'existe plus
-          await putFa(x, null) // delete en IDB
-          maj.push(x)
-        }
-      } else {
-        await putFa(x, null) // delete en IDB, le secret n'existe plus
-        maj.push(x)
-      }
-    }
-    if (maj.length) data.setFaidx(maj) // MAJ du store
-    return [nbp, vol]
-  }
-  */
 
   /* Recharge depuis le serveur les secrets d'un avatar et s'abonne à l'avatar
     Remplit aussi la liste des membres à mettre à jour en IDB et store/db
@@ -1436,13 +1353,7 @@ export class ConnexionCompte extends OperationUI {
       */
       await this.syncCVs()
 
-      /* Phase 5 : recharger les fichiers attachés aux secrets à stocker en IDB,
-      manquants ou ayant changé de version.
-      */
-      const [nbp, vol] = await this.syncPjs() // A REPRENDRE
-      data.setSyncItem('25', 1, 'Fichiers attachés disponibles en "avion" : ' + nbp + ' téléchargée(s) pour ' + edvol(vol))
-
-      /* Phase 6 : récupération des invitations aux groupes
+      /* Phase 5 : récupération des invitations aux groupes
       Elles seront de facto traitées en synchronisation quand un avatar reviendra avec un lgrk étendu
       */
       if (data.netok) await this.getInvitGrs(this.compte)

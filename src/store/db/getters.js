@@ -1,6 +1,3 @@
-import { crypt } from '../../app/crypto.mjs'
-import { Sid } from '../../app/util.mjs'
-
 export const fetat = (state) => (id) => {
   return id ? state.fetats[id] : state.fetats
 }
@@ -23,7 +20,7 @@ export const cv = (state) => (id) => {
 
 export const membre = (state) => (id, im) => {
   const lc = state['membres@' + id]
-  return !im ? lc || { } : (lc ? lc[im] : null)
+  return !im ? (lc || {}) : (lc ? lc[im] : null)
 }
 
 export const membreParId = (state) => (idg, idm) => {
@@ -37,20 +34,9 @@ export const membreParId = (state) => (idg, idm) => {
 
 export const secret = (state) => (id, ns) => {
   const lc = state['secrets@' + id]
-  return !ns ? lc || {} : lc ? lc[Sid(ns)] : null
+  return !ns ? (lc || {}) : (lc ? lc[ns] : null)
 }
 
 export const avsecret = (state) => (id, ns) => {
-  const lc = state['avsecrets@' + id]
-  return !ns ? lc || {} : lc ? lc[Sid(ns)] : null
-}
-
-export const faidx = (state) => ({ id, ns, cle }) => {
-  const k = crypt.idToSid(id) + '@' + (!ns ? '' : crypt.idToSid(ns) + '@' + (!cle ? '' : cle))
-  const st = state.pjidx
-  const r = []
-  for (const kx in st) {
-    if (kx.startsWith(k)) r.push(st[kx])
-  }
-  return r
+  return id ? state.avsecrets[id + '/' + ns] : state.avsecrets
 }

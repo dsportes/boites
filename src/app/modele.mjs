@@ -1,6 +1,6 @@
 import { schemas, serial, deserial } from './schemas.mjs'
 import { crypt } from './crypto.mjs'
-import { openIDB, closeIDB, debutSessionSync, saveSessionSync } from './db.mjs'
+import { openIDB, closeIDB, debutSessionSync, saveSessionSync, getFichier } from './db.mjs'
 import { openWS, closeWS } from './ws.mjs'
 import {
   store, appexc, dlvDepassee, NomAvatar, gzip, ungzip, dhstring,
@@ -1650,7 +1650,8 @@ export class Secret {
     const fetat = data.getFetat(idf)
     let buf
     if (fetat && fetat.estCharge) {
-      buf = await fetat.getFichier()
+      const b = await getFichier(idf)
+      buf = await crypt.decrypter(this.cle, b)
     } else {
       buf = await this.downloadFichier(idf)
     }

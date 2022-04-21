@@ -15,6 +15,7 @@ export default function () {
     couples: {}, // Tous les couples listés sur les avatars
     cvs: {}, // Toutes les cartes de visite
     fetats: {}, // Tous les Fetat
+    avsecrets: {},
 
     tousAx: {}
     /* Map par leur id de tous les avatars externes : { na, x, c, m }
