@@ -42,10 +42,12 @@
         <div class="cursor-pointer q-px-xs" @click="infomode = true">
           <q-avatar size="sm" :color="sessionok && mode !== 0 && mode !== modeInitial ? 'warning' : 'primary'">
             <q-icon v-if="mode === 0" size="sm" name="info"/>
-            <q-icon v-if="mode === 1" size="sm" name="autorenew"/>
+            <q-icon v-if="mode === 1 && !dlattente && !dlechecs" size="sm" name="autorenew"/>
             <img v-if="mode === 2" src="~assets/incognito_blanc.svg">
-            <q-icon v-if="mode === 3" size="sm" name="airplanemode_active"/>
+            <q-icon v-if="mode === 3 && !dlattente && !dlechecs" size="sm" name="airplanemode_active"/>
             <q-icon v-if="mode === 4" size="sm" name="visibility"/>
+            <q-icon v-if="dlattente && !dlechecs" size="sm" name="download"/>
+            <q-icon v-if="dlechecs" size="sm" name="download" color="negative"/>
           </q-avatar>
         </div>
 
@@ -269,6 +271,12 @@ export default {
       return cv ? cv[0] : phdef
     }
 
+    const dlattente = computed({
+      get: () => $store.state.ui.chargements.length
+    })
+    const dlechecs = computed({
+      get: () => $store.state.ui.echecs.length
+    })
     const infomode = computed({
       get: () => $store.state.ui.infomode,
       set: (val) => $store.commit('ui/majinfomode', val)
@@ -361,6 +369,8 @@ export default {
       mode,
       modeInitial,
       page,
+      dlattente,
+      dlechecs,
       sessionok,
       statutnet,
       statutidb,

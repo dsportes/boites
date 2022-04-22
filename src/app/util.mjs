@@ -440,7 +440,7 @@ export async function getData (url) {
     const r = await axios({ method: 'get', url, responseType: 'arraybuffer' })
     return new Uint8Array(r.data)
   } catch (e) {
-    throw e.toString()
+    throw appexc(e)
   }
 }
 

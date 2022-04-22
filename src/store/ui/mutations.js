@@ -118,12 +118,13 @@ export function razsyncitems (state) { state.syncitems = { } }
 
 export function initchargements (state, val) { state.chargements = val }
 export function ajoutchargements (state, val) {
+  if (!val || !val.length) return
   // en queue et sauf ceux supprimés (qui sont retirés)
   const plus = []
   const moins = new Set()
-  for (const f of val) if (f.suppr) moins.add(f.idf)
-  for (const f of state.chargements) if (!f.suppr && !moins.has(f.idf)) plus.push(f)
-  for (const f of val) if (!f.suppr) plus.push(f)
+  for (const f of val) if (f.suppr) moins.add(f.id)
+  if (state.chargements.length) for (const id of state.chargements) if (!moins.has(id)) plus.push(id)
+  for (const f of val) if (!f.suppr) plus.push(f.id)
   state.chargements = plus
 }
 export function okchargement (state) {
@@ -132,11 +133,12 @@ export function okchargement (state) {
     state.chargements = [...s]
   }
 }
-export function kochargement (state, e) {
+export function kochargement (state) {
   if (state.chargements.length !== 0) {
+    const i = state.chargements[0]
     const s = state.chargements.slice(1)
     state.chargements = [...s]
+    state.echecs = [i, ...state.echecs]
   }
-  state.echecs = [e, ...state.echecs]
 }
 export function majdemon (state, val) { state.demon = val }

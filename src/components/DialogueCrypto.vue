@@ -1,13 +1,13 @@
 <template>
     <q-dialog v-model="dialoguecrypto">
-      <q-card class="q-ma-xs moyennelargeur fs-md">
+      <q-card class="moyennelargeur fs-md">
         <q-card-section>
           <div class="titre-lg text-center">Crytographie</div>
           <q-btn flat label="Test de crypto" color="primary" @click="testcrypto" />
           <bouton-help page="page1"/>
         </q-card-section>
         <q-card-section class="q-ma-xs">
-          <phrase-secrete v-on:ok-ps="okps" icon-valider="check" verif label-ok="OK"></phrase-secrete>
+          <phrase-secrete v-on:ok-ps="okps" icon-valider="check" label-ok="OK"></phrase-secrete>
         </q-card-section>
         <q-card-section class="q-ma-xs">
           <div class='t1'>Hash de la ligne 1</div>

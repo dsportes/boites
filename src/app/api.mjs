@@ -140,7 +140,7 @@ schemas.forSchema({
 
 schemas.forSchema({
   name: 'idbFetat',
-  cols: ['id', 'dhd', 'dhc', 'dhx', 'lg', 'nom', 'info', 'ids', 'ts', 'gz', 'err']
+  cols: ['id', 'dhd', 'dhc', 'dhx', 'lg', 'nom', 'info', 'ids', 'ns', 'err']
 })
 
 schemas.forSchema({

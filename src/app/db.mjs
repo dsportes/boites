@@ -1,10 +1,10 @@
 /* eslint-disable func-call-spacing */
 import Dexie from 'dexie'
 import { Avatar, Compte, Prefs, Compta, Couple, Groupe, Membre, Secret, ListeCvIds, SessionSync, data, Cv } from './modele.mjs'
-import { store, Sid, difference, dhstring, get, getData, appexc } from './util.mjs'
+import { store, Sid, difference, dhstring, get, getData } from './util.mjs'
 import { schemas } from './schemas.mjs'
 import { crypt } from './crypto.mjs'
-import { AppExc, E_DB, t0n } from './api.mjs'
+import { AppExc, E_DB, E_BRO, t0n } from './api.mjs'
 
 const STORES = {
   sessionsync: 'id',
@@ -402,7 +402,7 @@ export async function gestionFichierSync (lst) {
 
   // Mise à jour de IDB (fetat / fdata et avsecret)
   if (nvFa.length || nvAvs.length) await commitFic(nvAvs, nvFa)
-  store().commit('ui/ajoutchargements', nvFa)
+  if (nvFa.length) store().commit('ui/ajoutchargements', nvFa)
   startDemon()
 }
 
@@ -448,10 +448,11 @@ export async function gestionFichierCnx (secrets) {
   const chec = []
   for (const idf in fetats) {
     const e = fetats[idf]
-    if (e.dhc === 0) chec.push(e)
+    if (e.enAttente) chec.push([e.dhd, e.idf])
   }
-  chec.sort((a, b) => { return a.dhd < b.dhd ? -1 : (a.dhd > b.dhd ? 1 : 0) })
-  store().commit('ui/initchargements', chec)
+  chec.sort((a, b) => { return a[0] < b[0] ? -1 : (a[0] > b[0] ? 1 : 0) })
+  const lidf = []; chec.forEach(x => { lidf.push(x[1]) })
+  store().commit('ui/initchargements', lidf)
   store().commit('ui/majdemon', false)
   startDemon()
 }
@@ -460,15 +461,16 @@ export async function gestionFichierCnx (secrets) {
 export async function gestionFichierMaj (secret, plus, idf, nom) {
   const avs = data.getAvSecret(secret.id, secret.ns) || new AvSecret().nouveau(secret)
   const [nvAvs, nvFa] = avs.maj(secret, plus, idf, nom)
+
   // Mise en db/store des fetat créés / supprimés
-  data.setFetats(nvFa)
+  if (nvFa.length) data.setFetats(nvFa)
 
   // Mise en db/store des AvSecret créés / modifiés / supprimés
   if (nvAvs) data.setAvSecrets([nvAvs])
 
   // Mise à jour de IDB (fetat / fdata et avsecret)
   if (nvFa.length || nvAvs) await commitFic(nvAvs ? [nvAvs] : [], nvFa)
-  store().commit('ui/ajoutchargements', nvFa)
+  if (nvFa.length) store().commit('ui/ajoutchargements', nvFa)
   startDemon()
 }
 
@@ -476,6 +478,10 @@ class Fetat {
   get table () { return 'fetat' }
   get sid () { return crypt.idToSid(this.id) }
   get estCharge () { return this.dhc !== 0 }
+  get enAttente () { return this.dhc === 0 && !this.dhx }
+  get enEchec () { return this.dhc === 0 && this.dhx }
+
+  nouveauSuppr (idf) { this.id = idf; this.suppr = true; return this }
 
   nouveau (s, f) {
     this.id = f.idf
@@ -486,8 +492,7 @@ class Fetat {
     this.nom = f.nom
     this.info = f.info
     this.ids = s.id
-    this.ts = s.ts
-    this.gz = s.mfa[f.idf].gz
+    this.ns = s.ns
     this.err = ''
     return this
   }
@@ -506,6 +511,7 @@ class Fetat {
     e.dhc = new Date().getTime()
     data.setFetats([e])
     await setFa(e, buf)
+    store().commit('ui/okchargement')
     console.log(`OK chargement : ${Sid(e.idf)} ${e.nom}#${e.info}`)
   }
 
@@ -513,9 +519,9 @@ class Fetat {
     const e = new Fetat().fromIdb(this.toIdb)
     e.dhx = new Date().getTime()
     e.err = err ? err.toString() : '?'
-    console.log(`Echec de chargement : ${Sid(e.idf)} ${e.nom}#${e.info} ${dhstring(e.dhx)} ${e.err}`)
     data.setFetats([e])
-    return e
+    store().commit('ui/kochargement')
+    console.log(`Echec de chargement : ${Sid(e.idf)} ${e.nom}#${e.info} ${dhstring(e.dhx)} ${e.err}`)
   }
 }
 
@@ -554,7 +560,7 @@ class AvSecret {
     const nvFa = x2.size || x1.size ? [] : null
     if (x1.size) {
       for (const idf of x1) {
-        const e = new Fetat(); e.id = idf; e.suppr = true
+        const e = new Fetat().nouveauSuppr(idf)
         nvFa.push(e)
       }
     }
@@ -688,36 +694,24 @@ async function commitFic (lstAvSecrets, lstFetats) { // lst : array / set d'idfs
 
 function startDemon () {
   if (!store().state.ui.demon) {
+    const dec = new TextDecoder()
     store().commit('ui/majdemon', true)
     setTimeout(async () => {
       while (store().state.ui.demon) {
-        const e = store().state.ui.chargements[0]
-        if (!e) { store().commit('ui/majdemon', false); return }
+        const id = store().state.ui.chargements[0]
+        if (!id) { store().commit('ui/majdemon', false); return }
+        const e = data.getFetat(id)
         try {
-          const buf = await download(e)
-          if (buf instanceof AppExc) throw buf
+          const args = { sessionId: data.sessionId, id: e.ids, ts: e.ns % 3, idf: e.id, idc: data.getCompte().id, vt: e.lg }
+          const r = await get('m1', 'getUrl', args)
+          if (!r) throw new AppExc(E_BRO, `Fichier ${Sid(e.id)} non accessible sur le serveur`)
+          const url = dec.decode(r)
+          const buf = await getData(url)
           await e.finChargement(buf)
-          store().commit('ui/okchargement')
         } catch (ex) {
-          const x = e.echecChargement(ex)
-          store().commit('ui/kochargement', x)
+          e.echecChargement(ex)
         }
       }
     }, 10)
-  }
-}
-
-const dec = new TextDecoder()
-
-async function download (e) { // e: fetat
-  try {
-    const args = { sessionId: data.sessionId, id: e.ids, ts: e.ts, idf: e.id, idc: data.getCompte().id, vt: e.lg }
-    const r = await get('m1', 'getUrl', args)
-    if (!r) return null
-    const url = dec.decode(r)
-    const buf = await getData(url)
-    return buf
-  } catch (e) {
-    return appexc(e)
   }
 }
