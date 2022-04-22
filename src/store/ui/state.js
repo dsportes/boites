@@ -78,6 +78,6 @@ export default function () {
 
     chargements: [],
     echecs: [],
-    demon: false
+    dlencours: 0
   }
 }

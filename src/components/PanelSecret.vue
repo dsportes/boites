@@ -129,7 +129,7 @@
                 </div>
               </q-item-section>
             </template>
-            <q-card-section v-for="f in it.l" :key="f.idf" class="ma-qcard-section">
+            <q-card-section v-for="f in it.l" :key="f.idf" class="ma-qcard-section q-my-sm">
               <div class="row justify-between items-center">
                 <div class="col">
                   <span class="text-bold q-pr-lg">{{f.info}}</span>
@@ -156,10 +156,10 @@
                             Elle l'est DE PLUS parce que c'est la plus récente portant ce nom</q-item-section>
                         </q-item>
                         <q-separator/>
-                        <q-item v-if="f.av === 1" clickable v-close-popup @click="avidf(false, f.idf)">
+                        <q-item v-if="f.av === 1 || f.av === 3" clickable v-close-popup @click="avidf(false, f.idf)">
                           <q-item-section>Ne plus garder CETTE version localement</q-item-section>
                         </q-item>
-                        <q-item v-if="f.av !== 1" clickable v-close-popup @click="avidf(true, f.idf)">
+                        <q-item v-if="f.av === 0 || f.av === 2" clickable v-close-popup @click="avidf(true, f.idf)">
                           <q-item-section>Rendre CETTE version lisible en mode avion</q-item-section>
                         </q-item>
                       </q-list>

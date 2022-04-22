@@ -1,6 +1,6 @@
 <template>
     <q-dialog v-model="infoidb">
-      <q-card class="q-ma-xs petitelargeur fs-md">
+      <q-card class="moyennelargeur fs-md">
         <q-card-section>
           <div class="titre-lg text-center">Accès à la base locale</div>
         </q-card-section>

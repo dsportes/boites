@@ -1616,6 +1616,11 @@ export class Secret {
     return f
   }
 
+  nomDeIdf (idf) {
+    const x = this.mfa[idf]
+    return x ? x.nom : null
+  }
+
   /* argument arg pour la gestion des volumes v1 et v2 lors de la création
   et maj des secrets (texte et fichier attaché):
   - id : id de l'avatar / couple / groupe

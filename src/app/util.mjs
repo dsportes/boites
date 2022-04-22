@@ -440,6 +440,10 @@ export async function getData (url) {
     const r = await axios({ method: 'get', url, responseType: 'arraybuffer' })
     return new Uint8Array(r.data)
   } catch (e) {
+    if (e.response && e.response.status === 404) {
+      const txt = decoder.decode(e.response.data)
+      throw new AppExc(E_SRV, txt)
+    }
     throw appexc(e)
   }
 }

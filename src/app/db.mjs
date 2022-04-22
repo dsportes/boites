@@ -1,7 +1,7 @@
 /* eslint-disable func-call-spacing */
 import Dexie from 'dexie'
 import { Avatar, Compte, Prefs, Compta, Couple, Groupe, Membre, Secret, ListeCvIds, SessionSync, data, Cv } from './modele.mjs'
-import { store, Sid, difference, dhstring, get, getData } from './util.mjs'
+import { store, Sid, difference, dhstring, get, getData, afficherdiagnostic } from './util.mjs'
 import { schemas } from './schemas.mjs'
 import { crypt } from './crypto.mjs'
 import { AppExc, E_DB, E_BRO, t0n } from './api.mjs'
@@ -453,7 +453,7 @@ export async function gestionFichierCnx (secrets) {
   chec.sort((a, b) => { return a[0] < b[0] ? -1 : (a[0] > b[0] ? 1 : 0) })
   const lidf = []; chec.forEach(x => { lidf.push(x[1]) })
   store().commit('ui/initchargements', lidf)
-  store().commit('ui/majdemon', false)
+  store().commit('ui/majdlencours', 0)
   startDemon()
 }
 
@@ -518,10 +518,32 @@ class Fetat {
   echecChargement (err) {
     const e = new Fetat().fromIdb(this.toIdb)
     e.dhx = new Date().getTime()
-    e.err = err ? err.toString() : '?'
+    e.err = err ? err.message : '?'
     data.setFetats([e])
     store().commit('ui/kochargement')
-    console.log(`Echec de chargement : ${Sid(e.idf)} ${e.nom}#${e.info} ${dhstring(e.dhx)} ${e.err}`)
+    const msg = `Echec de chargement : ${Sid(e.idf)} ${e.nom}#${e.info} ${dhstring(e.dhx)} ${e.err}` +
+      '<br>Cliquer sur l\'icône rouge de téléchargement dans la barre du haut'
+    afficherdiagnostic(msg)
+  }
+
+  async retry () {
+    store().commit('ui/razechec', this.id)
+    const e = new Fetat().fromIdb(this.toIdb)
+    e.dhx = 0
+    e.err = ''
+    const nvFa = [e]
+    data.setFetats(nvFa)
+    await commitFic([], nvFa)
+    store().commit('ui/ajoutchargements', nvFa)
+    startDemon()
+  }
+
+  async abandon () {
+    store().commit('ui/razechec', this.id)
+    const s = data.getSecret(this.ids, this.ns)
+    if (!s) return
+    const nom = s.nomDeIdf(this.id)
+    await gestionFichierMaj(s, false, this.id, nom)
   }
 }
 
@@ -557,7 +579,7 @@ class AvSecret {
     // difference (setA, setB) { // element de A pas dans B
     const x1 = difference(idfs, idfs2) // idf disparus
     const x2 = difference(idfs2, idfs) // nouveaux, version de nom plus récente
-    const nvFa = x2.size || x1.size ? [] : null
+    const nvFa = []
     if (x1.size) {
       for (const idf of x1) {
         const e = new Fetat().nouveauSuppr(idf)
@@ -692,14 +714,14 @@ async function commitFic (lstAvSecrets, lstFetats) { // lst : array / set d'idfs
   }
 }
 
+const dec = new TextDecoder()
+
 function startDemon () {
-  if (!store().state.ui.demon) {
-    const dec = new TextDecoder()
-    store().commit('ui/majdemon', true)
+  if (!store().state.ui.dlencours) {
+    let id = store().state.ui.chargements[0] || 0
+    store().commit('ui/majdlencours', id)
     setTimeout(async () => {
-      while (store().state.ui.demon) {
-        const id = store().state.ui.chargements[0]
-        if (!id) { store().commit('ui/majdemon', false); return }
+      while (id) {
         const e = data.getFetat(id)
         try {
           const args = { sessionId: data.sessionId, id: e.ids, ts: e.ns % 3, idf: e.id, idc: data.getCompte().id, vt: e.lg }
@@ -711,6 +733,8 @@ function startDemon () {
         } catch (ex) {
           e.echecChargement(ex)
         }
+        id = store().state.ui.chargements[0] || 0
+        store().commit('ui/majdlencours', id)
       }
     }, 10)
   }

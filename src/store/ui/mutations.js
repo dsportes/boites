@@ -141,4 +141,13 @@ export function kochargement (state) {
     state.echecs = [i, ...state.echecs]
   }
 }
-export function majdemon (state, val) { state.demon = val }
+export function razechec (state, idf) {
+  const i = state.echecs.indexOf(idf)
+  if (i === -1) return
+  const l = []
+  state.echecs.forEach(i => { if (i !== idf) l.push(i) })
+  state.echecs = l
+}
+export function majdlencours (state, val) {
+  state.dlencours = val
+}
