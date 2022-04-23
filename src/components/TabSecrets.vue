@@ -108,6 +108,7 @@
           <q-circular-progress class="col-1 text-center" :value="v2r * 100 / v2p" :thickness="0.2" color="grey-5" track-color="warning" />
           <div class="col-3 text-center font-mono">{{edvol(v2r)}}</div>
         </div>
+        <div class="font-mono fs-sm height-4"><span v-if="rundl">{{encours}}</span></div>
       </q-card-section>
     </q-card>
   </q-dialog>
@@ -115,7 +116,7 @@
 </div>
 </template>
 <script>
-import { Motscles, difference, Filtre, getJourJ, putData, afficherdiagnostic, edvol /*, sleep */ } from '../app/util.mjs'
+import { Motscles, difference, Filtre, getJourJ, putData, afficherdiagnostic, edvol, sleep } from '../app/util.mjs'
 import { serial, deserial } from '../app/schemas.mjs'
 import { computed, reactive, watch, isRef } from 'vue'
 import { useStore } from 'vuex'
@@ -144,6 +145,7 @@ export default ({
       stopdl: false,
       rundl: false,
       findl: false,
+      encours: '',
       edvol: edvol,
       row: { },
       port: 8000,
@@ -191,6 +193,7 @@ export default ({
       this.stopdl = false
       this.rundl = false
       this.findl = false
+      this.encours = ''
       this.v1p = 0; this.v2p = 0; this.v1r = 0; this.v2r = 0; this.nbsp = 0; this.nbfp = 0; this.nbsr = 0; this.nbfr = 0
       for (let i = 0; i < this.state.lst.length; i++) {
         const s = this.state.lst[i]
@@ -205,9 +208,11 @@ export default ({
 
     async startdl () {
       this.rundl = true
+      this.encours = ''
       const l = []
       for (let i = 0; i < this.state.lst.length; i++) { const s = this.state.lst[i]; l.push([s.id, s.ns]) }
       const root = 'http://localhost:' + this.port + '/'
+      const tempo = 0 // 300
       try {
         for (const x of l) {
           const s = data.getSecret(x[0], x[1])
@@ -217,23 +222,31 @@ export default ({
           const n2 = s.nomf
           const buf = enc.encode(s.txt.t)
           this.v1r += buf.length
-          const p = root + this.b64(this.org + '/' + n1 + '/' + n2 + '.md')
+          const ec = n1 + '/' + n2 + '.md'
+          this.encours = 'Ecriture : ' + ec + ' - ' + edvol(buf.length)
+          const p = root + this.b64(this.org + '/' + ec)
           await putData(p, buf)
-          // await sleep(1000)
+          if (tempo) await sleep(tempo)
           if (this.stopdl) break
           if (s.nbfa) {
             for (const ix in s.mfa) {
               const idf = parseInt(ix)
+              const ec = n1 + '/' + n2 + '/' + s.nomFichier(idf)
+              this.encours = 'Lecture  : ' + ec + ' - ' + edvol(s.mfa[idf].lg)
               const buf = await s.getFichier(idf)
+              if (tempo) await sleep(tempo)
               if (this.stopdl) break
-              const p = root + this.b64(this.org + '/' + n1 + '/' + n2 + '/' + s.nomFichier(idf))
+              const p = root + this.b64(this.org + '/' + ec)
+              this.encours = 'Ecriture : ' + ec + ' - ' + edvol(s.mfa[idf].lg)
               await putData(p, buf)
-              // await sleep(1000)
+              if (tempo) await sleep(tempo)
               if (this.stopdl) break
               this.v2r += buf.length
               this.nbfr++
+              this.encours = ''
             }
           }
+          this.encours = ''
           this.nbsr++
         }
         if (this.stopdl) {
