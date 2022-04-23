@@ -17,6 +17,7 @@ export function razdialogues (state) {
   majdialoguecrypto(state, false)
   majdialoguetestping(state, false)
   majdialoguecreationcompte(state, false)
+  majdialoguedlselection(state, false)
 }
 
 export function majstatutsession (state, val) {
@@ -61,6 +62,7 @@ export function majsessionid (state, val) { state.sessionid = val }
 export function majstatutnet (state, val) { state.statutnet = val }
 
 export function majdialoguesynchro (state, val) { state.dialoguesynchro = val }
+export function majdialoguedlselection (state, val) { state.dialoguedlselection = val }
 
 export function majerreur (state, err) { state.erreur = err }
 export function majdialogueerreur (state, val) { state.dialogueerreur = val }

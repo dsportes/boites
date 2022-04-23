@@ -2,13 +2,10 @@
 <div v-if="sessionok" :class="$q.screen.gt.sm ? 'ml20' : 'q-pa-xs full-width'">
   <q-card  v-if="!avatarscform && (mode === 1 || mode === 2)" class="shadow-8">
     <q-card-actions vertical>
-      <q-btn flat dense color="primary" size="md" icon="add" label="Nouveau secret personnel" @click="action(0)"/>
-      <q-btn v-if="couple" flat dense size="md" color="primary" icon="add" :label="'Nouveau secret du couple ' +  couple.nom" @click="action(1)"/>
-      <q-btn v-if="groupe" flat dense size="md" color="primary" icon="add" :label="'Nouveau secret du groupe ' +  groupe.nom" @click="action(2)"/>
-      <div class="row justify-center">
-        <q-input flat dense label="Port d'upload local" style="width:8rem" v-model="port" />
-        <q-btn class="q-ml-sm" flat dense icon="save" label="Upload local" @click="action(3, port)" />
-      </div>
+      <q-btn flat dense color="primary" size="md" icon="add" label="Nouveau secret personnel" @click="nvsecret(0)"/>
+      <q-btn v-if="couple" flat dense size="md" color="primary" icon="add" :label="'Nouveau secret du couple ' +  couple.nom" @click="nvsecret(1)"/>
+      <q-btn v-if="groupe" flat dense size="md" color="primary" icon="add" :label="'Nouveau secret du groupe ' +  groupe.nom" @click="nvsecret(2)"/>
+      <q-btn flat dense icon="save" color="primary" label="Télécharger les secrets" @click="ouvrirdl" />
     </q-card-actions>
   </q-card>
 
@@ -34,15 +31,15 @@
                 <q-item-section class="text-italic">Nouveau secret voisin ...</q-item-section>
               </q-item>
               <q-separator />
-              <q-item clickable v-close-popup @click="action(0, s)">
+              <q-item clickable v-close-popup @click="nvsecret(0, s)">
                 <q-item-section>...personnel</q-item-section>
               </q-item>
               <q-separator />
-              <q-item v-if="s.couple" clickable v-close-popup @click="action(1, s)">
+              <q-item v-if="s.couple" clickable v-close-popup @click="nvsecret(1, s)">
                 <q-item-section>...partagé avec {{s.couple.nom}}</q-item-section>
               </q-item>
               <q-separator v-if="s.groupe" />
-              <q-item v-if="s.groupe" clickable v-close-popup @click="action(2, s)">
+              <q-item v-if="s.groupe" clickable v-close-popup @click="nvsecret(2, s)">
                 <q-item-section>...partagé avec {{s.groupe.nom}}</q-item-section>
               </q-item>
             </q-list>
@@ -73,10 +70,52 @@
     <panel-filtre @ok="rechercher" @action="action" :motscles="motscles" :etat-interne="recherche"/>
   </q-page-sticky>
 
+  <q-dialog v-if="sessionok" v-model="dialoguedlselection">
+    <q-card class="shadow-8 moyennelargeur">
+      <q-card-section>
+        <div class="titre-lg text-center full-width">Téléchargement sur le poste des secrets sélectionnés et de leurs fichiers</div>
+        <div class="fs-md">Lancer l'application "upload" : port par défaut 8080. Penser à l'arrêter après.</div>
+        <q-input flat dense label="Numéro de port" style="width:8rem" v-model="port" />
+      </q-card-section>
+      <q-card-actions vertical center>
+        <q-btn v-if="!findl" flat dense icon="save" :disable="rundl" color="primary" label="Démarrer le téléchargement" @click="startdl" />
+        <q-btn v-if="!findl" flat dense icon="close" color="warning" :label="rundl ? 'Interrompre le téléchargement' : 'Annuler'" @click="fermerdl" />
+        <q-btn v-if="findl" dense icon="close" color="warning" label="Téléchargement terminé avec succès !" @click="fermerdl" />
+      </q-card-actions>
+      <q-card-section>
+        <div class="titre-md full-width text-center text-italic q-my-md color-primary text-bold">Estimation / réalisation</div>
+        <div class="row justify-center items-center">
+          <div class="col-5 text-right"></div>
+          <div class="col-3 text-center font-mono">Prévu</div>
+          <div class="col-1 text-center font-mono"></div>
+          <div class="col-3 text-center font-mono">Téléchargé</div>
+        </div>
+        <div class="row justify-center items-center q-my-sm">
+          <div class="col-5 text-right">Nombre de secrets / fichiers</div>
+          <div class="col-3 text-center font-mono">{{nbsp}} / {{nbfp}}</div>
+          <q-circular-progress class="col-1 text-center" :value="nbsr * 100 / nbsp" :thickness="0.2" color="grey-5" track-color="warning" />
+          <div class="col-3 text-center font-mono">{{nbsr}} / {{nbfr}}</div>
+        </div>
+        <div class="row justify-center items-center q-my-sm">
+          <div class="col-5 text-right">Volume V1 des textes</div>
+          <div class="col-3 text-center font-mono">{{edvol(v1p)}}</div>
+          <q-circular-progress class="col-1 text-center" :value="v1r * 100 / v1p" :thickness="0.2" color="grey-5" track-color="warning" />
+          <div class="col-3 text-center font-mono">{{edvol(v1r)}}</div>
+        </div>
+        <div class="row justify-center items-center q-my-sm">
+          <div class="col-5 text-right">Volume V2 des fichiers</div>
+          <div class="col-3 text-center font-mono">{{edvol(v2p)}}</div>
+          <q-circular-progress class="col-1 text-center" :value="v2r * 100 / v2p" :thickness="0.2" color="grey-5" track-color="warning" />
+          <div class="col-3 text-center font-mono">{{edvol(v2r)}}</div>
+        </div>
+      </q-card-section>
+    </q-card>
+  </q-dialog>
+
 </div>
 </template>
 <script>
-import { Motscles, difference, Filtre, getJourJ, upload, normpath, afficherdiagnostic } from '../app/util.mjs'
+import { Motscles, difference, Filtre, getJourJ, putData, afficherdiagnostic, edvol /*, sleep */ } from '../app/util.mjs'
 import { serial, deserial } from '../app/schemas.mjs'
 import { computed, reactive, watch, isRef } from 'vue'
 import { useStore } from 'vuex'
@@ -85,6 +124,7 @@ import ShowHtml from '../components/ShowHtml.vue'
 import ApercuMotscles from '../components/ApercuMotscles.vue'
 import PanelSecret from '../components/PanelSecret.vue'
 import PanelFiltre from '../components/PanelFiltre.vue'
+import { crypt } from '../app/crypto.mjs'
 import { useQuasar } from 'quasar'
 
 const enc = new TextEncoder()
@@ -101,8 +141,20 @@ export default ({
 
   data () {
     return {
+      stopdl: false,
+      rundl: false,
+      findl: false,
+      edvol: edvol,
       row: { },
-      port: 8000
+      port: 8000,
+      nbsp: 0,
+      nbfp: 0,
+      nbsr: 0,
+      nbfr: 0,
+      v1p: 0,
+      v2p: 0,
+      v1r: 0,
+      v2r: 0
     }
   },
 
@@ -129,37 +181,67 @@ export default ({
       }
     },
 
-    async action (n, p) {
-      if (n === 3) {
-        await this.upload(p)
-      } else {
-        this.nvsecret(n, p) // p : secret voisin
+    fermerdl () {
+      this.stopdl = true
+      this.dialoguedlselection = false
+    },
+
+    ouvrirdl () {
+      this.dialoguedlselection = true
+      this.stopdl = false
+      this.rundl = false
+      this.findl = false
+      this.v1p = 0; this.v2p = 0; this.v1r = 0; this.v2r = 0; this.nbsp = 0; this.nbfp = 0; this.nbsr = 0; this.nbfr = 0
+      for (let i = 0; i < this.state.lst.length; i++) {
+        const s = this.state.lst[i]
+        this.nbsp++
+        this.v1p += s.v1
+        this.v2p += s.v2
+        this.nbfp += s.nbfa
       }
     },
 
-    async upload (port) {
+    b64 (u) { return crypt.u8ToB64(enc.encode(u), true) },
+
+    async startdl () {
+      this.rundl = true
+      const l = []
+      for (let i = 0; i < this.state.lst.length; i++) { const s = this.state.lst[i]; l.push([s.id, s.ns]) }
+      const root = 'http://localhost:' + this.port + '/'
       try {
-        let nbpj = 0
-        let v1 = 0, v2 = 0
-        for (let i = 0; i < this.state.lst.length; i++) {
-          const s = this.state.lst[i]
-          console.log(s.path)
+        for (const x of l) {
+          const s = data.getSecret(x[0], x[1])
+          if (!s) continue
+          if (this.stopdl) break
+          const n1 = data.repertoire.na(s.id).nomf
+          const n2 = s.nomf
           const buf = enc.encode(s.txt.t)
-          v1 += buf.length
-          await upload(port, s.path + '.md', buf)
-          if (s.nbpj) {
-            for (const cpj in s.mpj) {
-              const pj = s.mpj[cpj]
-              const buf = await s.datapj(pj)
-              v2 += buf.length
-              const p = s.path + '/' + normpath(pj.nom, true)
-              await upload(port, p, buf)
-              nbpj++
+          this.v1r += buf.length
+          const p = root + this.b64(this.org + '/' + n1 + '/' + n2 + '.md')
+          await putData(p, buf)
+          // await sleep(1000)
+          if (this.stopdl) break
+          if (s.nbfa) {
+            for (const ix in s.mfa) {
+              const idf = parseInt(ix)
+              const buf = await s.getFichier(idf)
+              if (this.stopdl) break
+              const p = root + this.b64(this.org + '/' + n1 + '/' + n2 + '/' + s.nomFichier(idf))
+              await putData(p, buf)
+              // await sleep(1000)
+              if (this.stopdl) break
+              this.v2r += buf.length
+              this.nbfr++
             }
           }
+          this.nbsr++
         }
-        afficherdiagnostic('Upload de ' + this.state.lst.length +
-          ' secrets (' + nbpj + 'pièce(s) jointe(s)) terminé avec succès. Volume total : ' + v1 + ' + ' + v2)
+        if (this.stopdl) {
+          afficherdiagnostic('Opération interrompue')
+          this.dialoguedlselection = false
+        } else {
+          this.findl = true
+        }
       } catch (e) {
         afficherdiagnostic('Erreur du serveur local d\'upload : ' + e)
       }
@@ -171,11 +253,16 @@ export default ({
     const $q = useQuasar()
     // const compte = computed(() => { return $store.state.db.compte })
     const sessionok = computed(() => { return $store.state.ui.sessionok })
+    const org = computed(() => { return $store.state.ui.org })
     const prefs = computed(() => { return $store.state.db.prefs })
     const avatar = computed(() => { return $store.state.db.avatar })
     const groupe = computed(() => { return $store.state.db.groupe })
     const couple = computed(() => { return $store.state.db.couple })
     const mode = computed(() => $store.state.ui.mode)
+    const dialoguedlselection = computed({
+      get: () => $store.state.ui.dialoguedlselection,
+      set: (val) => $store.commit('ui/majdialoguedlselection', val)
+    })
     const secret = computed({ // secret courant
       get: () => $store.state.db.secret,
       set: (val) => $store.commit('db/majsecret', val)
@@ -446,6 +533,8 @@ export default ({
 
     return {
       sessionok,
+      org,
+      dialoguedlselection,
       afficherform,
       suiv,
       prec,

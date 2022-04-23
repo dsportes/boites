@@ -19,6 +19,7 @@ export default function () {
     confirmstopop: false,
     dialoguetestping: false,
     dialoguesynchro: false,
+    dialoguedlselection: false,
     diagnostic: null,
 
     helpstack: [],

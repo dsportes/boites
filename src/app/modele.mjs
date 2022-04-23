@@ -1466,6 +1466,7 @@ export class Secret {
   get table () { return 'secret' }
   get sid () { return crypt.idToSid(this.id) }
   get id2 () { return this.ns }
+  get sid2 () { return crypt.idToSid(this.ns) }
   get pk () { return this.sid + '/' + this.ns }
   get pkref () { return !this.ref ? '' : (crypt.idToSid(this.ref[0]) + '/' + this.ref[1]) }
 
