@@ -387,7 +387,8 @@ async function getAvSecrets (map) {
 export async function gestionFichierSync (lst) {
   const nvFa = []
   const nvAvs = []
-  for (const s in lst) {
+  for (const pk in lst) {
+    const s = lst[pk]
     const avs = data.getAvSecret(s.id, s.ns)
     if (!avs || avs.v >= s.v) continue // pas d'avsecret associé ou déjà à jour (??)
     const [nv, nvf] = avs.diff(s) // nouvel AvSecret compte tenu du nouveau s
