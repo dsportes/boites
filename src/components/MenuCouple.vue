@@ -82,10 +82,10 @@ export default ({
 
     nouveausecret () {
       if (this.c) this.couple = this.c
-      this.tabavtar = 'secrets'
+      this.tabavatar = 'secrets'
       setTimeout(() => {
         this.evtfiltresecrets = { cmd: 'nvc', arg: this.c ? this.c : this.couple }
-      })
+      }, 100)
     },
 
     copier () {

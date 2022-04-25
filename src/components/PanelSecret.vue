@@ -29,7 +29,7 @@
     </q-toolbar>
 
     <div v-if="tabsecret==='texte'" class='col column'>
-      <editeur-texte-secret class="col" v-model="state.textelocal" :texte-ref="secret.txt.t" :editable="!state.ro" :erreur="erreur" :apropos="secret.dh"/>
+      <editeur-texte-secret class="col" v-model="state.textelocal" :texte-ref="secret ? secret.txt.t : ''" :editable="!state.ro" :erreur="erreur" :apropos="secret.dh"/>
 
       <div class="col-auto q-px-xs full-width row justify-between items-center">
         <div class="col">
@@ -54,7 +54,7 @@
         <q-btn class="col-auto" v-if="!state.ro" :disable="!modifmcl()" size="sm" dense push icon="undo" color="primary" @click="undomcl"/>
       </div>
       <div v-if="state.ts === 2" class="col-auto q-px-xs full-width row justify-between items-center">
-        <apercu-motscles class="col" :motscles="state.motscles" :src="mcglocal"/>
+        <apercu-motscles class="col" :motscles="state.motscles" :src="state.mcglocal"/>
         <q-btn class="col-auto" :disable="state.ro !== 0" flat dense color="primary" label="Mots clés du groupe" @click="ouvrirmcg"/>
         <q-btn class="col-auto" v-if="!state.ro" :disable="!modifmcg()" size="sm" dense push icon="undo" color="primary" @click="undomcg"/>
       </div>
@@ -503,14 +503,13 @@ export default ({
       if (s.v) {
         // maj
         const txts = this.state.textelocal === s.txt.t ? null : await s.toRowTxt(this.state.textelocal, this.state.im)
-        const chgmc = s.ts === 0 ? !equ8(this.state.mclocal, s.mc) : !equ8(this.state.mclocal, s.mc[this.state.im])
-        const mc = chgmc ? this.state.mclocal : null
+        const mc = this.modifmcl() ? this.state.mclocal : null
         const v1 = this.state.textelocal === s.txt.t ? null : this.state.textelocal.length
         const tempav = this.secret.st > 0 && this.secret.st !== 99999
         const st = tempav === this.state.templocal ? null : (this.state.templocal ? this.jourJ + this.limjours : 99999)
         const xp = xploc === s.xp ? null : xploc
         const arg = { ts: s.ts, id: s.id, ns: s.ns, mc, txts, v1, xp, st, varg: s.volarg() }
-        if (s.ts === 2) arg.mcg = equ8(this.state.mcglocal, s.mc[0]) ? null : this.state.mcglocal
+        if (s.ts === 2) arg.mcg = this.modifmcg() ? this.state.mcglocal : null
         // im requis pour mettre à jour les motsclés de l'avatar
         if (s.ts !== 0) arg.im = this.state.im
         await new Maj1Secret().run(arg)
@@ -593,9 +592,23 @@ export default ({
       return lst
     }
 
-    function undomcl () { const s = secret.value; if (s) { state.mclocal = s.ts >= 1 ? s.mc[state.im] : s.mc } }
+    function undomcl () {
+      const s = secret.value
+      if (s) {
+        state.mclocal = s.ts >= 1 ? (s.mc[state.im] || new Uint8Array([])) : s.mc
+      } else {
+        state.mclocal = new Uint8Array([])
+      }
+    }
 
-    function undomcg () { const s = secret.value; if (s) { state.mcglocal = s.ts === 2 ? s.mc[0] : null } }
+    function undomcg () {
+      const s = secret.value
+      if (s.ts !== 2) {
+        state.mcglocal = null
+      } else {
+        state.mcglocal = s.mc[0] || new Uint8Array([])
+      }
+    }
 
     function undotp () { const s = secret.value; if (s) { const st = s.st; state.templocal = st > 0 && st < 99999 } }
 
@@ -608,10 +621,16 @@ export default ({
     function undo () { undomcl(); undomcg(); undotp(); undotx(); undox(); undop() }
 
     function modifmcl () {
-      return !equ8(state.mclocal, secret.value.ts === 2 ? secret.value.mc[state.im] : secret.value.mc)
+      const s = secret.value
+      if (s.ts === 0) return !equ8(state.mclocal, s.mc)
+      const av = s.mc[state.im] || new Uint8Array([])
+      return !equ8(state.mclocal, av)
     }
     function modifmcg () {
-      return secret.value.ts === 2 && !equ8(state.mcglocal, secret.value.mc[0])
+      const s = secret.value
+      if (s.ts !== 2) return null
+      const av = s.mc[0] || new Uint8Array([])
+      return !equ8(state.mcglocal, av)
     }
     function modifx () {
       return state.xlocal !== secret.value.exclu
@@ -656,14 +675,14 @@ export default ({
         state.avatar = s.ts === 0 ? avatar : null
         state.groupe = s.ts === 2 ? data.getGroupe(s.id) : null
         state.couple = s.ts === 1 ? data.getCouple(s.id) : null
-        state.im = s.ts === 2 ? state.groupe.imDeId(avid) : (s.ts === 1 ? state.couple.avc + 1 : 0)
+        state.im = s.im(avid)
         state.membre = s.ts === 2 && state.im ? data.getMembre(state.groupe.id, state.im) : null
         state.encreation = s.v === 0
         state.ro = 0
         state.listevoisins = lstvoisins($store.state.db['voisins@' + (s.ref ? s.pkref : s.pk)])
         if (s.ts >= 1) {
           if (!s.mc[state.im]) s.mc[state.im] = new Uint8Array([])
-          if (!s.mc[0]) s.mc[0] = new Uint8Array([])
+          if (s.ts === 2 && !s.mc[0]) s.mc[0] = new Uint8Array([])
         } else {
           if (!s.mc) s.mc = new Uint8Array([])
         }
@@ -682,8 +701,8 @@ export default ({
         }
         switch (secret.value.ts) {
           case 0 : { state.titre = 'Secret personnel'; break }
-          case 1 : { state.titre = 'Partagé avec ' + state.couple.nom; break }
-          case 2 : { state.titre = 'Partagé avec ' + state.groupe.nom; break }
+          case 1 : { state.titre = 'Secret du couple ' + state.couple.nom; break }
+          case 2 : { state.titre = 'Secret du groupe ' + state.groupe.nom; break }
         }
         state.listefic = listefichiers(s, state.avs)
         undo()

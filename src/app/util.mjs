@@ -925,8 +925,6 @@ export class Filtre {
   }
 
   debutFiltre () {
-    const av = this.avId ? data.getAvatar(this.avId) : null
-    this.m2gr = av ? av.mg2r : null
     if (this.modif) this.auj = Math.floor(new Date().getTime() / 86400000)
     this.f1 = new Set(this.m1)
     this.f2 = new Set(this.m2)
@@ -934,19 +932,22 @@ export class Filtre {
   }
 
   filtre (s) {
+    const im = s.im(this.avid)
     if (!s.v) return true // secret en création jamais filtré, toujours en tête
     if (s.ts === 0 && !this.perso) return false
     if (s.ts === 1 && (this.coupleId === 0 || (this.coupleId !== -1 && this.coupleId !== s.id))) return false
     if (s.ts === 2 && (this.groupeId === 0 || (this.groupeId !== -1 && this.groupeId !== s.id))) return false
-    const im = s.ts !== 2 || !this.m2gr ? 0 : this.m2gr.get(s.id)[0]
-    let mcs = im === 0 ? s.mc : s.mc[im]
-    if (!mcs && s.ts === 2) mcs = s.mc[0]
-    if (!mcs && this.f1.size) return false
-    if (mcs) {
-      const sx = new Set(mcs)
-      if (difference(this.f1, sx).size) return false
-      if (intersection(this.f2, sx).size) return false
+    let mcs
+    if (s.ts === 2) {
+      mcs = s.mc[im] || s.mc[0] || new Uint8Array([])
+    } else if (s.ts === 1) {
+      mcs = s.mc[im] || new Uint8Array([])
+    } else {
+      mcs = s.mc || new Uint8Array([])
     }
+    const sx = new Set(mcs)
+    if (difference(this.f1, sx).size) return false
+    if (intersection(this.f2, sx).size) return false
     if (!this.perm && s.st === 99999) return false
     if (s.st !== 99999) {
       if (!this.temp) return false // ne retenir aucun temporaire

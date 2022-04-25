@@ -63,11 +63,11 @@
   </div>
 
   <q-dialog  v-if="!$q.screen.gt.sm && sessionok" v-model="avatarscrech" position="left">
-    <panel-filtre @ok="rechercher" @action="action" :motscles="motscles" :etat-interne="recherche" :fermer="fermerfiltre"/>
+    <panel-filtre @ok="rechercher" :motscles="motscles" :etat-interne="recherche" :fermer="fermerfiltre"/>
   </q-dialog>
 
   <q-page-sticky v-if="$q.screen.gt.sm && sessionok" position="top-left" expand :offset="[5,5]">
-    <panel-filtre @ok="rechercher" @action="action" :motscles="motscles" :etat-interne="recherche"/>
+    <panel-filtre @ok="rechercher" :motscles="motscles" :etat-interne="recherche"/>
   </q-page-sticky>
 
   <q-dialog v-if="sessionok" v-model="dialoguedlselection">

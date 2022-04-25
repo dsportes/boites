@@ -1,7 +1,8 @@
 <template>
 <div ref="root1">
-  <q-card class="column fs-md full-height overflow-hidden shadow-8">
+  <q-card v-if="!max" class="column fs-md full-height overflow-hidden shadow-8">
     <q-toolbar class="col-auto full-width maToolBar">
+      <q-btn icon="zoom_out_map" size="md" push flat dense @click="max=true"></q-btn>
       <q-btn :disable="!md" class="q-mr-xs" size="md" label="TEXTE" :color="md ? 'warning' : 'purple'" push flat dense @click="md=false"></q-btn>
       <q-btn :disable="md" class="q-mr-xs" size="md" label="HTML" dense flat push @click="md=true"></q-btn>
       <q-btn v-if="editable" :disable="md" class="q-mr-xs" icon="face" size="md" dense flat push @click="emoji=true"></q-btn>
@@ -12,6 +13,21 @@
     <textarea v-if="!md" :class="'col q-pa-xs full-width font-mono ta ' + dlclass" v-model="textelocal" :readonly="!editable"/>
     <div v-else class="col q-pa-xs full-width ta"><show-html :texte="textelocal"/></div>
   </q-card>
+  <q-dialog v-model="max" full-height transition-show="slide-up" transition-hide="slide-down">
+    <div ref="root2" :class="'column fs-md full-height grandelargeur overflow-hidden ' + dlclass">
+      <q-toolbar class="col-auto full-width maToolBar">
+        <q-btn icon="zoom_in_map" size="md" push flat dense @click="max=false"></q-btn>
+        <q-btn :disable="!md" class="q-mr-xs" size="md" label="TEXTE" :color="md ? 'warning' : 'purple'" push flat dense @click="md=false"></q-btn>
+        <q-btn :disable="md" class="q-mr-xs" size="md" label="HTML" dense flat push @click="md=true"></q-btn>
+        <q-btn v-if="editable" :disable="md" class="q-mr-xs" icon="face" size="md" dense flat push @click="emoji=true"></q-btn>
+        <q-toolbar-title v-if="erreur" :class="'text-italic text-center fs-md erreur'">{{erreur}}</q-toolbar-title>
+        <q-toolbar-title v-if="apropos && !erreur" :class="'text-italic text-center fs-md'">{{apropos}}</q-toolbar-title>
+        <q-btn v-if="editable" :disable="!modifie" class="q-mr-xs" color="primary" icon="undo" size="sm" dense push @click="undo"></q-btn>
+      </q-toolbar>
+      <textarea v-if="!md" :class="'col q-pa-xs full-width font-mono ta ' + dlclass" v-model="textelocal" :readonly="!editable"/>
+      <div v-else class="col q-pa-xs full-width ta"><show-html :texte="textelocal"/></div>
+    </div>
+  </q-dialog>
   <q-dialog v-model="emoji">
     <VuemojiPicker @emojiClick="emojiclick" data-source="emoji.json"/>
   </q-dialog>
@@ -45,14 +61,16 @@ export default ({
 
   data () {
     return {
-      emoji: false
+      emoji: false,
+      max: false
     }
   },
 
   methods: {
     emojiclick (emoji) {
       const code = emoji.emoji.unicode
-      const ta = this.root1.querySelector('textarea')
+      const r = this.max ? this.root2 : this.root
+      const ta = r.querySelector('textarea')
       this.textelocal = ta.value.substring(0, ta.selectionStart) + code + ta.value.substring(ta.selectionEnd, ta.value.length)
       this.emoji = false
     }
@@ -60,6 +78,7 @@ export default ({
 
   setup (props, context) {
     const root1 = ref(null)
+    const root2 = ref(null)
     const textelocal = ref('')
     const texteinp = ref('')
     const texteRef = toRef(props, 'texteRef')
@@ -99,6 +118,7 @@ export default ({
     return {
       md,
       root1,
+      root2,
       textelocal,
       undo
     }
@@ -132,4 +152,5 @@ export default ({
   border-top: 1px solid $grey-5
   border-bottom: 1px solid $grey-5
   overflow-y: auto
+  outline-offset: 3px !important
 </style>

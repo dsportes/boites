@@ -75,7 +75,6 @@ export function majdialoguecreationcompte (state, val) { state.dialoguecreationc
 export function majdialoguetestping (state, val) { state.dialoguetestping = val }
 
 export function majevtfiltresecrets (state, val) { state.evtfiltresecrets = val }
-export function majevtfiltresecrets2 (state, val) { state.evtfiltresecrets2 = val }
 
 export function majevtavatarsc (state, val) { state.evtavatarsc = { evt: val } }
 

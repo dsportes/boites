@@ -1494,10 +1494,12 @@ export class Secret {
   get couple () { return this.ts !== 1 ? null : data.getCouple(this.id) }
   get groupe () { return this.ts !== 2 ? null : data.getGroupe(this.id) }
 
+  im (avid) { return this.ts === 0 ? 0 : (this.ts === 1 ? this.couple.avc + 1 : this.groupe.imDeId(avid)) }
+
   get partage () {
     if (this.ts === 0) return 'Secret personnel'
-    if (this.ts === 1) return 'Secret partagé avec ' + this.couple.nomf
-    return 'Secret partagé avec ' + this.groupe.nom
+    if (this.ts === 1) return 'Secret du couple ' + this.couple.nomf
+    return 'Secret du groupe ' + this.groupe.nom
   }
 
   nouveau (id, ref) {
@@ -1516,19 +1518,17 @@ export class Secret {
     return this
   }
 
-  nouveauC (id, ref, im) { // im : 0 ou 1 (couple.avc)
+  nouveauC (id, ref) { // im : 0 ou 1 (couple.avc)
     this.nouveau(id, ref)
     this.ns = (Math.floor(crypt.rnd4() / 3) * 3) + 1
-    this.mc = { 0: new Uint8Array([]) }
-    if (im) this.mc[im] = new Uint8Array([])
+    this.mc = { 1: new Uint8Array([]), 2: new Uint8Array([]) }
     return this
   }
 
   nouveauG (id, ref, im) {
     this.nouveau(id, ref)
     this.ns = (Math.floor(crypt.rnd4() / 3) * 3) + 2
-    this.mc = { 0: new Uint8Array([]) }
-    if (im) this.mc[im] = new Uint8Array([])
+    this.mc = { 0: new Uint8Array([]), im: new Uint8Array([]) }
     return this
   }
 
@@ -1536,7 +1536,7 @@ export class Secret {
     const x = { d: Math.floor(new Date().getTime() / 1000), t: gzip(txt) }
     if (this.ts) {
       const nl = [im]
-      this.txt.l.forEach(t => { if (t !== im) nl.push(t) })
+      if (this.txt.l) this.txt.l.forEach(t => { if (t !== im) nl.push(t) })
       x.l = new Uint8Array(nl)
     }
     return await crypt.crypter(this.cle, serial(x))
@@ -1569,10 +1569,10 @@ export class Secret {
         console.log(e.toString())
         this.txt = { t: '!!! texte illisible, corrompu !!!', d: Math.floor(new Date().getTime() / 1000) }
       }
-      if (row.mc) {
-        this.mc = this.ts === 0 || this.ts === 1 ? row.mc : deserial(row.mc)
+      if (this.ts === 0) {
+        this.mc = row.mc || new Uint8Array([])
       } else {
-        this.mc = this.ts === 0 || this.ts === 1 ? new Uint8Array([]) : {}
+        this.mc = row.mc ? deserial(row.mc) : {}
       }
       this.mfa = {}
       this.nbfa = 0

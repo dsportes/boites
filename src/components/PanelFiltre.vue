@@ -1,19 +1,7 @@
 <template>
   <q-scroll-area style="height:80vh;width:22rem">
   <q-card class="shadow-8">
-    <!--
-    <q-card-actions vertical>
-      <q-btn flat dense color="primary" size="md" icon="add" label="Nouveau secret personnel" @click="action(0)"/>
-      <q-btn v-if="couple" flat dense size="md" color="primary" icon="add" :label="'Nouveau secret du couple ' +  couple.nom" @click="action(1)"/>
-      <q-btn v-if="groupe" flat dense size="md" color="primary" icon="add" :label="'Nouveau secret du groupe ' +  groupe.nom" @click="action(2)"/>
-      <div class="row justify-center">
-        <q-input flat dense label="Port d'upload local" style="width:5rem" v-model="port" />
-        <q-btn class="q-ml-sm" flat dense icon="save" label="Upload local" @click="action(3, port)" />
-      </div>
-    </q-card-actions>
-    <q-separator/>
-    -->
-    <q-card-actions align="between">
+   <q-card-actions align="between">
       <q-btn v-if="$q.screen.lt.md" size="md" flat dense color="negative" icon="close" @click="fermeture" />
       <q-btn :disable="!modifie" size="md" flat dense color="primary" icon="undo" label="Annuler" @click="annuler" />
       <q-btn :disable="!modifie" size="md" flat dense color="warning" icon="search" label="Rechercher" @click="ok" />
@@ -126,8 +114,7 @@ export default ({
       mcedit2: false,
       menudd1: false,
       menudd2: false,
-      menudd3: false,
-      port: 8000
+      menudd3: false
     }
   },
 
@@ -147,10 +134,6 @@ export default ({
       if (this.fermer) this.fermer()
     },
     fermeture () {
-      if (this.fermer) this.fermer()
-    },
-    action (n, p) {
-      this.$emit('action', n, p)
       if (this.fermer) this.fermer()
     }
   },

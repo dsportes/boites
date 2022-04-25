@@ -3,7 +3,7 @@
   <q-card v-if="visi && !max" :class="'column fs-md full-height overflow-hidden shadow-8 ' + dlclass">
     <q-toolbar class="col-auto full-width">
       <q-btn icon="zoom_out_map" size="md" push flat dense @click="max=true"></q-btn>
-      <q-btn :disable="!md" class="q-mr-xs" size="md" label="TXT" :color="md ? 'warning' : 'purple'" push flat dense @click="md=false"></q-btn>
+      <q-btn :disable="!md" class="q-mr-xs" size="md" label="TEXTE" :color="md ? 'warning' : 'purple'" push flat dense @click="md=false"></q-btn>
       <q-btn :disable="md" class="q-mr-xs" size="md" label="HTML" dense flat push @click="md=true"></q-btn>
       <q-btn v-if="editable" :disable="md" class="q-mr-xs" icon="face" size="md" dense flat push @click="emoji=true"></q-btn>
       <q-btn v-if="modifie" class="q-mr-xs" icon="undo" size="md" dense flat push @click="undo"></q-btn>
@@ -163,4 +163,5 @@ export default ({
   border-top: 1px solid $grey-5
   border-bottom: 1px solid $grey-5
   overflow-y: auto
+  outline-offset: 3px !important
 </style>
