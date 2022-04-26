@@ -290,6 +290,10 @@ export default ({
     })
 
     let watchStop = null
+    /* Une entrée par groupe de secrets (map) attachés à une sid de l'avatar ou d'un groupe
+    La valeur est une référence active */
+    const refSecrets = reactive({ })
+
     function getRefSecrets () {
       /* Collecte les références vers les array de secrets
       - l'array de ceux de l'avatar
@@ -395,12 +399,10 @@ export default ({
     // watch(() => groupe.value, (ap, av) => { motscles.recharger() })
     watch(() => prefs.value, (ap, av) => { motscles.recharger() })
 
-    /* Une entrée par groupe de secrets (map) attachés à une sid de l'avatar ou d'un groupe
-    La valeur est une référence active */
-    const refSecrets = reactive({ })
-
     const state = reactive({
       idx: 0,
+      npin: 1,
+      pins: {}, // pksecret: idx pin
       secretencreation: null,
       lst: [], // array des SECRETS des références ci-dessous répondant au filtre
       nbs: 0, // nombre de secrets (lst.length mais reactive)
