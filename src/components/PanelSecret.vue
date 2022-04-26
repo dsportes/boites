@@ -1,35 +1,43 @@
 <template>
   <q-card class="full-height full-width fs-md column">
     <q-toolbar class="bg-primary text-white maToolBar">
-      <q-btn flat round dense icon="view_list" size="md" class="q-mr-sm" @click="retourliste" />
-      <q-btn :disable="!precedent" flat round dense icon="first_page" size="md" class="q-mr-sm" @click="prec(0)" />
-      <q-btn :disable="!precedent" flat round dense icon="arrow_back_ios" size="md" class="q-mr-sm" @click="prec(1)" />
+      <q-btn :disable="state.enedition" flat round dense icon="view_list" size="md" class="q-mr-sm" @click="retourliste" />
+      <q-btn :disable="!precedent || state.enedition" flat round dense icon="first_page" size="md" class="q-mr-sm" @click="prec(0)" />
+      <q-btn :disable="!precedent || state.enedition" flat round dense icon="arrow_back_ios" size="md" class="q-mr-sm" @click="prec(1)" />
       <span class="q-pa-sm">{{index + 1}} sur {{sur}}</span>
-      <q-btn :disable="!suivant" flat round dense icon="arrow_forward_ios" size="md" class="q-mr-sm" @click="suiv(1)" />
-      <q-btn :disable="!suivant" flat round dense icon="last_page" size="md" class="q-mr-sm" @click="suiv(0)" />
+      <q-btn :disable="!suivant || state.enedition" flat round dense icon="arrow_forward_ios" size="md" class="q-mr-sm" @click="suiv(1)" />
+      <q-btn :disable="!suivant || state.enedition" flat round dense icon="last_page" size="md" class="q-mr-sm" @click="suiv(0)" />
       <q-toolbar-title></q-toolbar-title>
-      <q-btn size="md" color="white" icon="menu" flat dense>
-      </q-btn>
+      <q-btn v-if="!state.enedition && mode <= 2" size="md" color="warning" icon="edit" dense label="Modifier" @click="editer"/>
+      <q-btn v-if="state.enedition" class="q-mx-xs" size="md" :color="modif() ? 'warning' : 'secondary'" icon="undo" dense @click="annuler"/>
+      <q-btn v-if="state.enedition" :disable="!modif() || (erreur !== '')" size="md" color="warning" icon="check" dense @click="valider"/>
     </q-toolbar>
     <q-toolbar inset class="col-auto bg-primary text-white maToolBar">
+      <q-btn class="q-mx-sm" dense push size="sm" icon="push_pin" :color="aPin() ? 'green-5' : 'grey-5'" @click="togglePin"/>
       <q-toolbar-title><div class="titre-md tit text-center">{{state.titre}}</div></q-toolbar-title>
-      <q-btn v-if="!state.encreation && mode <= 2" :disable="!modif()" class="q-ml-sm" flat dense color="white" icon="undo" @click="undo"/>
-      <q-btn v-if="state.encreation && mode <= 2" class="q-ml-sm" flat dense color="white" icon="close" @click="suppr" label="Renoncer"/>
-      <q-btn v-if="mode <= 2" :disable="!modif() || (erreur !== '')" class="q-my-sm" flat dense color="white" :label="state.encreation?'Créer':'Valider'" icon="check" @click="valider"/>
-      <q-btn icon="more_vert" flat dense color="white" @click="plusinfo"/>
+      <q-btn dense size="md" icon="menu">
+        <q-menu transition-show="scale" transition-hide="scale">
+          <q-list dense style="min-width: 15rem">
+            <q-item>
+              <q-item-section @click="plusinfo">Plus d'info ...</q-item-section>
+            </q-item>
+          </q-list>
+        </q-menu>
+      </q-btn>
     </q-toolbar>
     <q-toolbar inset class="col-auto bg-secondary text-white maToolBar">
       <div class="full-width font-cf">
         <q-tabs v-model="tabsecret" inline-label no-caps dense>
-          <q-tab name="texte" label="Détail du secret" />
-          <q-tab name="fa" label="Fichiers attachés" />
-          <q-tab name="voisins" label="Secrets voisins" />
+          <q-tab name="texte" :disable="state.enedition" label="Détail du secret" />
+          <q-tab name="fa" :disable="state.enedition" label="Fichiers attachés" />
+          <q-tab name="voisins" :disable="state.enedition" label="Secrets voisins" />
         </q-tabs>
       </div>
     </q-toolbar>
 
-    <div v-if="tabsecret==='texte'" class='col column'>
-      <editeur-texte-secret class="col" v-model="state.textelocal" :texte-ref="secret ? secret.txt.t : ''" :editable="!state.ro" :erreur="erreur" :apropos="secret.dh"/>
+    <div v-if="tabsecret==='texte'" class='col column q-mt-sm'>
+      <editeur-texte-secret class="col" v-model="state.textelocal" :texte-ref="secret ? secret.txt.t : ''"
+        :editable="!state.ro" :erreur="erreur" :apropos="secret ? secret.dh : ''"/>
 
       <div class="col-auto q-px-xs full-width row justify-between items-center">
         <div class="col">
@@ -248,11 +256,24 @@
       <fichier-attache :secret="secret" :close="fermerfa"/>
     </q-dialog>
 
+    <q-dialog v-model="confirmpin">
+      <q-card>
+        <q-card-section>
+          Ce secret ne répond pas aux critères de filtre actuels. Enlever la punaise
+          fait qu'il ne sera plus visible (qui que toujours existant).
+        </q-card-section>
+        <q-card-actions vertical>
+          <q-btn flat dense color="warning" label="J\'enlève la punaise" v-close-popup @click="punaiseoff"/>
+          <q-btn flat dense color="primary" label="Je laisse la punaise" v-close-popup/>
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
   </q-card>
 </template>
 
 <script>
-import { reactive, watch, computed, ref } from 'vue'
+import { reactive, watch, computed, ref, toRef } from 'vue'
 import { useStore } from 'vuex'
 import ApercuMotscles from './ApercuMotscles.vue'
 import FichierAttache from './FichierAttache.vue'
@@ -271,7 +292,7 @@ export default ({
 
   components: { ApercuMotscles, SelectMotscles, EditeurTexteSecret, ShowHtml, FichierAttache },
 
-  props: { sec: Object, suivant: Function, precedent: Function, supprcreation: Function, index: Number, sur: Number },
+  props: { aPin: Function, estFiltre: Function, sec: Object, suivant: Function, precedent: Function, pinSecret: Function, index: Number, sur: Number },
 
   computed: {
     tbclass () { return this.$q.dark.isActive ? ' sombre' : ' clair' },
@@ -301,6 +322,17 @@ export default ({
   },
 
   methods: {
+    togglePin () {
+      if (this.state.enedition) return
+      if (this.aPin() && !this.estFiltre()) {
+        this.confirmpin = true
+        return
+      }
+      if (this.pinSecret) this.pinSecret(this.secret, !this.aPin())
+    },
+    punaiseoff () {
+      this.pinSecret(this.secret, false)
+    },
     vol (f) { return edvol(f.lg) },
     dhed (f) { return dhstring(f.dh) },
     stf1 (f) { // visibilité d'un fichier
@@ -497,6 +529,11 @@ export default ({
       return lst
     },
 
+    annuler () {
+      if (this.modif()) this.undo()
+      this.state.enedition = false
+    },
+
     async valider () {
       const s = this.secret
       const xploc = this.state.plocal + (10 * this.state.xlocal)
@@ -537,10 +574,12 @@ export default ({
     }
   },
 
-  setup () {
+  setup (props) {
     const $store = useStore()
+    const pinSecret = toRef(props, 'pinSecret')
     const tabsecret = ref('texte')
     const erreur = ref('')
+    const confirmpin = ref(false)
     const avatarscform = computed({
       get: () => $store.state.ui.avatarscform,
       set: (val) => $store.commit('ui/majavatarscform', val)
@@ -564,7 +603,7 @@ export default ({
       membre: null,
       im: 0,
       ts: 0,
-      encreation: false,
+      enedition: false,
       ro: 0,
       titre: '',
       textelocal: '',
@@ -636,7 +675,7 @@ export default ({
       return state.xlocal !== secret.value.exclu
     }
     function modifp () {
-      return state.plocal !== secret.value.protect
+      return secret.value && state.plocal !== secret.value.protect
     }
     function modiftx () {
       return state.textelocal !== secret.value.txt.t
@@ -733,32 +772,16 @@ export default ({
     })
 
     watch(() => avatarscform.value, (ap, av) => {
-      if (!ap) {
-        if (modif()) {
-          afficherdiagnostic('Des modifications ont été faites. Avant de fermer ce secret, soit les "Annuler", soit les "Valider"')
-          setTimeout(() => { avatarscform.value = true; tabsecret.value = 'texte' }, 50)
-          return
-        }
-        if (state.encreation) {
-          afficherdiagnostic('Une création de secret est en cours. Avant de fermer ce secret, soit "Renoncer", soit "Valider"')
-          setTimeout(() => { avatarscform.value = true; tabsecret.value = 'texte' }, 50)
-          return
-        }
+      if (!ap && state.enedition) {
+        setTimeout(() => { avatarscform.value = true; tabsecret.value = 'texte' }, 50)
+        return
       }
       cleanVoisins(secret.value)
     })
 
     watch(() => tabsecret.value, (ap, av) => {
-      if (av === 'texte') {
-        if (modif()) {
-          afficherdiagnostic('Des modifications ont été faites. Avant de changer d\'onglet, soit les "Annuler", soit les "Valider"')
-          setTimeout(() => { tabsecret.value = 'texte' }, 50)
-          return
-        }
-        if (state.encreation) {
-          afficherdiagnostic('Une création de secret est en cours. Avant de changer d\'onglet, soit "Renoncer", soit "Valider"')
-          setTimeout(() => { avatarscform.value = true; tabsecret.value = 'texte' }, 50)
-        }
+      if (state.enedition && ap !== 'texte') {
+        setTimeout(() => { tabsecret.value = 'texte' }, 50)
       }
     })
 
@@ -768,6 +791,11 @@ export default ({
 
     function retourliste () {
       avatarscform.value = false
+    }
+
+    function editer () {
+      pinSecret.value(secret.value, true)
+      state.enedition = true
     }
 
     initState()
@@ -799,6 +827,8 @@ export default ({
       modiftp,
       modif,
       erreur,
+      editer,
+      confirmpin,
       retourliste
     }
   }
@@ -808,8 +838,8 @@ export default ({
 @import '../css/app.sass'
 .maToolBar
   padding: 0 !important
-  min-height: 1.1rem !important
-  max-height: 1.6rem !important
+  min-height: 2rem !important
+  max-height: 2rem !important
 .tit
   max-height: 1.3rem
   text-overflow: ellipsis

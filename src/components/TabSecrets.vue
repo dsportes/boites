@@ -15,7 +15,9 @@
     :class="$q.screen.gt.sm ? 'ml20' : 'q-pa-xs full-width'"
     :suivant="state.idx < state.nbs - 1 ? suiv : null"
     :precedent="state.idx > 0 ? prec : null"
-    :supprcreation="supprcreation"
+    :pin-secret="pinSecret"
+    :a-pin="aPin"
+    :est-filtre="estFiltre"
     :index="state.idx" :sur="state.nbs"/>
 
   <div v-if="!avatarscform && state.lst && state.nbs" class="col">
@@ -24,6 +26,7 @@
       <div class="col-auto column q-mr-sm">
         <q-btn dense push size="sm" :icon="'expand_'+(!row[s.vk]?'less':'more')"
           color="primary" @click="togglerow(s.vk)"/>
+        <q-btn dense push size="sm" icon="push_pin" :color="aPin(s) ? 'green-5' : 'grey-5'" @click="togglePin(s)"/>
         <q-btn dense push size="sm" color="warning" icon="add">
           <q-menu transition-show="scale" transition-hide="scale">
             <q-list dense style="min-width: 10rem">
@@ -116,9 +119,9 @@
 </div>
 </template>
 <script>
-import { Motscles, difference, Filtre, getJourJ, putData, afficherdiagnostic, edvol, sleep } from '../app/util.mjs'
+import { Motscles, difference, Filtre, getJourJ, putData, afficherdiagnostic, edvol, sleep, unpk } from '../app/util.mjs'
 import { serial, deserial } from '../app/schemas.mjs'
-import { computed, reactive, watch, isRef } from 'vue'
+import { computed, reactive, watch, watchEffect, onUnmounted } from 'vue'
 import { useStore } from 'vuex'
 import { Secret, data } from '../app/modele.mjs'
 import ShowHtml from '../components/ShowHtml.vue'
@@ -289,102 +292,120 @@ export default ({
       set: (val) => $store.commit('ui/majavatarscform', val)
     })
 
-    let watchStop = null
-    /* Une entrée par groupe de secrets (map) attachés à une sid de l'avatar ou d'un groupe
-    La valeur est une référence active */
     const refSecrets = reactive({ })
 
-    function getRefSecrets () {
-      /* Collecte les références vers les array de secrets
-      - l'array de ceux de l'avatar
-      - les array de tous les couples concernés
-      - les array de tous les groupes concernés
-      Déclare un watch dessus
-      */
-      for (const sid in refSecrets) delete refSecrets[sid]
-      if (watchStop) {
-        watchStop()
-        watchStop = null
-      }
+    const state = reactive({
+      idx: -1,
+      npin: 1,
+      pins: {}, // pksecret: idx pin
+      lst: [], // array des SECRETS des références ci-dessous répondant au filtre
+      nbs: 0, // nombre de secrets (lst.length mais reactive)
+      filtre: new Filtre(avatar.value ? avatar.value.id : 0), // Filtre par défaut
+      contacts: []
+    })
 
-      const f = state.filtre
-      const setIds = new Set()
-      if (avatar.value) {
-        // seulement si les secrets perso sont requis
-        if (f.perso) setIds.add(avatar.value.id)
-        if (f.coupleId) {
-          if (f.coupleId === -1) {
-            // les secrets de TOUS les couples sont requis
-            avatar.value.coupleIds(setIds)
-          } else {
-            // les secrets d'UN SEUL couple sont requis
-            setIds.add(f.coupleId)
-          }
+    let watchStop = null
+
+    // watch(() => avatarscform.value, (ap, av) => { })
+
+    watch(() => sessionok.value, (ap, av) => { if (watchStop) watchStop() })
+
+    onUnmounted(() => { if (watchStop) watchStop() })
+
+    function init1 () {
+      watchStop = watchEffect(() => {
+        const f = state.filtre
+        const setIds = new Set()
+        if (avatar.value) {
+          if (f.perso) setIds.add(avatar.value.id)
+          if (f.coupleId) { if (f.coupleId === -1) avatar.value.coupleIds(setIds); else setIds.add(f.coupleId) }
+          if (f.groupeId) { if (f.groupeId === -1) avatar.value.groupeIds(setIds); else setIds.add(f.groupeId) }
+          setIds.forEach(id => { refSecrets[id] = computed(() => data.getSecret(id)) })
         }
-        if (f.groupeId) {
-          if (f.groupeId === -1) {
-            // les secrets de TOUS les groupes sont requis
-            avatar.value.groupeIds(setIds)
-          } else {
-            // les secrets d'UN SEUL groupe sont requis
-            setIds.add(f.groupeId)
-          }
-        }
-      }
-      setIds.forEach(id => {
-        refSecrets[id] = computed(() => data.getSecret(id))
+        for (const pk in state.pins) { const { id, ns } = unpk(pk); refSecrets[pk] = computed(() => data.getSecret(id, ns)) }
+        // onCleanup(() => { console.log('cleanup TabSecrets') })
       })
-      watchStop = watch(() => { return { ...refSecrets } }, () => {
-        getSecrets()
-      })
+      getSecrets()
+      trier()
     }
 
-    function getSecrets () {
-      // Récupère les secrets référencés et les filtre au passage
+    function onChgPortee () { // chgt filtre majeur, secret punaisé
+      if (watchStop) watchStop()
+      init1()
+    }
+
+    function onChgSecrets () {
+      getSecrets()
+      trier()
+    }
+
+    function onChgTri () {
+      trier()
+    }
+
+    watch(() => state.filtre, (filtre, filtreavant) => {
+      if (!filtre || !filtreavant || filtre.equal(filtreavant)) return
+      const chg = filtre.changement(filtreavant)
+      if (chg >= 3) { onChgPortee(); return }
+      if (chg >= 2) { onChgSecrets(); return }
+      onChgTri()
+    })
+
+    function pinSecret (secret, onoff) {
+      const pk = secret.pk
+      if (state.pins[pk]) {
+        if (!onoff) { delete state.pins[pk]; onChgPortee() }
+      } else {
+        if (onoff) { state.pins[pk] = state.npin++; onChgPortee() }
+      }
+    }
+
+    function togglePin (s) { if (s) pinSecret(s, !aPin(s)) }
+
+    function aPin (s) {
+      if (!s) s = secret.value
+      return s && state.pins[s.pk]
+    }
+
+    function getSecrets () { // Récupère les secrets référencés dans refSecrets et les filtre au passage
       const f = state.filtre
+      const pks = new Set()
       const lst = []
       f.debutFiltre()
-      for (const id in refSecrets) {
-        const val = refSecrets[id]
-        // selon le cas on reçoit le ref ou la value
-        const map = isRef(val) ? val.value : val
-        // map: map des secrets de clé majeure id (avatar / couple / groupe)
-        // (clé: ns, val: secret)
-        for (const ns in map) {
-          const secret = map[ns]
-          if (f.filtre(secret)) lst.push(secret)
-        }
+      for (const id in refSecrets) { // id d'un ACP ou pk d'un secret isolé
+        const estMap = id.indexOf('/') === -1
+        const x = refSecrets[id]
+        // const x = isRef(val) ? val.value : val // selon le cas on reçoit le ref ou la value ???
+        if (estMap) { // map: map des secrets de clé majeure id (avatar / couple / groupe). (clé: ns, val: secret)
+          for (const ns in x) { const s = x[ns]; if (f.filtre(s)) { const pk = s.pk; if (!pks.has(pk)) { pks.add(pk); lst.push(s) } } }
+        } else { const pk = x.pk; if (!pks.has(pk)) { pks.add(pk); lst.push(x) } }
       }
-      if (state.secretencreation) lst.push(state.secretencreation)
       state.lst = lst
       state.nbs = state.lst.length
     }
 
-    function trier () {
-      const l = []; state.lst.forEach(x => l.push(x))
-      l.sort((a, b) => state.filtre.fntri(a, b))
-      state.lst = l
+    function estFiltre () {
+      const f = state.filtre
+      if (!f || !secret.value) return false
+      f.debutFiltre()
+      return f.filtre(secret.value)
     }
 
-    function indexer () {
+    function trier () {
+      const l = []; state.lst.forEach(x => l.push(x))
+      l.sort((a, b) => {
+        const pa = state.pins[a.pk] || -1
+        const pb = state.pins[b.pk] || -1
+        return pa > pb ? -1 : (pa < pb ? 1 : state.filtre.fntri(a, b))
+      })
+      state.lst = l
       state.idx = -1
-      if (secret.value) {
-        state.lst.forEach((x, n) => { if (x.pk === secret.value.pk) state.idx = n })
-      }
+      if (secret.value) state.lst.forEach((x, n) => { if (x.pk === secret.value.pk) state.idx = n })
       if (state.idx === -1) {
         if (state.lst.length) {
           state.idx = 0; secret.value = state.lst[0]
-        } else {
-          secret.value = null
-        }
+        } else secret.value = null
       }
-    }
-
-    function latotale () {
-      getRefSecrets()
-      getSecrets()
-      trier()
-      indexer()
     }
 
     const mc = reactive({ categs: new Map(), lcategs: [], st: { enedition: false, modifie: false } })
@@ -396,37 +417,7 @@ export default ({
       p: new Filtre(avatar.value ? avatar.value.id : 0).etat()
     })
 
-    // watch(() => groupe.value, (ap, av) => { motscles.recharger() })
     watch(() => prefs.value, (ap, av) => { motscles.recharger() })
-
-    const state = reactive({
-      idx: 0,
-      npin: 1,
-      pins: {}, // pksecret: idx pin
-      secretencreation: null,
-      lst: [], // array des SECRETS des références ci-dessous répondant au filtre
-      nbs: 0, // nombre de secrets (lst.length mais reactive)
-      filtre: new Filtre(avatar.value ? avatar.value.id : 0), // Filtre par défaut
-      contacts: []
-    })
-
-    watch(() => state.filtre, (filtre, filtreavant) => {
-      if (!filtre || !filtreavant || filtre.equal(filtreavant)) return
-      const chg = filtre.changement(filtreavant)
-      if (chg >= 3) {
-        latotale()
-        return
-      }
-      if (chg >= 2) {
-        getSecrets()
-      }
-      if (chg >= 1) {
-        trier()
-        indexer()
-      }
-    })
-
-    latotale()
 
     watch(() => avatar.value, (ap, av) => {
       // Avatar modifié : la liste des groupes a pu changer, recharger SI nécessaire
@@ -434,7 +425,7 @@ export default ({
         const sav = av.allGrId()
         const sap = ap.allGrId()
         if (difference(sav, sap).size || difference(sap, sav).size) {
-          latotale()
+          onChgPortee()
         }
       }
     })
@@ -442,14 +433,14 @@ export default ({
     watch(() => couple.value, (ap, av) => {
       // couple modifié : recharger SI nécessaire
       if (state.filtre.coupleId === -1 || state.filtre.coupleId === (ap ? ap.id : 0)) {
-        latotale()
+        onChgPortee()
       }
     })
 
     watch(() => groupe.value, (ap, av) => {
       // groupe modifié : recharger SI nécessaire
       if (state.filtre.groupeId === -1 || state.filtre.groupeId === (ap ? ap.id : 0)) {
-        latotale()
+        onChgPortee()
       }
     })
 
@@ -497,26 +488,23 @@ export default ({
     }
 
     function supprcreation () {
-      const s = state.lst[0]
-      if (s.v !== 0) return // n'était pas en création. Etrange !
-      $store.commit('db/cleanVoisins', s.ref ? s.pkref : s.pk)
-      state.lst.splice(0, 1)
-      state.nbs--
-      state.secretencreation = null
-      secret.value = state.lst.length > 0 ? state.lst[0] : null
+      if (secret.value && !secret.value.v) {
+        pinSecret(secret.value, false)
+        secret.value = null
+      }
     }
 
     function nvsecret (n, voisin) {
-      if (state.secretencreation) {
+      if (this.secret && !this.secret.v) {
         afficherdiagnostic('Il ne peut y avoir qu\'un seul secret en création à un instant donné')
         return
       }
       const ref = !voisin ? null : (voisin.ref ? voisin.ref : [voisin.id, voisin.ns])
       if (n === 0) { // secret personnel
-        nouveausecret(new Secret().nouveauP(avatar.value.id, ref))
+        editerSecret(new Secret().nouveauP(avatar.value.id, ref))
       } else if (n === 1) {
         const c = couple.value
-        if (c) nouveausecret(new Secret().nouveauC(c.id, ref, c.avc))
+        if (c) editerSecret(new Secret().nouveauC(c.id, ref, c.avc))
       } else if (n === 2) {
         const g = groupe.value
         if (!g) {
@@ -532,21 +520,24 @@ export default ({
           afficherdiagnostic('Seuls les membres de niveau "auteur" et "animateur" du groupe ' + g.nom + ' peuvent créer ou modifier des secrets.')
           return
         }
-        nouveausecret(new Secret().nouveauG(g.id, ref, membre.im))
+        editerSecret(new Secret().nouveauG(g.id, ref, membre.im))
       }
     }
 
-    function nouveausecret (sec) {
-      state.secretencreation = sec
+    function editerSecret (sec) {
       secret.value = sec
-      state.lst.push(sec)
-      state.nbs++
-      trier()
-      indexer()
+      pinSecret(sec, true)
       avatarscform.value = true
     }
 
+    init1()
+
     return {
+      pinSecret,
+      togglePin,
+      estFiltre,
+      aPin,
+      editerSecret,
       sessionok,
       org,
       dialoguedlselection,

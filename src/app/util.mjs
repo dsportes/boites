@@ -51,6 +51,11 @@ function testgz () {
 }
 */
 
+export function unpk (pk) {
+  const i = pk.indexOf('/')
+  return { id: crypt.sidToId(pk.substring(0, i)), ns: parseInt(pk.substring(i + 1)) }
+}
+
 export function equ8 (a, b) {
   if (!a && !b) return true
   if ((a && !b) || (b && !a) || (a.length !== b.length)) return false
