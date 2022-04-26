@@ -1494,12 +1494,27 @@ export class Secret {
   get couple () { return this.ts !== 1 ? null : data.getCouple(this.id) }
   get groupe () { return this.ts !== 2 ? null : data.getGroupe(this.id) }
 
-  im (avid) { return this.ts === 0 ? 0 : (this.ts === 1 ? this.couple.avc + 1 : this.groupe.imDeId(avid)) }
-
   get partage () {
     if (this.ts === 0) return 'Secret personnel'
-    if (this.ts === 1) return 'Secret du couple ' + this.couple.nomf
+    if (this.ts === 1) return 'Secret du couple ' + this.couple.nom
     return 'Secret du groupe ' + this.groupe.nom
+  }
+
+  get mcg () { return this.ts === 2 ? this.mc[0] || new Uint8Array([]) : new Uint8Array([]) }
+
+  ro (avid) {
+    if (this.protect) return 1 // protégé en écriture
+    if (this.exclu && this.exclu !== this.im(avid)) return 2 // exclusivité accordée à un autre membre
+    if (this.ts === 2 && this.membre.stp === 0) return 3 // lecteur
+    if (this.ts === 2 && this.groupe.sty === 0) return 4 // groupe protégé en écriture
+    return 0
+  }
+
+  im (avid) { return this.ts === 0 ? 0 : (this.ts === 1 ? this.couple.avc + 1 : this.groupe.imDeId(avid)) }
+  membre (avid) { return this.ts === 2 ? data.getMembre(this.groupe.id, this.im(avid)) : null }
+  mcl (avid) {
+    if (this.ts >= 1) return this.mc[this.im(avid)] || new Uint8Array([])
+    return this.mc || new Uint8Array([])
   }
 
   nouveau (id, ref) {

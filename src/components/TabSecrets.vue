@@ -305,11 +305,7 @@ export default ({
     })
 
     let watchStop = null
-
-    // watch(() => avatarscform.value, (ap, av) => { })
-
     watch(() => sessionok.value, (ap, av) => { if (watchStop) watchStop() })
-
     onUnmounted(() => { if (watchStop) watchStop() })
 
     function init1 () {

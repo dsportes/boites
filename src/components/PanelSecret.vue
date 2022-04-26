@@ -1,25 +1,25 @@
 <template>
   <q-card class="full-height full-width fs-md column">
     <q-toolbar class="bg-primary text-white maToolBar">
-      <q-btn :disable="state.enedition" flat round dense icon="view_list" size="md" class="q-mr-sm" @click="retourliste" />
-      <q-btn :disable="!precedent || state.enedition" flat round dense icon="first_page" size="md" class="q-mr-sm" @click="prec(0)" />
-      <q-btn :disable="!precedent || state.enedition" flat round dense icon="arrow_back_ios" size="md" class="q-mr-sm" @click="prec(1)" />
+      <q-btn :disable="ed" flat round dense icon="view_list" size="md" class="q-mr-sm" @click="avatarscform=false" />
+      <q-btn :disable="!precedent || ed" flat round dense icon="first_page" size="md" class="q-mr-sm" @click="prec(0)" />
+      <q-btn :disable="!precedent || ed" flat round dense icon="arrow_back_ios" size="md" class="q-mr-sm" @click="prec(1)" />
       <span class="q-pa-sm">{{index + 1}} sur {{sur}}</span>
-      <q-btn :disable="!suivant || state.enedition" flat round dense icon="arrow_forward_ios" size="md" class="q-mr-sm" @click="suiv(1)" />
-      <q-btn :disable="!suivant || state.enedition" flat round dense icon="last_page" size="md" class="q-mr-sm" @click="suiv(0)" />
+      <q-btn :disable="!suivant || ed" flat round dense icon="arrow_forward_ios" size="md" class="q-mr-sm" @click="suiv(1)" />
+      <q-btn :disable="!suivant || ed" flat round dense icon="last_page" size="md" class="q-mr-sm" @click="suiv(0)" />
       <q-toolbar-title></q-toolbar-title>
-      <q-btn v-if="!state.enedition && mode <= 2" size="md" color="warning" icon="edit" dense label="Modifier" @click="editer"/>
-      <q-btn v-if="state.enedition" class="q-mx-xs" size="md" :color="modif() ? 'warning' : 'secondary'" icon="undo" dense @click="annuler"/>
-      <q-btn v-if="state.enedition" :disable="!modif() || (erreur !== '')" size="md" color="warning" icon="check" dense @click="valider"/>
+      <q-btn v-if="!ed && mode <= 2" size="md" color="warning" icon="edit" dense label="Modifier" @click="editer"/>
+      <q-btn v-if="ed" class="q-mx-xs" size="md" :color="modif() ? 'warning' : 'secondary'" icon="undo" dense @click="annuler"/>
+      <q-btn v-if="ed" :disable="!modif() || (state.erreur !== '')" size="md" color="warning" icon="check" dense @click="valider"/>
     </q-toolbar>
     <q-toolbar inset class="col-auto bg-primary text-white maToolBar">
       <q-btn class="q-mx-sm" dense push size="sm" icon="push_pin" :color="aPin() ? 'green-5' : 'grey-5'" @click="togglePin"/>
-      <q-toolbar-title><div class="titre-md tit text-center">{{state.titre}}</div></q-toolbar-title>
+      <q-toolbar-title><div class="titre-md tit text-center">{{secret.partage}}</div></q-toolbar-title>
       <q-btn dense size="md" icon="menu">
         <q-menu transition-show="scale" transition-hide="scale">
           <q-list dense style="min-width: 15rem">
-            <q-item>
-              <q-item-section @click="plusinfo">Plus d'info ...</q-item-section>
+            <q-item clickable v-close-popup @click="plus=true">
+              <q-item-section>Plus d'info ...</q-item-section>
             </q-item>
           </q-list>
         </q-menu>
@@ -28,16 +28,16 @@
     <q-toolbar inset class="col-auto bg-secondary text-white maToolBar">
       <div class="full-width font-cf">
         <q-tabs v-model="tabsecret" inline-label no-caps dense>
-          <q-tab name="texte" :disable="state.enedition" label="Détail du secret" />
-          <q-tab name="fa" :disable="state.enedition" label="Fichiers attachés" />
-          <q-tab name="voisins" :disable="state.enedition" label="Secrets voisins" />
+          <q-tab name="texte" :disable="ed" label="Détail du secret" />
+          <q-tab name="fa" :disable="ed" label="Fichiers attachés" />
+          <q-tab name="voisins" :disable="ed" label="Secrets voisins" />
         </q-tabs>
       </div>
     </q-toolbar>
 
     <div v-if="tabsecret==='texte'" class='col column q-mt-sm'>
-      <editeur-texte-secret class="col" v-model="state.textelocal" :texte-ref="secret ? secret.txt.t : ''"
-        :editable="!state.ro" :erreur="erreur" :apropos="secret ? secret.dh : ''"/>
+      <editeur-texte-secret class="col" v-model="state.textelocal" :texte-ref="secret.txt.t"
+        :editable="ed && !state.ro" :erreur="state.erreur" :apropos="secret.dh"/>
 
       <div class="col-auto q-px-xs full-width row justify-between items-center">
         <div class="col">
@@ -74,15 +74,15 @@
         <q-btn v-if="!state.ro" :disable="!modiftp()" class="col-auto" size="sm" dense push icon="undo" color="primary" @click="undotp"/>
       </div>
 
-      <q-dialog v-model="mcledit">
+      <q-dialog v-if="sessionok" v-model="mcledit">
         <select-motscles :motscles="state.motscles" :src="state.mclocal" @ok="changermcl" :close="fermermcl"></select-motscles>
       </q-dialog>
 
-      <q-dialog v-model="mcgedit">
+      <q-dialog v-if="sessionok" v-model="mcgedit">
         <select-motscles :motscles="state.motscles" :src="state.mcglocal" @ok="changermcg" :close="fermermcg"></select-motscles>
       </q-dialog>
 
-      <q-dialog v-model="plus">
+      <q-dialog v-if="sessionok" v-model="plus">
         <q-card>
           <q-card-section>
             <div class="fs-md">Date-heure de dernière modification : {{secret.dh}}</div>
@@ -95,7 +95,7 @@
         </q-card>
       </q-dialog>
 
-      <q-dialog v-model="protect">
+      <q-dialog v-if="sessionok" v-model="protect">
         <q-card class="petitelargeur fs-md">
           <q-card-section><div class="fs-lg maauto">{{titrep}}</div></q-card-section>
           <q-card-section>
@@ -252,11 +252,11 @@
       </div>
     </div>
 
-    <q-dialog v-model="saisiefichier">
+    <q-dialog v-if="sessionok" v-model="saisiefichier">
       <fichier-attache :secret="secret" :close="fermerfa"/>
     </q-dialog>
 
-    <q-dialog v-model="confirmpin">
+    <q-dialog v-if="sessionok" v-model="confirmpin">
       <q-card>
         <q-card-section>
           Ce secret ne répond pas aux critères de filtre actuels. Enlever la punaise
@@ -295,6 +295,7 @@ export default ({
   props: { aPin: Function, estFiltre: Function, sec: Object, suivant: Function, precedent: Function, pinSecret: Function, index: Number, sur: Number },
 
   computed: {
+    ed () { return this.state.enedition },
     tbclass () { return this.$q.dark.isActive ? ' sombre' : ' clair' },
     msgtemp () {
       if (this.state.templocal) {
@@ -309,6 +310,7 @@ export default ({
   data () {
     return {
       row: {},
+      confirmpin: false,
       plus: false,
       mcledit: false,
       mcgedit: false,
@@ -393,9 +395,6 @@ export default ({
         this.ouvrirvoisin(new Secret().nouveauG(id || s.id, ref, m.im))
       }
     },
-    plusinfo () { // liste des auteurs, mots clés des membres du groupe, etc. dans un dialogue
-      this.plus = true
-    },
     fermerfa () { this.saisiefichier = false },
 
     async blobde (f, b) {
@@ -406,7 +405,6 @@ export default ({
     },
 
     wop (url) { // L'appel direct de wndow.open ne semble pas marcher dans une fonction async. Etrange !
-      // console.log(url)
       window.open(url, '_blank')
     },
 
@@ -578,8 +576,7 @@ export default ({
     const $store = useStore()
     const pinSecret = toRef(props, 'pinSecret')
     const tabsecret = ref('texte')
-    const erreur = ref('')
-    const confirmpin = ref(false)
+    const sessionok = computed(() => { return $store.state.ui.sessionok })
     const avatarscform = computed({
       get: () => $store.state.ui.avatarscform,
       set: (val) => $store.commit('ui/majavatarscform', val)
@@ -596,27 +593,40 @@ export default ({
     })
 
     const state = reactive({
-      motcles: null,
-      couple: null,
-      groupe: null,
-      avatar: null,
-      membre: null,
-      im: 0,
-      ts: 0,
       enedition: false,
+      listevoisins: [],
+      listefic: [],
+      erreur: '',
+      im: 0,
       ro: 0,
-      titre: '',
+      avs: null,
+      membre: null,
+      mcl: new Uint8Array([]),
+      motscles: null,
+
       textelocal: '',
       mclocal: null,
       mcglocal: null,
       xlocal: 0,
       plocal: 0,
       templocal: null,
-      dhlocal: 0,
-      listevoisins: [],
-      listefic: [],
-      avsecret: null
+      dhlocal: 0
     })
+
+    function initState () {
+      // données principalement dépendantes du secret ET de l'avatar courant ET de avsecrets
+      const avid = avatar.value ? avatar.value.id : 0
+      const s = secret.value
+      if (s) $store.commit('db/initVoisins', s)
+      state.im = s ? s.im(avid) : 0
+      state.ro = s ? s.ro(avid) : 5
+      state.membre = s ? s.membre(avid) : null
+      state.mcl = s ? s.mcl(avid) : new Uint8Array([])
+      state.avs = s ? data.getAvSecret(s.id, s.ns) : null
+      state.listevoisins = s ? lstvoisins($store.state.db['voisins@' + (s.ref ? s.pkref : s.pk)]) : []
+      state.listefic = s ? listefichiers(s, state.avs) : []
+    }
+
     const mc = reactive({ categs: new Map(), lcategs: [], st: { enedition: false, modifie: false } })
 
     function chargerMc () {
@@ -629,6 +639,59 @@ export default ({
       for (const pk in mapv) lst.push(mapv[pk])
       lst.sort((a, b) => { return !a.ref ? -1 : (a.titre > b.titre ? 1 : (a.titre < b.titre ? -1 : 0)) })
       return lst
+    }
+
+    function listefichiers (s, avs) {
+      const lst = []
+      const mnom = {}
+      for (const idf in s.mfa) {
+        const f = s.mfa[idf]
+        let e = mnom[f.nom]; if (!e) { e = []; mnom[f.nom] = e; lst.push(f.nom) }
+        e.push({ ...f, sidf: crypt.idToSid(f.idf), av: avs ? avs.aIdf(f.idf) : 0 })
+      }
+      lst.sort((a, b) => { return a < b ? -1 : (a > b ? 1 : 0) })
+      const res = []
+      lst.forEach(n => {
+        const l = mnom[n]
+        l.sort((a, b) => { return a.dh < b.dh ? 1 : (a.dh > b.dh ? -1 : 0) })
+        res.push({ n, l, av: avs && avs.mnom[n] })
+      })
+      return res
+    }
+
+    function cleanVoisins (s) {
+      if (s) $store.commit('db/cleanVoisins', s.ref ? s.pkref : s.pk)
+    }
+
+    watch(() => prefs.value, (ap, av) => {
+      chargerMc()
+    })
+
+    watch(() => avsecrets.value, (ap, av) => {
+      initState()
+    })
+
+    watch(() => secret.value, (ap, av) => {
+      if (av) cleanVoisins(av)
+      initState()
+      if (ap && (!av || av.pk !== ap.pk)) chargerMc() // le nouveau peut avoir un autre groupe
+    })
+
+    watch(() => avatarscform.value, (ap, av) => {
+      if (!ap && state.enedition) {
+        setTimeout(() => { avatarscform.value = true; tabsecret.value = 'texte' }, 50)
+      } else cleanVoisins(secret.value)
+    })
+
+    watch(() => tabsecret.value, (ap, av) => {
+      if (state.enedition && ap !== 'texte') {
+        setTimeout(() => { tabsecret.value = 'texte' }, 50)
+      }
+    })
+
+    function editer () {
+      pinSecret.value(secret.value, true)
+      state.enedition = true
     }
 
     function undomcl () {
@@ -686,128 +749,16 @@ export default ({
     function modif () {
       return secret.value && (modifmcl() || modifmcg() || modiftx() || modiftp() || modifx() || modifp())
     }
-    function listefichiers (s, avs) {
-      const lst = []
-      const mnom = {}
-      for (const idf in s.mfa) {
-        const f = s.mfa[idf]
-        let e = mnom[f.nom]; if (!e) { e = []; mnom[f.nom] = e; lst.push(f.nom) }
-        e.push({ ...f, sidf: crypt.idToSid(f.idf), av: avs ? avs.aIdf(f.idf) : 0 })
-      }
-      lst.sort((a, b) => { return a < b ? -1 : (a > b ? 1 : 0) })
-      const res = []
-      lst.forEach(n => {
-        const l = mnom[n]
-        l.sort((a, b) => { return a.dh < b.dh ? 1 : (a.dh > b.dh ? -1 : 0) })
-        res.push({ n, l, av: avs && avs.mnom[n] })
-      })
-      return res
-    }
-
-    function initState () {
-      const avid = avatar.value ? avatar.value.id : 0 // avatar null après déconnexion
-      const s = secret.value
-      if (s) { // propriétés immuables pour un secret
-        state.avs = data.getAvSecret(s.id, s.ns)
-        $store.commit('db/initVoisins', secret.value) // initialise (si besoin est, nouveau secret par exemple) l'entrée des voisins
-        state.ts = s.ts
-        state.avatar = s.ts === 0 ? avatar : null
-        state.groupe = s.ts === 2 ? data.getGroupe(s.id) : null
-        state.couple = s.ts === 1 ? data.getCouple(s.id) : null
-        state.im = s.im(avid)
-        state.membre = s.ts === 2 && state.im ? data.getMembre(state.groupe.id, state.im) : null
-        state.encreation = s.v === 0
-        state.ro = 0
-        state.listevoisins = lstvoisins($store.state.db['voisins@' + (s.ref ? s.pkref : s.pk)])
-        if (s.ts >= 1) {
-          if (!s.mc[state.im]) s.mc[state.im] = new Uint8Array([])
-          if (s.ts === 2 && !s.mc[0]) s.mc[0] = new Uint8Array([])
-        } else {
-          if (!s.mc) s.mc = new Uint8Array([])
-        }
-        if (!state.encreation) {
-          if (s.protect) {
-            state.ro = 1 // protégé en écriture
-          } else if (s.exclu && s.exclu !== state.im) {
-            state.ro = 2 // exclusivité accordée à un autre membre
-          } else if (s.ts === 2 && state.membre.stp === 0) {
-            state.ro = 3 // lecteur
-          } else if (s.ts === 2 && state.groupe.sty === 0) {
-            state.ro = 4 // groupe protégé en écriture
-          } else if (mode.value > 2) {
-            state.ro = 5 // mode sans mise à jour
-          }
-        }
-        switch (secret.value.ts) {
-          case 0 : { state.titre = 'Secret personnel'; break }
-          case 1 : { state.titre = 'Secret du couple ' + state.couple.nom; break }
-          case 2 : { state.titre = 'Secret du groupe ' + state.groupe.nom; break }
-        }
-        state.listefic = listefichiers(s, state.avs)
-        undo()
-      }
-    }
-
-    watch(() => prefs.value, (ap, av) => {
-      chargerMc()
-    })
-
-    watch(() => avsecrets.value, (ap, av) => {
-      initState()
-    })
-
-    watch(() => secret.value, (ap, av) => {
-      if (av) cleanVoisins(av)
-      initState()
-      check()
-      if (ap && (!av || av.pk !== ap.pk)) chargerMc() // le nouveau peut avoir un autre groupe
-    })
-
-    function check () {
-      erreur.value = state.ro || state.textelocal.length > 10 ? '' : 'Le texte doit contenir au moins 10 signes'
-    }
-
-    watch(() => state.textelocal, (ap, av) => {
-      check()
-    })
-
-    watch(() => avatarscform.value, (ap, av) => {
-      if (!ap && state.enedition) {
-        setTimeout(() => { avatarscform.value = true; tabsecret.value = 'texte' }, 50)
-        return
-      }
-      cleanVoisins(secret.value)
-    })
-
-    watch(() => tabsecret.value, (ap, av) => {
-      if (state.enedition && ap !== 'texte') {
-        setTimeout(() => { tabsecret.value = 'texte' }, 50)
-      }
-    })
-
-    function cleanVoisins (s) {
-      if (s) $store.commit('db/cleanVoisins', s.ref ? s.pkref : s.pk)
-    }
-
-    function retourliste () {
-      avatarscform.value = false
-    }
-
-    function editer () {
-      pinSecret.value(secret.value, true)
-      state.enedition = true
-    }
 
     initState()
     chargerMc()
-    check()
 
     return {
+      sessionok,
       tabsecret,
       couple,
       groupe,
       secret,
-      u8vide: new Uint8Array([]),
       state,
       mode,
       limjours: cfg().limitesjour.secrettemp,
@@ -826,10 +777,7 @@ export default ({
       modiftx,
       modiftp,
       modif,
-      erreur,
-      editer,
-      confirmpin,
-      retourliste
+      editer
     }
   }
 })

@@ -10,8 +10,12 @@
       <q-toolbar-title v-if="apropos && !erreur" :class="'text-italic text-center fs-md'">{{apropos}}</q-toolbar-title>
       <q-btn v-if="editable" :disable="!modifie" class="q-mr-xs" color="primary" icon="undo" size="sm" dense push @click="undo"></q-btn>
     </q-toolbar>
-    <textarea v-if="!md" :class="'col q-pa-xs full-width font-mono ta ' + dlclass" v-model="textelocal" :readonly="!editable"/>
-    <div v-else class="col q-pa-xs full-width ta"><show-html :texte="textelocal"/></div>
+    <textarea v-if="!md" style="min-height:12rem !important"
+      :class="'col q-pa-xs full-width font-mono ta ' + dlclass" v-model="textelocal"
+      :readonly="!editable"/>
+    <div v-else class="col q-pa-xs full-width ta" style="min-height:12rem !important">
+      <show-html :texte="textelocal"/>
+    </div>
   </q-card>
   <q-dialog v-model="max" full-height transition-show="slide-up" transition-hide="slide-down">
     <div ref="root2" :class="'column fs-md full-height grandelargeur overflow-hidden ' + dlclass">
