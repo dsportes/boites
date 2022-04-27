@@ -45,15 +45,15 @@
           <span v-if="state.plocal">Protection d'écriture</span>
           <span v-else>Pas de protection d'écriture</span>
         </div>
-        <q-btn v-if="ed && !state.ro" class="col-auto" size="md" flat dense color="primary" label="Protection d'écriture" @click="protection"/>
+        <q-btn v-if="ed && !state.ro" class="col-auto" size="md" flat dense color="primary" label="Protection d'écriture" @click="protectionP"/>
         <q-btn v-if="ed && !state.ro" class="col-auto" :disable="!state.modifp" size="sm" dense push icon="undo" color="primary" @click="undop"/>
       </div>
       <div v-if="secret.ts !== 0" class="col-auto q-px-xs full-width row justify-between items-center">
         <div class="col">
-          <span v-if="state.xlocal">Exclusité d'écriture</span>
+          <span v-if="state.xlocal">Exclusité d'écriture à {{excluNom()}}</span>
           <span v-else>Pas d'exclusité d'écriture </span>
         </div>
-        <q-btn v-if="ed && !state.ro" class="col-auto" size="md" flat dense color="primary" label="Exclusivité d'écriture" @click="protection"/>
+        <q-btn v-if="ed && !state.ro" class="col-auto" size="md" flat dense color="primary" label="Exclusivité d'écriture" @click="protectionX"/>
         <q-btn v-if="ed && !state.ro" class="col-auto" :disable="!state.modifx" size="sm" dense push icon="undo" color="primary" @click="undox"/>
      </div>
       <div class="col-auto q-px-xs full-width row justify-between items-center">
@@ -95,7 +95,7 @@
         </q-card>
       </q-dialog>
 
-      <q-dialog v-if="sessionok" v-model="protect">
+      <q-dialog v-if="sessionok" v-model="protectP">
         <q-card class="petitelargeur fs-md">
           <q-card-section><div class="fs-lg maauto">{{titrep}}</div></q-card-section>
           <q-card-section>
@@ -107,7 +107,30 @@
           <q-card-actions vertical>
             <q-btn v-if="actions.setprotP" flat dense label="Protéger contre les écritures" color="primary" @click="setprotP"/>
             <q-btn v-if="actions.resetprotP" flat dense label="Lever la protection d'écriture" color="primary" @click="resetprotP"/>
-            <q-btn flat dense label="Ne rien faire" color="warning" @click="protect = false"/>
+            <q-btn v-if="actions.nerienfaire" flat dense label="Ne rien faire" color="warning" @click="protectP = false"/>
+            <q-btn v-if="actions.jailu" flat dense label="J'ai lu" color="primary" @click="protectP = false"/>
+          </q-card-actions>
+        </q-card>
+      </q-dialog>
+
+      <q-dialog v-if="sessionok" v-model="protectX">
+        <q-card class="petitelargeur fs-md">
+          <q-card-section><div class="fs-lg maauto">{{titrep}}</div></q-card-section>
+          <q-card-section>
+            <div v-for="m in msg" :key="m" class="q-pa-sm fs-md">
+              <q-icon name='check' class="q-pr-lg" size="md"/>{{m}}
+            </div>
+          </q-card-section>
+
+          <q-card-actions vertical>
+            <q-btn v-if="actions.donnerexmoi" flat dense label="Me donner l'exclusité d'écriture"
+              color="warning" @click="setExcluC(false)"/>
+            <q-btn v-if="actions.resetExcluC" flat dense label="Me retirer l'exclusité d'écriture"
+              color="warning" @click="resetExcluC()"/>
+            <q-btn v-if="actions.donnerexctc" flat dense :label="'Donner l\'exclusité d\'écriture à ' + actions.donnerexctc"
+              color="warning" @click="setExcluC(true)"/>
+            <q-btn v-if="actions.nerienfaire" flat dense label="Ne rien faire" color="warning" @click="protectX = false"/>
+            <q-btn v-if="actions.jailu" flat dense label="J'ai lu" color="primary" @click="protectX = false"/>
           </q-card-actions>
         </q-card>
       </q-dialog>
@@ -313,7 +336,8 @@ export default ({
       plus: false,
       mcledit: false,
       mcgedit: false,
-      protect: false,
+      protectP: false,
+      protectX: false,
       saisiefichier: false,
       nomfic: '',
       msg: [],
@@ -448,13 +472,19 @@ export default ({
 
     changermcl (mc) { this.state.mclocal = mc },
     changermcg (mc) { this.state.mcglocal = mc },
-    setprotP () { this.state.plocal = 1; this.protect = false },
-    resetprotP () { this.state.plocal = 0; this.protect = false },
+    setprotP () { this.state.plocal = 1; this.protectP = false },
+    resetprotP () { this.state.plocal = 0; this.protectP = false },
+    setExcluC (lautre) {
+      this.state.xlocal = lautre ? (this.state.im === 1 ? 2 : 1) : this.state.im
+      this.protectX = false
+    },
+    resetExcluC () { this.state.xlocal = 0; this.protectX = false },
 
-    protection () { // paramétrage du dialogue de gestion des exclusivité / protection
+    protectionP () { // paramétrage du dialogue de gestion de la protection d'écriture
       const s = this.secret
-      const ex = this.state.xlocal
       const pr = this.state.plocal
+      const ex = this.state.xlocal
+      const im = this.state.im
       const m = []
       const a = {}
       if (this.mode > 2) {
@@ -464,21 +494,21 @@ export default ({
         this.titrep = 'Secret personnel'
         m.push(!pr ? 'Pas de protection d\'écriture' : 'Protection contre les écritures')
         if (!pr) a.setprotP = true; else a.resetprotP = true
+        a.nerienfaire = true
       } else if (s.ts === 1) {
-        const n = this.state.couple.nom
+        const n = this.secret.couple.nom
         this.titrep = 'Secret de couple : ' + n
-        m.push(pr ? 'Pas de protection d\'écriture' : 'Protection contre les écritures')
+        m.push(!pr ? 'Pas de protection d\'écriture' : 'Protection contre les écritures')
         if (ex === 0) {
-          a.donnerexmoictc = n
-          if (pr) a.setprotC = true; else a.resetprotC = true
-          a.ok = true
-        } else if (ex === this.state.im) {
+          if (!pr) a.setprotP = true; else a.resetprotP = true
+          a.nerienfaire = true
+        } else if (ex === im) {
           m.push('J\'ai l\'exclusité d\'écriture')
-          a.donnerexctc = n
-          a.ok = true
+          if (!pr) a.setprotP = true; else a.resetprotP = true
+          a.nerienfaire = true
         } else {
           m.push(n + ' a l\'exclusité d\'écriture et est le seul à pouvoir changer le statut de protection du secret')
-          a.jailu = true
+          a.nerienfaire = true
         }
       } else if (s.ts === 2) {
         this.titrep = 'Secret du groupe : ' + this.state.groupe.nom
@@ -509,7 +539,62 @@ export default ({
       }
       this.actions = a
       this.msg = m
-      this.protect = true
+      this.protectP = true
+    },
+
+    protectionX () { // paramétrage du dialogue de gestion des exclusivités
+      const s = this.secret
+      const ex = this.state.xlocal
+      const im = this.state.im
+      const m = []
+      const a = {}
+      if (this.mode > 2) {
+        m.push('Les secrets ne sont pas éditables en mode avion ou dégradé visio')
+        a.jailu = true
+      } else if (s.ts === 1) {
+        const c = this.secret.couple
+        this.titrep = 'Secret de couple : ' + c.nom
+        if (ex === 0) {
+          a.donnerexmoi = true
+          a.nerienfaire = true
+        } else if (ex === im) {
+          m.push('J\'ai l\'exclusité d\'écriture')
+          a.resetExcluC = true
+          if (c.naE) a.donnerexctc = c.naE.nom
+          a.nerienfaire = true
+        } else {
+          m.push((c.naE ? c.naE.nom : 'L\'autre') + ' a l\'exclusité d\'écriture et est la/le seul à pouvoir changer le statut de protection du secret')
+          a.nerienfaire = true
+        }
+      } else if (s.ts === 2) {
+        this.titrep = 'Secret du groupe : ' + this.state.groupe.nom
+        const p = this.state.membre.stp
+        m.push(this.labelp[p])
+        if (this.state.groupe.sty === 1) {
+          m.push('Le groupe est "protégé contre l\'écriture" : il est figé, les secrets ne sont pas éditables. Seul un animateur peut le remettre en activité')
+          a.jailu = true
+        } else if (p === 0) {
+          m.push('Un simple lecteur ne peut pas changer les protections d\'écriture')
+          a.jailu = true
+        } else {
+          m.push(ex ? 'Pas de protection d\'écriture' : 'Protection contre les écritures')
+          if (ex) {
+            const mbr = data.getMembre(this.state.groupe.id, ex)
+            const n = mbr ? mbr.nom : ('#' + ex)
+            m.push(ex === this.state.im ? 'J\'ai l\'exclusité d\'écriture' : (n + ' a l\'exclusité d\'écriture'))
+          }
+          if (ex === this.state.im || p === 2) { // l'exclusivité équivalente ici au pouvoir d'animateur
+            a.donnerexmbr = true // choix du membre recevant l'exclusivité
+            a.ok = true
+          } else {
+            m.push('N\'ayant pas l\'exclusivité et n\'étant pas animateur, vous ne pouvez pas changer les protections d\'écriture')
+            a.jailu = true
+          }
+        }
+      }
+      this.actions = a
+      this.msg = m
+      this.protectX = true
     },
 
     getMembres () { // liste des membres actifs du groupes, auteurs et animateurs
@@ -537,7 +622,7 @@ export default ({
         const v1 = !this.state.modift ? null : this.state.textelocal.length
         const mc = !this.state.modifmcl ? null : this.state.mclocal
         const st = !this.state.modiftp ? null : (this.state.templocal ? this.jourJ + this.limjours : 99999)
-        const xp = !this.state.modifx && !this.state.modifp ? null : this.xploc
+        const xp = !this.state.modifx && !this.state.modifp ? null : xploc
         const arg = { ts: s.ts, id: s.id, ns: s.ns, mc, txts, v1, xp, st, varg: s.volarg() }
         if (s.ts === 2) arg.mcg = !this.state.modifmcg ? null : this.state.mcglocal
         if (s.ts !== 0) arg.im = this.state.im
@@ -646,6 +731,18 @@ export default ({
       } else { // changement de secret OU de contenu du secret courant
         resetLocals(state, s)
       }
+    }
+
+    function excluNom () {
+      const s = secret.value
+      if (!s) return '?'
+      if (s.ts === 0) {
+        return avatar.value.na.nom
+      } else if (s.ts === 1) {
+        return s.couple.naDeIm(state.xlocal).nom
+      }
+      const m = data.getMembre(s.groupe.id, state.xlocal)
+      return m ? m.namb.nom : '?'
     }
 
     function editer () {
@@ -795,6 +892,7 @@ export default ({
       undox,
       undop,
       modif,
+      excluNom,
       editer,
       finEdition
     }

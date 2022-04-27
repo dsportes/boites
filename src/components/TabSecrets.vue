@@ -447,7 +447,7 @@ export default ({
       const cmd = ap.cmd
       if (cmd === 'fsc' || cmd === 'fsg') ouvrirfiltre()
       setTimeout(() => {
-        const f = new Filtre()
+        const f = new Filtre(avatar.value.id)
         if (cmd === 'fsc') { f.coupleId = c.id; f.groupeId = null }
         if (cmd === 'fsg') { f.coupleId = null; f.groupeId = c.id }
         f.perso = false

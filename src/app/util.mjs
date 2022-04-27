@@ -890,6 +890,23 @@ export class Filtre {
     this.asc = true // ascendant, descendant
   }
 
+  clone () {
+    const f = new Filtre(this.avId)
+    f.perso = this.perso
+    f.coupleId = this.coupleId
+    f.groupeId = this.groupeId
+    f.m1 = this.m1
+    f.m2 = this.m2
+    f.perm = this.perm
+    f.temp = this.temp
+    f.texte = this.texte
+    f.corps = this.corps
+    f.modif = this.modif
+    f.tri = this.tri
+    f.as = this.asc
+    return f
+  }
+
   etat () {
     const f = this
     const a = {
@@ -926,7 +943,9 @@ export class Filtre {
   }
 
   equal (f) {
-    return this.avId === f.avId && this.changement(f) === 0
+    const c = this.changement(f)
+    console.log('Changement : ' + c)
+    return this.avId === f.avId && c === 0
   }
 
   debutFiltre () {
@@ -937,19 +956,20 @@ export class Filtre {
   }
 
   filtre (s) {
-    const im = s.im(this.avid)
-    if (!s.v) return true // secret en création jamais filtré, toujours en tête
+    const im = s.im(this.avId)
     if (s.ts === 0 && !this.perso) return false
     if (s.ts === 1 && (this.coupleId === 0 || (this.coupleId !== -1 && this.coupleId !== s.id))) return false
     if (s.ts === 2 && (this.groupeId === 0 || (this.groupeId !== -1 && this.groupeId !== s.id))) return false
     let mcs
-    if (s.ts === 2) {
-      mcs = s.mc[im] || s.mc[0] || new Uint8Array([])
-    } else if (s.ts === 1) {
-      mcs = s.mc[im] || new Uint8Array([])
-    } else {
-      mcs = s.mc || new Uint8Array([])
-    }
+    if (s.mc) {
+      if (s.ts === 2) {
+        mcs = s.mc[im] || s.mc[0] || new Uint8Array([])
+      } else if (s.ts === 1) {
+        mcs = s.mc[im] || new Uint8Array([])
+      } else {
+        mcs = s.mc || new Uint8Array([])
+      }
+    } else mcs = new Uint8Array([])
     const sx = new Set(mcs)
     if (difference(this.f1, sx).size) return false
     if (intersection(this.f2, sx).size) return false
@@ -983,8 +1003,6 @@ export class Filtre {
   tri3 (a, b) { return this.asc ? (a.txt.t < b.txt.t ? -1 : (a.txt.t > b.txt.t ? 1 : 0)) : (a.txt.t < b.txt.t ? 1 : (a.txt.t > b.txt.t ? -1 : 0)) }
 
   fntri (a, b) {
-    if (!a.v) return -1 // celui en création est toujours en tête
-    if (!b.v) return 1
     return this.tri === 1 ? this.tri1(a, b) : (this.tri === 2 ? this.tri2(a, b) : this.tri3(a, b))
   }
 
@@ -992,7 +1010,7 @@ export class Filtre {
     // niveau de changement avec le filtre précédemment employé.
     // 0: aucun, 1:tri seulement, 2:filtre seulement, 3: base changée
     if (!f) return 3
-    if (this.perso !== f.perso || this.contactId !== f.contactId || this.groupeId !== f.groupeId) return 3
+    if (this.perso !== f.perso || this.coupleId !== f.coupleId || this.groupeId !== f.groupeId) return 3
     if (!equ8(this.m1, f.m1) || !equ8(this.m2, f.m2) || this.perm !== f.perm ||
       this.temp !== f.temp || this.modif !== f.modif || this.texte !== f.texte || this.corps !== f.corps) return 2
     if (this.tri !== f.tri || this.asc !== f.asc) return 1

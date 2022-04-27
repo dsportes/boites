@@ -928,6 +928,8 @@ export class Couple {
   get nom () { const x = this.data.x; return x[0][1] + '__' + x[1][1] }
   get nomE () { const x = this.data.x; return x[1][1] }
 
+  naDeIm (im) { return new NomAvatar(this.data.x[im - 1][1], this.data.x[im - 1][2]) }
+
   // id du compte du conjoint (quand il y a conjoint)
   get idc2 () { return this.stp !== 3 ? 0 : (this.avc === 0 ? this.data.x[1][0] : this.data.x[0][0]) }
 
@@ -1513,7 +1515,7 @@ export class Secret {
   im (avid) { return this.ts === 0 ? 0 : (this.ts === 1 ? this.couple.avc + 1 : this.groupe.imDeId(avid)) }
   membre (avid) { return this.ts === 2 ? data.getMembre(this.groupe.id, this.im(avid)) : null }
   mcl (avid) {
-    if (this.ts >= 1) return this.mc[this.im(avid)] || new Uint8Array([])
+    if (this.ts >= 1) return (this.mc ? this.mc[this.im(avid)] : new Uint8Array([])) || new Uint8Array([])
     return this.mc || new Uint8Array([])
   }
 
