@@ -12,7 +12,6 @@
   <div v-if="!state.lst || !state.nbs" class="titre-lg text-italic">Aucun secret trouvé répondant à ce filtre</div>
 
   <panel-secret v-if="avatarscform && state.lst && state.nbs"
-    :class="$q.screen.gt.sm ? 'ml20' : 'q-pa-xs full-width'"
     :suivant="state.idx < state.nbs - 1 ? suiv : null"
     :precedent="state.idx > 0 ? prec : null"
     :pin-secret="pinSecret"

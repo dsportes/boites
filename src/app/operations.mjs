@@ -713,7 +713,7 @@ export class Operation {
       }
       const sc = store().state.db.secret
       if (sc) {
-        const e = data.getSecret(sc.id, sc.im)
+        const e = data.getSecret(sc.id, sc.ns)
         if (!e) store().commit('db/majsecret', null)
       }
     }

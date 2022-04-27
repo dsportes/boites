@@ -73,7 +73,7 @@ export default ({
   methods: {
     emojiclick (emoji) {
       const code = emoji.emoji.unicode
-      const r = this.max ? this.root2 : this.root
+      const r = this.max ? this.root2 : this.root1
       const ta = r.querySelector('textarea')
       this.textelocal = ta.value.substring(0, ta.selectionStart) + code + ta.value.substring(ta.selectionEnd, ta.value.length)
       this.emoji = false
@@ -86,14 +86,8 @@ export default ({
     const textelocal = ref('')
     const texteinp = ref('')
     const texteRef = toRef(props, 'texteRef')
-    const editable = toRef(props, 'apropos')
-    toRef(props, 'apropos')
-    const md = ref(true)
-
-    /*
-    onMounted(() => { // initialisation de textelocal par défaut à texte
-    })
-    */
+    const editable = toRef(props, 'editable')
+    const md = ref(!editable.value)
 
     watch(texteRef, (ap, av) => { // quand texte change, textelocal ne change pas si en édition
       if (textelocal.value === texteinp.value && textelocal.value !== ap) {

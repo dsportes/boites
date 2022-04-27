@@ -41,37 +41,37 @@
 
       <div class="col-auto q-px-xs full-width row justify-between items-center">
         <div class="col">
-          <span v-if="nonmod" class="bg-warning q-pr-sm">[NON éditable]</span>
+          <span v-if="state.ro" class="bg-warning q-pr-sm">[NON éditable]</span>
           <span v-if="state.plocal">Protection d'écriture</span>
           <span v-else>Pas de protection d'écriture</span>
         </div>
-        <q-btn :disable="mode > 2" class="col-auto" size="md" flat dense color="primary" label="Protection d'écriture" @click="protection"/>
-        <q-btn class="col-auto" :disable="!modifp()" size="sm" dense push icon="undo" color="primary" @click="undop"/>
+        <q-btn v-if="ed && !state.ro" class="col-auto" size="md" flat dense color="primary" label="Protection d'écriture" @click="protection"/>
+        <q-btn v-if="ed && !state.ro" class="col-auto" :disable="!state.modifp" size="sm" dense push icon="undo" color="primary" @click="undop"/>
       </div>
-      <div v-if="state.ts !== 0" class="col-auto q-px-xs full-width row justify-between items-center">
+      <div v-if="secret.ts !== 0" class="col-auto q-px-xs full-width row justify-between items-center">
         <div class="col">
           <span v-if="state.xlocal">Exclusité d'écriture</span>
           <span v-else>Pas d'exclusité d'écriture </span>
         </div>
-        <q-btn :disable="mode > 2" class="col-auto" size="md" flat dense color="primary" label="Exclusivité d'écriture" @click="protection"/>
-        <q-btn class="col-auto" :disable="!modifx()" size="sm" dense push icon="undo" color="primary" @click="undox"/>
+        <q-btn v-if="ed && !state.ro" class="col-auto" size="md" flat dense color="primary" label="Exclusivité d'écriture" @click="protection"/>
+        <q-btn v-if="ed && !state.ro" class="col-auto" :disable="!state.modifx" size="sm" dense push icon="undo" color="primary" @click="undox"/>
      </div>
       <div class="col-auto q-px-xs full-width row justify-between items-center">
         <apercu-motscles class="col" :motscles="state.motscles" :src="state.mclocal"/>
-        <q-btn class="col-auto" :disable="state.ro !== 0" color="primary" flat dense label="Mots clés personnels" @click="ouvrirmcl"/>
-        <q-btn class="col-auto" v-if="!state.ro" :disable="!modifmcl()" size="sm" dense push icon="undo" color="primary" @click="undomcl"/>
+        <q-btn v-if="ed && !state.ro" class="col-auto" color="primary" flat dense label="Mots clés personnels" @click="ouvrirmcl"/>
+        <q-btn v-if="ed && !state.ro" class="col-auto" :disable="!state.modifmcl" size="sm" dense push icon="undo" color="primary" @click="undomcl"/>
       </div>
       <div v-if="state.ts === 2" class="col-auto q-px-xs full-width row justify-between items-center">
         <apercu-motscles class="col" :motscles="state.motscles" :src="state.mcglocal"/>
-        <q-btn class="col-auto" :disable="state.ro !== 0" flat dense color="primary" label="Mots clés du groupe" @click="ouvrirmcg"/>
-        <q-btn class="col-auto" v-if="!state.ro" :disable="!modifmcg()" size="sm" dense push icon="undo" color="primary" @click="undomcg"/>
+        <q-btn v-if="ed && !state.ro" class="col-auto" flat dense color="primary" label="Mots clés du groupe" @click="ouvrirmcg"/>
+        <q-btn v-if="ed && !state.ro" class="col-auto" :disable="!state.modifmcg" size="sm" dense push icon="undo" color="primary" @click="undomcg"/>
       </div>
 
       <div class="col-auto q-px-xs full-width row justify-between items-center">
         <div class="col">{{msgtemp}}</div>
-        <q-btn v-if="state.templocal" :disable="state.ro !== 0" class="col-auto" flat dense color="primary" label="Le rendre 'PERMANENT'" @click="state.templocal=false"/>
-        <q-btn v-if="!state.templocal" :disable="state.ro !== 0" class="col-auto" flat dense color="primary" label="Le rendre 'TEMPORAIRE'"  @click="state.templocal=true"/>
-        <q-btn v-if="!state.ro" :disable="!modiftp()" class="col-auto" size="sm" dense push icon="undo" color="primary" @click="undotp"/>
+        <q-btn v-if="state.templocal && ed && !state.ro" class="col-auto" flat dense color="primary" label="Le rendre 'PERMANENT'" @click="state.templocal=false"/>
+        <q-btn v-if="!state.templocal && ed && !state.ro" class="col-auto" flat dense color="primary" label="Le rendre 'TEMPORAIRE'"  @click="state.templocal=true"/>
+        <q-btn v-if="ed && !state.ro" :disable="!state.modiftp" class="col-auto" size="sm" dense push icon="undo" color="primary" @click="undotp"/>
       </div>
 
       <q-dialog v-if="sessionok" v-model="mcledit">
@@ -303,8 +303,7 @@ export default ({
         return 'Secret auto-détruit ' + (n === 0 ? 'aujourd\'hui' : (n === 1 ? 'demain' : ('dans ' + n + ' jours')))
       }
       return 'Secret permanent'
-    },
-    nonmod () { return this.state.ro }
+    }
   },
 
   data () {
@@ -446,13 +445,10 @@ export default ({
     fermermcl () { this.mcledit = false },
     ouvrirmcg () { this.mcgedit = true },
     fermermcg () { this.mcgedit = false },
+
     changermcl (mc) { this.state.mclocal = mc },
     changermcg (mc) { this.state.mcglocal = mc },
-
-    setprotP () {
-      this.state.plocal = 1
-      this.protect = false
-    },
+    setprotP () { this.state.plocal = 1; this.protect = false },
     resetprotP () { this.state.plocal = 0; this.protect = false },
 
     protection () { // paramétrage du dialogue de gestion des exclusivité / protection
@@ -470,7 +466,7 @@ export default ({
         if (!pr) a.setprotP = true; else a.resetprotP = true
       } else if (s.ts === 1) {
         const n = this.state.couple.nom
-        this.titrep = 'Secret partagé en couple ' + n
+        this.titrep = 'Secret de couple : ' + n
         m.push(pr ? 'Pas de protection d\'écriture' : 'Protection contre les écritures')
         if (ex === 0) {
           a.donnerexmoictc = n
@@ -485,7 +481,7 @@ export default ({
           a.jailu = true
         }
       } else if (s.ts === 2) {
-        this.titrep = 'Secret partagé avec le groupe ' + this.state.groupe.nom
+        this.titrep = 'Secret du groupe : ' + this.state.groupe.nom
         const p = this.state.membre.stp
         m.push(this.labelp[p])
         if (this.state.groupe.sty === 1) {
@@ -537,15 +533,13 @@ export default ({
       const xploc = this.state.plocal + (10 * this.state.xlocal)
       if (s.v) {
         // maj
-        const txts = this.state.textelocal === s.txt.t ? null : await s.toRowTxt(this.state.textelocal, this.state.im)
-        const mc = this.modifmcl() ? this.state.mclocal : null
-        const v1 = this.state.textelocal === s.txt.t ? null : this.state.textelocal.length
-        const tempav = this.secret.st > 0 && this.secret.st !== 99999
-        const st = tempav === this.state.templocal ? null : (this.state.templocal ? this.jourJ + this.limjours : 99999)
-        const xp = xploc === s.xp ? null : xploc
+        const txts = !this.state.modift ? null : await s.toRowTxt(this.state.textelocal, this.state.im)
+        const v1 = !this.state.modift ? null : this.state.textelocal.length
+        const mc = !this.state.modifmcl ? null : this.state.mclocal
+        const st = !this.state.modiftp ? null : (this.state.templocal ? this.jourJ + this.limjours : 99999)
+        const xp = !this.state.modifx && !this.state.modifp ? null : this.xploc
         const arg = { ts: s.ts, id: s.id, ns: s.ns, mc, txts, v1, xp, st, varg: s.volarg() }
-        if (s.ts === 2) arg.mcg = this.modifmcg() ? this.state.mcglocal : null
-        // im requis pour mettre à jour les motsclés de l'avatar
+        if (s.ts === 2) arg.mcg = !this.state.modifmcg ? null : this.state.mcglocal
         if (s.ts !== 0) arg.im = this.state.im
         await new Maj1Secret().run(arg)
       } else {
@@ -557,11 +551,11 @@ export default ({
         const xp = xploc
         const arg = { ts: s.ts, id: s.id, ns: s.ns, mc, txts, v1, xp, st, varg: s.volarg() }
         if (s.ts === 2) arg.mcg = this.mcglocal
-        // im requis pour mettre à jour les motsclés de l'avatar
         if (s.ts !== 0) arg.im = this.state.im
         arg.refs = await s.toRowRef()
         await new NouveauSecret().run(arg)
       }
+      this.finEdition()
     },
 
     // n == 0, premier / dernier, n == 1 suivant / précédent
@@ -600,32 +594,122 @@ export default ({
       im: 0,
       ro: 0,
       avs: null,
+      stp: 0,
+      mcg: new Uint8Array([]),
       membre: null,
       mcl: new Uint8Array([]),
+      temp: false,
       motscles: null,
+      dhlocal: 0,
 
       textelocal: '',
-      mclocal: null,
+      mclocal: new Uint8Array([]),
       mcglocal: null,
       xlocal: 0,
       plocal: 0,
       templocal: null,
-      dhlocal: 0
+
+      modift: false,
+      modifmcl: false,
+      modifmcg: false,
+      modifx: false,
+      modifp: false,
+      modiftp: false
     })
 
     function initState () {
       // données principalement dépendantes du secret ET de l'avatar courant ET de avsecrets
       const avid = avatar.value ? avatar.value.id : 0
-      const s = secret.value
+      const s = secret.value // Normalement (!!!) s n'est jamais null ici
       if (s) $store.commit('db/initVoisins', s)
       state.im = s ? s.im(avid) : 0
       state.ro = s ? s.ro(avid) : 5
       state.membre = s ? s.membre(avid) : null
+      state.stp = state.membre ? state.membre.stp : 0
+      state.mcg = state.stp ? s.mcg : new Uint8Array([])
       state.mcl = s ? s.mcl(avid) : new Uint8Array([])
+      state.temp = s ? s.st > 0 && s.st !== 99999 : 0
       state.avs = s ? data.getAvSecret(s.id, s.ns) : null
       state.listevoisins = s ? lstvoisins($store.state.db['voisins@' + (s.ref ? s.pkref : s.pk)]) : []
       state.listefic = s ? listefichiers(s, state.avs) : []
+      if (state.enedition) {
+        /* le contenu du secret a changé.
+        - si non modifié : valeur de s dans valeur éditée
+        - sinon : modifié si valeur de s != valeur éditée
+        */
+        if (!state.modift) state.textelocal = s.txt.t; else { state.modift = (state.textelocal !== s.txt.t) }
+        if (!state.modifmcl) state.mclocal = state.mcl; else { state.modifmcl = !equ8(state.mclocal, state.mcl) }
+        if (!state.modifmcg) state.mcglocal = state.mcg; else { state.modifmcg = !equ8(state.mcglocal, state.mcg) }
+        if (!state.modifx) state.xlocal = s.exclu; else { state.modifx = (state.xlocal !== s.exclu) }
+        if (!state.modifp) state.plocal = s.protect; else { state.modifp = (state.plocal !== s.protect) }
+        if (!state.modiftp) state.templocal = state.temp; else { state.modiftp = (state.templocal !== state.temp) }
+      } else { // changement de secret OU de contenu du secret courant
+        resetLocals(state, s)
+      }
     }
+
+    function editer () {
+      pinSecret.value(secret.value, true)
+      resetLocals(state, secret.value)
+      state.enedition = true
+    }
+
+    function undo () {
+      resetLocals(state, secret.value)
+      finEdition()
+    }
+
+    function finEdition () {
+      state.enedition = false
+    }
+
+    function resetLocals (st, s) {
+      if (!s) return
+      st.textelocal = s.txt.t
+      st.mclocal = st.mcl
+      st.mcglocal = st.mcg
+      st.xlocal = s.exclu
+      st.plocal = s.protect
+      st.templocal = st.temp
+      st.dhlocal = s.txt.d
+      st.modift = false; st.modifmcl = false; st.modifmcg = false
+      st.modifx = false; st.modifp = false; st.modiftp = false
+    }
+
+    watch(() => state.textelocal, (ap, av) => {
+      if (!state.enedition) return
+      const s = secret.value; state.modift = s && ap !== s.txt.t
+      state.erreur = ap.length < 10 ? 'Le texte doit avoir au moins 10 signes' : ''
+    })
+    watch(() => state.mclocal, (ap, av) => {
+      if (!state.enedition) return
+      const s = secret.value; state.modifmcl = s && !equ8(ap, state.mcl)
+    })
+    watch(() => state.mcglocal, (ap, av) => {
+      if (!state.enedition) return
+      const s = secret.value; state.modifmcg = s && !equ8(ap, state.mcg)
+    })
+    watch(() => state.xlocal, (ap, av) => {
+      if (!state.enedition) return
+      const s = secret.value; state.modifx = s && ap !== s.exclu
+    })
+    watch(() => state.plocal, (ap, av) => {
+      if (!state.enedition) return
+      const s = secret.value; state.modifp = s && ap !== s.protect
+    })
+    watch(() => state.templocal, (ap, av) => {
+      if (!state.enedition) return
+      const s = secret.value; state.modiftp = s && ap !== state.temp
+    })
+
+    function undomcl () { state.mclocal = state.mcl }
+    function undomcg () { state.mcglocal = state.mcg }
+    function undotp () { state.templocal = state.temp }
+    function undotx () { const s = secret.value; if (s) { state.textelocal = s.txt.t; state.dhlocal = s.txt.d } }
+    function undox () { const s = secret.value; if (s) { state.xlocal = s.exclu } }
+    function undop () { const s = secret.value; if (s) { state.plocal = s.protect } }
+
+    function modif () { return state.modift || state.modifmcl || state.modifmcg || state.modifx || state.modift || state.modiftp }
 
     const mc = reactive({ categs: new Map(), lcategs: [], st: { enedition: false, modifie: false } })
 
@@ -689,72 +773,12 @@ export default ({
       }
     })
 
-    function editer () {
-      pinSecret.value(secret.value, true)
-      state.enedition = true
-    }
-
-    function undomcl () {
-      const s = secret.value
-      if (s) {
-        state.mclocal = s.ts >= 1 ? (s.mc[state.im] || new Uint8Array([])) : s.mc
-      } else {
-        state.mclocal = new Uint8Array([])
-      }
-    }
-
-    function undomcg () {
-      const s = secret.value
-      if (s.ts !== 2) {
-        state.mcglocal = null
-      } else {
-        state.mcglocal = s.mc[0] || new Uint8Array([])
-      }
-    }
-
-    function undotp () { const s = secret.value; if (s) { const st = s.st; state.templocal = st > 0 && st < 99999 } }
-
-    function undotx () { const s = secret.value; if (s) { state.textelocal = s.txt.t; state.dhlocal = s.txt.d } }
-
-    function undox () { const s = secret.value; if (s) { state.xlocal = s.exclu } }
-
-    function undop () { const s = secret.value; if (s) { state.plocal = s.protect } }
-
-    function undo () { undomcl(); undomcg(); undotp(); undotx(); undox(); undop() }
-
-    function modifmcl () {
-      const s = secret.value
-      if (s.ts === 0) return !equ8(state.mclocal, s.mc)
-      const av = s.mc[state.im] || new Uint8Array([])
-      return !equ8(state.mclocal, av)
-    }
-    function modifmcg () {
-      const s = secret.value
-      if (s.ts !== 2) return null
-      const av = s.mc[0] || new Uint8Array([])
-      return !equ8(state.mcglocal, av)
-    }
-    function modifx () {
-      return state.xlocal !== secret.value.exclu
-    }
-    function modifp () {
-      return secret.value && state.plocal !== secret.value.protect
-    }
-    function modiftx () {
-      return state.textelocal !== secret.value.txt.t
-    }
-    function modiftp () {
-      return state.templocal !== (secret.value.st >= 0 && secret.value.st < 99999)
-    }
-    function modif () {
-      return secret.value && (modifmcl() || modifmcg() || modiftx() || modiftp() || modifx() || modifp())
-    }
-
     initState()
     chargerMc()
 
     return {
       sessionok,
+      avatarscform,
       tabsecret,
       couple,
       groupe,
@@ -770,14 +794,9 @@ export default ({
       undotx,
       undox,
       undop,
-      modifmcl,
-      modifmcg,
-      modifx,
-      modifp,
-      modiftx,
-      modiftp,
       modif,
-      editer
+      editer,
+      finEdition
     }
   }
 })
