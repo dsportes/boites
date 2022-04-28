@@ -8,9 +8,12 @@
       <q-btn :disable="!suivant || ed" flat round dense icon="arrow_forward_ios" size="md" class="q-mr-sm" @click="suiv(1)" />
       <q-btn :disable="!suivant || ed" flat round dense icon="last_page" size="md" class="q-mr-sm" @click="suiv(0)" />
       <q-toolbar-title></q-toolbar-title>
-      <q-btn v-if="!ed && mode <= 2" size="md" color="warning" icon="edit" dense label="Modifier" @click="editer"/>
+      <q-btn v-if="!ed && !c1() && mode <= 2" size="md" color="warning" icon="edit" dense label="Modifier" @click="editer"/>
       <q-btn v-if="ed" class="q-mx-xs" size="md" :color="modif() ? 'warning' : 'secondary'" icon="undo" dense @click="annuler"/>
-      <q-btn v-if="ed" :disable="!modif() || (state.erreur !== '')" size="md" color="warning" icon="check" dense @click="valider"/>
+      <q-btn v-if="ed" :disable="!modif() || (state.erreur !== '')" size="md" color="green-5" icon="check" dense @click="valider"/>
+    </q-toolbar>
+    <q-toolbar inset v-if="mode > 2" class="maToolBar2 fs-sm text-bold text-negative bg-yellow-5">
+      <div class="q-px-sm text-center">Les secrets ne peuvent être QUE consultés en mode avion ou visio (pas mis à jour)</div>
     </q-toolbar>
     <q-toolbar inset class="col-auto bg-primary text-white maToolBar">
       <q-btn class="q-mx-sm" dense push size="sm" icon="push_pin" :color="aPin() ? 'green-5' : 'grey-5'" @click="togglePin"/>
@@ -36,42 +39,51 @@
     </q-toolbar>
 
     <div v-if="tabsecret==='texte'" class='col column q-mt-sm'>
+      <q-btn v-if="ed && c8()" class="btnt" size="sm" icon="edit_off" dense color="negative" label="non modifiable">
+        <q-menu><q-card class="qc">{{lc[c8()]}}</q-card></q-menu></q-btn>
       <editeur-texte-secret class="col" v-model="state.textelocal" :texte-ref="secret.txt.t"
-        :editable="ed && !state.ro" :erreur="state.erreur" :apropos="secret.dh"/>
+        :editable="ed && !c8()" :erreur="state.erreur" :apropos="secret.dh"/>
 
       <div class="col-auto q-px-xs full-width row justify-between items-center">
         <div class="col">
-          <span v-if="state.ro" class="bg-warning q-pr-sm">[NON éditable]</span>
           <span v-if="state.plocal">Protection d'écriture</span>
           <span v-else>Pas de protection d'écriture</span>
         </div>
-        <q-btn v-if="ed && !state.ro" class="col-auto" size="md" flat dense color="primary" label="Protection d'écriture" @click="protectionP"/>
-        <q-btn v-if="ed && !state.ro" class="col-auto" :disable="!state.modifp" size="sm" dense push icon="undo" color="primary" @click="undop"/>
+        <q-btn v-if="ed && (c2() || c4())" class="col-auto" size="sm" icon="edit_off" dense color="negative" label="non modifiable">
+          <q-menu><q-card class="qc">{{lc[c2() || c4()]}}</q-card></q-menu></q-btn>
+        <q-btn v-if="ed && !c2() && !c4()" class="col-auto" size="md" flat dense color="primary" label="Protection d'écriture" @click="protectionP"/>
+        <q-btn v-if="ed && !c2() && !c4()" class="col-auto" :disable="!state.modifp" size="sm" dense push icon="undo" color="primary" @click="undop"/>
       </div>
       <div v-if="secret.ts !== 0" class="col-auto q-px-xs full-width row justify-between items-center">
         <div class="col">
           <span v-if="state.xlocal">Exclusité d'écriture à {{excluNom()}}</span>
           <span v-else>Pas d'exclusité d'écriture </span>
         </div>
-        <q-btn v-if="ed && !state.ro" class="col-auto" size="md" flat dense color="primary" label="Exclusivité d'écriture" @click="protectionX"/>
-        <q-btn v-if="ed && !state.ro" class="col-auto" :disable="!state.modifx" size="sm" dense push icon="undo" color="primary" @click="undox"/>
+        <q-btn v-if="ed && (c2() || c3())" class="col-auto" size="sm" icon="edit_off" dense color="negative" label="non modifiable">
+          <q-menu><q-card class="qc">{{lc[c2() || c3()]}}</q-card></q-menu></q-btn>
+        <q-btn v-if="ed && !c2() && !c3()" class="col-auto" size="md" flat dense color="primary" label="Exclusivité d'écriture" @click="protectionX"/>
+        <q-btn v-if="ed && !c2() && !c3()" class="col-auto" :disable="!state.modifx" size="sm" dense push icon="undo" color="primary" @click="undox"/>
      </div>
       <div class="col-auto q-px-xs full-width row justify-between items-center">
         <apercu-motscles class="col" :motscles="state.motscles" :src="state.mclocal"/>
-        <q-btn v-if="ed && !state.ro" class="col-auto" color="primary" flat dense label="Mots clés personnels" @click="ouvrirmcl"/>
-        <q-btn v-if="ed && !state.ro" class="col-auto" :disable="!state.modifmcl" size="sm" dense push icon="undo" color="primary" @click="undomcl"/>
+        <q-btn v-if="ed" class="col-auto" color="primary" flat dense label="Mots clés personnels" @click="ouvrirmcl"/>
+        <q-btn v-if="ed" class="col-auto" :disable="!state.modifmcl" size="sm" dense push icon="undo" color="primary" @click="undomcl"/>
       </div>
       <div v-if="state.ts === 2" class="col-auto q-px-xs full-width row justify-between items-center">
         <apercu-motscles class="col" :motscles="state.motscles" :src="state.mcglocal"/>
-        <q-btn v-if="ed && !state.ro" class="col-auto" flat dense color="primary" label="Mots clés du groupe" @click="ouvrirmcg"/>
-        <q-btn v-if="ed && !state.ro" class="col-auto" :disable="!state.modifmcg" size="sm" dense push icon="undo" color="primary" @click="undomcg"/>
+        <q-btn v-if="ed && (c4())" class="col-auto" size="sm" icon="edit_off" dense color="negative" label="non modifiable">
+          <q-menu><q-card class="qc">{{lc[c4()]}}</q-card></q-menu></q-btn>
+        <q-btn v-if="ed && !c4()" class="col-auto" flat dense color="primary" label="Mots clés du groupe" @click="ouvrirmcg"/>
+        <q-btn v-if="ed && !c4()" class="col-auto" :disable="!state.modifmcg" size="sm" dense push icon="undo" color="primary" @click="undomcg"/>
       </div>
 
       <div class="col-auto q-px-xs full-width row justify-between items-center">
         <div class="col">{{msgtemp}}</div>
-        <q-btn v-if="state.templocal && ed && !state.ro" class="col-auto" flat dense color="primary" label="Le rendre 'PERMANENT'" @click="state.templocal=false"/>
-        <q-btn v-if="!state.templocal && ed && !state.ro" class="col-auto" flat dense color="primary" label="Le rendre 'TEMPORAIRE'"  @click="state.templocal=true"/>
-        <q-btn v-if="ed && !state.ro" :disable="!state.modiftp" class="col-auto" size="sm" dense push icon="undo" color="primary" @click="undotp"/>
+        <q-btn v-if="ed && (c9())" class="col-auto" size="sm" icon="edit_off" dense color="negative" label="non modifiable">
+          <q-menu><q-card class="qc">{{lc[c9()]}}</q-card></q-menu></q-btn>
+        <q-btn v-if="state.templocal && ed && !c9()" class="col-auto" flat dense color="primary" label="Le rendre 'PERMANENT'" @click="state.templocal=false"/>
+        <q-btn v-if="!state.templocal && ed && !c9()" class="col-auto" flat dense color="primary" label="Le rendre 'TEMPORAIRE'"  @click="state.templocal=true"/>
+        <q-btn v-if="ed && !c9()" :disable="!state.modiftp" class="col-auto" size="sm" dense push icon="undo" color="primary" @click="undotp"/>
       </div>
 
       <q-dialog v-if="sessionok" v-model="mcledit">
@@ -621,22 +633,20 @@ export default ({
         const txts = !this.state.modift ? null : await s.toRowTxt(this.state.textelocal, this.state.im)
         const v1 = !this.state.modift ? null : this.state.textelocal.length
         const mc = !this.state.modifmcl ? null : this.state.mclocal
+        const mcg = !this.state.modifmcg ? null : this.state.mcglocal
         const st = !this.state.modiftp ? null : (this.state.templocal ? this.jourJ + this.limjours : 99999)
         const xp = !this.state.modifx && !this.state.modifp ? null : xploc
-        const arg = { ts: s.ts, id: s.id, ns: s.ns, mc, txts, v1, xp, st, varg: s.volarg() }
-        if (s.ts === 2) arg.mcg = !this.state.modifmcg ? null : this.state.mcglocal
-        if (s.ts !== 0) arg.im = this.state.im
+        const arg = { ts: s.ts, id: s.id, ns: s.ns, mc, txts, v1, xp, st, mcg, im: this.state.im, varg: s.volarg() }
         await new Maj1Secret().run(arg)
       } else {
         // création
         const txts = await s.toRowTxt(this.state.textelocal, this.state.im)
         const mc = this.state.mclocal
+        const mcg = this.mcglocal
         const v1 = this.state.textelocal.length
         const st = this.state.templocal ? this.jourJ + this.limjours : 99999
         const xp = xploc
-        const arg = { ts: s.ts, id: s.id, ns: s.ns, mc, txts, v1, xp, st, varg: s.volarg() }
-        if (s.ts === 2) arg.mcg = this.mcglocal
-        if (s.ts !== 0) arg.im = this.state.im
+        const arg = { ts: s.ts, id: s.id, ns: s.ns, mc, txts, v1, xp, st, mcg, im: this.state.im, varg: s.volarg() }
         arg.refs = await s.toRowRef()
         await new NouveauSecret().run(arg)
       }
@@ -729,7 +739,7 @@ export default ({
         if (!state.modifp) state.plocal = s.protect; else { state.modifp = (state.plocal !== s.protect) }
         if (!state.modiftp) state.templocal = state.temp; else { state.modiftp = (state.templocal !== state.temp) }
       } else { // changement de secret OU de contenu du secret courant
-        resetLocals(state, s)
+        resetLocals()
       }
     }
 
@@ -747,12 +757,12 @@ export default ({
 
     function editer () {
       pinSecret.value(secret.value, true)
-      resetLocals(state, secret.value)
+      resetLocals()
       state.enedition = true
     }
 
     function undo () {
-      resetLocals(state, secret.value)
+      resetLocals()
       finEdition()
     }
 
@@ -760,7 +770,9 @@ export default ({
       state.enedition = false
     }
 
-    function resetLocals (st, s) {
+    function resetLocals () {
+      const st = state
+      const s = secret.value
       if (!s) return
       st.textelocal = s.txt.t
       st.mclocal = st.mcl
@@ -807,6 +819,51 @@ export default ({
     function undop () { const s = secret.value; if (s) { state.plocal = s.protect } }
 
     function modif () { return state.modift || state.modifmcl || state.modifmcg || state.modifx || state.modift || state.modiftp }
+
+    const lc = [
+      '',
+      'Le groupe de ce secret est protégé contre toute modification',
+      'L\'exclusivité d\'écriture de ce secret a été attribuée à l\'autre dans le couple',
+      'Vous n\'êtes pas animateur du groupe et l\'exclusivité d\'écriture de ce secret a été attribuée à un autre membre du groupe',
+      'Vous n\'êtes pas animateur du groupe',
+      'Vous êtes lecteur dans le groupe sans droit d\'écriture',
+      'L\'exclusivité d\'écriture a été attribuée à un autre membre du groupe',
+      'Le secret est protégé contre l\'écriture'
+    ]
+
+    function c1 () {
+      const s = secret.value
+      return !s || (s.groupe && s.groupe.sty) ? 1 : 0
+    }
+    function c2 () {
+      const s = secret.value
+      return !s || (s.ts === 1 && s.exclu && s.exclu !== state.im) ? 2 : 0
+    }
+    function c3 () {
+      const s = secret.value
+      const m = state.membre
+      return !s || (s.ts === 2 && s.exclu && s.exclu !== state.im && m.stp !== 2) ? 3 : 0
+    }
+    function c4 () {
+      const s = secret.value
+      const m = state.membre
+      return !s || (s.ts === 2 && m.stp !== 2) ? 4 : 0
+    }
+    function c5 () {
+      const s = secret.value
+      const m = state.membre
+      return !s || (s.ts === 2 && m.stp <= 1) ? 5 : 0
+    }
+    function c6 () {
+      const s = secret.value
+      return !s || (s.ts === 2 && s.exclu && s.exclu !== state.im) ? 6 : 0
+    }
+    function c7 () {
+      const s = secret.value
+      return !s || s.stp ? 7 : 0
+    }
+    function c8 () { return c7() || c5() || c2() || c6() }
+    function c9 () { return c5() || c2() || c6() }
 
     const mc = reactive({ categs: new Map(), lcategs: [], st: { enedition: false, modifie: false } })
 
@@ -892,6 +949,16 @@ export default ({
       undox,
       undop,
       modif,
+      c1,
+      c2,
+      c3,
+      c4,
+      c5,
+      c6,
+      c7,
+      c8,
+      c9,
+      lc,
       excluNom,
       editer,
       finEdition
@@ -905,6 +972,14 @@ export default ({
   padding: 0 !important
   min-height: 2rem !important
   max-height: 2rem !important
+.maToolBar2
+  padding: 0 !important
+  min-height: 1.3rem !important
+  max-height: 1.3rem !important
+.qc
+  padding: 5px
+  background-color: $yellow-5
+  color: $negative
 .tit
   max-height: 1.3rem
   text-overflow: ellipsis
@@ -926,4 +1001,8 @@ export default ({
 .btnav2
   position: relative
   right: -1.8rem
+.btnt
+  position: absolute
+  right: 3px
+  z-index: 10
 </style>

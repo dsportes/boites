@@ -944,7 +944,7 @@ export class Filtre {
 
   equal (f) {
     const c = this.changement(f)
-    console.log('Changement : ' + c)
+    // console.log('Changement : ' + c)
     return this.avId === f.avId && c === 0
   }
 
