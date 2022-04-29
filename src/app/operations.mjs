@@ -623,9 +623,9 @@ export class Operation {
     if (mapObj.secret) {
       for (const pk in mapObj.secret) {
         const s = mapObj.secret[pk]
-        this.buf.setObj(s)
+        this.buf.setObj(s) // même supprimé, écrit dans db/store
         if (s.suppr) {
-          this.buf.supprIDB(s)
+          this.buf.supprIDB(s) // mais supprimé de IDB
           this.secretIdsM.add(s)
         } else {
           this.buf.putIDB(s)
@@ -1484,7 +1484,7 @@ export class SupprSecret extends OperationUI {
   async run (arg) {
     try {
       const args = { sessionId: data.sessionId, ...arg }
-      const ret = await post(this, 'm1', 'maj1Secret', args)
+      const ret = await post(this, 'm1', 'supprSecret', args)
       if (ret.info && ret.info.length) {
         afficherdiagnostic(ret.info.join('<br>'))
       }

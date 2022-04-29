@@ -23,10 +23,11 @@
     <div v-for="(s, idx) in state.lst" :key="s.vk"
       :class="dkli(idx) + ' zone full-width row items-start q-py-xs'">
       <div class="col-auto column q-mr-sm">
-        <q-btn dense push size="sm" :icon="'expand_'+(!row[s.vk]?'less':'more')"
+        <q-icon  v-if="s.suppr" name="delete" color="negative" size="sm"/>
+        <q-btn v-if="!s.suppr" dense push size="sm" :icon="'expand_'+(!row[s.vk]?'less':'more')"
           color="primary" @click="togglerow(s.vk)"/>
-        <q-btn dense push size="sm" icon="push_pin" :color="aPin(s) ? 'green-5' : 'grey-5'" @click="togglePin(s)"/>
-        <q-btn dense push size="sm" color="warning" icon="add">
+        <q-btn v-if="!s.suppr" dense push size="sm" icon="push_pin" :color="aPin(s) ? 'green-5' : 'grey-5'" @click="togglePin(s)"/>
+        <q-btn v-if="!s.suppr" dense push size="sm" color="warning" icon="add">
           <q-menu transition-show="scale" transition-hide="scale">
             <q-list dense style="min-width: 10rem">
               <q-item>
@@ -48,7 +49,7 @@
           </q-menu>
         </q-btn>
       </div>
-      <div class="col cursor-pointer" @click="afficherform(idx)">
+      <div v-if="!s.suppr" class="col cursor-pointer" @click="afficherform(idx)">
         <show-html v-if="row[s.vk]" class="height-8 full-width overlay-y-auto bottomborder" :texte="s.txt.t" :idx="idx"/>
         <div v-else class="full-width text-bold">{{s.titre}}</div>
         <div class="full-width row items-center">
@@ -61,6 +62,7 @@
           </div>
         </div>
       </div>
+      <div v-if="s.suppr" class="col text-negative text-italic text-bold">Secret SUPPRIMÉ</div>
     </div>
   </div>
 
@@ -338,14 +340,6 @@ export default ({
       trier()
     }
 
-    watch(() => state.filtre, (filtre, filtreavant) => {
-      if (!filtre || !filtreavant || filtre.equal(filtreavant)) return
-      const chg = filtre.changement(filtreavant)
-      if (chg >= 3) { onChgPortee(); return }
-      if (chg >= 2) { onChgSecrets(); return }
-      onChgTri()
-    })
-
     function pinSecret (secret, onoff) {
       const pk = secret.pk
       if (state.pins[pk]) {
@@ -370,10 +364,17 @@ export default ({
       for (const id in refSecrets) { // id d'un ACP ou pk d'un secret isolé
         const estMap = id.indexOf('/') === -1
         const x = refSecrets[id]
-        // const x = isRef(val) ? val.value : val // selon le cas on reçoit le ref ou la value ???
+        // const x = isRef(val) ? val.value : val // selon le cas on recevait le ref ou la value ???
         if (estMap) { // map: map des secrets de clé majeure id (avatar / couple / groupe). (clé: ns, val: secret)
-          for (const ns in x) { const s = x[ns]; if (f.filtre(s)) { const pk = s.pk; if (!pks.has(pk)) { pks.add(pk); lst.push(s) } } }
-        } else { const pk = x.pk; if (!pks.has(pk)) { pks.add(pk); lst.push(x) } }
+          for (const ns in x) {
+            const s = x[ns]
+            if (!s.suppr && f.filtre(s)) { // on ignore les supprimés NON punaisés
+              const pk = s.pk; if (!pks.has(pk)) { pks.add(pk); lst.push(s) }
+            }
+          }
+        } else { // on garde les supprimés PUNAISÉS
+          const pk = x.pk; if (!pks.has(pk)) { pks.add(pk); lst.push(x) }
+        }
       }
       state.lst = lst
       state.nbs = state.lst.length
@@ -439,6 +440,17 @@ export default ({
       }
     })
 
+    watch(() => secret.value, (ap, av) => {
+      onChgSecrets()
+    })
+
+    watch(() => state.filtre, (filtre, filtreavant) => {
+      if (!filtre || !filtreavant || filtre.equal(filtreavant)) return
+      const chg = filtre.changement(filtreavant)
+      if (chg >= 3) { onChgPortee(); return }
+      if (chg >= 2) { onChgSecrets(); return }
+      onChgTri()
+    })
     function nbj (dlv) { return dlv - getJourJ() }
 
     const evtfiltresecrets = computed(() => $store.state.ui.evtfiltresecrets)
@@ -496,10 +508,10 @@ export default ({
       }
       const ref = !voisin ? null : (voisin.ref ? voisin.ref : [voisin.id, voisin.ns])
       if (n === 0) { // secret personnel
-        editerSecret(new Secret().nouveauP(avatar.value.id, ref))
+        editerSecret(new Secret().nouveauP(avatar.value.id, ref), true)
       } else if (n === 1) {
         const c = couple.value
-        if (c) editerSecret(new Secret().nouveauC(c.id, ref, c.avc))
+        if (c) editerSecret(new Secret().nouveauC(c.id, ref, c.avc), true)
       } else if (n === 2) {
         const g = groupe.value
         if (!g) {
@@ -515,12 +527,13 @@ export default ({
           afficherdiagnostic('Seuls les membres de niveau "auteur" et "animateur" du groupe ' + g.nom + ' peuvent créer ou modifier des secrets.')
           return
         }
-        editerSecret(new Secret().nouveauG(g.id, ref, membre.im))
+        editerSecret(new Secret().nouveauG(g.id, ref, membre.im), true)
       }
     }
 
-    function editerSecret (sec) {
+    function editerSecret (sec, nouveau) {
       secret.value = sec
+      if (nouveau) data.setSecrets([sec])
       pinSecret(sec, true)
       avatarscform.value = true
     }

@@ -1480,13 +1480,14 @@ export class Secret {
   get ts () { return this.ns % 3 } // 0:personnel 1:couple 2:groupe
   get exclu () { return Math.floor(this.xp / 10) }
   get protect () { return this.xp % 10 }
-  get titre () { return titreEd(null, this.txt.t) }
+  get titre () { return this.suppr ? 'SUPPRIMÉ' : titreEd(null, this.txt.t) }
   get nbj () { return this.st <= 0 || this.st === 99999 ? 0 : (this.st - getJourJ()) }
-  get dh () { return dhstring(new Date(this.txt.d * 1000)) }
+  get dh () { return this.suppr ? '?' : dhstring(new Date(this.txt.d * 1000)) }
 
   get cle () { return this.ts ? data.repertoire.cle(this.id) : data.clek }
 
   get nomf () {
+    if (this.suppr) return 'SUPPRIMÉ@' + this.sid2
     const i = this.txt.t.indexOf('\n')
     const t = this.txt.t.substring(0, (i === -1 ? 16 : (i < 16 ? i : 16)))
     return normpath(t) + '@' + this.sid2
@@ -1502,15 +1503,7 @@ export class Secret {
     return 'Secret du groupe ' + this.groupe.nom
   }
 
-  get mcg () { return this.ts === 2 ? this.mc[0] || new Uint8Array([]) : new Uint8Array([]) }
-
-  ro (avid) {
-    if (this.protect) return 1 // protégé en écriture
-    if (this.exclu && this.exclu !== this.im(avid)) return 2 // exclusivité accordée à un autre membre
-    if (this.ts === 2 && this.membre.stp === 0) return 3 // lecteur
-    if (this.ts === 2 && this.groupe.sty === 0) return 4 // groupe protégé en écriture
-    return 0
-  }
+  get mcg () { return this.ts === 2 && this.mc ? this.mc[0] || new Uint8Array([]) : new Uint8Array([]) }
 
   im (avid) { return this.ts === 0 ? 0 : (this.ts === 1 ? this.couple.avc + 1 : this.groupe.imDeId(avid)) }
   membre (avid) { return this.ts === 2 ? data.getMembre(this.groupe.id, this.im(avid)) : null }
@@ -1572,13 +1565,15 @@ export class Secret {
     this.vsh = row.vsh || 0
     this.id = row.id
     this.ns = row.ns
-    this.st = row.st
-    this.xp = row.xp
+    this.x = row.x
     this.v = row.v
+    const cle = this.cle
+    this.ref = row.refs ? deserial(await crypt.decrypter(cle, row.refs)) : null
     if (!this.suppr) {
+      this.st = row.st
+      this.xp = row.xp
       this.v1 = row.v1
       this.v2 = row.v2
-      const cle = this.cle
       try {
         this.txt = deserial(await crypt.decrypter(cle, row.txts))
         this.txt.t = ungzip(this.txt.t)
@@ -1601,7 +1596,6 @@ export class Secret {
           this.nbfa++
         }
       }
-      this.ref = row.refs ? deserial(await crypt.decrypter(cle, row.refs)) : null
     }
     return this
   }

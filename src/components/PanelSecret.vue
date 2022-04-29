@@ -7,15 +7,17 @@
       <span class="q-pa-sm">{{index + 1}} sur {{sur}}</span>
       <q-btn :disable="!suivant || ed" flat round dense icon="arrow_forward_ios" size="md" class="q-mr-sm" @click="suiv(1)" />
       <q-btn :disable="!suivant || ed" flat round dense icon="last_page" size="md" class="q-mr-sm" @click="suiv(0)" />
-      <q-toolbar-title></q-toolbar-title>
-      <q-btn v-if="!ed && !c1() && mode <= 2" size="md" color="warning" icon="edit" dense label="Modifier" @click="editer"/>
-      <q-btn v-if="ed" class="q-mx-xs" size="md" :color="modif() ? 'warning' : 'secondary'" icon="undo" dense @click="annuler"/>
-      <q-btn v-if="ed" :disable="!modif() || (state.erreur !== '')" size="md" color="green-5" icon="check" dense @click="valider"/>
+      <q-toolbar-title>
+        <div v-if="secret.suppr" class="col text-negative text-italic text-bold">Secret SUPPRIMÉ</div>
+      </q-toolbar-title>
+      <q-btn v-if="!secret.suppr && !ed && !c1() && mode <= 2" size="md" color="warning" icon="edit" dense label="Modifier" @click="editer"/>
+      <q-btn v-if="!secret.suppr && ed" class="q-mx-xs" size="md" :color="modif() ? 'warning' : 'secondary'" icon="undo" dense @click="annuler"/>
+      <q-btn v-if="!secret.suppr && ed" :disable="!modif() || (state.erreur !== '')" size="md" color="green-5" icon="check" dense @click="valider"/>
     </q-toolbar>
     <q-toolbar inset v-if="mode > 2" class="maToolBar2 fs-sm text-bold text-negative bg-yellow-5">
       <div class="q-px-sm text-center">Les secrets ne peuvent être QUE consultés en mode avion ou visio (pas mis à jour)</div>
     </q-toolbar>
-    <q-toolbar inset class="col-auto bg-primary text-white maToolBar">
+    <q-toolbar v-if="!secret.suppr" inset class="col-auto bg-primary text-white maToolBar">
       <q-btn class="q-mx-sm" dense push size="sm" icon="push_pin" :color="aPin() ? 'green-5' : 'grey-5'" @click="togglePin"/>
       <q-toolbar-title><div class="titre-md tit text-center">{{secret.partage}}</div></q-toolbar-title>
       <q-btn dense size="md" icon="menu">
@@ -24,11 +26,14 @@
             <q-item clickable v-close-popup @click="plus=true">
               <q-item-section>Plus d'info ...</q-item-section>
             </q-item>
+            <q-item clickable v-close-popup @click="confirmsuppr=true">
+              <q-item-section>Supprimer le secret ...</q-item-section>
+            </q-item>
           </q-list>
         </q-menu>
       </q-btn>
     </q-toolbar>
-    <q-toolbar inset class="col-auto bg-secondary text-white maToolBar">
+    <q-toolbar v-if="!secret.suppr" inset class="col-auto bg-secondary text-white maToolBar">
       <div class="full-width font-cf">
         <q-tabs v-model="tabsecret" inline-label no-caps dense>
           <q-tab name="texte" :disable="ed" label="Détail du secret" />
@@ -38,7 +43,7 @@
       </div>
     </q-toolbar>
 
-    <div v-if="tabsecret==='texte'" class='col column q-mt-sm'>
+    <div v-if="!secret.suppr && tabsecret==='texte'" class='col column q-mt-sm'>
       <q-btn v-if="ed && c8()" class="btnt" size="sm" icon="edit_off" dense color="negative" label="non modifiable">
         <q-menu><q-card class="qc">{{lc[c8()]}}</q-card></q-menu></q-btn>
       <editeur-texte-secret class="col" v-model="state.textelocal" :texte-ref="secret.txt.t"
@@ -92,6 +97,25 @@
 
       <q-dialog v-if="sessionok" v-model="mcgedit">
         <select-motscles :motscles="state.motscles" :src="state.mcglocal" @ok="changermcg" :close="fermermcg"></select-motscles>
+      </q-dialog>
+
+      <q-dialog v-if="sessionok" v-model="confirmsuppr">
+        <q-card class="petitelargeur fs-md">
+          <q-card-section>
+            <div v-if="!(c1() || c2() || c3() || c5() || c7())" class="titre-md text-bold">
+              Supprimer un secret est irréversible. Pour simplement ne plus le voir mais le garder existant,
+              lui attribuer le mot clé "Poubelle" et filtrer les secrets n'ayant pas ce mot-clé (ou l'ayant pour retrouver le contenu de la poublelle).
+            </div>
+            <div v-else>Suppression non autorisée : {{lc[c1() || c2() || c3() || c5() || c7()]}}</div>
+          </q-card-section>
+          <q-card-actions v-if="!(c1() || c2() || c3() || c5() || c7())" vertical>
+            <q-btn flat dense v-close-popup color="primary" label="Je renonce à le suprimer"/>
+            <q-btn flat dense v-close-popup color="warning" label="Je confirme la suppression" @click="supprimer"/>
+          </q-card-actions>
+          <q-card-actions v-else>
+            <q-btn flat dense v-close-popup color="primary" label="J'ai lu"/>
+          </q-card-actions>
+        </q-card>
       </q-dialog>
 
       <q-dialog v-if="sessionok" v-model="plus">
@@ -149,7 +173,7 @@
 
     </div>
 
-    <div v-if="tabsecret==='fa'" class='col column items-center'>
+    <div v-if="!secret.suppr && tabsecret==='fa'" class='col column items-center'>
       <q-btn :disable="state.ro !== 0" flat dense color="primary" class="q-mt-sm" size="md" icon="add"
         label="Ajouter un fichier" @click="nomfic='';saisiefichier=true"/>
       <div v-if="mode === 3" class="bg-yellow text-bold text-negative text-center">
@@ -241,7 +265,7 @@
       </div>
     </div>
 
-    <div v-if="tabsecret==='voisins'" class='col'>
+    <div v-if="!secret.suppr && tabsecret==='voisins'" class='col'>
       <q-btn flat dense color="primary" size="md" icon="add" label="Nouveau secret voisin personnel" @click="action0"/>
       <q-btn v-if="couple" flat dense size="md" color="primary" icon="add" :label="'Nouveau secret voisin partagé avec ' +  couple.nom" @click="action1(couple.id)"/>
       <q-btn v-if="groupe" flat dense size="md" color="primary" icon="add" :label="'Nouveau secret voisin du groupe ' +  groupe.nom" @click="action2(groupe.id)"/>
@@ -350,6 +374,7 @@ export default ({
       mcgedit: false,
       protectP: false,
       protectX: false,
+      confirmsuppr: false,
       saisiefichier: false,
       nomfic: '',
       msg: [],
@@ -724,17 +749,18 @@ export default ({
       const avid = avatar.value ? avatar.value.id : 0
       const s = secret.value // Normalement (!!!) s n'est jamais null ici
       if (s) $store.commit('db/initVoisins', s)
-      state.im = s ? s.im(avid) : 0
-      state.ro = s ? s.ro(avid) : 5
-      state.membre = s ? s.membre(avid) : null
-      state.stp = state.membre ? state.membre.stp : 0
-      state.mcg = state.stp ? s.mcg : new Uint8Array([])
-      state.mcl = s ? s.mcl(avid) : new Uint8Array([])
-      state.temp = s ? s.st > 0 && s.st !== 99999 : 0
-      state.avs = s ? data.getAvSecret(s.id, s.ns) : null
-      state.listevoisins = s ? lstvoisins($store.state.db['voisins@' + (s.ref ? s.pkref : s.pk)]) : []
-      state.listefic = s ? listefichiers(s, state.avs) : []
-      if (state.enedition) {
+      const z = s && !s.suppr
+      if (z && s.v === 0) state.enedition = true
+      state.im = z ? s.im(avid) : 0
+      state.membre = z ? s.membre(avid) : null
+      state.stp = z && state.membre ? state.membre.stp : 0
+      state.mcg = z && state.stp ? s.mcg : new Uint8Array([])
+      state.mcl = z ? s.mcl(avid) : new Uint8Array([])
+      state.temp = z ? s.st > 0 && s.st !== 99999 : 0
+      state.avs = z ? data.getAvSecret(s.id, s.ns) : null
+      state.listevoisins = z ? lstvoisins($store.state.db['voisins@' + (s.ref ? s.pkref : s.pk)]) : []
+      state.listefic = z ? listefichiers(s, state.avs) : []
+      if (z && state.enedition) {
         /* le contenu du secret a changé.
         - si non modifié : valeur de s dans valeur éditée
         - sinon : modifié si valeur de s != valeur éditée
@@ -780,42 +806,42 @@ export default ({
     function resetLocals () {
       const st = state
       const s = secret.value
-      if (!s) return
-      st.textelocal = s.txt.t
-      st.mclocal = st.mcl
-      st.mcglocal = st.mcg
-      st.xlocal = s.exclu
-      st.plocal = s.protect
-      st.templocal = st.temp
-      st.dhlocal = s.txt.d
+      const z = s && !s.suppr
+      st.textelocal = z ? s.txt.t : ''
+      st.mclocal = z ? st.mcl : new Uint8Array([])
+      st.mcglocal = z ? st.mcg : new Uint8Array([])
+      st.xlocal = z ? s.exclu : 0
+      st.plocal = z ? s.protect : 0
+      st.templocal = z ? st.temp : false
+      st.dhlocal = z ? s.txt.d : 0
       st.modift = false; st.modifmcl = false; st.modifmcg = false
       st.modifx = false; st.modifp = false; st.modiftp = false
     }
 
     watch(() => state.textelocal, (ap, av) => {
       if (!state.enedition) return
-      const s = secret.value; state.modift = s && ap !== s.txt.t
+      const s = secret.value; state.modift = s && !s.suppr && ap !== s.txt.t
       state.erreur = ap.length < 10 ? 'Le texte doit avoir au moins 10 signes' : ''
     })
     watch(() => state.mclocal, (ap, av) => {
       if (!state.enedition) return
-      const s = secret.value; state.modifmcl = s && !equ8(ap, state.mcl)
+      const s = secret.value; state.modifmcl = s && !s.suppr && !equ8(ap, state.mcl)
     })
     watch(() => state.mcglocal, (ap, av) => {
       if (!state.enedition) return
-      const s = secret.value; state.modifmcg = s && !equ8(ap, state.mcg)
+      const s = secret.value; state.modifmcg = s && !s.suppr && !equ8(ap, state.mcg)
     })
     watch(() => state.xlocal, (ap, av) => {
       if (!state.enedition) return
-      const s = secret.value; state.modifx = s && ap !== s.exclu
+      const s = secret.value; state.modifx = s && !s.suppr && ap !== s.exclu
     })
     watch(() => state.plocal, (ap, av) => {
       if (!state.enedition) return
-      const s = secret.value; state.modifp = s && ap !== s.protect
+      const s = secret.value; state.modifp = s && !s.suppr && ap !== s.protect
     })
     watch(() => state.templocal, (ap, av) => {
       if (!state.enedition) return
-      const s = secret.value; state.modiftp = s && ap !== state.temp
+      const s = secret.value; state.modiftp = s && !s.suppr && ap !== state.temp
     })
 
     function undomcl () { state.mclocal = state.mcl }
@@ -831,11 +857,11 @@ export default ({
       '',
       'Le groupe de ce secret est protégé contre toute modification',
       'L\'exclusivité d\'écriture de ce secret a été attribuée à l\'autre dans le couple',
-      'Vous n\'êtes pas animateur du groupe et l\'exclusivité d\'écriture de ce secret a été attribuée à un autre membre du groupe',
+      'L\'exclusivité d\'écriture de ce secret a été attribuée à un autre membre du groupe ET vous n\'êtes pas animateur du groupe et ',
       'Vous n\'êtes pas animateur du groupe',
       'Vous êtes lecteur dans le groupe sans droit d\'écriture',
       'L\'exclusivité d\'écriture a été attribuée à un autre membre du groupe',
-      'Le secret est protégé contre l\'écriture'
+      'Le secret est protégé contre l\'écriture et la suppression'
     ]
 
     function c1 () {

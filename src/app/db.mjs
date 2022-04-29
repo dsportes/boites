@@ -283,9 +283,10 @@ export async function commitRows (opBuf) {
     if (opBuf.lsuppr && opBuf.lsuppr.length) {
       for (let i = 0; i < opBuf.lsuppr.length; i++) {
         const obj = opBuf.lsuppr[i]
-        const x = { ...obj }
+        const x = { }
         x.id = t0n.has(obj.table) ? '1' : crypt.u8ToB64(await crypt.crypter(data.clek, Sid(obj.id), 1), true)
         if (obj.id2) x.id2 = crypt.u8ToB64(await crypt.crypter(data.clek, Sid(obj.id2), 1), true)
+        x.table = obj.table
         lidbs.push(x)
         if (obj.table === 'compte') {
           lidbs.push({ table: 'prefs', id: '1' })
