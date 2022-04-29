@@ -90,20 +90,12 @@ export function setObjets (state, lobj) { // lobj : array d'objets
   lobj.forEach(obj => {
     if (t2n.has(obj.table)) {
       const n = obj.table + 's@' + obj.id
-      let st = sta[n]
-      if (!st) {
-        st = state[n]
-        if (!st) { st = {}; state[n] = st }
-        sta[n] = st
-      }
-      const oc = cs && obj.table === 'secret' && cs.id === obj.id && cs.ns === obj.ns // c'est le secret courant
-      if (obj.suppr) {
-        delete st[obj.id2]
-        if (oc) state.secret = null
-      } else {
-        st[obj.id2] = obj
-        if (oc) state.secret = obj
-        if (obj.table === 'secret') majvoisin(state, obj)
+      let st = sta[n]; if (!st) { st = state[n]; if (!st) { st = {}; state[n] = st }; sta[n] = st }
+      // pour un secret, une suppr est une maj (dont il ne reste plus que ref)
+      st[obj.id2] = obj
+      if (obj.table === 'secret') {
+        if (cs && cs.id === obj.id && cs.ns === obj.ns) state.secret = obj
+        majvoisin(state, obj)
       }
     } else if (t1n.has(obj.table)) {
       const n = obj.table + 's'
@@ -186,22 +178,35 @@ function majvoisin (state, secret) {
     // c'est, peut-être, un secret de référence
     const st = state['voisins@' + pk]
     if (st) {
-      // il a des voisins enregistrés (a priori) : maj de son entrée
-      st[pk] = secret
+      // il a des voisins enregistrés (a priori) : maj de son entrée, SAUF s'il est suppr
+      if (!secret.suppr) st[pk] = secret; else delete st[pk]
       state['voisins@' + pk] = { ...st }
     } // sinon on ne l'enregistre pas
-  } else {
+  } else { // il A un secret de référence
     const pkref = secret.pkref
-    // enregistrement du secret voisin
-    const st = state['voisins@' + pkref] || {}
-    st[pk] = secret
-    // recherche du secret de référence
-    const st2 = state['secrets@' + secret.ref[0]]
-    if (st2) {
-      const secref = st2[secret.ref[1]]
-      if (secref) st[secref.pk] = secref
-    } // sinon le secret de référence est inconnu dans la session
-    state['voisins@' + pkref] = { ...st }
+    // enregistrement du secret voisin ou retrait si suppr
+    if (secret.suppr) {
+      const st = state['voisins@' + pkref]
+      if (st) {
+        delete st[pk]
+        const l = Object.keys(st).length
+        if (l === 0 || (l === 1 && st[pkref])) {
+          delete state['voisins@' + pkref]
+        } else {
+          state['voisins@' + pk] = { ...st }
+        }
+      }
+    } else {
+      const st = state['voisins@' + pkref] || {}
+      st[pk] = secret
+      // recherche du secret de référence
+      const st2 = state['secrets@' + secret.ref[0]]
+      if (st2) {
+        const secref = st2[secret.ref[1]]
+        if (secref) st[secref.pk] = secref
+      } // sinon le secret de référence est inconnu dans la session
+      state['voisins@' + pkref] = { ...st }
+    }
   }
 }
 

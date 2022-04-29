@@ -316,7 +316,7 @@ import SelectMotscles from './SelectMotscles.vue'
 import EditeurTexteSecret from './EditeurTexteSecret.vue'
 import ShowHtml from './ShowHtml.vue'
 import { equ8, getJourJ, cfg, Motscles, dhstring, afficherdiagnostic, edvol } from '../app/util.mjs'
-import { NouveauSecret, Maj1Secret, SupprFichier } from '../app/operations.mjs'
+import { NouveauSecret, Maj1Secret, SupprFichier, SupprSecret } from '../app/operations.mjs'
 import { data, Secret } from '../app/modele.mjs'
 import { gestionFichierMaj } from '../app/db.mjs'
 import { crypt } from '../app/crypto.mjs'
@@ -650,6 +650,13 @@ export default ({
         arg.refs = await s.toRowRef()
         await new NouveauSecret().run(arg)
       }
+      this.finEdition()
+    },
+
+    async supprimer () {
+      const s = this.secret
+      const arg = { ts: s.ts, id: s.id, ns: s.ns, varg: s.volarg() }
+      await new SupprSecret().run(arg)
       this.finEdition()
     },
 

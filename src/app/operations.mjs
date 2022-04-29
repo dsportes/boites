@@ -1471,6 +1471,31 @@ export class Maj1Secret extends OperationUI {
 }
 
 /******************************************************
+Maj 1 d'un secret P : txt, mc, perm
+A_SRV, '13-Secret inexistant'
+X_SRV, '12-Forfait dépassé'
+*/
+export class SupprSecret extends OperationUI {
+  constructor () {
+    super('Suppression d\'un secret', OUI, SELONMODE)
+  }
+
+  // arg = ts, id, ns, varg
+  async run (arg) {
+    try {
+      const args = { sessionId: data.sessionId, ...arg }
+      const ret = await post(this, 'm1', 'maj1Secret', args)
+      if (ret.info && ret.info.length) {
+        afficherdiagnostic(ret.info.join('<br>'))
+      }
+      this.finOK()
+    } catch (e) {
+      await this.finKO(e)
+    }
+  }
+}
+
+/******************************************************
 Download fichier
 */
 

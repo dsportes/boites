@@ -1475,8 +1475,8 @@ export class Secret {
   get vk () { return this.pk + '@' + this.v }
 
   get suppr () { return this.x > 0 }
-  get horsLimite () { return this.st < 0 || this.st >= 99999 ? false : dlvDepassee(this.st) }
 
+  get horsLimite () { return this.st < 0 || this.st >= 99999 ? false : dlvDepassee(this.st) }
   get ts () { return this.ns % 3 } // 0:personnel 1:couple 2:groupe
   get exclu () { return Math.floor(this.xp / 10) }
   get protect () { return this.xp % 10 }
