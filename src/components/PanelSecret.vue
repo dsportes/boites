@@ -530,10 +530,7 @@ export default ({
       const im = this.state.im
       const m = []
       const a = {}
-      if (this.mode > 2) {
-        m.push('Les secrets ne sont pas éditables en mode avion ou dégradé visio')
-        a.jailu = true
-      } else if (s.ts === 0) {
+      if (s.ts === 0) {
         this.titrep = 'Secret personnel'
         m.push(!pr ? 'Pas de protection d\'écriture' : 'Protection contre les écritures')
         if (!pr) a.setprotP = true; else a.resetprotP = true
@@ -558,7 +555,7 @@ export default ({
         const p = this.state.membre.stp
         m.push(this.labelp[p])
         if (this.state.groupe.sty === 1) {
-          m.push('Le groupe est "protégé contre l\'écriture" : il est figé, les secrets ne sont pas éditables. Seul un animateur peut le remettre en activité')
+          m.push('Le groupe est "protégé contre l\'écriture" (archivé), ses secrets n\'y sont pas modifiables. Un animateur peut le remettre en activité')
           a.jailu = true
         } else if (p === 0) {
           m.push('Un simple lecteur ne peut pas changer les protections d\'écriture')
@@ -571,9 +568,8 @@ export default ({
             m.push(ex === this.state.im ? 'J\'ai l\'exclusité d\'écriture' : (n + ' a l\'exclusité d\'écriture'))
           }
           if (ex === this.state.im || p === 2) { // l'exclusivité équivalente ici au pouvoir d'animateur
-            if (pr) a.setprotG = true; else a.resetprotG = true
-            a.donnerexmbr = true // choix du membre recevant l'exclusivité
-            a.ok = true
+            if (!pr) a.setprotP = true; else a.resetprotP = true
+            a.nerienfaire = true
           } else {
             m.push('N\'ayant pas l\'exclusivité et n\'étant pas animateur, vous ne pouvez pas changer les protections d\'écriture')
             a.jailu = true
@@ -591,10 +587,7 @@ export default ({
       const im = this.state.im
       const m = []
       const a = {}
-      if (this.mode > 2) {
-        m.push('Les secrets ne sont pas éditables en mode avion ou dégradé visio')
-        a.jailu = true
-      } else if (s.ts === 1) {
+      if (s.ts === 1) {
         const c = this.secret.couple
         this.titrep = 'Secret de couple : ' + c.nom
         if (ex === 0) {
@@ -606,28 +599,27 @@ export default ({
           if (c.naE) a.donnerexctc = c.naE.nom
           a.nerienfaire = true
         } else {
-          m.push((c.naE ? c.naE.nom : 'L\'autre') + ' a l\'exclusité d\'écriture et est la/le seul à pouvoir changer le statut de protection du secret')
+          m.push((c.naE ? c.naE.nom : 'L\'autre') + ' a l\'exclusité d\'écriture et est la/le seul à pouvoir transmettre cette exclusivité')
           a.nerienfaire = true
         }
       } else if (s.ts === 2) {
-        this.titrep = 'Secret du groupe : ' + this.state.groupe.nom
-        const p = this.state.membre.stp
-        m.push(this.labelp[p])
+        const gr = this.state.groupe
+        this.titrep = 'Secret du groupe : ' + gr.nom
+        const stp = this.state.membre ? this.state.membre.stp : '0'
         if (this.state.groupe.sty === 1) {
-          m.push('Le groupe est "protégé contre l\'écriture" : il est figé, les secrets ne sont pas éditables. Seul un animateur peut le remettre en activité')
-          a.jailu = true
-        } else if (p === 0) {
-          m.push('Un simple lecteur ne peut pas changer les protections d\'écriture')
+          m.push('Le groupe est "protégé contre l\'écriture" (archivé), ses secrets n\'y sont pas modifiables. Un animateur peut le remettre en activité')
           a.jailu = true
         } else {
-          m.push(ex ? 'Pas de protection d\'écriture' : 'Protection contre les écritures')
           if (ex) {
-            const mbr = data.getMembre(this.state.groupe.id, ex)
+            const mbr = data.getMembre(gr.id, ex)
             const n = mbr ? mbr.nom : ('#' + ex)
             m.push(ex === this.state.im ? 'J\'ai l\'exclusité d\'écriture' : (n + ' a l\'exclusité d\'écriture'))
+          } else {
+            m.push('Personne n\'a d\'exclisivité d\'écriture')
           }
-          if (ex === this.state.im || p === 2) { // l'exclusivité équivalente ici au pouvoir d'animateur
+          if (ex === this.state.im || stp === 2) { // l'exclusivité équivalente ici au pouvoir d'animateur
             a.donnerexmbr = true // choix du membre recevant l'exclusivité
+            // TODO
             a.ok = true
           } else {
             m.push('N\'ayant pas l\'exclusivité et n\'étant pas animateur, vous ne pouvez pas changer les protections d\'écriture')
@@ -1000,7 +992,8 @@ export default ({
       lc,
       excluNom,
       editer,
-      finEdition
+      finEdition,
+      labelp: ['Simple lecteur', 'Lecteur et auteur', 'Lecteur, auteur et animateur']
     }
   }
 })
