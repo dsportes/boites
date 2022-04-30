@@ -21,13 +21,21 @@
 
   <div v-if="!avatarscform && state.lst && state.nbs" class="col">
     <div v-for="(s, idx) in state.lst" :key="s.vk"
-      :class="dkli(idx) + ' zone full-width row items-start q-py-xs'">
-      <div class="col-auto column q-mr-sm">
-        <q-icon  v-if="s.suppr" name="delete" color="negative" size="sm"/>
-        <q-btn v-if="!s.suppr" dense push size="sm" :icon="'expand_'+(!row[s.vk]?'less':'more')"
+      :class="dkli(idx) + ' zonex full-width q-py-xs zone' + (s === secret ? '2' :'1')">
+      <div v-if="s.suppr" class="col text-negative text-italic text-bold">
+        <q-icon class="q-mr-sm" v-if="s.suppr" name="delete" color="negative" size="sm"/>
+        <span>Secret SUPPRIMÉ</span>
+      </div>
+      <div v-if="!s.suppr" class="row items-start">
+        <q-btn class="col-auto q-mr-xs" dense push size="sm" icon="push_pin" :color="aPin(s) ? 'green-5' : 'grey-5'" @click="togglePin(s)"/>
+        <q-btn class="col-auto q-mr-xs" dense push size="sm" :icon="'expand_'+(!row[s.vk]?'more':'less')"
           color="primary" @click="togglerow(s.vk)"/>
-        <q-btn v-if="!s.suppr" dense push size="sm" icon="push_pin" :color="aPin(s) ? 'green-5' : 'grey-5'" @click="togglePin(s)"/>
-        <q-btn v-if="!s.suppr" dense push size="sm" color="warning" icon="add">
+        <div class="col cursor-pointer" @click="afficherform(idx)">
+          <div class="fs-sm">{{s.partage}}</div>
+          <show-html v-if="row[s.vk]" class="col height-8 full-width overlay-y-auto bottomborder" :texte="s.txt.t" :idx="idx"/>
+          <div v-else class="col full-width text-bold top5">{{s.titre}}</div>
+        </div>
+        <q-btn class="col-auto" flat dense push size="md" icon="menu">
           <q-menu transition-show="scale" transition-hide="scale">
             <q-list dense style="min-width: 10rem">
               <q-item>
@@ -49,20 +57,14 @@
           </q-menu>
         </q-btn>
       </div>
-      <div v-if="!s.suppr" class="col cursor-pointer" @click="afficherform(idx)">
-        <show-html v-if="row[s.vk]" class="height-8 full-width overlay-y-auto bottomborder" :texte="s.txt.t" :idx="idx"/>
-        <div v-else class="full-width text-bold">{{s.titre}}</div>
-        <div class="full-width row items-center">
-          <apercu-motscles class="col-6" :motscles="motscles" :src="s.mc" :groupe-id="s.ts===2?s.id:0"/>
-          <div class="col-6 row justify-end items-center">
-            <span class="fs-sm q-px-sm">{{s.partage}}</span>
-            <span class="fs-sm font-mono">{{s.dh}}</span>
-            <q-btn v-if="s.nbpj" size="sm" color="warning" flat dense icon="attach_file" :label="s.nbpj"/>
-            <q-btn v-if="s.st!=99999" size="sm" color="warning" flat dense icon="auto_delete" :label="s.nbj"/>
-          </div>
+      <div v-if="!s.suppr" class="full-width row items-center q-pl-xl cursor-pointer"  @click="afficherform(idx)">
+        <apercu-motscles class="col-6" :motscles="motscles" :src="s.mc" :groupe-id="s.ts===2?s.id:0"/>
+        <div class="col-6 row justify-end items-center">
+          <span class="fs-sm font-mono">{{s.dh}}</span>
+          <q-btn v-if="s.nbfa" size="sm" color="warning" flat dense icon="attach_file" :label="s.nbfa"/>
+          <q-btn v-if="s.st!=99999" size="sm" color="warning" flat dense icon="auto_delete" :label="s.nbj"/>
         </div>
       </div>
-      <div v-if="s.suppr" class="col text-negative text-italic text-bold">Secret SUPPRIMÉ</div>
     </div>
   </div>
 
@@ -577,7 +579,14 @@ export default ({
   width: 100%
   padding: 0.2rem 0.2rem 0.2rem 23rem
 .bottomborder
-  border-bottom: 1px solid $grey-5
-.secretcourant:hover
+  border: 1px solid $grey-5
+.zonex:hover
   background-color: rgba(130, 130, 130, 0.5)
+.zone1
+  border-left: 4px solid transparent
+.zone2
+  border-left: 4px solid $warning
+.top5
+  position: relative
+  top: -5px
 </style>

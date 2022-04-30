@@ -51,8 +51,8 @@
     </q-card-section>
     <q-separator />
     <q-card-actions align="right">
-      <q-btn size="md" flat dense color="negative" icon="close" @click="undogen" />
-      <q-btn :disable="!modif" flat icon="undo" label="Annuler" @click="undogen" />
+      <q-btn size="md" v-if="!modif" flat dense icon="close" label="Fermer" @click="undogen" />
+      <q-btn v-else flat icon="undo" label="Annuler" @click="undogen" />
       <q-btn :disable="!modif" flat icon="check" label="Valider" color="warning" @click="valider" />
     </q-card-actions>
   </q-card>

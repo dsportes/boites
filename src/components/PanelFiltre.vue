@@ -9,8 +9,8 @@
     <q-separator/>
     <div class="q-pa-sm column justify-start ful-width">
         <q-checkbox v-model="state.a.perso" dense size="md" label="Secrets personnels" />
-        <q-option-group :options="couple ? optionscp2 : optionscp1" dense v-model="state.a.cp"/>
-        <q-option-group :options="groupe ? optionsgr2 : optionsgr1" dense v-model="state.a.gr"/>
+        <q-option-group class="q-my-sm" :options="couple ? optionscp2 : optionscp1" dense v-model="state.a.cp"/>
+        <q-option-group class="q-my-sm" :options="groupe ? optionsgr2 : optionsgr1" dense v-model="state.a.gr"/>
     </div>
     <q-separator/>
     <div class="q-pa-sm column justify-start">

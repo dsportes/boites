@@ -869,7 +869,7 @@ export class Filtre {
     this.coupleId = 0 // 0: pas de secrets de couple, -1:tous les secrets de couples, n:secrets partagés seulement avec le couple d'id N
     this.groupeId = 0 // 0:pas de secrets de groupe, -1: secrets partagés avec tous les groupes, n: secrets partagés seulement avec le groupe N
     this.m1 = new Uint8Array([])
-    this.m2 = new Uint8Array([])
+    this.m2 = new Uint8Array([244])
     this.perm = true // sélectionner les permanents
     this.temp = 99998 // 0: ne pas sélectionner les temporaires N: ne sélectionner que les temporaires venant à échéance avant N
     this.texte = '' // secrets dont le titre contient ce texte

@@ -269,43 +269,49 @@
       <q-btn flat dense color="primary" size="md" icon="add" label="Nouveau secret voisin personnel" @click="action0"/>
       <q-btn v-if="couple" flat dense size="md" color="primary" icon="add" :label="'Nouveau secret voisin partagé avec ' +  couple.nom" @click="action1(couple.id)"/>
       <q-btn v-if="groupe" flat dense size="md" color="primary" icon="add" :label="'Nouveau secret voisin du groupe ' +  groupe.nom" @click="action2(groupe.id)"/>
-      <div v-for="(s, idx) in state.listevoisins" :key="s.vk" :class="dkli(idx) + ' full-width row items-start q-py-xs'" style="position:relative">
-        <div class="col-auto column">
-          <q-btn class="q-mx-sm" dense push size="sm" :icon="'expand_'+(!row[s.vk]?'less':'more')"
+      <div v-for="(s, idx) in state.listevoisins" :key="s.vk"
+        :class="dkli(idx) + ' zonex full-width q-py-xs zone' + (s === secret ? '2' :'1')">
+        <div v-if="s.suppr" class="col text-negative text-italic text-bold">
+          <q-icon class="q-mr-sm" v-if="s.suppr" name="delete" color="negative" size="sm"/>
+          <span>Secret SUPPRIMÉ</span>
+        </div>
+        <div v-if="!s.suppr" class="row items-start">
+          <q-btn class="col-auto q-mr-xs" dense push size="sm" icon="push_pin" :color="aPin(s) ? 'green-5' : 'grey-5'" @click="togglePin(s)"/>
+          <q-btn class="col-auto q-mr-xs" dense push size="sm" :icon="'expand_'+(!row[s.vk]?'more':'less')"
             color="primary" @click="togglerow(s.vk)"/>
-          <q-btn class="q-mx-sm" dense push size="sm" color="warning" icon="add">
+          <div class="col cursor-pointer" @click="ouvrirvoisin(s)">
+            <div class="fs-sm">{{s.partage}}</div>
+            <show-html v-if="row[s.vk]" class="col height-8 full-width overlay-y-auto bottomborder" :texte="s.txt.t" :idx="idx"/>
+            <div v-else class="col full-width text-bold top5">{{s.titre}}</div>
+          </div>
+          <q-btn class="col-auto" flat dense push size="md" icon="menu">
             <q-menu transition-show="scale" transition-hide="scale">
               <q-list dense style="min-width: 10rem">
                 <q-item>
                   <q-item-section class="text-italic">Nouveau secret voisin ...</q-item-section>
                 </q-item>
                 <q-separator />
-                <q-item clickable v-close-popup @click="action0">
+                <q-item clickable v-close-popup @click="nvsecret(0, s)">
                   <q-item-section>...personnel</q-item-section>
                 </q-item>
                 <q-separator />
-                <q-item v-if="s.couple" clickable v-close-popup @click="action1">
+                <q-item v-if="s.couple" clickable v-close-popup @click="nvsecret(1, s)">
                   <q-item-section>...partagé avec {{s.couple.nom}}</q-item-section>
                 </q-item>
                 <q-separator v-if="s.groupe" />
-                <q-item v-if="s.groupe" clickable v-close-popup @click="action2">
+                <q-item v-if="s.groupe" clickable v-close-popup @click="nvsecret(2, s)">
                   <q-item-section>...partagé avec {{s.groupe.nom}}</q-item-section>
                 </q-item>
               </q-list>
             </q-menu>
           </q-btn>
         </div>
-        <div class="zone col cursor-pointer" @click="ouvrirvoisin(s)">
-          <show-html v-if="row[s.vk]" class="height-8 full-width overlay-y-auto bottomborder" :texte="s.txt.t" :idx="idx"/>
-          <div v-else class="full-width text-bold">{{s.titre}}</div>
-          <div class="full-width row items-center">
-            <apercu-motscles class="col-6" :motscles="state.motscles" :src="s.mc" :groupe-id="s.ts===2?s.id:0"/>
-            <div class="col-6 row justify-end items-center">
-              <span class="fs-sm q-px-sm">{{s.partage}}</span>
-              <span class="fs-sm font-mono">{{s.dh}}</span>
-              <q-btn v-if="s.nbpj" size="sm" color="warning" flat dense icon="attach_file" :label="s.nbpj"/>
-              <q-btn v-if="s.st!=99999" size="sm" color="warning" flat dense icon="auto_delete" :label="s.nbj"/>
-            </div>
+        <div v-if="!s.suppr" class="full-width row items-center q-pl-xl cursor-pointer"  @click="ouvrirvoisin(s)">
+          <apercu-motscles class="col-6" :motscles="state.motscles" :src="s.mc" :groupe-id="s.ts===2?s.id:0"/>
+          <div class="col-6 row justify-end items-center">
+            <span class="fs-sm font-mono">{{s.dh}}</span>
+            <q-btn v-if="s.nbfa" size="sm" color="warning" flat dense icon="attach_file" :label="s.nbfa"/>
+            <q-btn v-if="s.st!=99999" size="sm" color="warning" flat dense icon="auto_delete" :label="s.nbj"/>
           </div>
         </div>
       </div>
