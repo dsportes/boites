@@ -24,10 +24,10 @@ Normalement quand une entrée existe il n'y a pas que le secret de référence d
 */
 
 // objets courants représentés par un singleton
-const l1 = new Set(['compte', 'compta', 'prefs', 'avatar', 'groupe', 'couple', 'secret'])
+const l1 = new Set(['compte', 'prefs', 'avatar', 'groupe', 'couple', 'secret'])
 
 // objets multiples à un seul niveau représenté par une map
-const l2 = new Set(['avatars', 'groupes', 'couples', 'cvs', 'fetats', 'avsecrets'])
+const l2 = new Set(['avatars', 'comptas', 'groupes', 'couples', 'cvs', 'fetats', 'avsecrets'])
 
 export function raz (state) {
   for (const e in state) if (l1.has(e)) state[e] = null; else if (l2.has(e)) state[e] = {}; else delete state[e]
@@ -52,11 +52,14 @@ export function majsecret (state, val) { state.secret = val }
 export function purgeAvatars (state, val) { // val : Set des ids des avatars INUTILES
   if (!val || !val.size) return 0
   const xa = state.avatars
+  const xc = state.comptas
   for (const id of val) {
     delete xa[id]
+    delete xc[id]
     delete state['secrets@' + id]
   }
   state.avatars = { ...xa }
+  state.comptas = { ...xc }
 }
 
 /* purge des groupes inutiles et membres, secrets associés */
@@ -130,7 +133,6 @@ export function setCvs (state, lst) { // lst : array [{id, cv}]
 }
 
 export function setCompte (state, obj) { state.compte = obj }
-export function setCompta (state, obj) { state.compta = obj }
 export function setPrefs (state, obj) { state.prefs = obj }
 
 /* Enregistrement de toutes les cv d'un coup */

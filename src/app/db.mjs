@@ -149,11 +149,15 @@ export async function getPrefs () {
   }
 }
 
-export async function getCompta () {
+export async function getComptas () {
   go()
   try {
-    const idb = await data.db.compta.get('1')
-    return idb ? new Compta().fromIdb(await crypt.decrypter(data.clek, idb.data)) : null
+    const r = {}
+    await data.db.compta.each(async (idb) => {
+      const x = new Compta().fromIdb(await crypt.decrypter(data.clek, idb.data))
+      r[x.id] = x
+    })
+    return r
   } catch (e) {
     throw data.setErDB(EX2(e))
   }
@@ -334,6 +338,7 @@ export async function commitRows (opBuf) {
       for (let i = 0; i < idac.length; i++) {
         const id = { id: idac[i] }
         await data.db.avatar.where(id).delete()
+        await data.db.compta.where(id).delete()
         await data.db.secret.where(id).delete()
       }
 

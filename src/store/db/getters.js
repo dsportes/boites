@@ -6,6 +6,10 @@ export const avatar = (state) => (id) => {
   return id ? state.avatars[id] : state.avatars
 }
 
+export const compta = (state) => (id) => {
+  return id ? state.comptas[id] : state.comptas
+}
+
 export const groupe = (state) => (id) => {
   return id ? state.groupes[id] : state.groupes
 }

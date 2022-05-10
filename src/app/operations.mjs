@@ -1,7 +1,7 @@
 import { NomAvatar, store, post, get, affichermessage, cfg, sleep, affichererreur, appexc, difference, getJourJ, afficherdiagnostic, gzipT, putData, getData } from './util.mjs'
 import { remplacePage } from './page.mjs'
 import {
-  deleteIDB, idbSidCompte, commitRows, getCompte, getCompta, getPrefs, getCvs,
+  deleteIDB, idbSidCompte, commitRows, getCompte, getComptas, getPrefs, getCvs,
   getAvatars, getGroupes, getCouples, getMembres, getSecrets,
   openIDB, enregLScompte, getVIdCvs, saveListeCvIds, gestionFichierSync, gestionFichierCnx
 } from './db.mjs'
@@ -447,18 +447,9 @@ export class Operation {
     }
 
     // Traitements des suppressions
-    if (this.avatarIdsM.size) {
-      this.buf.lav = this.avatarIdsM
-      this.buf.avatarIdsM = this.avatarIdsM
-    }
-    if (this.groupeIdsM.size) {
-      this.buf.lgr = this.groupeIdsM
-      this.buf.groupeIdsM = this.groupeIdsM
-    }
-    if (this.coupleIdsM.size) {
-      this.buf.lgr = this.coupleIdsM
-      this.buf.coupleIdsM = this.coupleIdsM
-    }
+    if (this.avatarIdsM.size) this.buf.lav = this.avatarIdsM
+    if (this.groupeIdsM.size) this.buf.lgr = this.groupeIdsM
+    if (this.coupleIdsM.size) this.buf.lcc = this.coupleIdsM
   }
 
   /* traiteQueue ***********************************************************************
@@ -562,13 +553,15 @@ export class Operation {
       }
     }
 
-    // Compta : singleton
+    // Compta
     if (mapObj.compta) {
-      const obj = mapObj.compta
-      const a = data.getCompta()
-      if (obj.v > a.v) {
-        this.buf.setCompta(obj)
-        this.buf.putIDB(obj)
+      for (const pk in mapObj.groupe) {
+        const obj = mapObj.compta[pk]
+        const a = data.getCompta(obj.id)
+        if (obj.v > a.v) {
+          this.buf.setObj(obj)
+          this.buf.putIDB(obj)
+        }
       }
     }
 
@@ -759,14 +752,15 @@ export class OperationUI extends Operation {
     compte.repAvatars()
     data.setCompte(compte)
 
-    const compta = await new Compta().fromRow(mapRows.compta)
-    data.setCompta(compta)
+    const xc = Object.values(mapRows.compta)
+    const compta = await new Avatar().fromRow(xc[0])
+    data.setComptas([compta])
 
     const prefs = await new Prefs().fromRow(mapRows.prefs)
     data.setPrefs(prefs)
 
-    const x = Object.values(mapRows.avatar)
-    const avatar = await new Avatar().fromRow(x[0])
+    const xa = Object.values(mapRows.avatar)
+    const avatar = await new Avatar().fromRow(xa[0])
     avatar.repGroupes()
     avatar.repCouples()
     data.setAvatars([avatar])
@@ -920,7 +914,7 @@ export class CreationCompte extends OperationUI {
       const prefs = new Prefs().nouveau(compte.id)
       const rowPrefs = await prefs.toRow()
 
-      const compta = new Compta().nouveau(compte.id, null)
+      const compta = new Compta().nouveau(nomAvatar.id, 0)
       compta.compteurs.setRes([64, 64])
       compta.compteurs.setF1(forfaits[0])
       compta.compteurs.setF2(forfaits[1])
@@ -956,16 +950,14 @@ export class ConnexionCompte extends OperationUI {
   /* Obtention de compte / prefs / compta depuis le serveur (si plus récents que ceux connus localement)
   RAZ des abonnements et abonnement au compte
   */
-  async chargerCPC (vcompte, vprefs, vcompta) {
-    const args = { sessionId: data.sessionId, pcbh: data.ps.pcbh, dpbh: data.ps.dpbh, vcompte, vprefs, vcompta }
+  async chargerCP (vcompte, vprefs) {
+    const args = { sessionId: data.sessionId, pcbh: data.ps.pcbh, dpbh: data.ps.dpbh, vcompte, vprefs }
     const ret = this.tr(await post(this, 'm1', 'connexionCompte', args))
     const compte = ret.rowCompte ? new Compte() : null
     const prefs = ret.rowPrefs ? new Prefs() : null
-    const compta = ret.rowCompta ? new Compta() : null
     if (compte) await compte.fromRow(schemas.deserialize('rowcompte', ret.rowCompte.serial))
     if (prefs) await prefs.fromRow(schemas.deserialize('rowprefs', ret.rowPrefs.serial))
-    if (compta) await compta.fromRow(schemas.deserialize('rowcompta', ret.rowCompta.serial))
-    return [compte, prefs, compta, ret.estComptable]
+    return [compte, prefs, ret.estComptable]
   }
 
   async phase0 () { // compte / prefs / compta : abonnement à compte
@@ -974,9 +966,8 @@ export class ConnexionCompte extends OperationUI {
       throw new AppExc(F_BRO, 'Compte non enregistré localement : aucune session synchronisée ne s\'est préalablement exécutée sur ce poste avec cette phrase secrète. Erreur dans la saisie de la ligne 2 de la phrase ?')
     }
     const prefsIdb = !data.dbok ? null : await getPrefs()
-    const comptaIdb = !data.dbok ? null : await getCompta()
-    const [compteSrv, prefsSrv, comptaSrv, estComptable] = !data.netok ? [null, null, null, false]
-      : await this.chargerCPC(compteIdb ? compteIdb.v : 0, prefsIdb ? prefsIdb.v : 0, comptaIdb ? comptaIdb.v : 0)
+    const [compteSrv, prefsSrv, estComptable] = !data.netok ? [null, null, null, false]
+      : await this.chargerCP(compteIdb ? compteIdb.v : 0, prefsIdb ? prefsIdb.v : 0)
     this.compte = compteSrv || compteIdb
     // Changement de phrase secrète
     if (data.ps.pcbh !== this.compte.pcbh) throw EXPS
@@ -986,25 +977,22 @@ export class ConnexionCompte extends OperationUI {
 
     this.compte.repAvatars()
     const prefs = prefsSrv || prefsIdb
-    const compta = comptaSrv || comptaIdb
     data.setCompte(this.compte)
     data.setPrefs(prefs)
-    data.setCompta(compta)
     this.buf.putIDB(this.compte)
     this.buf.putIDB(prefs)
-    this.buf.putIDB(compta)
     data.setSyncItem('01', 1, 'Compte et comptabilité')
     return true
   }
 
   /* Recharge depuis le serveur les avatars du compte, abonnement aux avatars */
-  async chargerAvatars (idsVers, idc, vc) {
-    const args = { sessionId: data.sessionId, idsVers, idc, vc }
-    const ret = this.tr(await post(this, 'm1', 'chargerAv', args))
-    if (!ret.ok) return false
-    if (!ret.rowItems.length) return {}
+  async chargerAvatars (idsVers, cptidsVers, idc, vc) {
+    const args = { sessionId: data.sessionId, idsVers, cptidsVers, idc, vc }
+    const ret = this.tr(await post(this, 'm1', 'chargerAvatars', args))
+    if (!ret.ok) return [false, false]
+    if (!ret.rowItems.length) return [{}, {}]
     const r = await compileToObject(deserialRowItems(ret.rowItems))
-    return r.avatar || {}
+    return [r.avatar || {}, r.compta || {}]
   }
 
   /* Récupération des avatars cités dans le compte
@@ -1014,20 +1002,27 @@ export class ConnexionCompte extends OperationUI {
   */
   async phase1 () {
     this.avatars = data.dbok ? await getAvatars() : {}
+    this.comptas = data.dbok ? await getComptas() : {}
     const setidbav = new Set(); for (const id in this.avatars) setidbav.add(parseInt(id))
     const avrequis = this.compte.avatarIds()
     this.nbAvatars = avrequis.size
     const aventrop = difference(setidbav, avrequis) // avatars en IDB NON requis (à supprimer de IDB)
     aventrop.forEach(id => {
       this.buf.supprIDB({ table: 'avatar', id: id })
+      this.buf.supprIDB({ table: 'compta', id: id })
       delete this.avatars[id]
+      delete this.comptas[id]
     })
     const avidsVers = {}
     avrequis.forEach(id => { const av = this.avatars[id]; avidsVers[id] = av ? av.v : 0 })
-    const avnouveaux = !data.netok ? {} : await this.chargerAvatars(avidsVers, this.compte.id, this.compte.v)
+    const cptidsVers = {}
+    avrequis.forEach(id => { const cpt = this.comptas[id]; cptidsVers[id] = cpt ? cpt.v : 0 })
+    const [avnouveaux, cptnouveaux] = !data.netok ? {} : await this.chargerAvatars(avidsVers, cptidsVers, this.compte.id, this.compte.v)
     if (avnouveaux === false) return false// le compte a changé de version, reboucler
     // avnouveaux contient tous les avatars ayant une version plus récente que celle (éventuellement) obtenue de IDB
     for (const pk in avnouveaux) { const av = avnouveaux[pk]; this.buf.putIDB(av); this.avatars[av.id] = av }
+    for (const pk in cptnouveaux) { const cpt = cptnouveaux[pk]; this.buf.putIDB(cpt); this.comptas[cpt.id] = cpt }
+    data.setComptas(Object.values(this.comptas))
     // avatars contient la version au top des objets avatars du compte requis et seulement eux
     const lav = Object.values(this.avatars)
     data.setAvatars(lav) // mis en store/db
@@ -1753,20 +1748,17 @@ export class NouveauParrainage extends OperationUI {
       - ni: clé d'accès à lcck de l'avatar
       - datak : clé cc cryptée par la clé k
     X_SRV, '14-Cette phrase de parrainage est trop proche d\'une déjà enregistrée'
-    X_SRV, '23-Avatar non trouvé.'
+    A_SRV, '23-Avatar non trouvé.'
     */
     try {
-      const compte = data.getCompte()
-
       const cc = crypt.random(32) // clé du couple
       const ni = crypt.hash(crypt.u8ToHex(cc) + '0')
       const datak = await crypt.crypter(data.clek, cc)
       const nap = data.repertoire.na(arg.id) // na de l'avatar créateur
       const naf = new NomAvatar(arg.nomf) // na de l'avatar du filleul
-      const idcf = crypt.rnd6() // id du compte filleul
       const dlv = getJourJ() + cfg().limitesjour.parrainage
 
-      const couple = new Couple().nouveauP(nap, naf, cc, dlv, arg.mot, compte.id, idcf, arg.pp, arg.forfaits, arg.ressources)
+      const couple = new Couple().nouveauP(nap, naf, cc, dlv, arg.mot, arg.pp, arg.forfaits, arg.ressources)
       const rowCouple = await couple.toRow()
 
       const contact = await new Contact().nouveau(arg.phch, arg.clex, dlv, cc, arg.nomf)
@@ -1806,11 +1798,11 @@ export class SupprParrainage extends OperationUI {
   }
 }
 /******************************************************************
- * Acceptation d'un parrainage
-A_SRV, '17-Compte parrain : données de comptabilité absentes'
-X_SRV, '18-Réserves de volume insuffisantes du parrain pour attribuer ces forfaits'
+Acceptation d'un parrainage
 X_SRV, '03-Phrase secrète probablement déjà utilisée. Vérifier que le compte n\'existe pas déjà en essayant de s\'y connecter avec la phrase secrète'
 X_SRV, '04-Une phrase secrète semblable est déjà utilisée. Changer a minima la première ligne de la phrase secrète pour ce nouveau compte'
+X_SRV, '18-Réserves de volume insuffisantes du parrain pour les forfaits attribués compte'
+A_SRV, '17-Avatar parrain : données de comptabilité absentes'
 A_SRV, '24-Couple non trouvé'
 */
 
@@ -1842,31 +1834,29 @@ export class AcceptationParrainage extends OperationUI {
       this.BRK()
       const kpav = await crypt.genKeyPair()
       const d = couple.data
-      const idcf = d.x[1][0] // id du compte filleul
-      const idcp = d.x[0][0] // id du compte filleul
-      const compte = new Compte().nouveau(couple.naI, kpav.privateKey, idcf)
+      const compte = new Compte().nouveau(couple.naI, kpav.privateKey)
       // nouveau() enregistre la clé K dans data.clek !!!
       const rowCompte = await compte.toRow()
 
       const prefs = new Prefs().nouveau(compte.id)
       const rowPrefs = await prefs.toRow()
 
+      const ni = crypt.hash(crypt.u8ToHex(couple.cc) + '1')
+      const avatar = new Avatar().nouveau(couple.idI, ni, couple.naTemp)
+      const rowAvatar = await avatar.toRow()
+
       const compta = new Compta()
       if (arg.estpar) {
         // parrain lui-même
-        compta.nouveau(compte.id, null)
+        compta.nouveau(avatar.id, 0)
         compta.compteurs.setRes([d.r1, d.r2])
       } else {
         // filleul
-        compta.nouveau(compte.id, idcp)
+        compta.nouveau(compte.id, avatar.id)
       }
       compta.compteurs.setF1(d.f1)
       compta.compteurs.setF2(d.f2)
       const rowCompta = await compta.toRow()
-
-      const ni = crypt.hash(crypt.u8ToHex(couple.cc) + '1')
-      const avatar = new Avatar().nouveau(couple.idI, ni, couple.naTemp)
-      const rowAvatar = await avatar.toRow()
 
       const ardc = await couple.toArdc(arg.ard, couple.cc)
 
@@ -1879,7 +1869,6 @@ export class AcceptationParrainage extends OperationUI {
         rowPrefs, // préférences du compte créé
         idCouple: couple.id, // id du couple
         phch: arg.phch, // hash de la phrase de contact
-        idcp, // id du compte parrain
         idavp: couple.idE, // id de l'avatar parrain
         dr1: arg.estpar ? d.r1 + d.f1 : d.f1, // montant à réduire de sa réserve
         dr2: arg.estpar ? d.r2 + d.f2 : d.f2,
@@ -1984,7 +1973,7 @@ export class CreationAvatar extends OperationUI {
     super('Création d\'un nouvel avatar', OUI, SELONMODE)
   }
 
-  async run (nom) { // argument : nom du nouvel avatar
+  async run (nom, forfaits, idPrimitif) { // argument : nom du nouvel avatar, forfaits attribués
     let n = 1
     try {
       while (true) {
@@ -1997,7 +1986,10 @@ export class CreationAvatar extends OperationUI {
         const avatar = new Avatar().nouveau(nomAvatar.id)
         const rowAvatar = await avatar.toRow()
 
-        const args = { sessionId: data.sessionId, idc: compte.id, vcav: compte.v, clePub: kpav.publicKey, mack, rowAvatar }
+        const compta = new Compta().nouveau(nomAvatar.id, null)
+        const rowCompta = await compta.toRow()
+
+        const args = { sessionId: data.sessionId, idc: compte.id, vcav: compte.v, clePub: kpav.publicKey, mack, rowAvatar, rowCompta, forfaits, idPrimitif }
         const ret = await post(this, 'm1', 'creationAvatar', args)
         if (ret.statut === 1) {
           affichermessage('(' + n++ + ')-Petit incident, nouvel essai en cours, merci d\'attendre', true)

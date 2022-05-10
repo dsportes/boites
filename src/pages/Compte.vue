@@ -3,7 +3,7 @@
   <div v-if="sessionok" class="col-12 col-md-7 q-pa-xs">
     <q-expansion-item label="Sélectionner un des avatars du compte" default-opened
         header-class="expansion-header-class-1 titre-lg bg-primary text-white">
-      <q-btn class="q-my-sm" size="md" icon="add" label="Nouvel avatar" color="primary" dense @click="nvav=true"/>
+      <q-btn class="q-my-sm" size="md" icon="add" label="Nouvel avatar" color="primary" dense @click="ouvrirnv"/>
       <div v-for="na in state.lst" :key="na.id" class="full-width">
         <identite-cv :nom-avatar="na" type="avatar" invitable clickable @identite-click="toAvatar"/>
         <q-separator class="q-ma-sm"/>
@@ -26,8 +26,23 @@
   </div>
 
   <q-dialog v-if="sessionok" v-model="nvav" persistent>
-    <q-card class="shadow-8 petitelargeur">
-      <nom-avatar label-valider="Créer l\'avatar" icon-valider="add" verif @ok-nom="nvAvatar" />
+    <q-card class="petitelargeur shadow-8">
+      <q-card-section>
+        <div class="titre-lg">Création d'un nouvel avatar</div>
+        <div class="titre-md">Nom de l'avatar</div>
+        <nom-avatar icon-valider="check" verif groupe label-valider="Valider" @ok-nom="oknom" />
+        <q-separator/>
+        <div v-if="nomgr">
+          <div class="titre-md">Forfaits attribués</div>
+          <div :class="'font-mono' + (mx1 ? 'text-negative bg-yellow-5' : '')">Maximum V1 attribuable : {{mxff[0]}}</div>
+          <div :class="'font-mono' + (mx2 ? 'text-negative bg-yellow-5' : '')">Maximum V2 attribuable : {{mxff[1]}}</div>
+          <choix-forfaits v-model="forfaits" :f1="1" :f2="1"/>
+        </div>
+      </q-card-section>
+      <q-card-actions>
+        <q-btn flat dense color="primary" icon="close" label="renoncer" @click="nouvgr=false" />
+        <q-btn flat dense color="warning" :disable="!nomgr || mx1 || mx2" icon="add" label="Créer l'avatar" @click="nvAvatar"/>
+      </q-card-actions>
     </q-card>
   </q-dialog>
 </q-page>
@@ -47,13 +62,43 @@ import { Motscles } from '../app/util.mjs'
 import { crypt } from '../app/crypto.mjs'
 import { data } from '../app/modele.mjs'
 import { serial } from '../app/schemas.mjs'
+import { UNITEV1, UNITEV2 } from '../app/api.mjs'
 
 export default ({
   name: 'Compte',
   components: { EditeurMd, BoutonHelp, MotsCles, IdentiteCv, NomAvatar },
-  data () { return { } },
+  data () {
+    return {
+      nomav: '',
+      forfaits: [1, 1],
+      mxff: [0, 0],
+      mx1: false,
+      mx2: false
+    }
+  },
+
+  watch: {
+    forfaits (f) {
+      this.mx1 = f[0] > this.mxff[0]
+      this.mx2 = f[1] > this.mxff[1]
+    }
+  },
 
   methods: {
+    ouvrirnv () {
+      this.nvav = true
+      this.prim = data.getComptaPrimitif()
+      const c = this.prim.compteurs
+      this.mxff[0] = Math.floor(((c.f1 * UNITEV1) - c.v1) / UNITEV1) - 1
+      this.mxff[1] = Math.floor(((c.f2 * UNITEV2) - c.v2) / UNITEV2) - 1
+    },
+    oknom (nom) { this.nomav = nom },
+
+    async nvAvatar (nom) {
+      await new CreationAvatar().run(nom, this.forfaits, this.prim.id)
+      this.nvav = false
+    },
+
     toAvatar (na) {
       this.avatar = data.getAvatar(na.id)
       remplacePage('Avatar')
@@ -66,10 +111,6 @@ export default ({
       this.memoed.undo()
       const datak = await crypt.crypter(data.clek, serial(m))
       await new PrefCompte().run('mp', datak)
-    },
-    async nvAvatar (nom) {
-      if (nom) await new CreationAvatar().run(nom)
-      this.nvav = false
     }
   },
 

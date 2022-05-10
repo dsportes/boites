@@ -2,7 +2,6 @@ export default function () {
   return {
     compte: null,
     prefs: null,
-    compta: null,
 
     avatar: null, // avatar courant
     groupe: null, // groupe courant
@@ -11,6 +10,7 @@ export default function () {
     secret: null, // secret courant
 
     avatars: {}, // Tous les avatars listés sur le compte
+    comptas: {}, // Toutes les lignes comptables des avatars listés sur le compte
     groupes: {}, // Tous les groupes listés sur les avatars
     couples: {}, // Tous les couples listés sur les avatars
     cvs: {}, // Toutes les cartes de visite

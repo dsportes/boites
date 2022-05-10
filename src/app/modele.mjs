@@ -320,14 +320,18 @@ class Session {
   getCompte () { return store().state.db.compte }
   setCompte (compte) { store().commit('db/setCompte', compte) }
 
-  getCompta () { return store().state.db.compta }
-  setCompta (compta) { store().commit('db/setCompta', compta) }
-
   getPrefs () { return store().state.db.prefs }
   setPrefs (prefs) { store().commit('db/setPrefs', prefs) }
 
   getAvatar (id) { return store().getters['db/avatar'](id) }
   setAvatars (lobj) { store().commit('db/setObjets', lobj) }
+
+  getCompta (id) { return store().getters['db/compta'](id) }
+  setComptas (lobj) { store().commit('db/setObjets', lobj) }
+  getComptaPrimitif () {
+    const m = this.getAvatar()
+    for (const avid of m) { const c = m[avid]; if (c.idp === null) return c }
+  }
 
   getGroupe (id) { return store().getters['db/groupe'](id) }
   setGroupes (lobj) { store().commit('db/setObjets', lobj) }
@@ -384,7 +388,7 @@ export const data = new Session()
 
 schemas.forSchema({
   name: 'idbCompte',
-  cols: ['id', 'v', 'dpbh', 'pcbh', 'k', 'mac', 'vsh']
+  cols: ['id', 'v', 'dds', 'dpbh', 'pcbh', 'k', 'mac', 'vsh']
 })
 /*
 - `id` : id du compte.
@@ -421,6 +425,7 @@ export class Compte {
   nouveau (nomAvatar, cprivav, id) { // id : du compte lui-même
     this.id = id || crypt.rnd6()
     this.v = 0
+    this.dds = 0
     this.dpbh = data.ps.dpbh
     this.pcbh = data.ps.pcbh
     this.k = crypt.random(32)
@@ -436,6 +441,7 @@ export class Compte {
     this.vsh = row.vsh || 0
     this.id = row.id
     this.v = row.v
+    this.dds = row.dds
     this.dpbh = row.dpbh
     this.k = await crypt.decrypter(data.ps.pcb, row.kx)
     this.pcbh = row.pcbh
@@ -575,9 +581,10 @@ export class Prefs {
 
 /** Compta *********************************
 - `id` : du compte.
-- `idp` : pour un filleul, id du parrain (null pour un parrain).
+- `idp` : pour un filleul (avatar primitif), id de l'avatar parrain :
+  - par convention 0 pour un parrain.
+  - `null` pour un avatar secondaire.
 - `v` :
-- `dds` : date de dernière signature du compte (dernière connexion). Un compte en sursis ou bloqué ne signe plus, sa disparition physique est déjà programmée.
 - `st` :
   - 0 : normal.
   - 1 : en sursis 1.
@@ -586,20 +593,22 @@ export class Prefs {
 - `dst` : date du dernier changement de st.
 - `data`: compteurs sérialisés (non cryptés)
 - `dh` : date-heure de dernière écriture sur l'ardoise.
+- `flag` : problème résolu 0 ou à résoudre 1.
 - `ard` : texte de l'ardoise _crypté soft_.
 - `vsh` :
 */
 
 schemas.forSchema({
   name: 'idbCompta',
-  cols: ['id', 'idp', 'v', 'dds', 'st', 'dst', 'data', 'dh', 'ard', 'vsh']
+  cols: ['id', 'idp', 'v', 'st', 'dst', 'data', 'dh', 'flag', 'ard', 'vsh']
 })
 
 export class Compta {
   get table () { return 'compta' }
   get sid () { return crypt.idToSid(this.id) }
-  get pk () { return '1' }
-  get estParrain () { return this.idp === null }
+  get pk () { return this.sid }
+  get estParrain () { return this.idp === null } // Pour un avatar primitif de compte idp est l'id de son avatar parrain
+  get estPrimtif () { return this.idp !== null } // Est le premier avatar du compte
 
   nouveau (id, idp) {
     this.id = id
@@ -610,6 +619,7 @@ export class Compta {
     this.dst = 0
     this.compteurs = new Compteurs()
     this.dh = 0
+    this.flag = 0
     this.ard = null
     return this
   }
@@ -619,7 +629,7 @@ export class Compta {
     this.id = row.id
     this.idp = row.idp
     this.v = row.v
-    this.dds = row.dds
+    this.flag = row.flag
     this.st = row.st
     this.compteurs = new Compteurs(row.data).calculauj()
     this.dh = row.dh
@@ -881,7 +891,7 @@ schemas.forSchema({
 - `mx11 mx21` : maximum des volumes autorisés pour A1
 - `dlv` : date limite de validité éventuelle de (re)prise de contact.
 - `datac` : données cryptées par la clé `cc` du couple :
-  - `x` : `[idc, nom, rnd], [idc, nom, rnd]` : id du compte, nom et clé d'accès à la carte de visite respectivement de A0 et A1. Quand l'un des deux est inconnu, le triplet est `null`.
+  - `x` : `[nom, rnd], [nom, rnd]` : nom et clé d'accès à la carte de visite respectivement de A0 et A1.
   - `phrase` : phrase de contact en phases 1/4-7 (qui nécessitent une phrase).
   - `f1 f2` : en phase 1/4 (parrainage), forfaits attribués par le parrain A0 à son filleul A1.
   - 'r1 r2' : en phase 1/4 (parrainage) et si le compte filleul est lui-même parrain, ressources attribuées.
@@ -930,12 +940,6 @@ export class Couple {
 
   naDeIm (im) { return new NomAvatar(this.data.x[im - 1][1], this.data.x[im - 1][2]) }
 
-  // id du compte du conjoint (quand il y a conjoint)
-  get idc2 () { return this.stp !== 3 ? 0 : (this.avc === 0 ? this.data.x[1][0] : this.data.x[0][0]) }
-
-  // id du compte de l'avatar
-  get idc () { return this.avc === 0 ? this.data.x[0][0] : this.data.x[1][0] }
-
   // origine du couple : 0) proposition standard à un contact connu, 1) parainage, 2) rencontre
   get orig () { return !this.data.phrase ? 0 : (this.data.f1 || this.data.f2 ? 1 : 2) }
 
@@ -946,26 +950,26 @@ export class Couple {
   setRepE () { if (this.naE) data.repertoire.setAx(this.naE) }
 
   setIdIE (x, cle) { // cle : non null pour réception d'un couple HORS session (accepatation / refus parrainage)
-    const id0 = x[0][2] ? crypt.hashBin(x[0][2]) : 0
-    const id1 = x[1][2] ? crypt.hashBin(x[1][2]) : 0
+    const id0 = x[0][1] ? crypt.hashBin(x[0][1]) : 0
+    const id1 = x[1][1] ? crypt.hashBin(x[1][1]) : 0
     if (!cle && data.repertoire.estAc(id0)) {
       this.idI = id0
       this.idE = id1
-      this.naE = this.idE ? new NomAvatar(x[1][1], x[1][2]) : null
-      this.naI = new NomAvatar(x[0][1], x[0][2])
+      this.naE = this.idE ? new NomAvatar(x[1][0], x[1][1]) : null
+      this.naI = new NomAvatar(x[0][0], x[0][1])
       this.avc = 0
     } else {
       this.idI = id1
       this.idE = id0
-      this.naE = this.idE ? new NomAvatar(x[0][1], x[0][2]) : null
-      this.naI = new NomAvatar(x[1][1], x[1][2])
+      this.naE = this.idE ? new NomAvatar(x[0][0], x[0][1]) : null
+      this.naI = new NomAvatar(x[1][0], x[1][1])
       this.avc = 1
     }
     const na = new NomAvatar(this.nom, cle || this.cle)
     if (!cle) data.repertoire.setCp(na); else this.naTemp = na
   }
 
-  nouveauP (naI, naE, cc, dlv, mot, idc0, idc1, pp, forfaits, ressources) {
+  nouveauP (naI, naE, cc, dlv, mot, pp, forfaits, ressources) {
     this.v = 0
     this.vsh = 0
     this.st = 1110
@@ -975,7 +979,7 @@ export class Couple {
     this.idE = naE.id
     this.avc = 0
     data.repertoire.setAx(naE)
-    const na = new NomAvatar(naI.nom + '__' + naE.nom, cc)
+    const na = new NomAvatar(naI.nom + '_' + naE.nom, cc)
     this.id = na.id
     data.repertoire.setCp(na)
     this.v1 = 0
@@ -991,7 +995,7 @@ export class Couple {
     this.ard = mot
     this.dh = new Date().getTime()
     this.data = {
-      x: [[idc0, naI.nom, naI.rnd], [idc1, naE.nom, naE.rnd]],
+      x: [[naI.nom, naI.rnd], [naE.nom, naE.rnd]],
       phrase: pp,
       f1: forfaits[0],
       f2: forfaits[1],
