@@ -753,7 +753,7 @@ export class OperationUI extends Operation {
     data.setCompte(compte)
 
     const xc = Object.values(mapRows.compta)
-    const compta = await new Avatar().fromRow(xc[0])
+    const compta = await new Compta().fromRow(xc[0])
     data.setComptas([compta])
 
     const prefs = await new Prefs().fromRow(mapRows.prefs)

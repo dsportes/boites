@@ -329,8 +329,8 @@ class Session {
   getCompta (id) { return store().getters['db/compta'](id) }
   setComptas (lobj) { store().commit('db/setObjets', lobj) }
   getComptaPrimitif () {
-    const m = this.getAvatar()
-    for (const avid of m) { const c = m[avid]; if (c.idp === null) return c }
+    const m = this.getCompta()
+    for (const avid in m) { const c = m[avid]; if (c.idp !== null) return c }
   }
 
   getGroupe (id) { return store().getters['db/groupe'](id) }

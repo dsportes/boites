@@ -30,18 +30,18 @@
       <q-card-section>
         <div class="titre-lg">Création d'un nouvel avatar</div>
         <div class="titre-md">Nom de l'avatar</div>
-        <nom-avatar icon-valider="check" verif groupe label-valider="Valider" @ok-nom="oknom" />
+        <nom-avatar icon-valider="check" verif label-valider="Valider" @ok-nom="oknom" />
         <q-separator/>
-        <div v-if="nomgr">
+        <div v-if="nomav">
           <div class="titre-md">Forfaits attribués</div>
-          <div :class="'font-mono' + (mx1 ? 'text-negative bg-yellow-5' : '')">Maximum V1 attribuable : {{mxff[0]}}</div>
-          <div :class="'font-mono' + (mx2 ? 'text-negative bg-yellow-5' : '')">Maximum V2 attribuable : {{mxff[1]}}</div>
+          <div :class="'font-mono' + (mx1 ? ' text-negative bg-yellow-5' : '')">Maximum V1 attribuable : {{mxff[0]}}</div>
+          <div :class="'font-mono' + (mx2 ? ' text-negative bg-yellow-5' : '')">Maximum V2 attribuable : {{mxff[1]}}</div>
           <choix-forfaits v-model="forfaits" :f1="1" :f2="1"/>
         </div>
       </q-card-section>
       <q-card-actions>
-        <q-btn flat dense color="primary" icon="close" label="renoncer" @click="nouvgr=false" />
-        <q-btn flat dense color="warning" :disable="!nomgr || mx1 || mx2" icon="add" label="Créer l'avatar" @click="nvAvatar"/>
+        <q-btn flat dense color="primary" icon="close" label="renoncer" @click="nvav=false" />
+        <q-btn flat dense color="warning" :disable="!nomav || mx1 || mx2" icon="add" label="Créer l'avatar" @click="nvAvatar"/>
       </q-card-actions>
     </q-card>
   </q-dialog>
@@ -56,6 +56,7 @@ import { onBoot, remplacePage } from '../app/page.mjs'
 import EditeurMd from '../components/EditeurMd.vue'
 import BoutonHelp from '../components/BoutonHelp.vue'
 import MotsCles from '../components/MotsCles.vue'
+import ChoixForfaits from '../components/ChoixForfaits.vue'
 import IdentiteCv from '../components/IdentiteCv.vue'
 import NomAvatar from '../components/NomAvatar.vue'
 import { Motscles } from '../app/util.mjs'
@@ -66,7 +67,7 @@ import { UNITEV1, UNITEV2 } from '../app/api.mjs'
 
 export default ({
   name: 'Compte',
-  components: { EditeurMd, BoutonHelp, MotsCles, IdentiteCv, NomAvatar },
+  components: { EditeurMd, BoutonHelp, MotsCles, IdentiteCv, NomAvatar, ChoixForfaits },
   data () {
     return {
       nomav: '',
@@ -94,8 +95,8 @@ export default ({
     },
     oknom (nom) { this.nomav = nom },
 
-    async nvAvatar (nom) {
-      await new CreationAvatar().run(nom, this.forfaits, this.prim.id)
+    async nvAvatar () {
+      await new CreationAvatar().run(this.nomav, this.forfaits, this.prim.id)
       this.nvav = false
     },
 
