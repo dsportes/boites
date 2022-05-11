@@ -1409,7 +1409,6 @@ export class MajCv extends OperationUI {
 
 /******************************************************
 Création d'un nouveau secret P
-Nouveau secret personnel
 Args :
 - sessionId
 - ts, id, ns, mc, txts, v1, xp, st, varg, mcg, im, refs
@@ -1961,11 +1960,21 @@ export class MajCouple extends OperationUI {
 }
 
 /* Creation nouvel avatar ****************************************
-- sessionId, clePub, idc (numéro du compte), vcav, mack, rowAvatar
+- sessionId,
+- clePub,
+- idc: numéro du compte
+- vcav: version du compte avant (ne doit pas avoir changé),
+- mack: map des avatars dans le compte
+- rowAvatar: du nouvel avatar
+- rowCompta: du nouvel avatar
+- forfaits: prélevés sur l'avatar primitif
+- idPrimitif: id de l'avatar primitif du compte sur lequel les forfaits sont prélevés
 Retour :
 - sessionId
 - dh
 - statut : 0:OK, 1:retry (version compte ayant évolué)
+X_SRV, '26-Forfait V1 insuffisant pour l\'attribution souhaitée au nouvel avatar'
+X_SRV, '27-Forfait V2 insuffisant pour l\'attribution souhaitée au nouvel avatar'
 A_SRV, '06-Compte non trouvé'
 */
 export class CreationAvatar extends OperationUI {
@@ -2263,12 +2272,13 @@ export class RefusInvitGroupe extends OperationUI {
 /* Fin d'hébergement d'un groupe ****************************************
 args :
 - sessionId
-- idc, idg : id du compte, id = groupe
+- idh : id de l'avatar hébergeur
+- idg : id du groupe
 - imh : indice de l'avatar membre hébergeur
 Retour: sessionId, dh
 A_SRV, '10-Données de comptabilité absentes'
 A_SRV, '18-Groupe non trouvé'
-X_SRV, '22-Ce compte n\'est pas l\'hébergeur actuel du groupe'
+X_SRV, '22-Cet avatar n\'est pas l\'hébergeur actuel du groupe'
 */
 export class FinHebGroupe extends OperationUI {
   constructor () {
@@ -2277,7 +2287,7 @@ export class FinHebGroupe extends OperationUI {
 
   async run (g) {
     try {
-      const args = { sessionId: data.sessionId, idc: data.getCompte().id, idg: g.id, imh: g.imh }
+      const args = { sessionId: data.sessionId, idh: g.naHeb.id, idg: g.id, imh: g.imh }
       const ret = await post(this, 'm1', 'finhebGroupe', args)
       if (data.dh < ret.dh) data.dh = ret.dh
       this.finOK()

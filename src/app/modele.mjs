@@ -1156,7 +1156,6 @@ export class Invitgr {
     - `x` : 1-ouvert (accepte de nouveaux membres), 2-fermé (ré-ouverture en vote)
     - `y` : 0-en écriture, 1-protégé contre la mise à jour, création, suppression de secrets.
 - `mxim` : dernier `im` de membre attribué.
-- `idhg` : id du compte hébergeur crypté par la clé G du groupe.
 - `imh` : indice `im` du membre dont le compte est hébergeur.
 - `v1 v2` : volumes courants des secrets du groupe.
 - `f1 f2` : forfaits attribués par le compte hébergeur.
@@ -1191,7 +1190,9 @@ export class Groupe {
   get pc1 () { return Math.round(this.v1 / UNITEV1 / this.f1) }
   get pc2 () { return Math.round(this.v2 / UNITEV2 / this.f2) }
 
-  get estHeb () { return this.idh && !this.dfh && this.idh === data.getCompte().id }
+  estHeb (avid) { const na = this.naHeb; return na && !this.dfh && na.id === avid }
+
+  get naHeb () { if (!this.dfh) return null; const m = data.getMembre(this.id, this.imh); return m ? m.namb : null }
 
   imDeId (id) {
     for (const im in data.getMembre(this.id)) {
@@ -1231,7 +1232,6 @@ export class Groupe {
     this.dfh = 0
     this.st = 10
     this.mxim = 1
-    this.idh = data.getCompte().id
     this.imh = 1
     this.v1 = 0
     this.v2 = 0
@@ -1251,7 +1251,6 @@ export class Groupe {
       this.st = row.st
       this.mxim = row.mxim
       this.mc = row.mcg ? deserial(await crypt.decrypter(this.cle, row.mcg)) : {}
-      this.idh = row.idhg ? parseInt(await crypt.decrypterStr(this.cle, row.idhg)) : 0
       this.imh = row.imh
       this.v1 = row.v1
       this.v2 = row.v2
@@ -1643,20 +1642,21 @@ export class Secret {
   - ts : type de secret 0 1 2
   - dv1 dv2 : delta de volume v1 et v2 (preset à 0)
   - vt : volume transféré (fichiers). Si vt est non 0, il est imputé à idc. Utiliser en download (opération getUrl)
-  - idc : id du compte hébergeur du secret (avatar, couple (de l'avatar du compte), groupe)
-  - idc2 : pour un couple seulement, id du second compte hébergeur du secret pour un couple (de l'avatar externe -s'il existe-))
+  - idc : id de l'avatar hébergeur du secret (avatar, couple (de l'avatar du compte), groupe)
+  - idc2 : pour un couple seulement, id du second avatar hébergeur du secret pour un couple (de l'avatar externe -s'il existe-))
   - im : pour un couple seulement, 0 ou 1 (position de l'avatar du compte dans le couple)
   */
   volarg () {
     const a = { id: this.id, ts: this.ts, dv1: 0, dv2: 0, vt: 0, idc2: null }
     if (this.ts === 0) {
-      a.idc = data.getCompte().id
+      a.idc = this.id
     } else if (this.ts === 1) {
-      a.idc = this.couple.idc
-      a.idc2 = this.couple.idc2
+      a.idc = this.couple.idI
+      a.idc2 = this.couple.idE
       a.im = this.couple.avc
     } else {
-      a.idc = this.groupe.idh
+      const na = this.groupe.naHeb
+      a.idc = na ? na.id : 0
     }
     return a
   }

@@ -65,11 +65,11 @@
       </template>
       <q-card class="shadow-8 q-ma-sm">
         <div v-if="state.g.dfh" class="text-negative bg-yellow-4 text-bold q-mx-xs q-pa-xs">
-          Le groupe n'a pas de compte qui l'héberge. Mises à jour et créations de secrets bloquées.
+          Le groupe n'a pas d'avatar qui l'héberge. Mises à jour et créations de secrets bloquées.
           S'auto-détruira dans {{nbj(state.g.dfh)}} jour(s).
           <q-btn dense color="primary" label="Héberger le groupe" @click="debheb"/>
         </div>
-        <q-btn v-if="state.g.estHeb" dense color="secondary" class="q-ma-xs" label="Fin d'hébergement du groupe" @click="finheb"/>
+        <q-btn v-if="state.g.estHeb(avatar.id)" dense color="secondary" class="q-ma-xs" label="Fin d'hébergement du groupe" @click="finheb"/>
         <div>Volumes occupés (arrondis en Mo): {{Math.round(state.g.v1 / 1000000)}}Mo / {{Math.round(state.g.v2 / 1000000)}}Mo</div>
         <div v-if="state.g.pc1 > 80 || state.g.pc2 > 80" class="q-ma-xs">
           <q-icon name="warning" size="md" color="warning"/>
@@ -77,7 +77,7 @@
         </div>
         <div>
           <div class="titre-md">Forfaits attribués</div>
-          <choix-forfaits v-model="state.forfaits" :lecture="!state.g.estHeb" :f1="state.g.f1" :f2="state.g.f2" :v1="state.g.v1" :v2="state.g.v2"
+          <choix-forfaits v-model="state.forfaits" :lecture="!state.g.estHeb(avatar.id)" :f1="state.g.f1" :f2="state.g.f2" :v1="state.g.v1" :v2="state.g.v2"
             label-valider="Changer les volumes maximum autorisés" @valider="chgvolmax"/>
         </div>
       </q-card>
