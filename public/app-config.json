@@ -9,7 +9,7 @@
       ["auzvillagezSANSz", "jaizmauvaisezREPUTATIONz"],
       ["emilieemilieemilie", "emilieemilieemilie"]
     ],
-    "forfaits" : { "Aucun": 0, "XXS": 1, "XS": 2, "SM": 4, "MD": 8, "LG": 16, "XL": 32, "XXL": 64 },
+    "forfaits" : { "0": 0, "XXS": 1, "XS": 2, "SM": 4, "MD": 8, "LG": 16, "XL": 32, "XXL": 64 },
     "pathlogo" : "icons/favicon-96x96.png",
     "orgs": { "doda": { "pathicon":"doda-icon.png" }, "super": { "pathicon":"super-icon.png" } },
     "datetimeformat": { "timeZone": "Europe/Paris", "year": "numeric", "month": "2-digit", "day": "2-digit", 

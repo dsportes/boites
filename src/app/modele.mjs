@@ -396,8 +396,8 @@ schemas.forSchema({
 - `dpbh` : hashBin (53 bits) du PBKFD du début de la phrase secrète (32 bytes). Pour la connexion, l'id du compte n'étant pas connu de l'utilisateur.
 - `pcbh` : hashBin (53 bits) du PBKFD de la phrase complète pour quasi-authentifier une connexion avant un éventuel échec de décryptage de `kx`.
 - `kx` : clé K du compte, cryptée par la X (phrase secrète courante).
-- `mack` {} : map des avatars du compte cryptée par la clé K. Clé: id, valeur: `[nom, rnd, cpriv]`
-  - `nom rnd` : nom et clé de l'avatar.
+- `mack` {} : map des avatars du compte cryptée par la clé K. Clé: id, valeur: `{ na:, cpriv: }`
+  - `na` : nom et clé de l'avatar.
   - `cpriv` : clé privée asymétrique.
 - `vsh`
 */
@@ -421,6 +421,11 @@ export class Compte {
   }
 
   repAvatars () { this.avatarNas().forEach(na => { data.repertoire.setAc(na, na.id) }) }
+
+  avatarDeNom (n) {
+    for (const sid in this.mac) if (this.mac[sid].na.nom === n) return crypt.sidToId(sid)
+    return 0
+  }
 
   nouveau (nomAvatar, cprivav, id) { // id : du compte lui-même
     this.id = id || crypt.rnd6()

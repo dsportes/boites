@@ -12,13 +12,13 @@
     </q-input>
     <div class="row justify-between items-center no-wrap">
       <q-btn color="primary" flat label="Renoncer" size="md" @click="ko" />
-      <q-btn color="warning" glossy :label="labelVal()" size="md" :icon-right="iconValider"
+      <q-btn v-if="phase < 3" color="warning" glossy :label="labelVal()" size="md" :icon-right="iconValider"
       :disable="r1(nom) !== true || r2(nom) !== true" @click="ok" />
     </div>
   </q-card-section>
 </template>
 <script>
-const msg = ['Saisir un nom', 'Saisie non confirmée, re-saisir le nom', 'Confirmer le nom']
+const msg = ['Saisir un nom', 'Saisie non confirmée, re-saisir le nom', 'Confirmer le nom', 'Nom confirmé']
 export default ({
   name: 'NomAvatar',
   props: {
@@ -45,17 +45,19 @@ export default ({
       return this.phase < 2 ? 'OK' : this.labelValider
     },
     ok () {
-      if (this.phase < 2) {
+      if (this.phase < 2 || this.phase === 3) {
         this.vnom = this.nom
         this.nom = ''
         this.phase = 2
+        this.$emit('ok-nom', null)
       } else {
         if (this.nom === this.vnom) {
+          this.phase = 3
           this.$emit('ok-nom', this.nom)
         } else {
           this.phase = 1
+          this.$emit('ok-nom', null)
         }
-        if (!this.groupe) this.raz()
       }
     },
     ko () {

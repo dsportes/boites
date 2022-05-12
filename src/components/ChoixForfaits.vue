@@ -1,11 +1,19 @@
 <template>
-  <q-card-section class="q-pt-none shadow-8 row justify-between w20">
-    <q-select v-model="f1c" :options="options1" :disable="lecture" bottom-slots dense options-dense label="Forfait 1 (textes)" class="w10">
-      <template v-slot:hint>Unité : 1/4 méga-octet</template>
-    </q-select>
-    <q-select v-model="f2c" :options="options2" :disable="lecture" bottom-slots dense options-dense label="Forfait 2 (fichiers attachés)" class="w10">
-      <template v-slot:hint>Unité : 25 méga-octets</template>
-    </q-select>
+  <q-card-section class="q-pt-none shadow-8 row justify-between fullwidth">
+    <div class="col-6">
+      <div class="titre-md">V1 : Textes - {{ed1(f1n)}}</div>
+      <div class="row justify-around">
+        <q-select class="col-5" v-model="f1c" :options="options1" :disable="lecture" dense options-dense/>
+        <q-input class="col-5" v-model.number="f1n" type="number" :disable="lecture" dense :rules="[val => val >= 0 && val <= 255 || '0 - 255']"/>
+      </div>
+    </div>
+    <div class="col-6">
+      <div class="titre-md">V2 : Fichiers - {{ed2(f2n)}}</div>
+      <div class="row justify-around">
+        <q-select class="col-5" v-model="f2c" :options="options2" :disable="lecture" dense options-dense/>
+        <q-input class="col-5" v-model.number="f2n" type="number" :disable="lecture" dense :rules="[val => val >= 0 && val <= 255 || '0 - 255']"/>
+      </div>
+    </div>
   </q-card-section>
   <q-card-section v-if="diag1 !== '' || diag2 !== ''">
     <div v-if="diag1 !== ''" class="text-warning text-bold">{{diag1}}</div>
@@ -14,11 +22,11 @@
   <q-card-actions v-if="!lecture">
     <q-btn flat dense icon="undo" label="Annuler" @click="undo" :disable="!modif"/>
     <q-btn v-if="labelValider" flat dense color="warning" icon="check" :label="labelValider" @click="valider"
-      :disable="!modif || diag1 !== '' || diag2 !== ''"/>
+      :disable="!modif || diag1 !== '' || diag2 !== '' || err1 || err2"/>
   </q-card-actions>
 </template>
 <script>
-import { cfg } from '../app/util.mjs'
+import { cfg, edvol } from '../app/util.mjs'
 import { ref, toRef, watch } from 'vue'
 import { UNITEV2, UNITEV1 } from '../app/api.mjs'
 
@@ -33,6 +41,8 @@ export default ({
   },
 
   methods: {
+    ed1 (v) { return this.err1 ? '' : edvol(v * UNITEV1) },
+    ed2 (v) { return this.err2 ? '' : edvol(v * UNITEV2) }
   },
 
   setup (props, context) {
@@ -40,8 +50,6 @@ export default ({
     const lecture = toRef(props, 'lecture')
     const options1 = []
     const options2 = []
-    const mapf = { }
-    const mapv = { }
     const f1 = toRef(props, 'f1') // valeurs sur l'élément
     const f2 = toRef(props, 'f2')
     const v1 = toRef(props, 'v1') // valeurs sur l'élément, volume min à couvrir
@@ -49,109 +57,98 @@ export default ({
 
     const f1inp = ref(0) // valeurs avant édition
     const f2inp = ref(0)
-    const f1c = ref(0) // valeurs courantes
+    const f1c = ref(0) // valeurs courantes (code)
     const f2c = ref(0)
+    const f1n = ref(0) // valeurs courantes (numérique)
+    const f2n = ref(0)
     const modif = ref(false)
     const min1 = ref(0)
     const min2 = ref(0)
     const diag1 = ref('')
     const diag2 = ref('')
+    const err1 = ref(false)
+    const err2 = ref(false)
 
     function setOptions () {
       min1.value = v1.value ? Math.ceil(v1.value / UNITEV1) : 0
       min2.value = v2.value ? Math.ceil(v2.value / UNITEV2) : 0
-      for (const f in lf) {
-        const v = lf[f]
-        if (v < min1.value) continue
-        const l = f + ' [' + v + ']'
-        options1.push(l)
-        mapf[l] = v
-        mapv[v] = l
-      }
-      options1.sort((a, b) => { return mapf[a] < mapf[b] ? -1 : (mapf[a] > mapf[b] ? 1 : 0) })
-      let v = f1.value
-      if (!mapv[v]) {
-        const x = '[' + v + ']'
-        options1.push(x)
-        mapf[x] = v
-        mapv[v] = x
-      }
-      f1inp.value = v
+      options1.length = 0; options1.push('')
+      options2.length = 0; options2.push('')
+      for (const f in lf) if (lf[f] >= min1.value) options1.push(f)
+      for (const f in lf) if (lf[f] >= min2.value) options2.push(f)
+    }
 
-      for (const f in lf) {
-        const v = lf[f]
-        if (v < min2.value) continue
-        const l = f + ' [' + v + ']'
-        options2.push(l)
-        mapf[l] = v
-        mapv[v] = l
-      }
-      options1.sort((a, b) => { return mapf[a] < mapf[b] ? -1 : (mapf[a] > mapf[b] ? 1 : 0) })
-      v = f2.value
-      if (!mapv[v]) {
-        const x = '[' + v + ']'
-        options2.push(x)
-        mapf[x] = v
-        mapv[v] = x
-      }
-      f2inp.value = v
+    function code (v) {
+      for (const f in lf) if (lf[f] === v) return f
+      return ''
     }
 
     function initState () {
-      f1c.value = mapv[f1.value]
-      f2c.value = mapv[f2.value]
+      f1c.value = code(f1.value)
+      f2c.value = code(f2.value)
+      f1n.value = f1.value
+      f2n.value = f2.value
       f1inp.value = f1.value
       f2inp.value = f2.value
       modif.value = achange()
     }
 
-    watch(f1, (ap, av) => { // quand f1 d'entrée change, f1c ne change pas si en édition
+    watch(f1, (ap, av) => { // quand f1 d'entrée change, f1n ne change pas si en édition
       setOptions()
-      const x = mapf[f1c.value]
-      if (x === f1inp.value && x !== ap) {
-        // f1c n'était PAS modifié, ni égal à la nouvelle valeur : alignement sur la nouvelle valeur
-        f1c.value = mapv[ap]
-      }
+      // si f1n n'était PAS modifié, ni égal à la nouvelle valeur : alignement sur la nouvelle valeur
+      if (f1n.value === f1inp.value && f1n.value !== ap) f1n.value = ap
       f1inp.value = ap
       modif.value = achange()
     })
 
-    watch(f2, (ap, av) => { // quand f1 d'entrée change, f1c ne change pas si en édition
+    watch(f2, (ap, av) => { // quand f2 d'entrée change, f2n ne change pas si en édition
       setOptions()
-      const x = mapf[f2c.value]
-      if (x === f2inp.value && x !== ap) {
-        // f1c n'était PAS modifié, ni égal à la nouvelle valeur : alignement sur la nouvelle valeur
-        f2c.value = mapv[ap]
-      }
+      // si f1n n'était PAS modifié, ni égal à la nouvelle valeur : alignement sur la nouvelle valeur
+      if (f2n.value === f2inp.value && f2n.value !== ap) f2n.value = ap
       f2inp.value = ap
       modif.value = achange()
     })
 
     watch(f1c, (ap, av) => {
+      if (ap !== '' && lf[ap] !== f1n.value) f1n.value = lf[ap]
+    })
+
+    watch(f1n, (ap, av) => {
       modif.value = achange()
-      if (!lecture.value) context.emit('update:modelValue', [mapf[f1c.value], mapf[f2c.value]])
+      const x = code(f1n.value)
+      if (x !== f1c.value) f1c.value = x
+      if (!lecture.value) context.emit('update:modelValue', [f1n.value, f2n.value])
+      // console.log(f1n.value + ' / ' + f2n.value)
     })
 
     watch(f2c, (ap, av) => {
+      if (ap !== '' && lf[ap] !== f2n.value) f2n.value = lf[ap]
+    })
+
+    watch(f2n, (ap, av) => {
       modif.value = achange()
-      if (!lecture.value) context.emit('update:modelValue', [mapf[f1c.value], mapf[f2c.value]])
+      const x = code(ap)
+      if (x !== f2c.value) f2c.value = x
+      if (!lecture.value) context.emit('update:modelValue', [f1n.value, f2n.value])
+      // console.log(f1n.value + ' / ' + f2n.value)
     })
 
     function valider () {
-      if (!lecture.value) context.emit('valider', [mapf[f1c.value], mapf[f2c.value]])
+      console.log(f1n.value + ' / ' + f2n.value)
+      if (!lecture.value) context.emit('valider', [f1n.value, f2n.value])
     }
 
     function achange () {
-      const x1 = mapf[f1c.value]
-      const x2 = mapf[f2c.value]
-      diag1.value = x1 < min1.value ? 'Le forfait 1 choisi (' + x1 + ') ne couvre pas le volume actuel (' + min1.value + ')' : ''
-      diag2.value = x2 < min2.value ? 'Le forfait 2 choisi (' + x2 + ') ne couvre pas le volume actuel (' + min2.value + ')' : ''
-      return x1 !== f1inp.value || x2 !== f2inp.value
+      err1.value = f1n.value < 0 || f1n.value > 255
+      err2.value = f2n.value < 0 || f2n.value > 255
+      diag2.value = f1n.value < min1.value && !err1.value ? 'Le forfait 1 choisi ne couvre pas le volume actuel (' + min1.value + ')' : ''
+      diag2.value = f2n.value < min2.value && !err2.value ? 'Le forfait 2 choisi ne couvre pas le volume actuel (' + min2.value + ')' : ''
+      return f1n.value !== f1inp.value || f2n.value !== f2inp.value
     }
 
     function undo () {
-      f1c.value = mapv[f1inp.value]
-      f2c.value = mapv[f2inp.value]
+      f1n.value = f1inp.value
+      f2n.value = f2inp.value
     }
 
     setOptions()
@@ -165,8 +162,12 @@ export default ({
       options2,
       f1c,
       f2c,
+      f1n,
+      f2n,
       diag1,
-      diag2
+      diag2,
+      err1,
+      err2
     }
   }
 })

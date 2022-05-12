@@ -29,7 +29,6 @@
     <q-card class="petitelargeur shadow-8">
       <q-card-section>
         <div class="titre-lg">Création d'un nouvel avatar</div>
-        <div class="titre-md">Nom de l'avatar</div>
         <nom-avatar icon-valider="check" verif label-valider="Valider" @ok-nom="oknom" />
         <q-separator/>
         <div v-if="nomav">
@@ -41,7 +40,7 @@
       </q-card-section>
       <q-card-actions>
         <q-btn flat dense color="primary" icon="close" label="renoncer" @click="nvav=false" />
-        <q-btn flat dense color="warning" :disable="!nomav || mx1 || mx2" icon="add" label="Créer l'avatar" @click="nvAvatar"/>
+        <q-btn flat dense color="warning" :disable="!nomav || mx1 || mx2 || err" icon="add" label="Créer l'avatar" @click="nvAvatar"/>
       </q-card-actions>
     </q-card>
   </q-dialog>
@@ -59,7 +58,7 @@ import MotsCles from '../components/MotsCles.vue'
 import ChoixForfaits from '../components/ChoixForfaits.vue'
 import IdentiteCv from '../components/IdentiteCv.vue'
 import NomAvatar from '../components/NomAvatar.vue'
-import { Motscles } from '../app/util.mjs'
+import { Motscles, afficherdiagnostic } from '../app/util.mjs'
 import { crypt } from '../app/crypto.mjs'
 import { data } from '../app/modele.mjs'
 import { serial } from '../app/schemas.mjs'
@@ -74,7 +73,8 @@ export default ({
       forfaits: [1, 1],
       mxff: [0, 0],
       mx1: false,
-      mx2: false
+      mx2: false,
+      err: false
     }
   },
 
@@ -82,6 +82,7 @@ export default ({
     forfaits (f) {
       this.mx1 = f[0] > this.mxff[0]
       this.mx2 = f[1] > this.mxff[1]
+      this.err = f[0] < 0 || f[0] > 255 || f[1] < 0 || f[1] > 255
     }
   },
 
@@ -93,7 +94,12 @@ export default ({
       this.mxff[0] = Math.floor(((c.f1 * UNITEV1) - c.v1) / UNITEV1) - 1
       this.mxff[1] = Math.floor(((c.f2 * UNITEV2) - c.v2) / UNITEV2) - 1
     },
-    oknom (nom) { this.nomav = nom },
+    oknom (nom) {
+      const ida = this.compte.avatarDeNom(nom)
+      if (ida) {
+        afficherdiagnostic('Ce nom est déjà celui d\'un de vos avatars. En choisir un autre.')
+      } else this.nomav = nom
+    },
 
     async nvAvatar () {
       await new CreationAvatar().run(this.nomav, this.forfaits, this.prim.id)

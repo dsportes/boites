@@ -5,7 +5,7 @@
   <tab-groupes v-if="sessionok && tabavatar === 'groupes'"></tab-groupes>
 
   <div v-if="sessionok && tabavatar === 'etc'">
-    <q-btn v-if="compta.estParrain" class="full-width maauto q-py-lg" flat dense color="primary"
+    <q-btn v-if="estParrain" class="full-width maauto q-py-lg" flat dense color="primary"
       icon="add" label="Nouveau parrainage" @click="nvpar = true"></q-btn>
 
     <q-expansion-item label="Carte de visite de l'avatar" group="groupeetc"
@@ -72,7 +72,6 @@ export default ({
     const sessionok = computed(() => { return $store.state.ui.sessionok })
     const nvpar = ref(false)
     const prefs = computed(() => { return $store.state.db.prefs })
-    const compta = computed(() => { return $store.state.db.compta })
     const avatar = computed(() => { return $store.state.db.avatar })
     // const groupe = computed(() => { return $store.state.db.groupe })
     const mode = computed(() => $store.state.ui.mode)
@@ -94,10 +93,13 @@ export default ({
       nvpar.value = false
     })
 
+    const compta = avatar.value ? data.getCompta(avatar.value.id) : null
+    const estParrain = compta != null && compta.idp === 0
+
     return {
       sessionok,
       nvpar,
-      compta,
+      estParrain,
       avatar,
       tabavatar,
       motscles,

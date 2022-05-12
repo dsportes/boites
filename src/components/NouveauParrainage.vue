@@ -23,7 +23,7 @@
         </q-step>
 
         <q-step :name="2" title="Nom du premier avatar du compte" icon="settings" :done="step > 3" >
-          <nom-avatar class="q-ma-xs" v-on:ok-nom="oknom" icon-valider="check" label-valider="Suivant"></nom-avatar>
+          <nom-avatar class="q-ma-xs" v-on:ok-nom="oknom" verif icon-valider="check" label-valider="Suivant"></nom-avatar>
           <q-stepper-navigation>
             <q-btn flat @click="step = 2" color="primary" label="Précédent" class="q-ml-sm" />
           </q-stepper-navigation>
@@ -139,9 +139,11 @@ export default ({
       this.encours = false
     },
     oknom (nom) {
-      this.nom = nom
-      this.mot1 = 'Bonjour ' + this.nom + ' !'
-      this.step = 3
+      if (nom) {
+        this.nom = nom
+        this.mot1 = 'Bonjour ' + this.nom + ' !'
+        this.step = 3
+      }
     },
     okmot () {
       if (this.mot.length > 0) {
