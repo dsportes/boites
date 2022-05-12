@@ -60,12 +60,12 @@
           <div>Nom de l'avatar: <span class="font-mono q-pl-md">{{nom}}</span></div>
           <div>Mot de bienvenue: <span class="font-mono q-pl-md">{{mot}}</span></div>
           <div>Forfaits du compte:
-            <span class="font-mono q-pl-md">{{'v1: ' + forfaits[0] + '*0,25MB'}}</span>
-            <span class="font-mono q-pl-lg">{{'v2: ' + forfaits[1] + '*25MB'}}</span>
+            <span class="font-mono q-pl-md">v1: {{ed1(forfaits[0])}}</span>
+            <span class="font-mono q-pl-lg">v2: {{ed2(forfaits[1])}}</span>
           </div>
-          <div v-if="estParrain">Ressources attribuables aux filleuls:
-            <span class="font-mono q-pl-md">{{'v1: ' + ressources[0] + '*0,25MB'}}</span>
-            <span class="font-mono q-pl-lg">{{'v2: ' + ressources[1] + '*25MB'}}</span>
+          <div v-if="estParrain">+ pour les filleuls:
+            <span class="font-mono q-pl-md">v1: {{ed1(ressources[0])}}</span>
+            <span class="font-mono q-pl-lg">v2: {{ed2(ressources[1])}}</span>
           </div>
           <q-stepper-navigation>
             <q-btn flat @click="corriger" color="primary" label="Corriger" class="q-ml-sm" />
@@ -85,8 +85,9 @@ import NomAvatar from './NomAvatar.vue'
 import ChoixForfaits from './ChoixForfaits.vue'
 import EditeurMd from './EditeurMd.vue'
 import { NouveauParrainage } from '../app/operations.mjs'
-import { PhraseContact } from '../app/util.mjs'
+import { PhraseContact, edvol } from '../app/util.mjs'
 import { data } from '../app/modele.mjs'
+import { UNITEV1, UNITEV2 } from '../app/api.mjs'
 
 export default ({
   name: 'NouveauParrainage',
@@ -122,6 +123,8 @@ export default ({
   },
 
   methods: {
+    ed1 (f) { return edvol(f * UNITEV1) },
+    ed2 (f) { return edvol(f * UNITEV2) },
     r1 (val) { return (val.length > 15 && val.length < 33) || 'De 16 à 32 signes' },
     crypterphrase () {
       if (!this.r1(this.phrase)) return

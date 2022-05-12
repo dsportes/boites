@@ -10,14 +10,12 @@
           <div>Premier avatar du nouveau compte: <span class="font-mono q-pl-md">{{couple.naI.nom}}</span></div>
           <div>Nom du parrain: <span class="font-mono q-pl-md">{{couple.naE.nom}}</span></div>
           <div>Forfaits du compte:
-            <span class="font-mono q-pl-md">{{'v1: ' + couple.data.f1 + '*0,25MB'}}</span>
-            <span class="font-mono q-pl-lg">{{'v2: ' + couple.data.f2 + '*25MB'}}</span>
+            <span class="font-mono q-pl-md">v1: {{ed1(couple.data.f1)}}</span>
+            <span class="font-mono q-pl-lg">v2: {{ed2(couple.data.f2)}}</span>
           </div>
-          <div v-if="estpar">Ressources attribuables aux futurs filleuls:
-            <div>
-            <span class="font-mono q-pl-md">{{'v1: ' + couple.data.r1 + '*0,25MB'}}</span>
-            <span class="font-mono q-pl-lg">{{'v2: ' + couple.data.r2 + '*25MB'}}</span>
-            </div>
+          <div v-if="estpar">+ pour les filleuls:
+            <span class="font-mono q-pl-md">v1: {{ed1(couple.data.r1)}}</span>
+            <span class="font-mono q-pl-lg">v2: {{ed2(couple.data.r2)}}</span>
           </div>
           <div class="t1">Validité: <span class="sp1">{{couple.dlv - jourJ}}</span> jour(s)</div>
           <show-html class="full-width height-6 border1" :texte="couple.ard" />
@@ -80,8 +78,9 @@ import PhraseSecrete from './PhraseSecrete.vue'
 import EditeurMd from './EditeurMd.vue'
 import ShowHtml from './ShowHtml.vue'
 import { AcceptationParrainage, RefusParrainage } from '../app/operations.mjs'
-import { getJourJ } from '../app/util.mjs'
+import { getJourJ, edvol } from '../app/util.mjs'
 import ChoixForfaits from './ChoixForfaits.vue'
+import { UNITEV1, UNITEV2 } from '../app/api.mjs'
 
 export default ({
   name: 'AcceptParrain',
@@ -108,6 +107,8 @@ export default ({
   },
 
   methods: {
+    ed1 (f) { return edvol(f * UNITEV1) },
+    ed2 (f) { return edvol(f * UNITEV2) },
     fermer () {
       this.razps()
       this.texte = ''

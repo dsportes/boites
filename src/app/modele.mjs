@@ -940,10 +940,11 @@ export class Couple {
 
   get cle () { return data.repertoire.cle(this.id) }
   get na () { return data.repertoire.na(this.id) }
-  get nom () { const x = this.data.x; return x[0][1] + '__' + x[1][1] }
-  get nomE () { const x = this.data.x; return x[1][1] }
+  get nom () { const x = this.data.x; return x[0][0] + '_' + x[1][0] }
+  get nomE () { const x = this.data.x; return x[1][0] }
+  get nomI () { const x = this.data.x; return x[0][0] }
 
-  naDeIm (im) { return new NomAvatar(this.data.x[im - 1][1], this.data.x[im - 1][2]) }
+  naDeIm (im) { return new NomAvatar(this.data.x[im - 1][0], this.data.x[im - 1][1]) }
 
   // origine du couple : 0) proposition standard à un contact connu, 1) parainage, 2) rencontre
   get orig () { return !this.data.phrase ? 0 : (this.data.f1 || this.data.f2 ? 1 : 2) }
