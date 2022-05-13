@@ -31,10 +31,10 @@
     <q-separator/>
 
     <q-expansion-item v-if="state.g" group="etc" default-opened
-        header-class="expansion-header-class-1 titre-md bg-secondary text-white">
+        header-class="expansion-header-class-1 titre-lg bg-secondary text-white">
       <template v-slot:header>
         <q-item-section>
-          <div>{{state.g.na.noml}}</div>
+          <div>{{state.g.nomEdMb(state.mbav)}}</div>
         </q-item-section>
       </template>
       <identite-cv :nom-avatar="state.g.na" type="groupe" :editable="anim" @cv-changee="cvchangee"/>
@@ -318,8 +318,10 @@ export default ({
       let maxstp = 0
       let nbanim = 0
       let nbvote = 0
+      let mbav = null
       for (const im in membres.value) {
         const m = membres.value[im]
+        if (m.namb.id === avatar.value.id) mbav = m
         if (f.filtre(m)) lst.push(m)
         if (m.estAc) { lstAc.push(m); if (m.stp > maxstp) maxstp = m.stp }
         if (m.stp === 2) nbanim++
@@ -330,6 +332,7 @@ export default ({
       state.maxstp = maxstp
       state.nbanim = nbanim
       state.nbvote = nbvote
+      state.mbav = mbav
     }
 
     function trier () {

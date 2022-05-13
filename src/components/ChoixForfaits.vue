@@ -134,7 +134,7 @@ export default ({
     })
 
     function valider () {
-      console.log(f1n.value + ' / ' + f2n.value)
+      // console.log(f1n.value + ' / ' + f2n.value)
       if (!lecture.value) context.emit('valider', [f1n.value, f2n.value])
     }
 

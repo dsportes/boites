@@ -2269,6 +2269,32 @@ export class RefusInvitGroupe extends OperationUI {
   }
 }
 
+/* Résilier un membre d'un groupe ****************************************
+args :
+- sessionId
+- id, im : id du membre
+- ida: id de l'avatar
+- ni: numéro d'invitation au groupe
+Retour: sessionId, dh
+A_SRV, '19-Membre non trouvé
+A_SRV, '17-Avatar non trouvé
+*/
+export class ResilierMembreGroupe extends OperationUI {
+  constructor () {
+    super('Résilier un membre d\'un groupe', OUI, SELONMODE)
+  }
+
+  async run (m) { // membre
+    try {
+      const args = { sessionId: data.sessionId, id: m.id, im: m.im, ida: m.namb.id, ni: m.data.ni }
+      await post(this, 'm1', 'resilierMembreGroupe', args)
+      this.finOK()
+    } catch (e) {
+      await this.finKO(e)
+    }
+  }
+}
+
 /* Fin d'hébergement d'un groupe ****************************************
 args :
 - sessionId
@@ -2385,6 +2411,7 @@ export class ContactGroupe extends OperationUI {
         const args = { sessionId: data.sessionId, mxim, rowMembre }
         const ret = await post(this, 'm1', 'contactGroupe', args)
         if (ret.statut === 1) {
+          if (n > 10) throw new AppExc(E_BRO, 'Compte anormalement sollicité, bug probable')
           affichermessage('(' + n++ + ')-Petit incident, nouvel essai en cours, merci d\'attendre', true)
           await sleep(2000)
         } else {

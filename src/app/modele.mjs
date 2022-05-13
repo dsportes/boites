@@ -767,7 +767,8 @@ export class Avatar {
     }
     this.m1gr.clear()
     if (lgr) {
-      for (const ni in lgr) {
+      for (const nis in lgr) {
+        const ni = parseInt(nis)
         const y = lgr[ni]
         const x = deserial(brut ? y : await crypt.decrypter(data.clek, y))
         const na = new NomAvatar(x[0], x[1])
@@ -1171,7 +1172,7 @@ export class Invitgr {
 
 schemas.forSchema({
   name: 'idbGroupe',
-  cols: ['id', 'v', 'dfh', 'st', 'mxin', 'idh', 'imh', 'v1', 'v2', 'f1', 'f2', 'mc', 'vsh']
+  cols: ['id', 'v', 'dfh', 'st', 'mxim', 'imh', 'v1', 'v2', 'f1', 'f2', 'mc', 'vsh']
 })
 
 export class Groupe {
@@ -1181,12 +1182,13 @@ export class Groupe {
   get estZombi () { return this.dfh === 99999 }
 
   get cv () { return data.getCv(this.id) }
-  get photo () { const cv = this.cv; return cv ? cv.photo : '' }
-  get info () { const cv = this.cv; return cv ? cv.info : '' }
+  get photo () { const cv = this.cv; return cv ? cv[0] : '' }
+  get info () { const cv = this.cv; return cv ? cv[1] : '' }
 
   get cle () { return data.repertoire.cle(this.id) }
   get na () { return data.repertoire.na(this.id) }
   get nomEd () { return titreEd(this.na.nom || '', this.info) }
+  nomEdMb (m) { const t = m.titre; return t ? (t + ' [' + this.nomEd + ']') : this.nomEd }
 
   get nomf () { return normpath(this.na.nom) }
 
@@ -1266,7 +1268,6 @@ export class Groupe {
       this.st = 0
       this.mxim = 0
       this.mc = null
-      this.idh = 0
       this.imh = 0
       this.v1 = 0
       this.v2 = 0
@@ -1279,7 +1280,6 @@ export class Groupe {
   async toRow () {
     const r = { ...this }
     r.mcg = Object.keys(r.mc).length ? await crypt.crypter(this.cle, serial(this.mc)) : null
-    r.idhg = this.idh ? await crypt.crypter(this.cle, '' + this.idh) : 0
     return schemas.serialize('rowgroupe', r)
   }
 
@@ -1342,16 +1342,16 @@ export class Membre {
   // De l'avatar membre
   get estAc () { return data.repertoire.estAc(this.namb.id) }
   get cvm () { return data.getCv(this.namb.id) }
-  get photom () { const cv = this.cvm; return cv ? cv.photo : '' }
-  get infom () { const cv = this.cvm; return cv ? cv.info : '' }
+  get photom () { const cv = this.cvm; return cv ? cv[0] : '' }
+  get infom () { const cv = this.cvm; return cv ? cv[1] : '' }
   get clem () { return data.repertoire.cle(this.namb.id) }
   get nomEd () { return titreEd(this.namb.nom || '', this.info) }
 
   get titre () {
-    const i = this.infom.indexOf('\n')
-    const t1 = i === -1 ? this.infom : this.infom.substring(0, i)
-    const t = t1.length <= 16 ? t1 : t1.substring(0, 13) + '...'
-    return t ? t + ' [' + this.namb.titre + ']' : this.namb.titre
+    if (!this.info) return ''
+    const i = this.info.indexOf('\n')
+    const t1 = i === -1 ? this.info : this.info.substring(0, i)
+    return t1.length <= 20 ? t1 : t1.substring(0, 20) + '...'
   }
 
   // Du groupe

@@ -19,7 +19,7 @@
         <div class="col row cursor-pointer" @click="afficher(idx)">
           <img class="col-auto photomax" :src="photo(x.g)"/>
           <div class="col q-px-sm">
-            <div class="titre-md text-bold">{{x.g.nom}}</div>
+            <div class="titre-md text-bold">{{x.g.nomEdMb(x.m)}}</div>
             <div v-if="x.g.dfh" class="text-negative bg-yellow-4 text-bold q-pa-xs">
               Le groupe n'a pas de compte qui l'héberge. Mises à jour et créations de secrets bloquées.
               S'auto-détruira dans {{nbj(x.g.dfh)}} jour(s).
@@ -37,7 +37,7 @@
               <span v-if="x.g.imh === x.m.im" class="q-px-xs text-bold text-italic text-warning">Hébergeur du groupe</span>
             </div>
             <div v-if="x.m.ard && x.m.ard.length" class="row justify-between">
-              <show-html class="col height-2" :texte="x.m.ard" :idx="idx"/>
+              <show-html class="col" style="height:1.8rem;overflow:hidden" :texte="x.m.ard" :idx="idx"/>
               <div class="col-auto q-pl-sm fs-sm">{{x.m.dhed}}</div>
             </div>
             <div v-else class="text-italic">(rien sur l'ardoise partagée avec le groupe)</div>
@@ -48,7 +48,7 @@
         </div>
         <q-btn class="col-auto btnmenu" size="md" color="white" icon="menu" flat dense>
           <q-menu touch-position transition-show="scale" transition-hide="scale">
-            <q-list dense style="min-width: 10rem">
+            <q-list dense class="bord1">
               <q-item clickable v-close-popup @click="avatargrform = true">
                 <q-item-section>Détail et édition du groupe</q-item-section>
               </q-item>
@@ -59,6 +59,14 @@
               <q-separator />
               <q-item clickable v-close-popup @click="nouveausecret(x)">
                 <q-item-section>Nouveau secret de groupe</q-item-section>
+              </q-item>
+              <q-separator />
+              <q-item v-if="x.m.stx === 1" clickable v-close-popup @click="accepterinvit(x.m)">
+                <q-item-section>Accepter l'invitation</q-item-section>
+              </q-item>
+              <q-separator />
+              <q-item v-if="x.m.stx === 1" clickable v-close-popup @click="refuserinvit(x.m)">
+                <q-item-section>Refuser l'invitation</q-item-section>
               </q-item>
             </q-list>
           </q-menu>
@@ -106,7 +114,7 @@ import ChoixForfaits from './ChoixForfaits.vue'
 import NomAvatar from './NomAvatar.vue'
 import ApercuMotscles from './ApercuMotscles.vue'
 import { data } from '../app/modele.mjs'
-import { CreationGroupe } from '../app/operations.mjs'
+import { CreationGroupe, AcceptInvitGroupe, RefusInvitGroupe } from '../app/operations.mjs'
 
 export default ({
   name: 'TabGroupes',
@@ -143,6 +151,13 @@ export default ({
     async creergroupe () {
       await new CreationGroupe().run(this.avatar, this.nomgr, this.forfaits)
       this.nouvgr = false
+    },
+
+    async accepterinvit (m) {
+      await new AcceptInvitGroupe().run(m)
+    },
+    async refuserinvit (m) {
+      await new RefusInvitGroupe().run(m, this.avatar)
     },
 
     dkli (idx) { return this.$q.dark.isActive ? (idx ? 'sombre' + (idx % 2) : 'sombre0') : (idx ? 'clair' + (idx % 2) : 'clair0') }
@@ -377,4 +392,7 @@ export default ({
 .photomax
   position: relative
   top: 3px
+.bord1
+  border:  1px solid $grey-5
+  min-width: 20rem
 </style>

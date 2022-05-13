@@ -9,13 +9,13 @@
       <q-icon size="sm" :color="m.stx === 2 ?'primary':'warning'"
         :name="m.stx < 2 ? 'hourglass_empty' : (m.stx === 2 ? 'thumb_up' : 'thumb_down')"/>
       <span class="q-px-sm">{{statuts[m.stx]}}</span>
-      <span class="q-px-sm" :color="m.stp < 2 ?'primary':'warning'">{{['Lecteur','Auteur','Animateur'][m.stp]}}</span>
+      <span v-if="m.stx !== 0" class="q-px-sm" :color="m.stp < 2 ?'primary':'warning'">{{['Lecteur','Auteur','Animateur'][m.stp]}}</span>
       <span v-if="g.imh === m.im" class="q-px-xs text-bold text-italic text-warning">Hébergeur du groupe</span>
     </div>
 
-    <div v-if="m.ard" class="row justify-between cursor-pointer zone" @click="ouvmajard">
+    <div v-if="m.ard" class="row justify-between cursor-pointer zone items-start" @click="ouvmajard">
       <div class="col-auto q-pr-sm titre-md text-italic">Ardoise :</div>
-      <show-html class="col height-2" :texte="m.ard" :idx="idx"/>
+      <show-html class="col" style="height:1.8rem;overflow:hidden" :texte="m.ard" :idx="idx"/>
       <div class="col-auto q-pl-sm fs-sm">{{m.dhed}}</div>
     </div>
     <div v-else class="text-italic cursor-pointer zone" @click="ouvmajard">(rien sur l'ardoise partagée avec le groupe)</div>
@@ -40,7 +40,7 @@
           <q-item-section class="titre-lg text-bold text-grey-8 bg-yellow-4 q-mx-sm text-center">[Contact !]</q-item-section>
         </q-item>
         <q-separator v-if="invitationattente && m.stx === 0 && g.maxStp() === 2"/>
-        <q-item v-if="m.stx === 0 && g.maxStp() === 2" clickable v-ripple v-close-popup @click="ouvririnvitcontact">
+        <q-item v-if="(m.stx === 0 || m.stx === 3 || m.stx === 4) && g.maxStp() === 2" clickable v-ripple v-close-popup @click="ouvririnvitcontact">
           <q-item-section avatar>
             <q-icon dense name="open_in_new" color="primary" size="md"/>
           </q-item-section>
@@ -92,8 +92,7 @@
           <div class="titre-md">Ardoise commune avec le groupe</div>
           <q-btn class="col-auto q-ml-sm btn1" flat round dense icon="close" color="negative" size="md" @click="ardedit = false" />
         </div>
-        <editeur-md class="height-8" v-model="mbcard" :texte="m.ard"
-          :editable="g.maxStp() > 0" @ok="changerardmbc" label-ok="OK" :close="fermermajard"/>
+        <editeur-md class="height-8" v-model="mbcard" :texte="m.ard" @ok="changerardmbc" editable label-ok="OK"/>
       </q-card-section>
     </q-card>
   </q-dialog>
@@ -183,7 +182,7 @@ import IdentiteCv from './IdentiteCv.vue'
 import SelectMotscles from './SelectMotscles.vue'
 import ApercuMotscles from './ApercuMotscles.vue'
 import EditeurMd from './EditeurMd.vue'
-import { AcceptInvitGroupe, RefusInvitGroupe, MajMcMembre, MajArdMembre, MajInfoMembre, InviterGroupe } from '../app/operations.mjs'
+import { AcceptInvitGroupe, RefusInvitGroupe, MajMcMembre, MajArdMembre, MajInfoMembre, InviterGroupe, ResilierMembreGroupe } from '../app/operations.mjs'
 import { retourInvitation } from '../app/page.mjs'
 
 export default ({
@@ -239,7 +238,8 @@ export default ({
     // TODO
     autoresilier () {
     },
-    resilier () {
+    async resilier () {
+      await new ResilierMembreGroupe().run(this.m)
     },
     async accepterinvit () {
       await new AcceptInvitGroupe().run(this.m)
