@@ -23,10 +23,96 @@
       header-class="expansion-header-class-1 titre-lg bg-secondary text-white">
       <div class="fake"><mots-cles class="petitelargeur maauto" :motscles="motscles" @ok="okmc"></mots-cles></div>
     </q-expansion-item>
+    <q-separator/>
+    <q-expansion-item class="q-mt-xs" label="Comptabilité des volumes" group="groupeetc"
+      header-class="expansion-header-class-1 titre-lg bg-secondary text-white">
+      <div class="fake">
+        <q-btn class="col-auto" label="Choisir un avatar ..." dense push size="md" icon="menu">
+          <q-menu transition-show="scale" transition-hide="scale">
+            <q-list dense style="min-width: 10rem">
+              <q-item v-for="na in state.lst" :key="na.id" clickable v-close-popup @click="choixAv(na)">
+                <q-item-section class="text-italic">{{na.nom}}</q-item-section>
+              </q-item>
+            </q-list>
+          </q-menu>
+        </q-btn>
+        <span class="titre-md q-ml-xl">{{cpt.av}}</span>
+        <div class="fullwidth">
+          <div class="row items-start">
+            <div class="col-5 text-right text-italic">Jour de calcul</div>
+            <div class="col-7 font-mono fs-md text-center">{{cpt.x.j}}</div>
+          </div>
+          <div class="row items-start">
+            <div class="col-5 text-right text-italic">Forfaits V1 / V2</div>
+            <div class="col-3 font-mono fs-md text-center">[{{cpt.x.f1}}]  {{ed1(cpt.x.f1)}}</div>
+            <div class="col-1 font-mono fs-md text-center">/</div>
+            <div class="col-3 font-mono fs-md text-center">[{{cpt.x.f2}}]  {{ed2(cpt.x.f2)}}</div>
+          </div>
+          <div class="row items-start">
+            <div class="col-5 text-right text-italic">Réserve de forfaits V1 / V2 (parrain)</div>
+            <div class="col-3 font-mono fs-md text-center">[{{cpt.x.res1}}]  {{ed1(cpt.x.res1)}}</div>
+            <div class="col-1 font-mono fs-md text-center">/</div>
+            <div class="col-3 font-mono fs-md text-center">[{{cpt.x.res2}}]  {{ed2(cpt.x.res2)}}</div>
+          </div>
+          <div class="row items-start">
+            <div class="col-5 text-right text-italic">Forfaits V1 / V2 attribués aux filleuls (parrain)</div>
+            <div class="col-3 font-mono fs-md text-center">[{{cpt.x.t1}}]  {{ed1(cpt.x.t1)}}</div>
+            <div class="col-1 font-mono fs-md text-center">/</div>
+            <div class="col-3 font-mono fs-md text-center">[{{cpt.x.t2}}]  {{ed2(cpt.x.t2)}}</div>
+          </div>
+          <div class="row items-start">
+            <div class="col-5 text-right text-italic">Forfaits V1 / v2</div>
+            <div class="col-3 font-mono fs-md text-center">[{{cpt.x.f1}}]  {{ed1(cpt.x.f1)}}</div>
+            <div class="col-1 font-mono fs-md text-center">/</div>
+            <div class="col-3 font-mono fs-md text-center">[{{cpt.x.f2}}]  {{ed2(cpt.x.f2)}}</div>
+          </div>
+          <div class="row items-start">
+            <div class="col-5 text-right text-italic">V1 actuel / moyenne du mois</div>
+            <div class="col-3 font-mono fs-md text-center">{{ed(cpt.x.v1)}}</div>
+            <div class="col-1 font-mono fs-md text-center">/</div>
+            <div class="col-3 font-mono fs-md text-center">{{ed(cpt.x.v1m)}}</div>
+          </div>
+          <div class="row items-start">
+            <div class="col-5 text-right text-italic">V2 actuel / moyenne du mois</div>
+            <div class="col-3 font-mono fs-md text-center">{{ed(cpt.x.v2)}}</div>
+            <div class="col-1 font-mono fs-md text-center">/</div>
+            <div class="col-3 font-mono fs-md text-center">{{ed(cpt.x.v2m)}}</div>
+          </div>
+          <div class="row items-start">
+            <div class="col-5 text-right text-italic">Moy. journalière de transfert dans le mois</div>
+            <div class="col-7 font-mono fs-md text-center">{{ed(cpt.x.trm)}}</div>
+          </div>
+          <div class="row items-start">
+            <div class="col-5 text-right text-italic">Ratio des transferts 1-14 jours / forfait v2</div>
+            <div class="col-7 font-mono fs-md text-center">{{cpt.x.rtr}}%</div>
+          </div>
+          <div class="row items-start">
+            <div class="col-5 text-right text-italic">Total transféré sur 7 jours</div>
+            <div class="col-1 font-mono fs-md text-center q-pl-sm">{{ed(cpt.x.tr[0])}}</div>
+            <div class="col-1 font-mono fs-md text-center">{{ed(cpt.x.tr[1])}}</div>
+            <div class="col-1 font-mono fs-md text-center">{{ed(cpt.x.tr[2])}}</div>
+            <div class="col-1 font-mono fs-md text-center">{{ed(cpt.x.tr[3])}}</div>
+            <div class="col-1 font-mono fs-md text-center">{{ed(cpt.x.tr[4])}}</div>
+            <div class="col-1 font-mono fs-md text-center">{{ed(cpt.x.tr[5])}}</div>
+            <div class="col-1 font-mono fs-md text-center">{{ed(cpt.x.tr[6])}}</div>
+          </div>
+          <div class="row items-start">
+            <div class="col-5 text-right text-italic">Total transféré sur 8-14 jours</div>
+            <div class="col-1 font-mono fs-md text-center q-pl-sm">{{ed(cpt.x.tr[7])}}</div>
+            <div class="col-1 font-mono fs-md text-center">{{ed(cpt.x.tr[8])}}</div>
+            <div class="col-1 font-mono fs-md text-center">{{ed(cpt.x.tr[9])}}</div>
+            <div class="col-1 font-mono fs-md text-center">{{ed(cpt.x.tr[10])}}</div>
+            <div class="col-1 font-mono fs-md text-center">{{ed(cpt.x.tr[11])}}</div>
+            <div class="col-1 font-mono fs-md text-center">{{ed(cpt.x.tr[12])}}</div>
+            <div class="col-1 font-mono fs-md text-center">{{ed(cpt.x.tr[13])}}</div>
+          </div>
+        </div>
+      </div>
+    </q-expansion-item>
   </div>
 
   <q-dialog v-if="sessionok" v-model="nvav" persistent>
-    <q-card class="petitelargeur shadow-8">
+    <q-card class="moyennelargeur shadow-8">
       <q-card-section>
         <div class="titre-lg">Création d'un nouvel avatar</div>
         <nom-avatar icon-valider="check" verif label-valider="Valider" @ok-nom="oknom" />
@@ -58,11 +144,28 @@ import MotsCles from '../components/MotsCles.vue'
 import ChoixForfaits from '../components/ChoixForfaits.vue'
 import IdentiteCv from '../components/IdentiteCv.vue'
 import NomAvatar from '../components/NomAvatar.vue'
-import { Motscles, afficherdiagnostic } from '../app/util.mjs'
+import { Motscles, afficherdiagnostic, edvol } from '../app/util.mjs'
 import { crypt } from '../app/crypto.mjs'
 import { data } from '../app/modele.mjs'
 import { serial } from '../app/schemas.mjs'
-import { UNITEV1, UNITEV2 } from '../app/api.mjs'
+import { UNITEV1, UNITEV2, Compteurs } from '../app/api.mjs'
+
+/** Compteurs ***************************
+- `j` : jour de calcul
+- `v1 v1m` : volume v1 actuel et total du mois
+- `v2 v2m` : volume v2 actuel et total du mois
+- `trm` : volume transféré dans le mois
+- `f1 f2` : forfait de v1 et v2
+- `tr` : array de 14 compteurs (les 14 derniers jours) de volume journalier de transfert
+- `rtr` : ratio de la moyenne des tr / forfait v2
+- `hist` : array de 12 éléments, un par mois. 4 bytes par éléments.
+  - `f1 f2` : forfaits du mois
+  - `r1` : ratio du v1 du mois par rapport à son forfait.
+  - `r2` : ratio du v2 du mois par rapport à son forfait.
+  - `r3` : ratio des transferts cumulés du mois / volume du forfait v2
+- `res1 res2` : pour un parrain, réserve de forfaits v1 et v2.
+- `t1 t2` : pour un parrain, total des forfaits 1 et 2 attribués aux filleuls.
+*/
 
 export default ({
   name: 'Compte',
@@ -146,9 +249,37 @@ export default ({
       set: (val) => $store.commit('db/majavatar', val)
     })
 
+    /** Compteurs ***************************
+    - `j` : jour de calcul
+    - `v1 v1m` : volume v1 actuel et total du mois
+    - `v2 v2m` : volume v2 actuel et total du mois
+    - `trm` : volume transféré dans le mois
+    - `f1 f2` : forfait de v1 et v2
+    - `tr` : array de 14 compteurs (les 14 derniers jours) de volume journalier de transfert
+    - `rtr` : ratio de la moyenne des tr / forfait v2
+    - `hist` : array de 12 éléments, un par mois. 4 bytes par éléments.
+      - `f1 f2` : forfaits du mois
+      - `r1` : ratio du v1 du mois par rapport à son forfait.
+      - `r2` : ratio du v2 du mois par rapport à son forfait.
+      - `r3` : ratio des transferts cumulés du mois / volume du forfait v2
+    - `res1 res2` : pour un parrain, réserve de forfaits v1 et v2.
+    - `t1 t2` : pour un parrain, total des forfaits 1 et 2 attribués aux filleuls.
+    */
+    const cpt = reactive({ av: '', x: new Compteurs() })
+
+    function choixAv (na) {
+      cpt.av = na.nom
+      const c = data.getCompta(na.id)
+      cpt.x = c.compteurs
+    }
+
+    function ed (v) { return edvol(v) }
+    function ed1 (v) { return edvol(v * UNITEV1) }
+    function ed2 (v) { return edvol(v * UNITEV2) }
     function init1 () {
       if (sessionok.value) {
         state.lst = compte.value.avatarNas()
+        choixAv(Array.from(state.lst)[0])
       }
     }
 
@@ -175,6 +306,11 @@ export default ({
     init2()
 
     return {
+      choixAv,
+      ed,
+      ed1,
+      ed2,
+      cpt,
       nvav,
       avatar,
       state,

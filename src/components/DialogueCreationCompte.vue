@@ -1,6 +1,6 @@
 <template>
   <q-dialog v-model="dialoguecreationcompte">
-  <q-card class="q-ma-xs petitelargeur fs-md">
+  <q-card class="q-ma-xs moyennelargeur fs-md">
     <q-card-section class="column items-center">
       <div class="titre-lg text-center">Création du compte d'un comptable</div>
       <div class="titre-sm text-center text-italic">!!! l'autorisation doit avoir été enregistrée en configuration !!!</div>
@@ -15,7 +15,7 @@
         </q-step>
 
         <q-step :name="2" title="Nom du premier avatar du compte" icon="settings" :done="step > 3" >
-          <nom-avatar class="q-ma-xs" v-on:ok-nom="oknom" icon-valider="check" label-valider="Suivant"></nom-avatar>
+          <nom-avatar class="q-ma-xs" v-on:ok-nom="oknom" verif icon-valider="check" label-valider="Suivant"></nom-avatar>
           <q-stepper-navigation>
             <q-btn flat @click="step = 2" color="primary" label="Précédent" class="q-ml-sm" />
           </q-stepper-navigation>
@@ -86,8 +86,10 @@ export default ({
       }
     },
     oknom (nom) {
-      this.nom = nom
-      this.step = 3
+      if (nom) {
+        this.nom = nom
+        this.step = 3
+      }
     },
     async confirmer () {
       await new CreationCompte().run(this.ps, this.nom, this.forfaits)

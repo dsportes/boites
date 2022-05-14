@@ -1,5 +1,5 @@
 <template>
-  <q-card class="q-ma-xs petitelargeur fs-md">
+  <q-card class="q-ma-xs moyennelargeur fs-md">
     <q-card-section class="column items-center">
       <div class="titre-lg text-center">Parrainage d'un nouveau compte</div>
       <q-btn flat @click="close" color="primary" label="Renoncer" class="q-ml-sm" />

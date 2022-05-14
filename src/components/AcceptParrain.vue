@@ -1,5 +1,5 @@
 <template>
-  <q-card class="q-ma-xs petitelargeur fs-md">
+  <q-card class="q-ma-xs moyennelargeur fs-md">
     <q-card-section class="column items-center">
       <div class="titre-lg text-center">{{'Acceptation du parrainage d\'un compte '+ (estpar ? 'PARRAIN' : 'filleul standard')}}</div>
     </q-card-section>

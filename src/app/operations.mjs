@@ -547,7 +547,7 @@ export class Operation {
     if (mapObj.prefs) {
       const obj = mapObj.prefs
       const a = data.getPrefs()
-      if (obj.v > a.v) {
+      if (!a || obj.v > a.v) {
         this.buf.setPrefs(obj)
         this.buf.putIDB(obj)
       }
@@ -555,10 +555,10 @@ export class Operation {
 
     // Compta
     if (mapObj.compta) {
-      for (const pk in mapObj.groupe) {
+      for (const pk in mapObj.compta) {
         const obj = mapObj.compta[pk]
         const a = data.getCompta(obj.id)
-        if (obj.v > a.v) {
+        if (!a || obj.v > a.v) {
           this.buf.setObj(obj)
           this.buf.putIDB(obj)
         }
@@ -1851,7 +1851,7 @@ export class AcceptationParrainage extends OperationUI {
         compta.compteurs.setRes([d.r1, d.r2])
       } else {
         // filleul
-        compta.nouveau(compte.id, avatar.id)
+        compta.nouveau(avatar.id, couple.idE)
       }
       compta.compteurs.setF1(d.f1)
       compta.compteurs.setF2(d.f2)
