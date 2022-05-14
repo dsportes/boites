@@ -1498,7 +1498,7 @@ export class DownloadFichier extends OperationUI {
     super('Téléchargement d\'un fichier d\'un secret', OUI, SELONMODE)
   }
 
-  async run (secret, idf) {
+  async run (secret, idf, ida) { // ida : id avatar demandeur du transfert
     try {
       /*****************************************
       !!GET!! getUrl : retourne l'URL de get d'un fichier
@@ -1506,11 +1506,11 @@ export class DownloadFichier extends OperationUI {
       - sessionId
       - id : id du secret
       - idf : id du fichier
-      - idc : id du compte demandeur
+      - idc : id de l'avatar demandeur
       - vt : volume du fichier (pour compta des volumes v2 transférés)
       */
       const vt = secret.mfa[idf].lg
-      const args = { sessionId: data.sessionId, id: secret.id, ts: secret.ts, idf, idc: data.getCompte().id, vt }
+      const args = { sessionId: data.sessionId, id: secret.id, ts: secret.ts, idf, ida, vt }
       const r = await get('m1', 'getUrl', args)
       if (!r) return null
       const url = dec.decode(r)

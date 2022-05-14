@@ -325,13 +325,31 @@ export async function post (op, module, fonction, args) {
       throw appexc
     } else throw new AppExc(E_SRV, e.message, e.stack) // inattendue, pas mise en forme
   }
-
   // les status HTTP non 2xx sont tombés en exception
   try {
     return deserial(buf)
   } catch (e) { // Résultat mal formé
     throw new AppExc(E_BRO, 'Retour de la requête mal formé : désérialisation de la réponse. ' + (op ? 'Opération: ' + op.nom : ''), e.message)
   }
+}
+
+function procEx (e) {
+  // Exceptions jetées par le this.BRK au-dessus)
+  if (e === data.EXBRK) throw e
+  if (axios.isCancel(e)) throw EXBRK
+
+  const status = (e.response && e.response.status) || 0
+  let appexc
+  if (status >= 400 && status <= 402) {
+    try {
+      const x = JSON.parse(decoder.decode(e.response.data))
+      appexc = new AppExc(x.code, x.message)
+      if (status === 402 && x.stack) appexc.stack = x.stack
+    } catch (e2) {
+      throw new AppExc(E_BRO, 'Retour de la requête mal formé : JSON parse. Message: ' + e.message)
+    }
+    throw appexc
+  } else throw new AppExc(E_SRV, e.message, e.stack) // inattendue, pas mise en forme
 }
 
 export async function ping () {
@@ -362,9 +380,10 @@ export async function get (module, fonction, args) {
       responseType: 'arraybuffer',
       timeout: $cfg.debug ? 50000000 : 5000
     })
-    return r.status === 200 ? new Uint8Array(r.data) : null
+    if (r.status === 200) return new Uint8Array(r.data)
+    throw new AppExc(E_SRV, r.statusText)
   } catch (e) {
-    return null
+    procEx(e)
   }
 }
 

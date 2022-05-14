@@ -239,7 +239,7 @@ export default ({
               const idf = parseInt(ix)
               const ec = n1 + '/' + n2 + '/' + s.nomFichier(idf)
               this.encours = 'Lecture  : ' + ec + ' - ' + edvol(s.mfa[idf].lg)
-              const buf = await s.getFichier(idf)
+              const buf = await s.getFichier(idf, this.avatar.id)
               if (tempo) await sleep(tempo)
               if (this.stopdl) break
               const p = root + this.b64(this.org + '/' + ec)
@@ -374,8 +374,10 @@ export default ({
               const pk = s.pk; if (!pks.has(pk)) { pks.add(pk); lst.push(s) }
             }
           }
-        } else { // on garde les supprimés PUNAISÉS
-          const pk = x.pk; if (!pks.has(pk)) { pks.add(pk); lst.push(x) }
+        } else { // on garde les supprimés PUNAISÉS ???
+          if (!x.suppr) {
+            const pk = x.pk; if (!pks.has(pk)) { pks.add(pk); lst.push(x) }
+          }
         }
       }
       state.lst = lst
@@ -394,7 +396,7 @@ export default ({
       l.sort((a, b) => {
         const pa = state.pins[a.pk] || -1
         const pb = state.pins[b.pk] || -1
-        return pa > pb ? -1 : (pa < pb ? 1 : state.filtre.fntri(a, b))
+        return a.v === 0 ? -1 : (b.v === 0 ? 1 : (pa > pb ? -1 : (pa < pb ? 1 : state.filtre.fntri(a, b))))
       })
       state.lst = l
       state.idx = -1
@@ -443,7 +445,7 @@ export default ({
     })
 
     watch(() => secret.value, (ap, av) => {
-      onChgSecrets()
+      if (!ap || ap.v === 0) onChgPortee(); else onChgSecrets()
     })
 
     watch(() => state.filtre, (filtre, filtreavant) => {

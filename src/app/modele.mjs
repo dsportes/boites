@@ -1470,7 +1470,7 @@ export class Membre {
 
 schemas.forSchema({
   name: 'idbSecret',
-  cols: ['id', 'ns', 'v', 'st', 'xp', 'v1', 'v2', 'mc', 'txt', 'mfa', 'ref', 'vsh']
+  cols: ['id', 'ns', 'v', 'x', 'st', 'xp', 'v1', 'v2', 'mc', 'txt', 'mfa', 'ref', 'vsh']
 })
 
 export class Secret {
@@ -1521,9 +1521,20 @@ export class Secret {
     return this.mc || new Uint8Array([])
   }
 
+  cloneSuppr () {
+    const s = new Secret()
+    s.id = this.id
+    s.ns = this.ns
+    s.x = 1
+    s.v = 0
+    s.ref = this.ref
+    return s
+  }
+
   nouveau (id, ref) {
     this.id = id
     this.v = 0
+    this.x = 0
     this.st = getJourJ() + cfg().limitesjour.secrettemp
     this.xp = 0
     this.txt = { t: '', d: Math.floor(new Date().getTime() / 1000) }
@@ -1574,7 +1585,7 @@ export class Secret {
     this.vsh = row.vsh || 0
     this.id = row.id
     this.ns = row.ns
-    this.x = row.x
+    this.x = row.x || 0
     this.v = row.v
     const cle = this.cle
     this.ref = row.refs ? deserial(await crypt.decrypter(cle, row.refs)) : null
@@ -1667,20 +1678,20 @@ export class Secret {
     return a
   }
 
-  async downloadFichier (idf) { // fichier décrypté mais pas dézippé
-    const buf = await new DownloadFichier().run(this, idf)
+  async downloadFichier (idf, ida) { // fichier décrypté mais pas dézippé
+    const buf = await new DownloadFichier().run(this, idf, ida)
     if (!buf) return null
     return await crypt.decrypter(this.cle, buf)
   }
 
-  async getFichier (idf) { // Obtenu localement ou par download. Fichier décrypté ET dézippé
+  async getFichier (idf, ida) { // Obtenu localement ou par download. Fichier décrypté ET dézippé
     const fetat = data.getFetat(idf)
     let buf
     if (fetat && fetat.estCharge) {
       const b = await getFichier(idf)
       buf = await crypt.decrypter(this.cle, b)
     } else {
-      buf = await this.downloadFichier(idf)
+      buf = await this.downloadFichier(idf, ida)
     }
     if (!buf) return null
     const f = this.mfa[idf]

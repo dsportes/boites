@@ -10,14 +10,14 @@
       <q-toolbar-title>
         <div v-if="secret.suppr" class="col text-negative text-italic text-bold">Secret SUPPRIMÉ</div>
       </q-toolbar-title>
-      <q-btn v-if="!secret.suppr && !ed && !c1() && mode <= 2" size="md" color="warning" icon="edit" dense label="Modifier" @click="editer"/>
-      <q-btn v-if="!secret.suppr && ed" class="q-mx-xs" size="md" :color="modif() ? 'warning' : 'secondary'" icon="undo" dense @click="annuler"/>
-      <q-btn v-if="!secret.suppr && ed" :disable="!modif() || (state.erreur !== '')" size="md" color="green-5" icon="check" dense @click="valider"/>
+      <q-btn v-if="tabsecret==='texte' && !secret.suppr && !ed && !c1() && mode <= 2" size="md" color="warning" icon="edit" dense label="Modifier" @click="editer"/>
+      <q-btn v-if="tabsecret==='texte' && !secret.suppr && ed" class="q-mx-xs" size="md" :color="modif() ? 'warning' : 'secondary'" icon="undo" dense @click="undo"/>
+      <q-btn v-if="tabsecret==='texte' && !secret.suppr && ed" :disable="!modif() || (state.erreur !== '')" size="md" color="green-5" icon="check" dense @click="valider"/>
     </q-toolbar>
     <q-toolbar inset v-if="mode > 2" class="maToolBar2 fs-sm text-bold text-negative bg-yellow-5">
       <div class="q-px-sm text-center">Les secrets ne peuvent être QUE consultés en mode avion ou visio (pas mis à jour)</div>
     </q-toolbar>
-    <q-toolbar v-if="!secret.suppr" inset class="col-auto bg-primary text-white maToolBar">
+    <q-toolbar v-if="tabsecret==='texte' && !secret.suppr" inset class="col-auto bg-primary text-white maToolBar">
       <q-btn class="q-mx-sm" dense push size="sm" icon="push_pin" :color="aPin() ? 'green-5' : 'grey-5'" @click="togglePin"/>
       <q-toolbar-title><div class="titre-md tit text-center">{{secret.partage}}</div></q-toolbar-title>
       <q-btn dense size="md" icon="menu">
@@ -429,20 +429,24 @@ export default ({
         this.row[vk] = true
       }
     },
-    ouvrirvoisin (s) {
+    ouvrirvoisin (s, nouveau) {
       this.secret = s
+      if (nouveau) {
+        data.setSecrets([s])
+        this.pinSecret(s, true)
+      }
       this.tabsecret = 'texte'
     },
     action0 () {
       const s = this.secret
       const ref = s.ref ? s.ref : [s.id, s.ns]
-      this.ouvrirvoisin(new Secret().nouveauP(s.id, ref))
+      this.ouvrirvoisin(new Secret().nouveauP(s.id, ref), true)
     },
     action1 (id) {
       const s = this.secret
       const ref = s.ref ? s.ref : [s.id, s.ns]
       const c = this.couple
-      if (c) this.ouvrirvoisin(new Secret().nouveauC(id || s.id, ref, c.avc))
+      if (c) this.ouvrirvoisin(new Secret().nouveauC(id || s.id, ref, c.avc), true)
     },
     action2 (id) {
       const s = this.secret
@@ -458,13 +462,13 @@ export default ({
           afficherdiagnostic('Seuls les membres de niveau "auteur" et "animateur" du groupe ' + g.nom + ' peuvent créer ou modifier des secrets.')
           return
         }
-        this.ouvrirvoisin(new Secret().nouveauG(id || s.id, ref, m.im))
+        this.ouvrirvoisin(new Secret().nouveauG(id || s.id, ref, m.im), true)
       }
     },
     fermerfa () { this.saisiefichier = false },
 
     async blobde (f, b) {
-      const buf = await this.secret.getFichier(f.idf)
+      const buf = await this.secret.getFichier(f.idf, this.avatar.id)
       if (!buf || !buf.length) return null
       const blob = new Blob([buf], { type: f.type })
       return b ? blob : URL.createObjectURL(blob)
@@ -643,11 +647,6 @@ export default ({
       return lst
     },
 
-    annuler () {
-      if (this.modif()) this.undo()
-      this.state.enedition = false
-    },
-
     async valider () {
       const s = this.secret
       const xploc = this.state.plocal + (10 * this.state.xlocal)
@@ -758,6 +757,7 @@ export default ({
       state.avs = z ? data.getAvSecret(s.id, s.ns) : null
       state.listevoisins = z ? lstvoisins($store.state.db['voisins@' + (s.ref ? s.pkref : s.pk)]) : []
       state.listefic = z ? listefichiers(s, state.avs) : []
+      state.erreur = z ? (s.txt.t.length < 10 ? 'Le texte doit avoir au moins 10 signes' : '') : ''
       if (z && state.enedition) {
         /* le contenu du secret a changé.
         - si non modifié : valeur de s dans valeur éditée
@@ -793,7 +793,12 @@ export default ({
     }
 
     function undo () {
-      resetLocals()
+      const s = secret.value
+      if (s.v) {
+        if (modif()) resetLocals()
+      } else {
+        data.setSecrets([s.cloneSuppr()])
+      }
       finEdition()
     }
 
@@ -905,7 +910,10 @@ export default ({
 
     function lstvoisins (mapv) {
       const lst = []
-      for (const pk in mapv) lst.push(mapv[pk])
+      for (const pk in mapv) {
+        const s = mapv[pk]
+        if (!s.suppr) lst.push(mapv[pk])
+      }
       lst.sort((a, b) => { return !a.ref ? -1 : (a.titre > b.titre ? 1 : (a.titre < b.titre ? -1 : 0)) })
       return lst
     }
@@ -963,6 +971,7 @@ export default ({
 
     return {
       sessionok,
+      avatar,
       avatarscform,
       tabsecret,
       couple,
