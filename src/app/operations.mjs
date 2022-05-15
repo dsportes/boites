@@ -1433,8 +1433,10 @@ export class NouveauSecret extends OperationUI {
         afficherdiagnostic(ret.info.join('<br>'))
       }
       this.finOK()
+      return true
     } catch (e) {
       await this.finKO(e)
+      return false
     }
   }
 }
@@ -1458,8 +1460,10 @@ export class Maj1Secret extends OperationUI {
         afficherdiagnostic(ret.info.join('<br>'))
       }
       this.finOK()
+      return true
     } catch (e) {
       await this.finKO(e)
+      return false
     }
   }
 }

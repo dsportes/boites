@@ -650,6 +650,7 @@ export default ({
     async valider () {
       const s = this.secret
       const xploc = this.state.plocal + (10 * this.state.xlocal)
+      let ret
       if (s.v) {
         // maj
         const txts = !this.state.modift ? null : await s.toRowTxt(this.state.textelocal, this.state.im)
@@ -659,7 +660,7 @@ export default ({
         const st = !this.state.modiftp ? null : (this.state.templocal ? this.jourJ + this.limjours : 99999)
         const xp = !this.state.modifx && !this.state.modifp ? null : xploc
         const arg = { ts: s.ts, id: s.id, ns: s.ns, mc, txts, v1, xp, st, mcg, im: this.state.im, varg: s.volarg() }
-        await new Maj1Secret().run(arg)
+        ret = await new Maj1Secret().run(arg)
       } else {
         // création
         const txts = await s.toRowTxt(this.state.textelocal, this.state.im)
@@ -670,9 +671,9 @@ export default ({
         const xp = xploc
         const arg = { ts: s.ts, id: s.id, ns: s.ns, mc, txts, v1, xp, st, mcg, im: this.state.im, varg: s.volarg() }
         arg.refs = await s.toRowRef()
-        await new NouveauSecret().run(arg)
+        ret = await new NouveauSecret().run(arg)
       }
-      this.finEdition()
+      if (ret) this.finEdition()
     },
 
     async supprimer () {

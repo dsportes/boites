@@ -315,14 +315,16 @@ export default ({
       watchStop = watchEffect(() => {
         const f = state.filtre
         const setIds = new Set()
-        if (avatar.value) {
-          if (f.perso) setIds.add(avatar.value.id)
-          if (f.coupleId) { if (f.coupleId === -1) avatar.value.coupleIds(setIds); else setIds.add(f.coupleId) }
-          if (f.groupeId) { if (f.groupeId === -1) avatar.value.groupeIds(setIds); else setIds.add(f.groupeId) }
-          setIds.forEach(id => { refSecrets[id] = computed(() => data.getSecret(id)) })
+        if (sessionok.value) {
+          if (avatar.value) {
+            if (f.perso) setIds.add(avatar.value.id)
+            if (f.coupleId) { if (f.coupleId === -1) avatar.value.coupleIds(setIds); else setIds.add(f.coupleId) }
+            if (f.groupeId) { if (f.groupeId === -1) avatar.value.groupeIds(setIds); else setIds.add(f.groupeId) }
+            setIds.forEach(id => { refSecrets[id] = computed(() => data.getSecret(id)) })
+          }
+          for (const pk in state.pins) { const { id, ns } = unpk(pk); refSecrets[pk] = computed(() => data.getSecret(id, ns)) }
+          // onCleanup(() => { console.log('cleanup TabSecrets') })
         }
-        for (const pk in state.pins) { const { id, ns } = unpk(pk); refSecrets[pk] = computed(() => data.getSecret(id, ns)) }
-        // onCleanup(() => { console.log('cleanup TabSecrets') })
       })
       getSecrets()
       trier()
@@ -362,21 +364,23 @@ export default ({
       const f = state.filtre
       const pks = new Set()
       const lst = []
-      f.debutFiltre()
-      for (const id in refSecrets) { // id d'un ACP ou pk d'un secret isolé
-        const estMap = id.indexOf('/') === -1
-        const x = refSecrets[id]
-        // const x = isRef(val) ? val.value : val // selon le cas on recevait le ref ou la value ???
-        if (estMap) { // map: map des secrets de clé majeure id (avatar / couple / groupe). (clé: ns, val: secret)
-          for (const ns in x) {
-            const s = x[ns]
-            if (!s.suppr && f.filtre(s)) { // on ignore les supprimés NON punaisés
-              const pk = s.pk; if (!pks.has(pk)) { pks.add(pk); lst.push(s) }
+      if (sessionok.value) {
+        f.debutFiltre()
+        for (const id in refSecrets) { // id d'un ACP ou pk d'un secret isolé
+          const estMap = id.indexOf('/') === -1
+          const x = refSecrets[id]
+          // const x = isRef(val) ? val.value : val // selon le cas on recevait le ref ou la value ???
+          if (estMap) { // map: map des secrets de clé majeure id (avatar / couple / groupe). (clé: ns, val: secret)
+            for (const ns in x) {
+              const s = x[ns]
+              if (!s.suppr && f.filtre(s)) { // on ignore les supprimés NON punaisés
+                const pk = s.pk; if (!pks.has(pk)) { pks.add(pk); lst.push(s) }
+              }
             }
-          }
-        } else { // on garde les supprimés PUNAISÉS ???
-          if (!x.suppr) {
-            const pk = x.pk; if (!pks.has(pk)) { pks.add(pk); lst.push(x) }
+          } else { // on garde les supprimés PUNAISÉS ???
+            if (!x.suppr) {
+              const pk = x.pk; if (!pks.has(pk)) { pks.add(pk); lst.push(x) }
+            }
           }
         }
       }
@@ -506,7 +510,7 @@ export default ({
     }
 
     function nvsecret (n, voisin) {
-      if (this.secret && !this.secret.v) {
+      if (secret.value && !secret.value.v) {
         afficherdiagnostic('Il ne peut y avoir qu\'un seul secret en création à un instant donné')
         return
       }
