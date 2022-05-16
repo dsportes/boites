@@ -426,8 +426,8 @@ export default ({
     watch(() => avatar.value, (ap, av) => {
       // Avatar modifié : la liste des groupes a pu changer, recharger SI nécessaire
       if (state.filtre.groupeId === -1) {
-        const sav = av.allGrId()
-        const sap = ap.allGrId()
+        const sav = av ? av.allGrId() : new Set()
+        const sap = ap ? ap.allGrId() : new Set()
         if (difference(sav, sap).size || difference(sap, sav).size) {
           onChgPortee()
         }
