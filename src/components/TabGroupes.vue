@@ -53,11 +53,11 @@
                 <q-item-section>Détail et édition du groupe</q-item-section>
               </q-item>
               <q-separator />
-              <q-item clickable v-close-popup @click="voirsecrets(x)">
+              <q-item clickable v-close-popup @click="voirsecrets(x.g)">
                 <q-item-section>Voir les secrets du groupe</q-item-section>
               </q-item>
               <q-separator />
-              <q-item clickable v-close-popup @click="nouveausecret(x)">
+              <q-item clickable v-close-popup @click="nouveausecret(x.g)">
                 <q-item-section>Nouveau secret de groupe</q-item-section>
               </q-item>
               <q-separator />
@@ -134,12 +134,21 @@ export default ({
 
   methods: {
     nbj (j) { return j - getJourJ() + cfg().limitesjour.groupenonheb },
-    voirsecrets () {
-      this.evtfiltresecrets = { cmd: 'fsg', arg: this.groupe }
+
+    voirsecrets (g) {
+      this.groupe = g
+      this.tabavatar = 'secrets'
+      setTimeout(() => {
+        this.evtfiltresecrets = { cmd: 'fsg', arg: this.groupe }
+      }, 100)
     },
 
-    nouveausecret () {
-      this.evtfiltresecrets = { cmd: 'nvg', arg: this.groupe }
+    nouveausecret (g) {
+      this.groupe = g
+      this.tabavatar = 'secrets'
+      setTimeout(() => {
+        this.evtfiltresecrets = { cmd: 'nvg', arg: this.groupe }
+      }, 100)
     },
 
     fermerfiltre () { this.avatargrrech = false },
@@ -226,6 +235,10 @@ export default ({
     const groupe = computed({ // groupe courant
       get: () => $store.state.db.groupe,
       set: (val) => $store.commit('db/majgroupe', val)
+    })
+    const tabavatar = computed({
+      get: () => $store.state.ui.tabavatar,
+      set: (val) => $store.commit('ui/majtabavatar', val)
     })
     const mode = computed(() => $store.state.ui.mode)
     const avatargrrech = computed({
@@ -359,6 +372,7 @@ export default ({
 
     return {
       sessionok,
+      tabavatar,
       groupe,
       photo,
       compte,

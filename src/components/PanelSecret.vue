@@ -10,9 +10,9 @@
       <q-toolbar-title>
         <div v-if="secret.suppr" class="col text-negative text-italic text-bold">Secret SUPPRIMÉ</div>
       </q-toolbar-title>
-      <q-btn v-if="tabsecret==='texte' && !secret.suppr && !ed && !c1() && mode <= 2" size="md" color="warning" icon="edit" dense label="Modifier" @click="editer"/>
-      <q-btn v-if="tabsecret==='texte' && !secret.suppr && ed" class="q-mx-xs" size="md" :color="modif() ? 'warning' : 'secondary'" icon="undo" dense @click="undo"/>
-      <q-btn v-if="tabsecret==='texte' && !secret.suppr && ed" :disable="!modif() || (state.erreur !== '')" size="md" color="green-5" icon="check" dense @click="valider"/>
+      <q-btn v-if="tabsecret==='texte' && !secret.suppr && !ed && !c1() && mode <= 2" size="sm" color="warning" icon="edit" dense label="Modifier" @click="editer"/>
+      <q-btn v-if="tabsecret==='texte' && !secret.suppr && ed" class="q-mx-xs" size="sm" :color="modif() ? 'warning' : 'secondary'" icon="undo" dense @click="undo"/>
+      <q-btn v-if="tabsecret==='texte' && !secret.suppr && ed" :disable="!modif() || (state.erreur !== '')" size="sm" color="green-5" icon="check" dense @click="valider"/>
     </q-toolbar>
     <q-toolbar inset v-if="mode > 2" class="maToolBar2 fs-sm text-bold text-negative bg-yellow-5">
       <div class="q-px-sm text-center">Les secrets ne peuvent être QUE consultés en mode avion ou visio (pas mis à jour)</div>
@@ -20,18 +20,7 @@
     <q-toolbar v-if="tabsecret==='texte' && !secret.suppr" inset class="col-auto bg-primary text-white maToolBar">
       <q-btn class="q-mx-sm" dense push size="sm" icon="push_pin" :color="aPin() ? 'green-5' : 'grey-5'" @click="togglePin"/>
       <q-toolbar-title><div class="titre-md tit text-center">{{secret.partage}}</div></q-toolbar-title>
-      <q-btn dense size="md" icon="menu">
-        <q-menu transition-show="scale" transition-hide="scale">
-          <q-list dense style="min-width: 15rem">
-            <q-item clickable v-close-popup @click="plus=true">
-              <q-item-section>Plus d'info ...</q-item-section>
-            </q-item>
-            <q-item clickable v-close-popup @click="confirmsuppr=true">
-              <q-item-section>Supprimer le secret ...</q-item-section>
-            </q-item>
-          </q-list>
-        </q-menu>
-      </q-btn>
+      <q-btn v-if="!secret.suppr && mode <= 2" size="sm" color="warning" icon="delete" dense @click="confirmsuppr=true"/>
     </q-toolbar>
     <q-toolbar v-if="!secret.suppr" inset class="col-auto bg-secondary text-white maToolBar">
       <div class="full-width font-cf">
@@ -54,10 +43,10 @@
           <span v-if="state.plocal">Protection d'écriture</span>
           <span v-else>Pas de protection d'écriture</span>
         </div>
-        <q-btn v-if="ed && (c2() || c4())" class="col-auto" size="sm" icon="edit_off" dense color="negative" label="non modifiable">
+        <q-btn v-if="ed && (c2() || c3())" class="col-auto" size="sm" icon="edit_off" dense color="negative" label="non modifiable">
           <q-menu><q-card class="qc">{{lc[c2() || c4()]}}</q-card></q-menu></q-btn>
-        <q-btn v-if="ed && !c2() && !c4()" class="col-auto" size="md" flat dense color="primary" label="Protection d'écriture" @click="protectionP"/>
-        <q-btn v-if="ed && !c2() && !c4()" class="col-auto" :disable="!state.modifp" size="sm" dense push icon="undo" color="primary" @click="undop"/>
+        <q-btn v-if="ed && !c2() && !c3()" class="col-auto" size="md" flat dense color="primary" label="Protection d'écriture" @click="protectionP"/>
+        <q-btn v-if="ed && !c2() && !c3()" class="col-auto" :disable="!state.modifp" size="sm" dense push icon="undo" color="primary" @click="undop"/>
       </div>
       <div v-if="secret.ts !== 0" class="col-auto q-px-xs full-width row justify-between items-center">
         <div class="col">
@@ -91,6 +80,12 @@
         <q-btn v-if="ed && !c9()" :disable="!state.modiftp" class="col-auto" size="sm" dense push icon="undo" color="primary" @click="undotp"/>
       </div>
 
+      <div class="col-auto q-px-xs full-width">
+        <div class="fs-md">Taille du texte du secret : <span class="font-mono">{{secret.v1}}</span></div>
+        <div class="fs-md">Volume total des pièces jointes : <span class="font-mono">{{secret.v2}}</span></div>
+        <div v-if="secret.ts" class="fs-md">Derniers auteurs : <span class="font-mono">{{secret.auteurs().join(' / ')}}</span></div>
+      </div>
+
       <q-dialog v-if="sessionok" v-model="mcledit">
         <select-motscles :motscles="state.motscles" :src="state.mclocal" @ok="changermcl" :close="fermermcl"></select-motscles>
       </q-dialog>
@@ -114,19 +109,6 @@
           </q-card-actions>
           <q-card-actions v-else>
             <q-btn flat dense v-close-popup color="primary" label="J'ai lu"/>
-          </q-card-actions>
-        </q-card>
-      </q-dialog>
-
-      <q-dialog v-if="sessionok" v-model="plus">
-        <q-card>
-          <q-card-section>
-            <div class="fs-md">Date-heure de dernière modification : {{secret.dh}}</div>
-            <div class="fs-md">Taille du texte du secret : {{secret.v1}}</div>
-            <div class="fs-md">Volume total des pièces jointes : {{secret.v2}}</div>
-          </q-card-section>
-          <q-card-actions align="right">
-            <q-btn flat dense label="J'ai lu" color="primary" @click="plus = false"/>
           </q-card-actions>
         </q-card>
       </q-dialog>
@@ -157,11 +139,15 @@
               <q-icon name='check' class="q-pr-lg" size="md"/>{{m}}
             </div>
           </q-card-section>
-
+          <q-card-section v-if="actions.donnerexmbr">
+            <q-select v-model="auteur" :options="auteurs" dense options-dense label="Choisir un membre du groupe" />
+            <q-btn :disable="!auteur" flat dense :label="'Donner l\'exclusité d\'écriture à ' + auteur"
+              color="warning" @click="setExcluM(auteur)"/>
+          </q-card-section>
           <q-card-actions vertical>
             <q-btn v-if="actions.donnerexmoi" flat dense label="Me donner l'exclusité d'écriture"
               color="warning" @click="setExcluC(false)"/>
-            <q-btn v-if="actions.resetExcluC" flat dense label="Me retirer l'exclusité d'écriture"
+            <q-btn v-if="actions.resetExcluC" flat dense label="Retirer l'exclusité d'écriture"
               color="warning" @click="resetExcluC()"/>
             <q-btn v-if="actions.donnerexctc" flat dense :label="'Donner l\'exclusité d\'écriture à ' + actions.donnerexctc"
               color="warning" @click="setExcluC(true)"/>
@@ -375,7 +361,6 @@ export default ({
     return {
       row: {},
       confirmpin: false,
-      plus: false,
       mcledit: false,
       mcgedit: false,
       protectP: false,
@@ -385,7 +370,9 @@ export default ({
       nomfic: '',
       msg: [],
       titrep: '',
-      actions: {}
+      actions: {},
+      auteurs: [],
+      auteur: ''
     }
   },
 
@@ -526,7 +513,11 @@ export default ({
       this.protectX = false
     },
     resetExcluC () { this.state.xlocal = 0; this.protectX = false },
-
+    setExcluM (auteur) {
+      const n = auteur.substring(0, auteur.indexOf('-'))
+      this.state.xlocal = parseInt(n)
+      this.protectX = false
+    },
     protectionP () { // paramétrage du dialogue de gestion de la protection d'écriture
       const s = this.secret
       const pr = this.state.plocal
@@ -555,10 +546,10 @@ export default ({
           a.nerienfaire = true
         }
       } else if (s.ts === 2) {
-        this.titrep = 'Secret du groupe : ' + this.state.groupe.nom
+        this.titrep = 'Secret du groupe : ' + this.groupe.nom
         const p = this.state.membre.stp
         m.push(this.labelp[p])
-        if (this.state.groupe.sty === 1) {
+        if (this.groupe.sty === 1) {
           m.push('Le groupe est "protégé contre l\'écriture" (archivé), ses secrets n\'y sont pas modifiables. Un animateur peut le remettre en activité')
           a.jailu = true
         } else if (p === 0) {
@@ -567,7 +558,7 @@ export default ({
         } else {
           m.push(pr ? 'Pas de protection d\'écriture' : 'Protection contre les écritures')
           if (ex) {
-            const mbr = data.getMembre(this.state.groupe.id, ex)
+            const mbr = data.getMembre(this.groupe.id, ex)
             const n = mbr ? mbr.nom : ('#' + ex)
             m.push(ex === this.state.im ? 'J\'ai l\'exclusité d\'écriture' : (n + ' a l\'exclusité d\'écriture'))
           }
@@ -600,31 +591,45 @@ export default ({
         } else if (ex === im) {
           m.push('J\'ai l\'exclusité d\'écriture')
           a.resetExcluC = true
-          if (c.naE) a.donnerexctc = c.naE.nom
+          if (c.naE) {
+            a.donnerexctc = true
+            a.donnerexctc = c.naE.nom
+          }
           a.nerienfaire = true
         } else {
           m.push((c.naE ? c.naE.nom : 'L\'autre') + ' a l\'exclusité d\'écriture et est la/le seul à pouvoir transmettre cette exclusivité')
           a.nerienfaire = true
         }
       } else if (s.ts === 2) {
-        const gr = this.state.groupe
+        const gr = this.groupe
         this.titrep = 'Secret du groupe : ' + gr.nom
-        const stp = this.state.membre ? this.state.membre.stp : '0'
-        if (this.state.groupe.sty === 1) {
+        const p = this.state.membre.stp
+        if (p === 0) {
+          m.push('Un simple lecteur ne peut pas changer l\'exclusivité d\'écriture')
+          a.jailu = true
+        } else if (gr.sty === 1) {
           m.push('Le groupe est "protégé contre l\'écriture" (archivé), ses secrets n\'y sont pas modifiables. Un animateur peut le remettre en activité')
           a.jailu = true
         } else {
           if (ex) {
             const mbr = data.getMembre(gr.id, ex)
-            const n = mbr ? mbr.nom : ('#' + ex)
+            const n = mbr ? mbr.nomEd : ('#' + ex)
             m.push(ex === this.state.im ? 'J\'ai l\'exclusité d\'écriture' : (n + ' a l\'exclusité d\'écriture'))
           } else {
-            m.push('Personne n\'a d\'exclisivité d\'écriture')
+            m.push('Personne n\'a d\'exclusivité d\'écriture')
           }
-          if (ex === this.state.im || stp === 2) { // l'exclusivité équivalente ici au pouvoir d'animateur
-            a.donnerexmbr = true // choix du membre recevant l'exclusivité
-            // TODO
-            a.ok = true
+          if (ex === this.state.im || p === 2) {
+            a.resetExcluC = true
+            a.nerienfaire = true
+          }
+          if (!ex || p === 2) {
+            a.donnerexmoi = true
+            a.nerienfaire = true
+          }
+          if (!ex || ex === this.state.im || p === 2) { // l'exclusivité équivalente ici au pouvoir d'animateur
+            a.donnerexmbr = true // je peux transférer et supprimer l'exclusivité. Choix du membre recevant l'exclusivité
+            a.nerienfaire = true
+            this.auteurs = gr.auteurs()
           } else {
             m.push('N\'ayant pas l\'exclusivité et n\'étant pas animateur, vous ne pouvez pas changer les protections d\'écriture')
             a.jailu = true
@@ -702,13 +707,19 @@ export default ({
     })
     const prefs = computed(() => { return data.getPrefs() })
     const avatar = computed(() => { return $store.state.db.avatar })
-    const couple = computed(() => { return $store.state.db.couple })
-    const groupe = computed(() => { return $store.state.db.groupe })
     const mode = computed(() => $store.state.ui.mode)
     const avsecrets = computed(() => $store.state.db.avsecrets)
     const secret = computed({ // secret courant
       get: () => $store.state.db.secret,
       set: (val) => $store.commit('db/majsecret', val)
+    })
+    const couple = computed({ // secret courant
+      get: () => $store.state.db.couple,
+      set: (val) => $store.commit('db/majcouple', val)
+    })
+    const groupe = computed({ // secret courant
+      get: () => $store.state.db.groupe,
+      set: (val) => $store.commit('db/majgroupe', val)
     })
 
     const state = reactive({
@@ -748,6 +759,10 @@ export default ({
       const s = secret.value // Normalement (!!!) s n'est jamais null ici
       if (s) $store.commit('db/initVoisins', s)
       const z = s && !s.suppr
+      if (z) {
+        if (s.ts === 1 && (!couple.value || couple.value.id !== s.id)) couple.value = s.couple
+        if (s.ts === 2 && (!groupe.value || groupe.value.id !== s.id)) groupe.value = s.groupe
+      }
       if (z && s.v === 0) state.enedition = true
       state.im = z ? s.im(avid) : 0
       state.membre = z ? s.membre(avid) : null
@@ -868,36 +883,36 @@ export default ({
       'Le secret est protégé contre l\'écriture et la suppression'
     ]
 
-    function c1 () {
+    function c1 () { // groupe protégé en écriture (archivé)
       const s = secret.value
       return !s || (s.groupe && s.groupe.sty) ? 1 : 0
     }
-    function c2 () {
+    function c2 () { // couple et exclusivité accordée à l'autre
       const s = secret.value
       return !s || (s.ts === 1 && s.exclu && s.exclu !== state.im) ? 2 : 0
     }
-    function c3 () {
+    function c3 () { // groupe et exclusivité accordée à un autre et pas animateur
       const s = secret.value
       const m = state.membre
       return !s || (s.ts === 2 && s.exclu && s.exclu !== state.im && m.stp !== 2) ? 3 : 0
     }
-    function c4 () {
+    function c4 () { // groupe et pas animateur
       const s = secret.value
       const m = state.membre
       return !s || (s.ts === 2 && m.stp !== 2) ? 4 : 0
     }
-    function c5 () {
+    function c5 () { // groupe et pas auteur
       const s = secret.value
       const m = state.membre
-      return !s || (s.ts === 2 && m.stp <= 1) ? 5 : 0
+      return !s || (s.ts === 2 && m.stp < 1) ? 5 : 0
     }
-    function c6 () {
+    function c6 () { // groupe et exclusivité accordée à un autre
       const s = secret.value
       return !s || (s.ts === 2 && s.exclu && s.exclu !== state.im) ? 6 : 0
     }
-    function c7 () {
+    function c7 () { // secret protégé en écriture
       const s = secret.value
-      return !s || s.stp ? 7 : 0
+      return !s || s.protect ? 7 : 0
     }
     function c8 () { return c7() || c5() || c2() || c6() }
     function c9 () { return c5() || c2() || c6() }

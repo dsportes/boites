@@ -526,7 +526,7 @@ export default ({
           afficherdiagnostic('Le groupe ? n\'est pas en état d\'accepter le partage de nouveaux secrets.')
           return
         }
-        if (g.sty === 0) {
+        if (g.sty === 1) {
           afficherdiagnostic('Le groupe ' + g.nom + ' est "archivé", création et modification de secrets impossible.')
           return
         }

@@ -1187,6 +1187,7 @@ export class Groupe {
 
   get cle () { return data.repertoire.cle(this.id) }
   get na () { return data.repertoire.na(this.id) }
+  get nom () { return this.na.nom }
   get nomEd () { return titreEd(this.na.nom || '', this.info) }
   nomEdMb (m) { const t = m.titre; return t ? (t + ' [' + this.nomEd + ']') : this.nomEd }
 
@@ -1200,7 +1201,11 @@ export class Groupe {
 
   estHeb (avid) { const na = this.naHeb; return na && !this.dfh && na.id === avid }
 
-  get naHeb () { if (!this.dfh) return null; const m = data.getMembre(this.id, this.imh); return m ? m.namb : null }
+  get naHeb () {
+    if (this.dfh) return null
+    const m = data.getMembre(this.id, this.imh)
+    return m ? m.namb : null
+  }
 
   imDeId (id) {
     for (const im in data.getMembre(this.id)) {
@@ -1208,6 +1213,15 @@ export class Groupe {
       if (m.namb.id === id) return parseInt(im)
     }
     return 0
+  }
+
+  auteurs () {
+    const l = []
+    for (const im in data.getMembre(this.id)) {
+      const m = data.getMembre(this.id, im)
+      if (m.stp) l.push(im + '-' + m.nomEd)
+    }
+    return l
   }
 
   membreParId (id) {
@@ -1519,6 +1533,13 @@ export class Secret {
   mcl (avid) {
     if (this.ts >= 1) return (this.mc ? this.mc[this.im(avid)] : new Uint8Array([])) || new Uint8Array([])
     return this.mc || new Uint8Array([])
+  }
+
+  auteurs () {
+    const l = []
+    if (this.ts === 1) this.txt.l.forEach(im => { l.push(this.couple.naDeIm(im).nom) })
+    if (this.ts === 2) this.txt.l.forEach(im => { const m = data.getMembre(this.id, im); if (m) l.push(m.namb.nom) })
+    return l
   }
 
   cloneSuppr () {

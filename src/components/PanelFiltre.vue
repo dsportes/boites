@@ -190,10 +190,10 @@ export default ({
     })
 
     if (couple.value) {
-      optionscp2.splice(2, 1, { label: 'Secrets partagés avec ' + couple.value.nom, value: couple.value.id })
+      optionscp2.splice(2, 1, { label: 'Secrets partagés avec ' + couple.value.na.nom, value: couple.value.id })
     }
     if (groupe.value) {
-      optionsgr2.splice(2, 1, { label: 'Secrets partagés avec le groupe ' + groupe.value.nom, value: groupe.value.id })
+      optionsgr2.splice(2, 1, { label: 'Secrets partagés avec le groupe ' + groupe.value.na.nom, value: groupe.value.id })
     }
 
     watch(() => state.value, (ap, av) => {
