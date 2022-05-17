@@ -2318,8 +2318,7 @@ export class FinHebGroupe extends OperationUI {
   async run (g) {
     try {
       const args = { sessionId: data.sessionId, idh: g.naHeb.id, idg: g.id, imh: g.imh }
-      const ret = await post(this, 'm1', 'finhebGroupe', args)
-      if (data.dh < ret.dh) data.dh = ret.dh
+      await post(this, 'm1', 'finhebGroupe', args)
       this.finOK()
     } catch (e) {
       await this.finKO(e)
@@ -2330,14 +2329,14 @@ export class FinHebGroupe extends OperationUI {
 /* Début d'hébergement d'un groupe ****************************************
 args :
 - sessionId
-- idc, idg : id du compte, id = groupe,
-- idhg : idg crypté par la clé G du groupe
+- idg : du groupe,
+- idh : de l'avatar hébergeur
 - imh : indice de l'avatar membre hébergeur
 Retour: sessionId, dh
 A_SRV, '10-Données de comptabilité absentes'
 A_SRV, '18-Groupe non trouvé'
-X_SRV, '20-Groupe encore hébergé : un nouvel hébergeur ne peut se proposer que si le groupe n\'a plus de compte hébergeur'
-X_SRV, '21-Forfaits (' + f + ') insuffisants pour héberger le groupe.'
+X_SRV, '20-Groupe encore hébergé : un nouvel hébergeur ne peut se proposer que si le groupe n\'a plus d'avatar hébergeur'
+X_SRV, '21-ilierMembreGroupeLimite de volume (' + f + ') insuffisante pour héberger le volume actuel groupe.'
 */
 export class DebHebGroupe extends OperationUI {
   constructor () {
@@ -2349,8 +2348,7 @@ export class DebHebGroupe extends OperationUI {
       const idc = data.getCompte().id
       const idhg = await g.toIdhg(idc)
       const args = { sessionId: data.sessionId, idc, idg: g.id, idhg, imh }
-      const ret = await post(this, 'm1', 'debhebGroupe', args)
-      if (data.dh < ret.dh) data.dh = ret.dh
+      await post(this, 'm1', 'debhebGroupe', args)
       this.finOK()
     } catch (e) {
       await this.finKO(e)
@@ -2366,8 +2364,8 @@ args :
 - forfaits: [max1, max2]
 Retour: sessionId, dh
 A_SRV, '18-Groupe non trouvé'
-A_SRV, '22-Groupe hébergé par un autre compte'
-X_SRV, '21-Forfaits (' + f + ') insuffisants pour héberger le groupe.'
+A_SRV, '22-Groupe hébergé par un autre avatar'
+X_SRV, '21-Limite de volume (' + f + ') insuffisante pour héberger le groupe avec son volume actuel.'
 */
 export class MajvmaxGroupe extends OperationUI {
   constructor () {
@@ -2377,8 +2375,32 @@ export class MajvmaxGroupe extends OperationUI {
   async run (g, imh, f) {
     try {
       const args = { sessionId: data.sessionId, idg: g.id, imh, forfaits: f }
-      const ret = await post(this, 'm1', 'majvmaxGroupe', args)
-      if (data.dh < ret.dh) data.dh = ret.dh
+      await post(this, 'm1', 'majvmaxGroupe', args)
+      this.finOK()
+    } catch (e) {
+      await this.finKO(e)
+    }
+  }
+}
+
+/* Mise à jour LAA d'un membre d'un groupe ****************************************
+args :
+- sessionId
+- idg : du groupe,
+- im : de l'avatar membre
+- laa: 0 1 2
+Retour: sessionId, dh
+A_SRV, '19-Membre non trouvé'
+*/
+export class MajLAAMembre extends OperationUI {
+  constructor () {
+    super('Mise à jour du statut lecteur / auteur / animateur d\'un membre d\'un groupe', OUI, SELONMODE)
+  }
+
+  async run (g, im, laa) {
+    try {
+      const args = { sessionId: data.sessionId, idg: g.id, im, laa }
+      await post(this, 'm1', 'majLAAMembre', args)
       this.finOK()
     } catch (e) {
       await this.finKO(e)

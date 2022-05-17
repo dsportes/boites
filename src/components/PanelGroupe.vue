@@ -136,7 +136,7 @@
 import { computed, reactive, watch, toRef, onMounted } from 'vue'
 import { useStore } from 'vuex'
 import { useQuasar } from 'quasar'
-import { Motscles, cfg, FiltreMbr, getJourJ } from '../app/util.mjs'
+import { Motscles, cfg, FiltreMbr, getJourJ, afficherdiagnostic } from '../app/util.mjs'
 import { data } from '../app/modele.mjs'
 import {
   MajMcGroupe, MajArchGroupe, MajBIGroupe, FinHebGroupe, DebHebGroupe, MajvmaxGroupe,
@@ -211,8 +211,13 @@ export default ({
     },
 
     async debheb () {
-      const imh = this.state.g.imDeId(this.avatar.id)
-      await new DebHebGroupe().run(this.state.g, imh)
+      const m = this.state.g.membreParId(this.avatar.id)
+      if (!m) return
+      if (m.stp !== 2) {
+        afficherdiagnostic('Seul un animateur peut être hébergeur du groupe')
+      } else {
+        await new DebHebGroupe().run(this.state.g, m.im)
+      }
     },
     async finheb () {
       const imh = this.state.g.imDeId(this.avatar.id)

@@ -175,14 +175,14 @@
 import { computed, reactive, watch, ref, toRef } from 'vue'
 import { useStore } from 'vuex'
 // import { useQuasar } from 'quasar'
-import { Motscles, cfg } from '../app/util.mjs'
+import { Motscles, cfg, afficherdiagnostic } from '../app/util.mjs'
 import { data } from '../app/modele.mjs'
 import ShowHtml from './ShowHtml.vue'
 import IdentiteCv from './IdentiteCv.vue'
 import SelectMotscles from './SelectMotscles.vue'
 import ApercuMotscles from './ApercuMotscles.vue'
 import EditeurMd from './EditeurMd.vue'
-import { AcceptInvitGroupe, RefusInvitGroupe, MajMcMembre, MajArdMembre, MajInfoMembre, InviterGroupe, ResilierMembreGroupe } from '../app/operations.mjs'
+import { MajLAAMembre, AcceptInvitGroupe, RefusInvitGroupe, MajMcMembre, MajArdMembre, MajInfoMembre, InviterGroupe, ResilierMembreGroupe } from '../app/operations.mjs'
 import { retourInvitation } from '../app/page.mjs'
 
 export default ({
@@ -239,7 +239,11 @@ export default ({
     autoresilier () {
     },
     async resilier () {
-      await new ResilierMembreGroupe().run(this.m)
+      if (this.g.imh === this.m.im) {
+        afficherdiagnostic('Impossible de résilier l\'hébergeur du groupe')
+      } else {
+        await new ResilierMembreGroupe().run(this.m)
+      }
     },
     async accepterinvit () {
       await new AcceptInvitGroupe().run(this.m)
@@ -247,7 +251,8 @@ export default ({
     async refuserinvit () {
       await new RefusInvitGroupe().run(this.m, this.avatar)
     },
-    modifierlaa () {
+    async modifierlaa () {
+      await new MajLAAMembre().run(this.g, this.m.im, this.laa)
     }
   },
 
