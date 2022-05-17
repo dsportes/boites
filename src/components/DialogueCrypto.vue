@@ -7,22 +7,6 @@
           <bouton-help page="page1"/>
         </q-card-section>
         <q-card-section>
-
-    <q-checkbox v-model="vkb" label="Clavier virtuel" />
-    <q-input dense counter hint="Au moins 16 caractères" @focus="setKB(1)" v-model="ligne1" :type="isPwd ? 'password' : 'text'" label="Première ligne de la phrase secrète">
-    <template v-slot:append>
-        <q-icon :name="isPwd ? 'visibility_off' : 'visibility'" class="cursor-pointer" @click="isPwd = !isPwd"/>
-        <span :class="!ligne1 || ligne1.length === 0 ? 'disabled' : ''"><q-icon name="cancel" class="cursor-pointer"  @click="ligne1 = ''"/></span>
-    </template>
-    </q-input>
-    <q-input dense counter hint="Au moins 16 caractères" @focus="setKB(2)" v-model="ligne2" :type="isPwd ? 'password' : 'text'" label="Seconde ligne de la phrase secrète">
-    <template v-slot:append>
-        <q-icon :name="isPwd ? 'visibility_off' : 'visibility'" class="cursor-pointer" @click="isPwd = !isPwd"/>
-        <span :class="!ligne2 || ligne2.length === 0 ? 'disabled' : ''"><q-icon name="cancel" class="cursor-pointer"  @click="ligne2 = ''"/></span>
-    </template>
-    </q-input>
-
-          <div class="simple-keyboard"></div>
         </q-card-section>
         <q-card-section class="q-ma-xs">
           <phrase-secrete v-on:ok-ps="okps" icon-valider="check" label-ok="OK"></phrase-secrete>
@@ -44,14 +28,11 @@
 
 <script>
 import { useStore } from 'vuex'
-import { computed, ref, watch } from 'vue'
+import { computed } from 'vue'
 import { crypt } from '../app/crypto.mjs'
 import PhraseSecrete from '../components/PhraseSecrete.vue'
 import BoutonHelp from '../components/BoutonHelp.vue'
 import { post, testEcho } from '../app/util.mjs'
-// eslint-disable-next-line no-unused-vars
-import Keyboard from 'simple-keyboard'
-import 'simple-keyboard/build/css/index.css'
 
 export default ({
   name: 'DialogueCrypto',
@@ -73,10 +54,6 @@ export default ({
   },
 
   methods: {
-    onInputChange (input) {
-    },
-    onInputFocus (input) {
-    },
     okps (ps) {
       this.ps = ps
     },
@@ -105,77 +82,6 @@ export default ({
   },
 
   setup () {
-    const layout = {
-      default: [
-        '` 1 2 3 4 5 6 7 8 9 0 \u00B0 + {bksp}',
-        '{tab} a z e r t y u i o p ^ $',
-        '{lock} q s d f g h j k l m \u00F9 * {enter}',
-        '{shift} < w x c v b n , ; : ! {shift}',
-        '.com @ {space}'
-      ],
-      shift: [
-        "\u00B2 & \u00E9 \" ' ( - \u00E8 _ \u00E7 \u00E0 ) = {bksp}",
-        '{tab} A Z E R T Y U I O P \u00A8 \u00A3',
-        '{lock} Q S D F G H J K L M % \u00B5 {enter}',
-        '{shift} > W X C V B N ? . / \u00A7 {shift}',
-        '.com @ {space}'
-      ]
-    }
-
-    const keyboard = ref(null)
-
-    const ligne1 = ref('')
-    const ligne2 = ref('')
-    const nl = ref(0)
-    const vkb = ref(false)
-
-    function onChange (input) {
-      if (nl.value === 1) ligne1.value = input
-      if (nl.value === 2) ligne2.value = input
-    }
-
-    function handleShift () {
-      const currentLayout = keyboard.value.options.layoutName
-      const shiftToggle = currentLayout === 'default' ? 'shift' : 'default'
-      keyboard.value.setOptions({
-        layoutName: shiftToggle
-      })
-    }
-
-    // eslint-disable-next-line no-unused-vars
-    function onKeyPress (button) {
-      if (button === '{shift}' || button === '{lock}') handleShift()
-      if (button === '{enter}') {
-        keyboard.value.destroy()
-        nl.value = 0
-      }
-      console.log('Button pressed: ' + button)
-    }
-
-    function setKB (n) {
-      if (!vkb.value) return
-      if (!nl.value) {
-        keyboard.value = new Keyboard({
-          onChange: input => onChange(input),
-          onKeyPress: button => onKeyPress(button),
-          layout: layout,
-          theme: 'hg-theme-default'
-        })
-      }
-      if (nl.value !== n) {
-        if (n === 1) keyboard.value.setInput(ligne1.value)
-        if (n === 2) keyboard.value.setInput(ligne2.value)
-      }
-      nl.value = n
-    }
-
-    watch(() => vkb.value, (ap, av) => {
-      if (!ap && keyboard.value) {
-        keyboard.value.destroy()
-        nl.value = 0
-      }
-    })
-
     const $store = useStore()
     const dialoguecrypto = computed({
       get: () => $store.state.ui.dialoguecrypto,
@@ -183,12 +89,7 @@ export default ({
     })
 
     return {
-      dialoguecrypto,
-      keyboard,
-      setKB,
-      ligne1,
-      ligne2,
-      vkb
+      dialoguecrypto
     }
   }
 })
@@ -201,7 +102,4 @@ export default ({
   color: $primary
 .t2
   font-family: 'Roboto Mono'
-.hg-theme-default
-  color: black !important
-  font-family:'Roboto Mono'
 </style>
