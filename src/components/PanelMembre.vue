@@ -67,19 +67,19 @@
           </q-item-section>
           <q-item-section>Résilier du groupe</q-item-section>
         </q-item>
-        <q-separator v-if="g.maxStp() === 2 && m.stx >= 1 && m.stx <= 2 && (m.stp < 2 || m.estAc)" />
-        <q-item v-if="g.maxStp() === 2 && m.stx >= 1 && m.stx <= 2 && (m.stp < 2 || m.estAc)" clickable v-ripple v-close-popup @click="changerlaa">
-          <q-item-section avatar>
-            <q-icon dense name="close" color="warning" size="sm"/>
-          </q-item-section>
-          <q-item-section>Changer le niveau d'habilitation</q-item-section>
-        </q-item>
         <q-separator v-if="m.stp === 2 && m.estAc"/>
         <q-item v-if="m.stx === 2 && m.estAc" clickable v-ripple v-close-popup @click="autoresilier">
           <q-item-section avatar>
             <q-icon dense name="close" color="warning" size="sm"/>
           </q-item-section>
           <q-item-section>S'auto-résilier du groupe</q-item-section>
+        </q-item>
+        <q-separator v-if="g.maxStp() === 2 && m.stx >= 1 && m.stx <= 2 && (m.stp < 2 || m.estAc)" />
+        <q-item v-if="g.maxStp() === 2 && m.stx >= 1 && m.stx <= 2 && (m.stp < 2 || m.estAc)" clickable v-ripple v-close-popup @click="changerlaa">
+          <q-item-section avatar>
+            <q-icon dense name="close" color="warning" size="sm"/>
+          </q-item-section>
+          <q-item-section>Changer le niveau d'habilitation</q-item-section>
         </q-item>
       </q-list>
     </q-menu>
@@ -235,8 +235,24 @@ export default ({
       await new InviterGroupe().run(this.g.na, this.m, this.laa)
       this.invitcontact = false
     },
-    // TODO
-    autoresilier () {
+
+    async autoresilier () {
+      let msg = 'Voulez-vous vraiment vous auto-résilier du groupe ? '
+      if (this.g.imh === this.m.im) msg += 'Vous êtes hébergeur du groupe : après auto-résiliation le groupe sera bloqué en lecture puis disparaîtra. '
+      if (this.g.nbActifsInvites() === 1) msg += 'Vous êtes le dernier membre actif du groupe: après auto-résiliation le groupe sera détruit'
+      this.$q.dialog({
+        dark: true,
+        title: 'Confirmer l\'auto-résiliation',
+        message: msg,
+        cancel: { label: 'Je renonce', color: 'primary' },
+        ok: { color: 'warning', label: 'Je confirme mon auto-résiliation' },
+        persistent: true
+      }).onOk(async () => {
+        await new ResilierMembreGroupe().run(this.m)
+      }).onCancel(() => {
+      }).onDismiss(() => {
+        // console.log('I am triggered on both OK and Cancel')
+      })
     },
     async resilier () {
       if (this.g.imh === this.m.im) {

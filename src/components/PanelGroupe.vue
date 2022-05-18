@@ -166,14 +166,14 @@ export default ({
     nbj (j) { return j - getJourJ() },
 
     voirsecrets () {
-      this.tabavtar = 'secrets'
+      this.tabavatar = 'secrets'
       setTimeout(() => {
         this.evtfiltresecrets = { cmd: 'fsg', arg: this.groupe }
       }, 100)
     },
 
     nouveausecret () {
-      this.tabavtar = 'secrets'
+      this.tabavatar = 'secrets'
       setTimeout(() => {
         this.evtfiltresecrets = { cmd: 'nvg', arg: this.groupe }
       })
@@ -241,7 +241,14 @@ export default ({
     const $q = useQuasar()
     const $store = useStore()
     const sessionok = computed(() => { return $store.state.ui.sessionok })
-
+    const tabavatar = computed({
+      get: () => $store.state.ui.tabavatar,
+      set: (val) => $store.commit('ui/majtabavatar', val)
+    })
+    const evtfiltresecrets = computed({ // secret courant
+      get: () => $store.state.ui.evtfiltresecrets,
+      set: (val) => $store.commit('ui/majevtfiltresecrets', val)
+    })
     const groupe = toRef(props, 'groupe')
     const avatargrform = computed({
       get: () => $store.state.ui.avatargrform,
@@ -466,6 +473,8 @@ export default ({
 
     return {
       sessionok,
+      tabavatar,
+      evtfiltresecrets,
       avatargrform,
       phdefa,
       phdefg,

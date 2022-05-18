@@ -1224,6 +1224,15 @@ export class Groupe {
     return l
   }
 
+  nbActifsInvites () { // actif et invité
+    let n = 0
+    for (const im in data.getMembre(this.id)) {
+      const m = data.getMembre(this.id, im)
+      if (m.stx === 1 || m.stx === 2) n++
+    }
+    return n
+  }
+
   membreParId (id) {
     for (const im in data.getMembre(this.id)) {
       const m = data.getMembre(this.id, im)
@@ -1537,8 +1546,10 @@ export class Secret {
 
   auteurs () {
     const l = []
-    if (this.ts === 1) this.txt.l.forEach(im => { l.push(this.couple.naDeIm(im).nom) })
-    if (this.ts === 2) this.txt.l.forEach(im => { const m = data.getMembre(this.id, im); if (m) l.push(m.namb.nom) })
+    if (this.txt && this.txt.l) {
+      if (this.ts === 1) this.txt.l.forEach(im => { l.push(this.couple.naDeIm(im).nom) })
+      if (this.ts === 2) this.txt.l.forEach(im => { const m = data.getMembre(this.id, im); if (m) l.push(m.namb.nom) })
+    }
     return l
   }
 
