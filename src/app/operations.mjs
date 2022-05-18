@@ -1718,10 +1718,15 @@ export class SupprimerCouple extends OperationUI {
 }
 
 /******************************************************************
-Parrainage : args de m1/nouveauParrainage
-- sessionId: data.sessionId,
-- rowCouple
-- rowContact
+Parrainage :
+arg :
+  phch: // le hash de la clex (integer)
+  pp: // phrase de parrainage (string)
+  clex: // PBKFD de pp (u8)
+  forfaits: this.forfaits,
+  ressources: this.estParrain ? this.ressources : null,
+  nomf: this.nom, // nom du filleul (string)
+  mot: this.mot
 Retour : dh
 X_SRV, '14-Cette phrase de parrainage est trop proche d\'une déjà enregistrée' + x
 */
@@ -1733,16 +1738,6 @@ export class NouveauParrainage extends OperationUI {
 
   async run (arg) {
     /*
-      - `lcck` : map : de avatar
-        - _clé_ : `ni`, numéro pseudo aléatoire. Hash de (`cc` en hexa suivi de `0` ou `1`).
-        - _valeur_ : clé `cc` cryptée par la clé K de l'avatar cible. Le hash d'une clé d'un couple donne son id.
-      phch: // le hash de la clex (integer)
-      pp: // phrase de parrainage (string)
-      clex: // PBKFD de pp (u8)
-      forfaits: this.forfaits,
-      ressources: this.estParrain ? this.ressources : null,
-      nomf: this.nom, // nom du filleul (string)
-      mot: this.mot
     args :
       - sessionid
       - row Contact :
@@ -1750,10 +1745,14 @@ export class NouveauParrainage extends OperationUI {
       - id: id de l'avatar
       - ni: clé d'accès à lcck de l'avatar
       - datak : clé cc cryptée par la clé k
-    X_SRV, '14-Cette phrase de parrainage est trop proche d\'une déjà enregistrée'
+    X_SRV, '14-Cette phrase de parrainage / rencontre est trop proche d\'une déjà enregistrée'
     A_SRV, '23-Avatar non trouvé.'
     */
     try {
+      /* `lcck` : map : de avatar
+          - _clé_ : `ni`, numéro pseudo aléatoire. Hash de (`cc` en hexa suivi de `0` ou `1`).
+          - _valeur_ : clé `cc` cryptée par la clé K de l'avatar cible. Le hash d'une clé d'un couple donne son id.
+      */
       const cc = crypt.random(32) // clé du couple
       const ni = crypt.hash(crypt.u8ToHex(cc) + '0')
       const datak = await crypt.crypter(data.clek, cc)
@@ -1762,6 +1761,63 @@ export class NouveauParrainage extends OperationUI {
       const dlv = getJourJ() + cfg().limitesjour.parrainage
 
       const couple = new Couple().nouveauP(nap, naf, cc, dlv, arg.mot, arg.pp, arg.forfaits, arg.ressources)
+      const rowCouple = await couple.toRow()
+
+      const contact = await new Contact().nouveau(arg.phch, arg.clex, dlv, cc, arg.nomf)
+      const rowContact = contact.toRow()
+
+      const args = { sessionId: data.sessionId, rowCouple, rowContact, ni, datak, id: nap.id }
+      await post(this, 'm1', 'nouveauParrainage', args)
+      return this.finOK()
+    } catch (e) {
+      return await this.finKO(e)
+    }
+  }
+}
+
+/******************************************************************
+Nouvelle rencontre :
+arg = {
+  phch: this.phch, // le hash de la clex (integer)
+  pp: this.phrase, // phrase de rencontre (string)
+  clex: this.clex, // PBKFD de pp (u8)
+  id: this.avatar.id,
+  forfaits: this.forfaits, // max volumes couple
+  nomf: this.nom, // nom de l'avatar rencontré
+  mot: this.mot // mot de bienvenue
+}
+Retour : dh
+X_SRV, '14-Cette phrase de parrainage / rencontre est trop proche d\'une déjà enregistrée' + x
+*/
+
+export class NouvelleRencontre extends OperationUI {
+  constructor () {
+    super('Rencontre avec un avatar', OUI, SELONMODE)
+  }
+
+  async run (arg) {
+    /* `lcck` : map : de avatar
+        - _clé_ : `ni`, numéro pseudo aléatoire. Hash de (`cc` en hexa suivi de `0` ou `1`).
+        - _valeur_ : clé `cc` cryptée par la clé K de l'avatar cible. Le hash d'une clé d'un couple donne son id.
+    args :
+      - sessionid
+      - row Contact :
+      - row Couple :
+      - id: id de l'avatar
+      - ni: clé d'accès à lcck de l'avatar
+      - datak : clé cc cryptée par la clé k
+    X_SRV, '14-Cette phrase de parrainage / rencontre est trop proche d\'une déjà enregistrée'
+    A_SRV, '23-Avatar non trouvé.'
+    */
+    try {
+      const cc = crypt.random(32) // clé du couple
+      const ni = crypt.hash(crypt.u8ToHex(cc) + '0')
+      const datak = await crypt.crypter(data.clek, cc)
+      const nap = data.repertoire.na(arg.id) // na de l'avatar créateur
+      const naf = new NomAvatar(arg.nomf) // na de l'avatar rencontré
+      const dlv = getJourJ() + cfg().limitesjour.parrainage
+
+      const couple = new Couple().nouveauR(nap, naf, cc, dlv, arg.mot, arg.pp, arg.forfaits)
       const rowCouple = await couple.toRow()
 
       const contact = await new Contact().nouveau(arg.phch, arg.clex, dlv, cc, arg.nomf)

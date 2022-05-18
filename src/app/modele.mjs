@@ -976,10 +976,16 @@ export class Couple {
     if (!cle) data.repertoire.setCp(na); else this.naTemp = na
   }
 
+  nouveauR (naI, naE, cc, dlv, mot, pp, forfaits) {
+    this.nouveauP(naI, naE, cc, dlv, mot, pp, forfaits, null)
+    this.st = 1710
+    return this
+  }
+
   nouveauP (naI, naE, cc, dlv, mot, pp, forfaits, ressources) {
     this.v = 0
     this.vsh = 0
-    this.st = 1110
+    this.st = 1410
     this.naI = naI
     this.idI = naI.id
     this.naE = naE

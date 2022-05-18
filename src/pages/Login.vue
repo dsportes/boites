@@ -103,7 +103,7 @@ export default ({
         this.phch = crypt.hash(hx)
         this.encours = false
         const resp = await get('m1', 'getContact', { phch: this.phch })
-        if (!resp) {
+        if (!resp || !resp.length) {
           this.diagnostic = 'Cette phrase de parrainage est introuvable'
         } else {
           try {
