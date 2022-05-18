@@ -2032,8 +2032,7 @@ export class MajMcGroupe extends OperationUI {
   async run (groupe, mmc) { // arguments : groupe, map des mots clés
     try {
       const args = { sessionId: data.sessionId, idg: groupe.id, mcg: await groupe.toMcg(mmc) }
-      const ret = await post(this, 'm1', 'majmcGroupe', args)
-      if (data.dh < ret.dh) data.dh = ret.dh
+      await post(this, 'm1', 'majmcGroupe', args)
       this.finOK()
     } catch (e) {
       await this.finKO(e)
@@ -2056,8 +2055,7 @@ export class MajCvGroupe extends OperationUI {
   async run (groupe, cv) {
     try {
       const args = { sessionId: data.sessionId, idg: groupe.id, cvg: await groupe.toCvg(cv) }
-      const ret = await post(this, 'm1', 'majcvGroupe', args)
-      if (data.dh < ret.dh) data.dh = ret.dh
+      await post(this, 'm1', 'majcvGroupe', args)
       this.finOK()
     } catch (e) {
       await this.finKO(e)
@@ -2080,8 +2078,7 @@ export class MajArchGroupe extends OperationUI {
   async run (groupe, arch) {
     try {
       const args = { sessionId: data.sessionId, idg: groupe.id, arch }
-      const ret = await post(this, 'm1', 'majarchGroupe', args)
-      if (data.dh < ret.dh) data.dh = ret.dh
+      await post(this, 'm1', 'majarchGroupe', args)
       this.finOK()
     } catch (e) {
       await this.finKO(e)
@@ -2097,15 +2094,37 @@ Retour :
 */
 export class MajBIGroupe extends OperationUI {
   constructor () {
-    super('Mise à jour des mots clés d\'un groupe', OUI, SELONMODE)
+    super('Blocage des invitations d\'un groupe', OUI, SELONMODE)
   }
 
-  // arguments : groupe, blocage (true / false)
-  async run (groupe, blocage) {
+  // arguments : groupe
+  async run (groupe) {
     try {
-      const args = { sessionId: data.sessionId, idg: groupe.id, blocage }
-      const ret = await post(this, 'm1', 'majBIGroupe', args)
-      if (data.dh < ret.dh) data.dh = ret.dh
+      const args = { sessionId: data.sessionId, idg: groupe.id }
+      await post(this, 'm1', 'majBIGroupe', args)
+      this.finOK()
+    } catch (e) {
+      await this.finKO(e)
+    }
+  }
+}
+
+/* Mise à jour du statut de blocage d'invitations d'un groupe ****************************************
+- sessionId
+Retour :
+- sessionId
+- dh
+*/
+export class MajDBIGroupe extends OperationUI {
+  constructor () {
+    super('Déblocage des invitations d\'un groupe', OUI, SELONMODE)
+  }
+
+  // arguments : groupe
+  async run (membre) {
+    try {
+      const args = { sessionId: data.sessionId, idg: membre.id, im: membre.im }
+      await post(this, 'm1', 'majDBIGroupe', args)
       this.finOK()
     } catch (e) {
       await this.finKO(e)

@@ -41,11 +41,16 @@
 
       <q-toggle v-model="state.arch" :disable="!anim" size="md" :color="state.arch ? 'warning' : 'green'"
           :label="state.arch ? 'Création de secrets et mises à jour bloquées' : 'Création de secrets et mises à jour libres'"/>
-      <div v-if="state.g.stx === 2">
-        <div class="text-italic text-bold" color="warning">Invitation bloquées - {{state.nbvote}} vote(s) pour le déblocage sur {{state.nbanim}}</div>
-        <q-btn v-if="anim" class="q-ma-xs" size="md" dense icon="lock_open" label="Débloquer les invitations" @click="debloquer" />
+      <div v-if="state.g.stx === 2" class="q-mb-sm">
+        <div class="text-bold text-warning titre-md">Invitations encore bloquées par :</div>
+        <div class="row items-center">
+          <div v-for="m in state.votes" :key="m.pkv" class="q-px-md">
+            <span>{{m.namb.nom}}</span>
+            <q-btn v-if="m.estAc" class="q-xl-xs" dense size="sm" color="primary" label="débloquer" @click="debloquer(m)"/>
+          </div>
+        </div>
       </div>
-      <div v-if="state.g.stx === 1">
+      <div v-if="state.g.stx === 1" class="q-mb-sm">
         <div class="text-italic">Les invitations sont libres</div>
         <q-btn v-if="anim" class="q-ma-xs" size="md" dense icon="lock" label="Bloquer les invitations" @click="bloquer" />
       </div>
@@ -138,10 +143,7 @@ import { useStore } from 'vuex'
 import { useQuasar } from 'quasar'
 import { Motscles, cfg, FiltreMbr, getJourJ, afficherdiagnostic } from '../app/util.mjs'
 import { data } from '../app/modele.mjs'
-import {
-  MajMcGroupe, MajArchGroupe, MajBIGroupe, FinHebGroupe, DebHebGroupe, MajvmaxGroupe,
-  ContactGroupe, MajCv
-} from '../app/operations.mjs'
+import { MajMcGroupe, MajArchGroupe, MajBIGroupe, MajDBIGroupe, FinHebGroupe, DebHebGroupe, MajvmaxGroupe, ContactGroupe, MajCv } from '../app/operations.mjs'
 import ShowHtml from './ShowHtml.vue'
 import IdentiteCv from './IdentiteCv.vue'
 import PanelMembre from './PanelMembre.vue'
@@ -186,10 +188,10 @@ export default ({
       new MajMcGroupe().run(this.state.g, mmc)
     },
     async bloquer () {
-      await new MajBIGroupe().run(this.state.g, true)
+      await new MajBIGroupe().run(this.state.g)
     },
-    async debloquer () {
-      await new MajBIGroupe().run(this.state.g, false)
+    async debloquer (m) {
+      await new MajDBIGroupe().run(m)
     },
 
     suiv (n) { if (this.suivant) this.suivant(n) },
@@ -329,21 +331,22 @@ export default ({
       const lstAc = []
       let maxstp = 0
       let nbanim = 0
-      let nbvote = 0
+      const votes = []
       let mbav = null
+      const bl = state.g.stx === 2
       for (const im in membres.value) {
         const m = membres.value[im]
         if (m.namb.id === avatar.value.id) mbav = m
         if (f.filtre(m)) lst.push(m)
         if (m.estAc) { lstAc.push(m); if (m.stp > maxstp) maxstp = m.stp }
         if (m.stp === 2) nbanim++
-        if (m.stp === 2 && m.vote) nbvote++
+        if (bl && m.stp === 2 && m.vote === 1) votes.push(m)
       }
       state.lst = lst
       state.lstAc = lstAc
       state.maxstp = maxstp
       state.nbanim = nbanim
-      state.nbvote = nbvote
+      state.votes = votes
       state.mbav = mbav
     }
 
