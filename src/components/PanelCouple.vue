@@ -31,7 +31,7 @@
           <div class="titre-md text-italic">Volumes maximaux pour les secrets du couple</div>
           <div class="titre-md text-italic">Fixés par moi</div>
           <choix-forfaits v-model="vmaxI" :f1="s.maxI1" :f2="s.maxI2" label-valider="OK" @valider="changervmax"/>
-          <div v-if="s.maxEvis" class="titre-md">Fixés par {{s.naE.nom}}</div>
+          <div v-if="s.maxEvis" class="titre-md">Fixés par {{s.nomE}}</div>
           <choix-forfaits v-if="s.maxEvis" v-model="vmaxE" :f1="s.maxE1" :f2="s.maxE2" lecture/>
         </div>
       </q-card-section>
@@ -66,7 +66,7 @@
 
     <q-expansion-item v-if="s.orig === 1" header-class="expansion-header-class-1 titre-md bg-secondary text-white">
       <template v-slot:header>
-        <q-item-section>Couple créé par parrainage du compte de {{s.naE.nom}}</q-item-section>
+        <q-item-section>Couple créé par parrainage du compte de {{s.nomE}}</q-item-section>
       </template>
       <q-card-section>
         <div>Phrase de parrainage : <span class="text-italic">{{s.phrase}}</span></div>
@@ -74,6 +74,16 @@
         <choix-forfaits v-model="pf" :f1="s.f1" :f2="s.f2" lecture/>
         <div v-if="s.r1 || s.r2" >Réserve attribuée pour parrainage d'autres comptes :</div>
         <choix-forfaits v-if="s.r1 || s.r2" v-model="pr" :f1="s.r1" :f2="s.r2" lecture/>
+      </q-card-section>
+    </q-expansion-item>
+    <q-separator/>
+
+    <q-expansion-item v-if="s.orig === 2" header-class="expansion-header-class-1 titre-md bg-secondary text-white">
+      <template v-slot:header>
+        <q-item-section>Couple créé par rencontre avec l'avatar {{s.nomE}}</q-item-section>
+      </template>
+      <q-card-section>
+        <div>Phrase de rencontre : <span class="text-italic">{{s.phrase}}</span></div>
       </q-card-section>
     </q-expansion-item>
     <q-separator/>
@@ -160,46 +170,48 @@ export default ({
     const cvs = computed(() => { return $store.state.db.cvs })
 
     function libst (c) {
+      const nomE = c.naE ? c.naE.nom : c.data.x[1][0]
       if (c.stp <= 2) {
         return [
           '',
-          `En attente [${c.dlv - getJourJ()} jour(s)] d'acceptation ou de refus de ${c.naE.nom}`,
-          `Proposition faite à ${c.naE.nom} caduque, sans réponse dans les délais`,
-          `Proposition faite à ${c.naE.nom} explicitement refusée`,
-          `En attente [${c.dlv - getJourJ()} jour(s)] d'acceptation ou de refus du parrainage du compte de ${c.naE.nom}`,
-          `Parrainage du compte de ${c.naE.nom} caduque, sans réponse dans les délais`,
-          `Parrainage du compte de ${c.naE.nom} explicitement refusée`,
-          `En attente [${c.dlv - getJourJ()} jour(s)] d'acceptation ou de refus de rencontre avec ${c.naE.nom}`,
-          `Proposition de rencontre faite à ${c.naE.nom} caduque, sans réponse dans les délais`,
-          `Proposition de rencontre faite à ${c.naE.nom} explicitement refusée`
+          `En attente [${c.dlv - getJourJ()} jour(s)] d'acceptation ou de refus de ${nomE}`,
+          `Proposition faite à ${nomE} caduque, sans réponse dans les délais`,
+          `Proposition faite à ${nomE} explicitement refusée`,
+          `En attente [${c.dlv - getJourJ()} jour(s)] d'acceptation ou de refus du parrainage du compte de ${nomE}`,
+          `Parrainage du compte de ${nomE} caduque, sans réponse dans les délais`,
+          `Parrainage du compte de ${nomE} explicitement refusée`,
+          `En attente [${c.dlv - getJourJ()} jour(s)] d'acceptation ou de refus de rencontre avec ${nomE}`,
+          `Proposition de rencontre faite à ${nomE} caduque, sans réponse dans les délais`,
+          `Proposition de rencontre faite à ${nomE} explicitement refusée`
         ][c.ste]
       } else if (c.stp === 3) {
         return 'Couple établi'
       } else if (c.stp === 4) { // stp = 4. Couple quitté par l'autre
         return [
-          `${c.naE.nom} a quitté le couple. Continuation en solo`,
-          `${c.naE.nom} a quitté le couple et a été relancé pour y revenir: attente de sa décision`,
-          `${c.naE.nom} a quitté le couple, a été relancé pour y revenir mais n'a pas répondu dans les délais`,
-          `${c.naE.nom} a quitté le couple, a été relancé pour y revenir mais a explicitement refusé`
+          `${nomE} a quitté le couple. Continuation en solo`,
+          `${nomE} a quitté le couple et a été relancé pour y revenir: attente de sa décision`,
+          `${nomE} a quitté le couple, a été relancé pour y revenir mais n'a pas répondu dans les délais`,
+          `${nomE} a quitté le couple, a été relancé pour y revenir mais a explicitement refusé`
         ][c.ste]
-      } return `${c.naE.nom} a disparu. Continuation en solo`
+      } return `${nomE} a disparu. Continuation en solo`
     }
 
     function liborig (c) {
+      const nomE = c.naE ? c.naE.nom : c.data.x[1][0]
       if (c.orig === 0) {
         return [
-          `Proposition faite à ${c.naE.nom} qui a accepté`,
-          `Proposition faite par ${c.naE.nom} et acceptée`
+          `Proposition faite à ${nomE} qui a accepté`,
+          `Proposition faite par ${nomE} et acceptée`
         ][c.avc]
       } else if (c.orig === 1) {
         return [
-          `A l'occasion de la création du compte ${c.naE.nom} par parrainage`,
-          `Suite à l'acceptation du parrainage du compte par ${c.naE.nom}`
+          `A l'occasion de la création du compte ${nomE} par parrainage`,
+          `Suite à l'acceptation du parrainage du compte par ${nomE}`
         ][c.avc]
       } else {
         return [
-          `Rencontre proposée à ${c.naE.nom} qui a accepté`,
-          `Rencontre proposée par ${c.naE.nom} et acceptée`
+          `Rencontre proposée à ${nomE} qui a accepté`,
+          `Rencontre proposée par ${nomE} et acceptée`
         ][c.avc]
       }
     }
@@ -273,6 +285,7 @@ export default ({
       s.cvc = c ? cvs.value[c.id] : null // carte de visite du couple
       s.na = c ? c.na : null // na du couple
       s.naE = c ? c.naE : null // na de l'autre
+      s.nomE = c ? (c.naE ? c.naE.nom : c.data.x[1][0]) : ''
       s.cvax = c && c.naE ? cvs.value[c.naE] : null // carte de visite de l'autre
       s.orig = c ? c.orig : 0
       s.origlib = c ? liborig(c) : ''

@@ -938,6 +938,7 @@ export class Couple {
   get ste () { return Math.floor(this.st / 100) % 10 }
   get st0 () { return Math.floor(this.st / 10) % 10 }
   get st1 () { return this.st % 10 }
+  get phraseactive () { return this.stp === 1 && this.dlv && !dlvDepassee(this.dlv) }
 
   get cle () { return data.repertoire.cle(this.id) }
   get na () { return data.repertoire.na(this.id) }
@@ -952,7 +953,12 @@ export class Couple {
 
   get nomf () { return normpath(this.nom) }
 
-  async phraseContact () { return !this.data.phrase ? null : new PhraseContact().init(this.data.phrase) }
+  async phraseContact () {
+    if (!this.data.phrase) return null
+    const pc = new PhraseContact()
+    await pc.init(this.data.phrase)
+    return pc
+  }
 
   setRepE () { if (this.naE) data.repertoire.setAx(this.naE) }
 
@@ -976,9 +982,38 @@ export class Couple {
     if (!cle) data.repertoire.setCp(na); else this.naTemp = na
   }
 
-  nouveauR (naI, naE, cc, dlv, mot, pp, forfaits) {
-    this.nouveauP(naI, naE, cc, dlv, mot, pp, forfaits, null)
+  nouveauR (naI, nomf, cc, dlv, mot, pp, forfaits) {
+    this.v = 0
+    this.vsh = 0
     this.st = 1710
+    this.naI = naI
+    this.idI = naI.id
+    this.naE = null
+    this.idE = 0
+    this.avc = 0
+    const na = new NomAvatar(naI.nom + '_' + nomf, cc)
+    this.id = na.id
+    data.repertoire.setCp(na)
+    this.v1 = 0
+    this.v2 = 0
+    this.mx10 = 1
+    this.mx20 = 1
+    this.mx11 = 0
+    this.mx21 = 0
+    this.dlv = dlv
+    this.mc0 = null
+    this.mc1 = null
+    this.info = null
+    this.ard = mot
+    this.dh = new Date().getTime()
+    this.data = {
+      x: [[naI.nom, naI.rnd], [nomf, null]],
+      phrase: pp,
+      f1: forfaits[0],
+      f2: forfaits[1],
+      r1: 0,
+      r2: 0
+    }
     return this
   }
 
@@ -1039,9 +1074,9 @@ export class Couple {
     this.mx11 = row.mx11
     this.mx21 = row.mx21
     this.dlv = row.dlv
-    this.data = deserial(await crypt.decrypter(cle || this.cle, row.datac))
+    this.data = deserial(await crypt.decrypter(this.cc || this.cle, row.datac))
     this.setIdIE(this.data.x, cle)
-    const x = row.ardc ? deserial(await crypt.decrypter(cle || this.cle, row.ardc)) : [0, '']
+    const x = row.ardc ? deserial(await crypt.decrypter(this.cc || this.cle, row.ardc)) : [0, '']
     this.dh = x[0]
     this.ard = x[1]
     if (this.avc === 0) {
@@ -1064,8 +1099,14 @@ export class Couple {
     return schemas.serialize('rowcouple', r)
   }
 
+  async datacRenc (avatar) {
+    const data = { x: this.data.x, phrase: this.data.phrase, f1: 0, f2: 0, r1: 0, r2: 0 }
+    data.x[1][1] = avatar.na.rnd
+    return await crypt.crypter(this.cc || this.cle, serial(data))
+  }
+
   async toArdc (ard, cc) {
-    return await crypt.crypter(cc || this.cle, serial([new Date().getTime(), ard]))
+    return await crypt.crypter(this.cc || cc || this.cle, serial([new Date().getTime(), ard]))
   }
 
   get toIdb () {

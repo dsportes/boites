@@ -42,7 +42,7 @@
 import { computed, toRef } from 'vue'
 import { useStore } from 'vuex'
 import { retourInvitation } from '../app/page.mjs'
-import { ProlongerCouple, QuitterCouple, SupprimerCouple, RelancerCouple } from '../app/operations.mjs'
+import { ProlongerCouple, QuitterCouple, SuppressionCouple, RelancerCouple } from '../app/operations.mjs'
 import { useQuasar } from 'quasar'
 
 export default ({
@@ -96,6 +96,8 @@ export default ({
     const $store = useStore()
     const $q = useQuasar()
     const c = toRef(props, 'c')
+    const avatar = computed(() => { return $store.state.db.avatar })
+
     const tabavatar = computed({
       get: () => $store.state.ui.tabavatar,
       set: (val) => $store.commit('ui/majtabavatar', val)
@@ -132,7 +134,7 @@ export default ({
         ok: { color: 'warning', label: 'Je veux la prolonger' },
         persistent: true
       }).onOk(async () => {
-        await new ProlongerCouple().run(x)
+        await new ProlongerCouple().run(x, avatar.value.id)
       }).onCancel(() => {
       }).onDismiss(() => {
         // console.log('I am triggered on both OK and Cancel')
@@ -154,9 +156,9 @@ export default ({
         persistent: true
       }).onOk(async () => {
         if (x.stp === 3) {
-          await new QuitterCouple().run(x)
+          await new QuitterCouple().run(x, avatar.value.id)
         } else {
-          await new SupprimerCouple().run(x)
+          await new SuppressionCouple().run(x, avatar.value.id)
         }
       }).onCancel(() => {
       }).onDismiss(() => {
@@ -174,13 +176,13 @@ export default ({
       ]
       $q.dialog({
         dark: true,
-        title: 'Quitter le couple',
+        title: 'Supprimer le couple',
         message: lbl[x.orig],
         cancel: { label: 'Je le maintiens quand-même', color: 'primary' },
         ok: { color: 'warning', label: 'Je supprime le couple' },
         persistent: true
       }).onOk(async () => {
-        await new SupprimerCouple().run(x)
+        await new SuppressionCouple().run(x, avatar.value.id)
       }).onCancel(() => {
       }).onDismiss(() => {
         // console.log('I am triggered on both OK and Cancel')
@@ -199,7 +201,7 @@ export default ({
         ok: { color: 'warning', label: `Je relance ${n}` },
         persistent: true
       }).onOk(async () => {
-        await new RelancerCouple().run(x)
+        await new RelancerCouple().run(x, avatar.value.id)
       }).onCancel(() => {
       }).onDismiss(() => {
         // console.log('I am triggered on both OK and Cancel')

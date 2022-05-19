@@ -77,12 +77,12 @@ export function purgeGroupes (state, val) { // val : Set des ids des groupes INU
 /* purge des couples inutiles et secrets associés */
 export function purgeCouples (state, val) { // val : Set des ids des couples INUTILES
   if (!val || !val.size) return 0
-  const xg = state.groupes
+  const xc = state.couples
   for (const id of val) {
-    delete xg[id]
+    delete xc[id]
     delete state['secrets@' + id]
   }
-  state.groupes = { ...xg }
+  state.couples = { ...xc }
 }
 
 /* Stockage (et suppression) d'une liste d'objets "multiples", SAUF cvs */

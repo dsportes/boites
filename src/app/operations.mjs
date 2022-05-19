@@ -407,6 +407,7 @@ export class Operation {
 
   /********************************************/
   async processCA (apCompte, apAvatars) {
+    // Situation AVANT : set des avatars, groupes, couples
     const avCompte = data.getCompte()
     const avAvatarIds = avCompte.avatarIds()
     const avGroupeIds = new Set()
@@ -417,34 +418,32 @@ export class Operation {
       av.coupleIds(avCoupleIds)
     })
 
+    // Set des avatars APRES - Les plus this.avatarIdsP, les moins this.avatarIdsM
     const apAvatarIds = new Set()
-
     if (apCompte && apCompte.v > avCompte.v) {
       apCompte.avatarIds(apAvatarIds)
       apAvatarIds.forEach(id => { if (!avAvatarIds.has(id)) this.avatarIdsP.add(id) })
       avAvatarIds.forEach(id => { if (!apAvatarIds.has(id)) this.avatarIdsM.add(id) })
-    } else {
+    } else { // APRES comme AVANT si le compte n'a pas changé
       avAvatarIds.forEach(av => { apAvatarIds.add(av) })
     }
 
+    // Set des groupes et couples APRES
     const apGroupeIds = new Set()
     const apCoupleIds = new Set()
+    apAvatarIds.forEach(id => { // Pour tous les avatars APRES, **changés OU NON**
+      const a = apAvatars && apAvatars[id] ? apAvatars[id] : data.getAvatar(id)
+      a.repGroupes() // Oui, la plupart du temps c'est déjà fait
+      a.repCouples()
+      a.groupeIds(apGroupeIds)
+      a.coupleIds(apCoupleIds)
+    })
 
-    if (apAvatars) {
-      for (const id in apAvatars) {
-        const avAvatar = data.getAvatar(id)
-        const apAvatar = apAvatars[id]
-        if (!avAvatar || avAvatar.v > apAvatar.v) continue
-        apAvatar.repGroupes()
-        apAvatar.repCouples()
-        apAvatar.groupeIds(apGroupeIds)
-        apAvatar.coupleIds(apCoupleIds)
-      }
-      apGroupeIds.forEach(id => { if (!avGroupeIds.has(id)) this.groupeIdsP.add(id) })
-      avGroupeIds.forEach(id => { if (!apGroupeIds.has(id)) this.groupeIdsM.add(id) })
-      apCoupleIds.forEach(id => { if (!avCoupleIds.has(id)) this.coupleIdsP.add(id) })
-      avCoupleIds.forEach(id => { if (!apCoupleIds.has(id)) this.coupleIdsM.add(id) })
-    }
+    // Calcul des PLUS et des MOINS
+    apGroupeIds.forEach(id => { if (!avGroupeIds.has(id)) this.groupeIdsP.add(id) })
+    avGroupeIds.forEach(id => { if (!apGroupeIds.has(id)) this.groupeIdsM.add(id) })
+    apCoupleIds.forEach(id => { if (!avCoupleIds.has(id)) this.coupleIdsP.add(id) })
+    avCoupleIds.forEach(id => { if (!apCoupleIds.has(id)) this.coupleIdsM.add(id) })
 
     // Traitements des suppressions
     if (this.avatarIdsM.size) this.buf.lav = this.avatarIdsM
@@ -666,6 +665,9 @@ export class Operation {
 
     /* commit de store/db : séquence SANS AWAIT pour unicité de la mise à jour du store */
     this.buf.commitStore()
+    if (this.avatarIdsM.size) data.purgeAvatars(this.avatarIdsM)
+    if (this.groupeIdsM.size) data.purgeGroupes(this.groupeIdsM)
+    if (this.coupleIdsM.size) data.purgeCouples(this.coupleIdsM)
     this.coupleIdsDisp = new Set()
     this.membreIdsDisp = new Set()
     if (this.acgP || this.acgM || this.axP || this.axM) {
@@ -1698,18 +1700,29 @@ export class QuitterCouple extends OperationUI {
 /******************************************************************
 SupprimerCouple : args de m1/supprimerCouple
 - sessionId: data.sessionId,
-- rowCouple
+- idc : id du couple
+- ni : numéro d'invitation du couple pour l'avatar avid
+- avid : id de l'avatar demandeur
+- phch : id du contact ou 0 si non active
 Retour : dh
-X_SRV, '14-Cette phrase de parrainage est trop proche d\'une déjà enregistrée' + x
+
 */
 
-export class SupprimerCouple extends OperationUI {
+export class SuppressionCouple extends OperationUI {
   constructor () {
     super('Supprimer un couple', OUI, SELONMODE)
   }
 
-  async run (couple) {
+  async run (couple, avid) {
     try {
+      const ni = crypt.hash(crypt.u8ToHex(couple.cle) + '0')
+      let phch = 0
+      if (couple.phraseactive) {
+        const pc = await couple.phraseContact()
+        phch = pc.phch
+      }
+      const args = { sessionId: data.sessionId, idc: couple.id, ni, avid, phch }
+      await post(this, 'm1', 'suppressionCouple', args)
       return this.finOK()
     } catch (e) {
       return await this.finKO(e)
@@ -1814,10 +1827,9 @@ export class NouvelleRencontre extends OperationUI {
       const ni = crypt.hash(crypt.u8ToHex(cc) + '0')
       const datak = await crypt.crypter(data.clek, cc)
       const nap = data.repertoire.na(arg.id) // na de l'avatar créateur
-      const naf = new NomAvatar(arg.nomf) // na de l'avatar rencontré
       const dlv = getJourJ() + cfg().limitesjour.parrainage
 
-      const couple = new Couple().nouveauR(nap, naf, cc, dlv, arg.mot, arg.pp, arg.forfaits)
+      const couple = new Couple().nouveauR(nap, arg.nomf, cc, dlv, arg.mot, arg.pp, arg.forfaits)
       const rowCouple = await couple.toRow()
 
       const contact = await new Contact().nouveau(arg.phch, arg.clex, dlv, cc, arg.nomf)
@@ -1825,6 +1837,87 @@ export class NouvelleRencontre extends OperationUI {
 
       const args = { sessionId: data.sessionId, rowCouple, rowContact, ni, datak, id: nap.id }
       await post(this, 'm1', 'nouveauParrainage', args)
+      return this.finOK()
+    } catch (e) {
+      return await this.finKO(e)
+    }
+  }
+}
+
+/******************************************************************
+Accepter une rencontre :
+/* `lcck` : map : de avatar
+    - _clé_ : `ni`, numéro pseudo aléatoire. Hash de (`cc` en hexa suivi de `0` ou `1`).
+    - _valeur_ : clé `cc` cryptée par la clé K de l'avatar cible. Le hash d'une clé d'un couple donne son id.
+args :
+  - sessionid
+  - idc: id du couple
+  - phch: id du contact
+  - id: id de l'avatar
+  - ni: clé d'accès à lcck de l'avatar
+  - datak : terme ni de lcck
+  - datac : datac du contact
+  - vmax : [mx11 mx21]
+  - ardc : du contact
+A_SRV, '23-Avatar non trouvé.'
+*/
+
+export class AcceptRencontre extends OperationUI {
+  constructor () {
+    super('Rencontre avec un avatar', OUI, SELONMODE)
+  }
+
+  async run (couple, avatar, ard, vmax, phch) {
+    try {
+      const datac = await couple.datacRenc(avatar)
+      const ni = crypt.hash(crypt.u8ToHex(couple.cc) + '1')
+      const ardc = await couple.toArdc(ard)
+      const datak = await crypt.crypter(data.clek, couple.cc)
+      const args = { sessionId: data.sessionId, ni, datak, datac, idc: couple.id, id: avatar.id, ardc, phch, vmax }
+      await post(this, 'm1', 'acceptRencontre', args)
+      return this.finOK()
+    } catch (e) {
+      return await this.finKO(e)
+    }
+  }
+}
+
+/******************************************************************
+Refuser une rencontre :
+/* `lcck` : map : de avatar
+    - _clé_ : `ni`, numéro pseudo aléatoire. Hash de (`cc` en hexa suivi de `0` ou `1`).
+    - _valeur_ : clé `cc` cryptée par la clé K de l'avatar cible. Le hash d'une clé d'un couple donne son id.
+args :
+  - sessionid
+  - idc: id du couple
+  - phch: id du contact
+  - id: id de l'avatar
+  - ni: clé d'accès à lcck de l'avatar
+  - datak : terme ni de lcck
+  - datac : datac du contact
+  - vmax : [mx11 mx21]
+  - ardc : du contact
+A_SRV, '23-Avatar non trouvé.'
+*/
+
+export class RefusRencontre extends OperationUI {
+  constructor () {
+    super('Rencontre avec un avatar', OUI, SELONMODE)
+  }
+
+  async run (couple, avatar, ard, phch) {
+    try {
+      const datac = couple.datacRenc(avatar)
+      const ni = crypt.hash(crypt.u8ToHex(couple.cle) + '1')
+      const ardc = couple.toArdc(ard)
+      let phch = 0
+      if (couple.phraseactive) {
+        const pc = await couple.phraseContact()
+        phch = pc.phch
+      }
+      const datak = await crypt.crypter(data.clek, couple.cle)
+      const args = { sessionId: data.sessionId, ni, datak, datac, idc: couple.id, id: avatar.id, ardc, phch }
+      await post(this, 'm1', 'acceptRencontre', args)
       return this.finOK()
     } catch (e) {
       return await this.finKO(e)
@@ -1856,6 +1949,7 @@ export class SupprParrainage extends OperationUI {
     }
   }
 }
+
 /******************************************************************
 Acceptation d'un parrainage
 X_SRV, '03-Phrase secrète probablement déjà utilisée. Vérifier que le compte n\'existe pas déjà en essayant de s\'y connecter avec la phrase secrète'

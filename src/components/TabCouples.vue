@@ -47,11 +47,11 @@
   </div>
 
   <q-dialog v-model="nvrenc">
-    <nouvelle-rencontre :phrase="phrase" :clex="clex" :phch="phch" :close="closerenc"/>
+    <nouvelle-rencontre :phrase="phrase2" :clex="clex" :phch="phch" :close="closerenc"/>
   </q-dialog>
 
   <q-dialog v-model="acceptrenc">
-    <accept-rencontre :couple="couple" :phch="phch" :close="closeacceptrenc"/>
+    <accept-rencontre :couple="coupleloc" :phch="phch" :close="closeacceptrenc"/>
   </q-dialog>
 
   <q-dialog v-if="!$q.screen.gt.sm && sessionok" v-model="avatarcprech" position="left">
@@ -92,7 +92,9 @@ export default ({
       encours: false,
       nvrenc: false,
       acceptrenc: false,
-      phrase: ''
+      phrase: '',
+      phrase2: '',
+      coupleloc: null
     }
   },
 
@@ -118,6 +120,8 @@ export default ({
         this.encours = false
         const resp = await get('m1', 'getContact', { phch: this.phch })
         if (!resp || !resp.length) {
+          this.phrase2 = this.phrase
+          this.raz()
           this.nvrenc = true
         } else {
           try {
@@ -125,24 +129,35 @@ export default ({
             const contact = await new Contact().fromRow(row)
             if (dlvDepassee(contact.dlv)) {
               this.diagnostic = 'Cette phrase de rencontre n\'est plus valide'
+              this.raz()
               return
             }
             // eslint-disable-next-line no-unused-vars
             const [cc, id, nom] = await contact.getCcId(this.clex)
+            if (nom !== this.avatar.na.nom) {
+              this.diagnostic = 'Cette phrase de rencontre n\'est pas associée à votre nom'
+              this.raz()
+              return
+            }
             const resp2 = await get('m1', 'getCouple', { id })
             if (!resp2) {
               this.diagnostic = 'Pas de rencontre en attente avec cette phrase'
+              this.raz()
               return
             }
             const row2 = deserial(new Uint8Array(resp2))
-            this.couple = await new Couple().fromRow(row2, cc)
-            this.phraserenc = false
+            this.coupleloc = await new Couple().fromRow(row2, cc)
+            this.raz()
             this.acceptrenc = true
           } catch (e) {
-            console.log(e.toString())
+            this.raz()
           }
         }
       }, 1)
+    },
+    raz () {
+      this.phraserenc = false
+      this.phrase = ''
     }
   },
 
