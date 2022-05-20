@@ -42,7 +42,7 @@
 import { computed, toRef } from 'vue'
 import { useStore } from 'vuex'
 import { retourInvitation } from '../app/page.mjs'
-import { ProlongerCouple, QuitterCouple, SuppressionCouple, RelancerCouple } from '../app/operations.mjs'
+import { ProlongerCouple, QuitterCouple, RelancerCouple } from '../app/operations.mjs'
 import { useQuasar } from 'quasar'
 
 export default ({
@@ -155,11 +155,7 @@ export default ({
         ok: { color: 'warning', label: x.stp === 3 ? 'Je quitte le couple' : 'Je supprime le couple' },
         persistent: true
       }).onOk(async () => {
-        if (x.stp === 3) {
-          await new QuitterCouple().run(x, avatar.value.id)
-        } else {
-          await new SuppressionCouple().run(x, avatar.value.id)
-        }
+        await new QuitterCouple().run(x, avatar.value.id)
       }).onCancel(() => {
       }).onDismiss(() => {
         // console.log('I am triggered on both OK and Cancel')
@@ -170,19 +166,19 @@ export default ({
       const x = c.value || couple.value
       const n = x.nomE
       const lbl = [
-        `${n} n'a pas répondu favorablement dans les temps. Ce couple est inutile.`,
-        `${n} n'a pas accepté la proposition de parrainage de son compte. Ce couple est inutile.`,
-        `${n} n'a pas accepté répondu à la proposition de rencontre faite. Ce couple est inutile.`
+        `${n} n'a pas répondu favorablement dans les temps. Vous êtes seul(e) dans ce couple.`,
+        `${n} n'a pas accepté la proposition de parrainage de son compte. Vous êtes seul(e) dans ce couple.`,
+        `${n} n'a pas accepté répondu à la proposition de rencontre faite. Vous êtes seul(e) dans ce couple.`
       ]
       $q.dialog({
         dark: true,
-        title: 'Supprimer le couple',
-        message: lbl[x.orig],
-        cancel: { label: 'Je le maintiens quand-même', color: 'primary' },
+        title: 'Confirmer la suppression du couple',
+        message: lbl[x.orig] + ' Tous les secrets seront perdus.',
+        cancel: { label: 'Je renonce à la suppression', color: 'primary' },
         ok: { color: 'warning', label: 'Je supprime le couple' },
         persistent: true
       }).onOk(async () => {
-        await new SuppressionCouple().run(x, avatar.value.id)
+        await new QuitterCouple().run(x, avatar.value.id)
       }).onCancel(() => {
       }).onDismiss(() => {
         // console.log('I am triggered on both OK and Cancel')

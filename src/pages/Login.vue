@@ -44,7 +44,7 @@
     </div>
 
     <q-dialog v-model="dialcp">
-      <AcceptParrain :couple="couple" :phch="phch" :close="fermerap" />
+      <AcceptParrain :couple="coupleloc" :phch="phch" :close="fermerap" />
     </q-dialog>
   </q-page>
 </template>
@@ -56,8 +56,7 @@ import { ConnexionCompte } from '../app/operations'
 import PhraseSecrete from '../components/PhraseSecrete.vue'
 import AcceptParrain from '../components/AcceptParrain.vue'
 import { onBoot } from '../app/page.mjs'
-import { crypt } from '../app/crypto.mjs'
-import { get, afficherdiagnostic, dlvDepassee } from '../app/util.mjs'
+import { get, afficherdiagnostic, dlvDepassee, PhraseContact } from '../app/util.mjs'
 import { deserial } from '../app/schemas.mjs'
 import { Contact, Couple } from '../app/modele.mjs'
 
@@ -72,6 +71,8 @@ export default ({
       encours: false,
       phrase: '',
       clex: null,
+      phch: 0,
+      coupleloc: null,
       pph: 0,
       dialcp: false,
       p: null
@@ -97,38 +98,43 @@ export default ({
       if (!this.phrase) return
       this.encours = true
       setTimeout(async () => {
-        this.clex = await crypt.pbkfd(this.phrase)
-        let hx = ''
-        for (let i = 0; i < this.phrase.length; i = i + 2) hx += this.phrase.charAt(i)
-        this.phch = crypt.hash(hx)
+        const pc = await new PhraseContact().init(this.phrase)
+        this.phch = pc.phch
         this.encours = false
-        const resp = await get('m1', 'getContact', { phch: this.phch })
+        const resp = await get('m1', 'getContact', { phch: pc.phch })
         if (!resp || !resp.length) {
           this.diagnostic = 'Cette phrase de parrainage est introuvable'
+          this.raz()
         } else {
           try {
             const row = deserial(new Uint8Array(resp))
             const contact = await new Contact().fromRow(row)
             if (dlvDepassee(contact.dlv)) {
               this.diagnostic = 'Cette phrase de parrainage n\'est plus valide'
+              this.raz()
               return
             }
             // eslint-disable-next-line no-unused-vars
-            const [cc, id, nom] = await contact.getCcId(this.clex)
+            const [cc, id, nom] = await contact.getCcId(pc.clex)
             const resp2 = await get('m1', 'getCouple', { id })
             if (!resp2) {
               this.diagnostic = 'Pas de parrainage en attente avec cette phrase'
+              this.raz()
               return
             }
             const row2 = deserial(new Uint8Array(resp2))
-            this.couple = await new Couple().fromRow(row2, cc)
-            this.phrasepar = false
+            this.coupleloc = await new Couple().fromRow(row2, cc)
+            this.raz()
             this.dialcp = true
           } catch (e) {
-            console.log(e.toString())
+            this.raz()
           }
         }
       }, 1)
+    },
+    raz () {
+      this.phrasepar = false
+      this.phrase = ''
     }
   },
 

@@ -1676,39 +1676,20 @@ export class RelancerCouple extends OperationUI {
     }
   }
 }
-/******************************************************************
-QuitterCouple : args de m1/quitterCouple
-- sessionId: data.sessionId,
-- rowCouple
-Retour : dh
-X_SRV, '14-Cette phrase de parrainage est trop proche d\'une déjà enregistrée' + x
-*/
 
-export class QuitterCouple extends OperationUI {
-  constructor () {
-    super('Quitter un couple', OUI, SELONMODE)
-  }
-
-  async run (couple) {
-    try {
-      return this.finOK()
-    } catch (e) {
-      return await this.finKO(e)
-    }
-  }
-}
 /******************************************************************
-SupprimerCouple : args de m1/supprimerCouple
+DuitterCouple : args de m1/supprimerCouple
 - sessionId: data.sessionId,
 - idc : id du couple
 - ni : numéro d'invitation du couple pour l'avatar avid
 - avid : id de l'avatar demandeur
 - phch : id du contact ou 0 si non active
+- avc : l'avatar demandeur est le 0 ou le 1
 Retour : dh
 
 */
 
-export class SuppressionCouple extends OperationUI {
+export class QuitterCouple extends OperationUI {
   constructor () {
     super('Supprimer un couple', OUI, SELONMODE)
   }
@@ -1721,7 +1702,7 @@ export class SuppressionCouple extends OperationUI {
         const pc = await couple.phraseContact()
         phch = pc.phch
       }
-      const args = { sessionId: data.sessionId, idc: couple.id, ni, avid, phch }
+      const args = { sessionId: data.sessionId, idc: couple.id, ni, avid, phch, avc: couple.avc }
       await post(this, 'm1', 'suppressionCouple', args)
       return this.finOK()
     } catch (e) {

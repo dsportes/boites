@@ -67,14 +67,13 @@
 <script>
 import { computed, reactive, watch, ref } from 'vue'
 import { useStore } from 'vuex'
-import { get, Motscles, FiltreCp, cfg, dhstring, dlvDepassee } from '../app/util.mjs'
+import { get, Motscles, FiltreCp, cfg, dhstring, dlvDepassee, PhraseContact } from '../app/util.mjs'
 import PanelFiltreCouples from './PanelFiltreCouples.vue'
 import PanelCouple from './PanelCouple.vue'
 import MenuCouple from './MenuCouple.vue'
 import AcceptRencontre from './AcceptRencontre.vue'
 import NouvelleRencontre from './NouvelleRencontre.vue'
 import { data, Contact, Couple } from '../app/modele.mjs'
-import { crypt } from '../app/crypto.mjs'
 import { deserial } from '../app/schemas.mjs'
 
 export default ({
@@ -113,13 +112,12 @@ export default ({
       if (!this.phrase) return
       this.encours = true
       setTimeout(async () => {
-        this.clex = await crypt.pbkfd(this.phrase)
-        let hx = ''
-        for (let i = 0; i < this.phrase.length; i = i + 2) hx += this.phrase.charAt(i)
-        this.phch = crypt.hash(hx)
+        const pc = await new PhraseContact().init(this.phrase)
+        this.phch = pc.phch
         this.encours = false
-        const resp = await get('m1', 'getContact', { phch: this.phch })
+        const resp = await get('m1', 'getContact', { phch: pc.phch })
         if (!resp || !resp.length) {
+          this.clex = pc.clex
           this.phrase2 = this.phrase
           this.raz()
           this.nvrenc = true
@@ -132,8 +130,7 @@ export default ({
               this.raz()
               return
             }
-            // eslint-disable-next-line no-unused-vars
-            const [cc, id, nom] = await contact.getCcId(this.clex)
+            const [cc, id, nom] = await contact.getCcId(pc.clex)
             if (nom !== this.avatar.na.nom) {
               this.diagnostic = 'Cette phrase de rencontre n\'est pas associée à votre nom'
               this.raz()
