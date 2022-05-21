@@ -1,6 +1,6 @@
 /* eslint-disable func-call-spacing */
 import Dexie from 'dexie'
-import { Avatar, Compte, Prefs, Compta, Couple, Groupe, Membre, Secret, ListeCvIds, SessionSync, data, Cv } from './modele.mjs'
+import { Avatar, Compte, Prefs, Compta, Couple, Groupe, Membre, Secret, ListeCvIds, SessionSync, data, Cv, Contactstd } from './modele.mjs'
 import { store, Sid, difference, dhstring, get, getData, afficherdiagnostic } from './util.mjs'
 import { schemas } from './schemas.mjs'
 import { crypt } from './crypto.mjs'
@@ -15,6 +15,7 @@ const STORES = {
   avatar: 'id',
   couple: 'id',
   groupe: 'id',
+  contactstd: '[id+id2]', // nx
   membre: '[id+id2]', // im
   secret: '[id+id2]', // ns
   avsecret: '[id+id2]', // ns
@@ -242,6 +243,23 @@ export async function getSecrets () {
   }
 }
 
+export async function getContactstds () {
+  go()
+  try {
+    const r = {}
+    const v = {}
+    await data.db.contactstd.each(async (idb) => {
+      const x = new Contactstd().fromIdb(await crypt.decrypter(data.clek, idb.data))
+      let e = r[x.id]; if (!e) { e = {}; r[x.id] = e }
+      e[x.nx] = x
+      const v1 = v[x.id]
+      if (!v1 || v1 < x.v) v[x.id] = x.v
+    })
+    return [r, v]
+  } catch (e) {
+    throw data.setErDB(EX2(e))
+  }
+}
 export async function getCvs (cvIds, buf) {
   go()
   try {

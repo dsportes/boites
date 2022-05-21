@@ -1698,11 +1698,16 @@ export class QuitterCouple extends OperationUI {
     try {
       const ni = crypt.hash(crypt.u8ToHex(couple.cle) + '0')
       let phch = 0
-      if (couple.phraseactive) {
-        const pc = await couple.phraseContact()
-        phch = pc.phch
+      let idx = 0
+      let nx = 0
+      if (couple.stp === 1) {
+        if (couple.ste === 4 || couple.ste === 7) {
+          const pc = await couple.phraseContact()
+          phch = pc.phch
+        }
+        if (couple.ste === 1) { idx = couple.id1; nx = couple.data.nx }
       }
-      const args = { sessionId: data.sessionId, idc: couple.id, ni, avid, phch, avc: couple.avc }
+      const args = { sessionId: data.sessionId, idc: couple.id, ni, avid, phch, idx, nx, avc: couple.avc }
       await post(this, 'm1', 'suppressionCouple', args)
       return this.finOK()
     } catch (e) {

@@ -41,6 +41,11 @@ export const secret = (state) => (id, ns) => {
   return !ns ? (lc || {}) : (lc ? lc[ns] : null)
 }
 
+export const contactstd = (state) => (id, nx) => {
+  const lc = state['contactstds@' + id]
+  return !nx ? (lc || {}) : (lc ? lc[nx] : null)
+}
+
 export const avsecret = (state) => (id, ns) => {
   return id ? state.avsecrets[id + '/' + ns] : state.avsecrets
 }

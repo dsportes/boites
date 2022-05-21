@@ -350,6 +350,9 @@ class Session {
   getSecret (id, ns) { return store().getters['db/secret'](id, ns) }
   setSecrets (lobj) { store().commit('db/setObjets', lobj) }
 
+  getContactstd (id, nx) { return store().getters['db/contactstd'](id, nx) }
+  setContactstds (lobj) { store().commit('db/setObjets', lobj) }
+
   getFetat (idf) { return store().getters['db/fetat'](idf) }
   setFetats (lobj) { store().commit('db/setObjets', lobj) }
 
@@ -396,7 +399,7 @@ schemas.forSchema({
 - `dpbh` : hashBin (53 bits) du PBKFD du début de la phrase secrète (32 bytes). Pour la connexion, l'id du compte n'étant pas connu de l'utilisateur.
 - `pcbh` : hashBin (53 bits) du PBKFD de la phrase complète pour quasi-authentifier une connexion avant un éventuel échec de décryptage de `kx`.
 - `kx` : clé K du compte, cryptée par la X (phrase secrète courante).
-- `mack` {} : map des avatars du compte cryptée par la clé K. Clé: id, valeur: `{ na:, cpriv: }`
+- `mack` {} : map des avatars du compte cryptée par la clé K. Clé: sid, valeur: `{ na:, cpriv: }`
   - `na` : nom et clé de l'avatar.
   - `cpriv` : clé privée asymétrique.
 - `vsh`
@@ -425,6 +428,11 @@ export class Compte {
   avatarDeNom (n) {
     for (const sid in this.mac) if (this.mac[sid].na.nom === n) return crypt.sidToId(sid)
     return 0
+  }
+
+  cpriv (avid) {
+    const e = this.mac[crypt.idToSid(avid)]
+    return e ? e.cpriv : null
   }
 
   nouveau (nomAvatar, cprivav, id) { // id : du compte lui-même
@@ -910,7 +918,7 @@ schemas.forSchema({
 - **(1) prise de contact par A0**. Etats : 147
 - **(2) fin de vie de A0 seul après refus de A1**. Etats : 235689
 - **(3) vie à deux**. Etat : 0
-- **(4) vie de A0 OU A1 seul après _départ_ de l'autre**. Etats: 0123
+- **(4) vie de A0 OU A1 seul après _départ_ de l'autre**. Etats: 0 (pas de relance), 123
 - **(5) vie de A0 OU A1 seul après _disparition_ de l'autre**. Etat : 0
 
 Dans certaines de ces phases il y a des **états** significatifs (sinon 0).
@@ -938,7 +946,6 @@ export class Couple {
   get ste () { return Math.floor(this.st / 100) % 10 }
   get st0 () { return Math.floor(this.st / 10) % 10 }
   get st1 () { return this.st % 10 }
-  get phraseactive () { return this.stp === 1 && this.dlv && !dlvDepassee(this.dlv) }
 
   get cle () { return data.repertoire.cle(this.id) }
   get na () { return data.repertoire.na(this.id) }
@@ -1009,6 +1016,7 @@ export class Couple {
     this.data = {
       x: [[naI.nom, naI.rnd], [nomf, null]],
       phrase: pp,
+      nx: 0,
       f1: forfaits[0],
       f2: forfaits[1],
       r1: 0,
@@ -1045,6 +1053,7 @@ export class Couple {
     this.data = {
       x: [[naI.nom, naI.rnd], [naE.nom, naE.rnd]],
       phrase: pp,
+      nx: 0,
       f1: forfaits[0],
       f2: forfaits[1],
       r1: ressources ? ressources[0] : 0,
@@ -1168,6 +1177,67 @@ export class Contact {
 
   toRow () {
     return schemas.serialize('rowcontact', this)
+  }
+}
+
+/** Contactstd **********************************/
+/*
+- `id` : id de l'avatar A1 invité à accepter son couple avec A0
+- `nx` : numéro aléatoire - rangé comme *la phrase de contact* dans le couple
+- `x` : jour de suppression (0 si existant).
+- `dlv`
+- `ccp` : [cle nom] crypté par la clé publique de A1:
+  - `cle` : clé du couple (donne son id).
+  - `nom` : nom de A0.
+- `vsh` :
+*/
+
+schemas.forSchema({
+  name: 'idbContactstd',
+  cols: ['id', 'nx', 'x', 'cc', 'nom', 'dlv', 'vsh']
+})
+
+export class Contactstd {
+  get table () { return 'contactstd' }
+  get sid () { return crypt.idToSid(this.id) }
+  get sid2 () { return crypt.idToSid(this.nx) }
+  get pk () { return this.sid + '/' + this.sid2 }
+
+  get horsLimite () { return dlvDepassee(this.dlv) }
+  get suppr () { return this.x !== 0 }
+
+  async nouveau (id, dlv, cc, nom, clepub) {
+    this.vsh = 0
+    this.id = id
+    this.x = 0
+    this.nx = crypt.random(32)
+    this.cc = cc
+    this.nom = nom
+    this.ccp = await crypt.crypterRSA(clepub, serial([cc, nom]))
+    this.dlv = dlv
+    return this
+  }
+
+  async fromRow (row) {
+    this.vsh = row.vsh || 0
+    this.id = row.id
+    this.x = row.x
+    if (!this.x) {
+      this.dlv = row.dlv
+      const clePriv = data.getCompte().cpriv(this.id)
+      const y = deserial(await crypt.decrypterRSA(clePriv, row.ccp))
+      this.cle = y[0]
+      this.nom = y[1]
+    } else {
+      this.dlv = 0
+      this.cle = null
+      this.nom = ''
+    }
+    return this
+  }
+
+  toRow () {
+    return schemas.serialize('rowcontactstd', this)
   }
 }
 

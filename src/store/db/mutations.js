@@ -94,7 +94,7 @@ export function setObjets (state, lobj) { // lobj : array d'objets
     if (t2n.has(obj.table)) {
       const n = obj.table + 's@' + obj.id
       let st = sta[n]; if (!st) { st = state[n]; if (!st) { st = {}; state[n] = st }; sta[n] = st }
-      // pour un secret, une suppr est une maj (dont il ne reste plus que ref)
+      // pour un secret, une suppr est une maj (dont il ne reste plus que ref), idem pour contactstd
       st[obj.id2] = obj
       if (obj.table === 'secret') {
         if (cs && cs.id === obj.id && cs.ns === obj.ns) state.secret = obj
