@@ -8,6 +8,7 @@ export default function () {
 
     // MainLayout
     menuouvert: false,
+    panelcontacts: false,
     confirmerdrc: false,
     infomode: false,
     inforeseau: false,

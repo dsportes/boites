@@ -241,7 +241,7 @@ export default ({
     function nom (c) { return c.naE ? c.naE.noml : c.na.nom }
 
     function icone (p) {
-      return ['thumb_up', 'hourglass_empty', 'thumb_down', 'thumb_up', 'o_thumb_down', 'person_off'][p]
+      return ['thumb_up', 'hourglass_empty', 'thumb_down', 'thumb_up', 'thumb_down_off_alt', 'person_off'][p]
     }
 
     const state = reactive({

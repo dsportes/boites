@@ -56,6 +56,8 @@
       </q-toolbar>
 
       <q-toolbar inset :class="tbclass">
+        <q-btn v-if="sessionok && (page==='Compte' || page==='Avatar')" class="q-pr-sm" dense color="primary" round size="md" icon="people"
+          aria-label="Mes contacts" @click="panelcontacts = !panelcontacts"/>
         <q-toolbar-title class="text-center fs-md">
           <div v-if="page==='Org'" class="tbpage">Choix de l'organisation</div>
           <div v-if="page==='Login'" class="tbpage">Connexion à un compte</div>
@@ -94,9 +96,11 @@
       </q-toolbar>
     </q-header>
 
-    <q-drawer v-model="menuouvert"  :breakpoint="200" overlay elevated side="right" style="padding:0.5rem"><panel-menu></panel-menu></q-drawer>
+    <q-drawer v-model="menuouvert" :breakpoint="200" overlay elevated side="right" style="padding:0.5rem"><panel-menu></panel-menu></q-drawer>
 
-    <!--q-drawer elevated side="left"></q-drawer-->
+    <q-drawer v-model="panelcontacts" :width="330" elevated side="left">
+      <panel-contacts/>
+    </q-drawer>
 
     <q-page-container>
       <router-view v-slot="{ Component }">
@@ -198,6 +202,7 @@ import DialogueErreur from 'components/DialogueErreur.vue'
 import DialogueCrypto from 'components/DialogueCrypto.vue'
 import RapportSynchro from 'components/RapportSynchro.vue'
 import DialogueHelp from 'components/DialogueHelp.vue'
+import PanelContacts from 'components/PanelContacts.vue'
 import { data, MODES } from '../app/modele.mjs'
 import { cfg } from '../app/util.mjs'
 import { remplacePage, onBoot, retourInvitation } from '../app/page.mjs'
@@ -207,7 +212,7 @@ export default {
   name: 'MainLayout',
 
   components: {
-    RapportSynchro, PanelMenu, DialogueErreur, DialogueCrypto, DialogueCreationCompte, DialogueTestPing, DialogueInfoMode, DialogueInfoReseau, DialogueInfoIdb, DialogueHelp
+    RapportSynchro, PanelMenu, PanelContacts, DialogueErreur, DialogueCrypto, DialogueCreationCompte, DialogueTestPing, DialogueInfoMode, DialogueInfoReseau, DialogueInfoIdb, DialogueHelp
   },
 
   computed: {
@@ -301,6 +306,10 @@ export default {
       get: () => $store.state.ui.menuouvert,
       set: (val) => $store.commit('ui/majmenuouvert', val)
     })
+    const panelcontacts = computed({
+      get: () => $store.state.ui.panelcontacts,
+      set: (val) => $store.commit('ui/majpanelcontacts', val)
+    })
 
     const tabavatar = computed({
       get: () => $store.state.ui.tabavatar,
@@ -391,6 +400,7 @@ export default {
       msgdegrade,
 
       menuouvert,
+      panelcontacts,
       confirmerdrc,
       infomode,
       inforeseau,

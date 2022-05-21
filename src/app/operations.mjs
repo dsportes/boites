@@ -1696,7 +1696,7 @@ export class QuitterCouple extends OperationUI {
 
   async run (couple, avid) {
     try {
-      const ni = crypt.hash(crypt.u8ToHex(couple.cle) + '0')
+      const ni = crypt.hash(crypt.u8ToHex(couple.cle) + couple.avc)
       let phch = 0
       let idx = 0
       let nx = 0
@@ -1708,7 +1708,7 @@ export class QuitterCouple extends OperationUI {
         if (couple.ste === 1) { idx = couple.id1; nx = couple.data.nx }
       }
       const args = { sessionId: data.sessionId, idc: couple.id, ni, avid, phch, idx, nx, avc: couple.avc }
-      await post(this, 'm1', 'suppressionCouple', args)
+      await post(this, 'm1', 'quitterCouple', args)
       return this.finOK()
     } catch (e) {
       return await this.finKO(e)

@@ -34,6 +34,7 @@ export function majstatutsession (state, val) {
 
 // MainLayout
 export function majmenuouvert (state, val) { state.menuouvert = val }
+export function majpanelcontacts (state, val) { state.panelcontacts = val }
 export function majconfirmerdrc (state, val) { state.confirmerdrc = val }
 export function majinfomode (state, val) { state.infomode = val }
 export function majinforeseau (state, val) { state.inforeseau = val }
