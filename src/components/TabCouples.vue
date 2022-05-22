@@ -1,23 +1,6 @@
 <template>
 <div v-if="sessionok" :class="$q.screen.gt.sm ? 'ml20' : 'q-pa-xs full-width'">
 
-  <div v-if="mode === 1 || mode === 2" class="q-my-xs petitelargeur column items-start">
-    <q-btn flat color="warning" icon="add_circle" label="Rencontre ..." @click="phraserenc=!phraserenc"/>
-    <q-card v-if="phraserenc" class="petitelargeur text-center q-mb-sm">
-        <q-input class="full-width" dense v-model="phrase" label="Phrase de rencontre"
-          @keydown.enter.prevent="crypterphrase" :type="isPwd ? 'password' : 'text'"
-          hint="Presser 'Entrée' à la fin de la saisie">
-        <template v-slot:append>
-          <q-icon :name="isPwd ? 'visibility_off' : 'visibility'" class="cursor-pointer" @click="isPwd = !isPwd"/>
-          <span :class="phrase.length === 0 ? 'disabled' : ''"><q-icon name="cancel" class="cursor-pointer"  @click="phrase=''"/></span>
-        </template>
-        </q-input>
-        <div v-if="encours" class="fs-md text-italic text-primary">Cryptage en cours ...
-          <q-spinner color="primary" size="2rem" :thickness="3" />
-        </div>
-    </q-card>
-  </div>
-
   <div v-if="!state.lst || !state.lst.length" class="titre-lg">Aucun couple ne correspond au critère de recherche</div>
 
   <panel-couple v-if="avatarcpform && state.lst && state.lst.length"
@@ -46,14 +29,6 @@
     </div>
   </div>
 
-  <q-dialog v-model="nvrenc">
-    <nouvelle-rencontre :phrase="phrase2" :clex="clex" :phch="phch" :close="closerenc"/>
-  </q-dialog>
-
-  <q-dialog v-model="acceptrenc">
-    <accept-rencontre :couple="coupleloc" :phch="phch" :close="closeacceptrenc"/>
-  </q-dialog>
-
   <q-dialog v-if="!$q.screen.gt.sm && sessionok" v-model="avatarcprech" position="left">
     <panel-filtre-couples @ok="rechercher" :motscles="motscles" :etat-interne="recherche" :fermer="fermerfiltre"/>
   </q-dialog>
@@ -67,33 +42,22 @@
 <script>
 import { computed, reactive, watch, ref } from 'vue'
 import { useStore } from 'vuex'
-import { get, Motscles, FiltreCp, cfg, dhstring, dlvDepassee, PhraseContact } from '../app/util.mjs'
+import { Motscles, FiltreCp, cfg, dhstring } from '../app/util.mjs'
 import PanelFiltreCouples from './PanelFiltreCouples.vue'
 import PanelCouple from './PanelCouple.vue'
 import MenuCouple from './MenuCouple.vue'
-import AcceptRencontre from './AcceptRencontre.vue'
-import NouvelleRencontre from './NouvelleRencontre.vue'
-import { data, Contact, Couple } from '../app/modele.mjs'
-import { deserial } from '../app/schemas.mjs'
+import { data } from '../app/modele.mjs'
 
 export default ({
   name: 'TabCouples',
 
-  components: { PanelFiltreCouples, PanelCouple, MenuCouple, AcceptRencontre, NouvelleRencontre },
+  components: { PanelFiltreCouples, PanelCouple, MenuCouple },
 
   computed: { },
 
   data () {
     return {
-      dhstring: dhstring,
-      phraserenc: false,
-      isPwd: false,
-      encours: false,
-      nvrenc: false,
-      acceptrenc: false,
-      phrase: '',
-      phrase2: '',
-      coupleloc: null
+      dhstring: dhstring
     }
   },
 
@@ -102,60 +66,7 @@ export default ({
 
     rechercher (f) { this.state.filtre = f },
 
-    dkli (idx) { return this.$q.dark.isActive ? (idx ? 'sombre' + (idx % 2) : 'sombre0') : (idx ? 'clair' + (idx % 2) : 'clair0') },
-
-    closerenc () { this.nvrenc = false },
-
-    closeacceptrenc () { this.acceptrenc = false },
-
-    crypterphrase () {
-      if (!this.phrase) return
-      this.encours = true
-      setTimeout(async () => {
-        const pc = await new PhraseContact().init(this.phrase)
-        this.phch = pc.phch
-        this.encours = false
-        const resp = await get('m1', 'getContact', { phch: pc.phch })
-        if (!resp || !resp.length) {
-          this.clex = pc.clex
-          this.phrase2 = this.phrase
-          this.raz()
-          this.nvrenc = true
-        } else {
-          try {
-            const row = deserial(new Uint8Array(resp))
-            const contact = await new Contact().fromRow(row)
-            if (dlvDepassee(contact.dlv)) {
-              this.diagnostic = 'Cette phrase de rencontre n\'est plus valide'
-              this.raz()
-              return
-            }
-            const [cc, id, nom] = await contact.getCcId(pc.clex)
-            if (nom !== this.avatar.na.nom) {
-              this.diagnostic = 'Cette phrase de rencontre n\'est pas associée à votre nom'
-              this.raz()
-              return
-            }
-            const resp2 = await get('m1', 'getCouple', { id })
-            if (!resp2) {
-              this.diagnostic = 'Pas de rencontre en attente avec cette phrase'
-              this.raz()
-              return
-            }
-            const row2 = deserial(new Uint8Array(resp2))
-            this.coupleloc = await new Couple().fromRow(row2, cc)
-            this.raz()
-            this.acceptrenc = true
-          } catch (e) {
-            this.raz()
-          }
-        }
-      }, 1)
-    },
-    raz () {
-      this.phraserenc = false
-      this.phrase = ''
-    }
+    dkli (idx) { return this.$q.dark.isActive ? (idx ? 'sombre' + (idx % 2) : 'sombre0') : (idx ? 'clair' + (idx % 2) : 'clair0') }
   },
 
   setup () {

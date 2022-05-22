@@ -430,6 +430,12 @@ export class Compte {
     return 0
   }
 
+  avatars () {
+    const l = []
+    for (const sid in this.mac) l.push(this.mac[sid].na.nom)
+    return l
+  }
+
   cpriv (avid) {
     const e = this.mac[crypt.idToSid(avid)]
     return e ? e.cpriv : null

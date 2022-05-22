@@ -116,4 +116,5 @@ export function retourInvitation (nacopie) {
   $store.commit('ui/majpanelinvit', true)
   $store.commit('ui/majinvitationattente', null)
   $store.commit('ui/majclipboard', nacopie instanceof NomAvatar ? nacopie.clone() : 'KO')
+  $store.commit('ui/majpanelcontacts', false)
 }

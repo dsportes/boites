@@ -768,9 +768,15 @@ export class NomAvatar {
   get disparu () { return data.repertoire.disparu(this.id) }
   get cle () { return this.rnd }
   get photo () {
-    if (this.disparu) return $cfg.disparu
+    if (this.disparu) return ''
     const cv = data.getCv(this.id)
     return !cv || !cv[0] ? '' : cv[0]
+  }
+
+  get photoDef () {
+    if (this.disparu) return $cfg.disparu
+    const cv = data.getCv(this.id)
+    return !cv || !cv[0] ? $cfg.avatar : cv[0]
   }
 
   get info () {
