@@ -1894,7 +1894,7 @@ export class NouveauCouple extends OperationUI {
       const datak = await crypt.crypter(data.clek, cc)
       const dlv = getJourJ() + cfg().limitesjour.parrainage
 
-      const couple = new Couple().nouveauC(arg.na0, arg.na1, cc, dlv, arg.mot)
+      const couple = new Couple().nouveauC(arg.na0, arg.na1, cc, dlv, arg.mot, arg.max)
       const rowCouple = await couple.toRow()
       const rowInvitcp = await new Invitcp().toRow(arg.na1.id, ni1, cc, clepub)
       const args = { sessionId: data.sessionId, idc: couple.id, id: arg.na0.id, ni, datak, rowCouple, rowInvitcp }

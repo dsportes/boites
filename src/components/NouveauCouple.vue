@@ -3,14 +3,14 @@
     <q-card-section class="column items-center">
       <div class="titre-lg text-center">Nouveau couple avec {{s.na1.noml}}</div>
       <q-btn flat @click="close" color="primary" label="Renoncer" class="q-ml-sm" />
-      <q-select v-model="s.nomavatar" :options="s.avatars" dense options-dense label="Choisir mon avatar concerné"
+      <q-select v-model="s.nomavatar" class="full-width" :options="s.avatars" dense options-dense label="Choisir mon avatar concerné"
         popup-content-style="border:1px solid #777777;border-radius:3px"/>
-      <div v-if="s.deja === 0">{{s.na1.noml}} n'est pas en couple avec {{s.nomavatar}}</div>
-      <div v-else class="text-bold text-warning">{{s.na1.noml}} est déjà {{s.deja}} fois en couple avec {{s.nomavatar}}</div>
+      <div v-if="s.deja === 0">{{s.na1.noml}} et {{s.nomavatar}} ne sont pas encore associés dans un couple</div>
+      <div v-else class="text-bold text-warning">{{s.na1.noml}} et avec {{s.nomavatar}} sont déjà associés dans {{s.deja}} couple(s)</div>
     </q-card-section>
 
     <q-card-section v-if="sessionok">
-      <q-stepper>
+      <q-stepper v-model="step" vertical color="primary" animated>
         <q-step :name="1" title="Mot de bienvenue sur l'ardoise du couple" icon="settings" :done="step > 1" >
           <editeur-md :texte="'Bonjour ' + s.na1.nom + ' !'" v-model="mot" editable modetxt style="height:8rem"></editeur-md>
           <div v-if="diagmot" class="fs-sm text-warning">De 10 à 140 signes ({{mot.length}})</div>
@@ -94,7 +94,7 @@ export default ({
     async confirmer () {
       const arg = {
         na0: this.avatar.na,
-        na1: this.id1,
+        na1: this.s.na1,
         max: this.forfaits, // max volumes couple
         mot: this.mot // mot de bienvenue
       }
@@ -140,7 +140,7 @@ export default ({
         s.nomavatar = avatar.value.na.nom
       } else {
         s.nomavatar = s.avatars[0]
-        avatar.value = data.getAvatar(c.avatarDeNom(this.nomavatar))
+        avatar.value = data.getAvatar(c.avatarDeNom(s.nomavatar))
       }
     }
 
@@ -152,12 +152,15 @@ export default ({
       s.deja = 0
       lcpl.forEach(idc => {
         const c = data.getCouple(idc)
-        if (c.id0 === avid || c.id1 === avid) s.deja++
+        if (c.idI === avid || c.idE === avid) s.deja++
       })
     }
 
     watch(() => tousAx.value, (ap, av) => { onId1() })
-    watch(() => id1.value, (ap, av) => { onId1() })
+    watch(() => avatar.value, (ap, av) => { onId1() })
+    watch(() => s.nomavatar, (ap, av) => {
+      avatar.value = data.getAvatar(data.getCompte().avatarDeNom(ap))
+    })
 
     listeAvatars()
     onId1()

@@ -58,6 +58,9 @@
         <div class="titre-lg">Avatar</div>
         <identite-cv :nom-avatar="nac" :invitable="invit != null" type="avatar"/>
       </q-card-section>
+      <q-card-actions>
+        <q-btn flat dense color="primary" icon="add" label="Nouveau Couple" v-close-popup @click="nvcouple=true"/>
+      </q-card-actions>
     </q-card>
   </q-dialog>
 
@@ -68,6 +71,10 @@
         <identite-cv :nom-avatar="nac" type="couple"/>
       </q-card-section>
     </q-card>
+  </q-dialog>
+
+  <q-dialog v-model="nvcouple">
+    <nouveau-couple :id1="nac.id" :close="closenvcouple" />
   </q-dialog>
 
   <q-dialog v-model="grident">
@@ -96,6 +103,7 @@ import { computed, reactive, watch, ref } from 'vue'
 import IdentiteCv from '../components/IdentiteCv.vue'
 import AcceptRencontre from './AcceptRencontre.vue'
 import NouvelleRencontre from './NouvelleRencontre.vue'
+import NouveauCouple from './NouveauCouple.vue'
 import { data, Contact, Couple } from '../app/modele.mjs'
 import { deserial } from '../app/schemas.mjs'
 import { get, dlvDepassee, PhraseContact } from '../app/util.mjs'
@@ -103,7 +111,7 @@ import { get, dlvDepassee, PhraseContact } from '../app/util.mjs'
 export default ({
   name: 'PanelContacts',
 
-  components: { IdentiteCv, AcceptRencontre, NouvelleRencontre },
+  components: { IdentiteCv, AcceptRencontre, NouvelleRencontre, NouveauCouple },
 
   data () {
     return {
@@ -113,6 +121,7 @@ export default ({
       encours: false,
       nvrenc: false,
       acceptrenc: false,
+      nvcouple: false,
       phrase: '',
       phrase2: '',
       coupleloc: null,
@@ -142,6 +151,8 @@ export default ({
       this.nac = data.repertoire.na(x[0])
       this.grident = true
     },
+
+    closenvcouple () { this.nvcouple = false; this.cvident = false },
 
     ouvrirrenc () {
       const c = data.getCompte()
