@@ -5,7 +5,7 @@ import {
   getAvatars, getGroupes, getCouples, getMembres, getSecrets,
   openIDB, enregLScompte, getVIdCvs, saveListeCvIds, gestionFichierSync, gestionFichierCnx
 } from './db.mjs'
-import { Compte, Avatar, deserialRowItems, compileToObject, data, Prefs, Contact, Invitgr, Compta, Groupe, Membre, Cv, Couple } from './modele.mjs'
+import { Compte, Avatar, deserialRowItems, compileToObject, data, Prefs, Contact, Invitgr, Invitcp, Compta, Groupe, Membre, Cv, Couple } from './modele.mjs'
 import { AppExc, EXBRK, EXPS, F_BRO, E_BRO, X_SRV, E_WS, MC } from './api.mjs'
 
 import { crypt } from './crypto.mjs'
@@ -257,6 +257,31 @@ export class Operation {
       const iv = lstInvitGr[i]
       const args = { sessionId: data.sessionId, id: iv.id, idg: iv.idg, ni: iv.ni, datak: iv.datak }
       this.tr(await post(this, 'm1', 'regulGr', args))
+    }
+  }
+
+  /* Obtention des invitCp du compte et traitement de régularisation ***********************************/
+  async getInvitCps (compte) {
+    const ids = compte.avatarIds()
+    const ret = this.tr(await post(this, 'm1', 'chargerInvitCp', { sessionId: data.sessionId, ids: Array.from(ids) }))
+    const lstInvitCp = []
+    if (ret.rowItems.length) {
+      for (const item of ret.rowItems) {
+        const row = schemas.deserialize('rowinvitcp', item.serial)
+        const obj = new Invitcp()
+        await obj.fromRow(row)
+        lstInvitCp.push(obj)
+      }
+    }
+    await this.traitInvitCp(lstInvitCp)
+  }
+
+  /* Traitement des invitCp, appel de régularisation ********************************/
+  async traitInvitCp (lstInvitCp) {
+    for (let i = 0; i < lstInvitCp.length; i++) {
+      const iv = lstInvitCp[i]
+      const args = { sessionId: data.sessionId, id: iv.id, idc: iv.idc, ni: iv.ni, datak: iv.datak }
+      this.tr(await post(this, 'm1', 'regulCp', args))
     }
   }
 
@@ -632,6 +657,13 @@ export class Operation {
       await this.traitInvitGr(lst)
     }
 
+    // Invitcp : post de traitement pour maj de la liste des couples dans l'avatar invité
+    if (mapObj.invitcp) {
+      const lst = []
+      for (const pk in mapObj.invitcp) lst.push(mapObj.invitcp[pk])
+      await this.traitInvitCp(lst)
+    }
+
     /* Traitement des CVs. Double effet :
       - si le x est true, c'est une disparition
       - cv peut être null ou non (maj ou suppr)
@@ -949,7 +981,7 @@ export class ConnexionCompte extends OperationUI {
 
   excActions () { return { d: deconnexion, x: deconnexion, r: reconnexion, default: null } }
 
-  /* Obtention de compte / prefs / compta depuis le serveur (si plus récents que ceux connus localement)
+  /* Obtention de compte / prefs depuis le serveur (si plus récents que ceux connus localement)
   RAZ des abonnements et abonnement au compte
   */
   async chargerCP (vcompte, vprefs) {
@@ -962,7 +994,7 @@ export class ConnexionCompte extends OperationUI {
     return [compte, prefs, ret.estComptable]
   }
 
-  async phase0 () { // compte / prefs / compta : abonnement à compte
+  async phase0 () { // compte / prefs : abonnement à compte
     const compteIdb = !data.dbok ? null : await getCompte()
     if (!data.netok && (!compteIdb || compteIdb.pcbh !== data.ps.pcbh)) {
       throw new AppExc(F_BRO, 'Compte non enregistré localement : aucune session synchronisée ne s\'est préalablement exécutée sur ce poste avec cette phrase secrète. Erreur dans la saisie de la ligne 2 de la phrase ?')
@@ -1350,10 +1382,11 @@ export class ConnexionCompte extends OperationUI {
       */
       await this.syncCVs()
 
-      /* Phase 5 : récupération des invitations aux groupes
-      Elles seront de facto traitées en synchronisation quand un avatar reviendra avec un lgrk étendu
+      /* Phase 5 : récupération des invitations aux groupes / couples
+      Elles seront de facto traitées en synchronisation quand un avatar reviendra avec un lgrk / lcck étendu
       */
       if (data.netok) await this.getInvitGrs(this.compte)
+      if (data.netok) await this.getInvitCps(this.compte)
 
       // Finalisation en une seule fois, commit en IDB
       if (data.dbok && data.netok) await this.buf.commitIDB()
@@ -1823,6 +1856,49 @@ export class NouvelleRencontre extends OperationUI {
 
       const args = { sessionId: data.sessionId, rowCouple, rowContact, ni, datak, id: nap.id }
       await post(this, 'm1', 'nouveauParrainage', args)
+      return this.finOK()
+    } catch (e) {
+      return await this.finKO(e)
+    }
+  }
+}
+/******************************************************************
+Nouveau Couple :
+/* `lcck` : map : de avatar
+    - _clé_ : `ni`, numéro pseudo aléatoire. Hash de (`cc` en hexa suivi de `0` ou `1`).
+    - _valeur_ : clé `cc` cryptée par la clé K de l'avatar cible. Le hash d'une clé d'un couple donne son id.
+args :
+  - sessionid
+  - idc: id du couple
+  - id: id de l'avatar,
+  - ni: clé d'accès à lcck de l'avatar
+  - datak : terme ni de lcck
+  - rowCouple
+  - rowInvitcp
+A_SRV, '23-Avatar non trouvé.'
+*/
+
+export class NouveauCouple extends OperationUI {
+  constructor () {
+    super('Création d\'un nouveau couple', OUI, SELONMODE)
+  }
+
+  async run (arg) {
+    try {
+      const clepub = await get('m1', 'getclepub', { sessionId: data.sessionId, sid: crypt.idToSid(arg.na1.id) })
+      if (!clepub) throw new AppExc(E_BRO, '23-Cle RSA publique d\'avatar non trouvé')
+
+      const cc = crypt.random(32) // clé du couple
+      const ni = crypt.hash(crypt.u8ToHex(cc) + '0')
+      const ni1 = crypt.hash(crypt.u8ToHex(cc) + '1')
+      const datak = await crypt.crypter(data.clek, cc)
+      const dlv = getJourJ() + cfg().limitesjour.parrainage
+
+      const couple = new Couple().nouveauC(arg.na0, arg.na1, cc, dlv, arg.mot)
+      const rowCouple = await couple.toRow()
+      const rowInvitcp = await new Invitcp().toRow(arg.na1.id, ni1, cc, clepub)
+      const args = { sessionId: data.sessionId, idc: couple.id, id: arg.na0.id, ni, datak, rowCouple, rowInvitcp }
+      await post(this, 'm1', 'acceptRencontre', args)
       return this.finOK()
     } catch (e) {
       return await this.finKO(e)

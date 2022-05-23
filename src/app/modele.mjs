@@ -83,6 +83,7 @@ function newObjet (table) {
     case 'avatar' : return new Avatar()
     case 'couple' : return new Couple()
     case 'invitgr' : return new Invitgr()
+    case 'invitcp' : return new Invitcp()
     case 'contact' : return new Contact()
     case 'groupe' : return new Groupe()
     case 'membre' : return new Membre()
@@ -349,9 +350,6 @@ class Session {
 
   getSecret (id, ns) { return store().getters['db/secret'](id, ns) }
   setSecrets (lobj) { store().commit('db/setObjets', lobj) }
-
-  getContactstd (id, nx) { return store().getters['db/contactstd'](id, nx) }
-  setContactstds (lobj) { store().commit('db/setObjets', lobj) }
 
   getFetat (idf) { return store().getters['db/fetat'](idf) }
   setFetats (lobj) { store().commit('db/setObjets', lobj) }
@@ -1022,7 +1020,6 @@ export class Couple {
     this.data = {
       x: [[naI.nom, naI.rnd], [nomf, null]],
       phrase: pp,
-      nx: 0,
       f1: forfaits[0],
       f2: forfaits[1],
       r1: 0,
@@ -1059,11 +1056,45 @@ export class Couple {
     this.data = {
       x: [[naI.nom, naI.rnd], [naE.nom, naE.rnd]],
       phrase: pp,
-      nx: 0,
       f1: forfaits[0],
       f2: forfaits[1],
       r1: ressources ? ressources[0] : 0,
       r2: ressources ? ressources[1] : 0
+    }
+    return this
+  }
+
+  nouveauC (naI, naE, cc, dlv, mot, max) {
+    this.v = 0
+    this.vsh = 0
+    this.st = 1110
+    this.naI = naI
+    this.idI = naI.id
+    this.naE = naE
+    this.idE = naE.id
+    this.avc = 0
+    const na = new NomAvatar(naI.nom + '_' + naE.nom, cc)
+    this.id = na.id
+    data.repertoire.setCp(na)
+    this.v1 = 0
+    this.v2 = 0
+    this.mx10 = max[0]
+    this.mx20 = max[1]
+    this.mx11 = 0
+    this.mx21 = 0
+    this.dlv = dlv
+    this.mc0 = null
+    this.mc1 = null
+    this.info = null
+    this.ard = mot
+    this.dh = new Date().getTime()
+    this.data = {
+      x: [[naI.nom, naI.rnd], [naE.nom, naE.rnd]],
+      phrase: null,
+      f1: 0,
+      f2: 0,
+      r1: 0,
+      r2: 0
     }
     return this
   }
@@ -1186,67 +1217,6 @@ export class Contact {
   }
 }
 
-/** Contactstd **********************************/
-/*
-- `id` : id de l'avatar A1 invité à accepter son couple avec A0
-- `nx` : numéro aléatoire - rangé comme *la phrase de contact* dans le couple
-- `x` : jour de suppression (0 si existant).
-- `dlv`
-- `ccp` : [cle nom] crypté par la clé publique de A1:
-  - `cle` : clé du couple (donne son id).
-  - `nom` : nom de A0.
-- `vsh` :
-*/
-
-schemas.forSchema({
-  name: 'idbContactstd',
-  cols: ['id', 'nx', 'x', 'cc', 'nom', 'dlv', 'vsh']
-})
-
-export class Contactstd {
-  get table () { return 'contactstd' }
-  get sid () { return crypt.idToSid(this.id) }
-  get sid2 () { return crypt.idToSid(this.nx) }
-  get pk () { return this.sid + '/' + this.sid2 }
-
-  get horsLimite () { return dlvDepassee(this.dlv) }
-  get suppr () { return this.x !== 0 }
-
-  async nouveau (id, dlv, cc, nom, clepub) {
-    this.vsh = 0
-    this.id = id
-    this.x = 0
-    this.nx = crypt.random(32)
-    this.cc = cc
-    this.nom = nom
-    this.ccp = await crypt.crypterRSA(clepub, serial([cc, nom]))
-    this.dlv = dlv
-    return this
-  }
-
-  async fromRow (row) {
-    this.vsh = row.vsh || 0
-    this.id = row.id
-    this.x = row.x
-    if (!this.x) {
-      this.dlv = row.dlv
-      const clePriv = data.getCompte().cpriv(this.id)
-      const y = deserial(await crypt.decrypterRSA(clePriv, row.ccp))
-      this.cle = y[0]
-      this.nom = y[1]
-    } else {
-      this.dlv = 0
-      this.cle = null
-      this.nom = ''
-    }
-    return this
-  }
-
-  toRow () {
-    return schemas.serialize('rowcontactstd', this)
-  }
-}
-
 /** Invitgr **********************************/
 /*
 - `id` : id du membre invité.
@@ -1273,6 +1243,34 @@ export class Invitgr {
     const datap = await crypt.crypterRSA(clepub, serial(this.data))
     const r = { id: this.id, ni: this.ni, datap }
     return schemas.serialize('rowinvitgr', r)
+  }
+}
+
+/** Invitcp **********************************/
+/*
+- `id` : id du membre invité.
+- `ni` : numéro d'invitation.
+- `datap` : clé cc du couple cryptée par la clé publique du membre invité (recrypté en datak par la clé k)
+Jamais stocké en IDB : dès réception, le row avatar correspondant est "régularisé"
+*/
+
+export class Invitcp {
+  get table () { return 'invitcp' }
+
+  async fromRow (row) {
+    this.id = row.id
+    this.ni = row.ni
+    const cpriv = data.getCompte().av(row.id).cpriv
+    const x = await crypt.decrypterRSA(cpriv, row.datap)
+    this.idc = crypt.hashBin(x) // pour le traitement de régularisation (abonnement au groupe)
+    this.datak = await crypt.crypter(data.clek, x)
+    return this
+  }
+
+  async toRow (id, ni, cc, clepub) {
+    const datap = await crypt.crypterRSA(clepub, cc)
+    const r = { id, ni, datap }
+    return schemas.serialize('rowinvitcp', r)
   }
 }
 
