@@ -170,30 +170,30 @@ export default ({
     const cvs = computed(() => { return $store.state.db.cvs })
 
     function libst (c) {
-      const nomE = c.naE ? c.naE.nom : c.data.x[1][0]
+      const nomAbs = c.absentE ? (c.naE ? c.naE.nom : c.data.x[1][0]) : c.naI.nom // Nom de "l'absent"
       if (c.stp <= 2) {
         return [
           '',
-          `En attente [${c.dlv - getJourJ()} jour(s)] d'acceptation ou de refus de ${nomE}`,
-          `Proposition faite à ${nomE} caduque, sans réponse dans les délais`,
-          `Proposition faite à ${nomE} explicitement refusée`,
-          `En attente [${c.dlv - getJourJ()} jour(s)] d'acceptation ou de refus du parrainage du compte de ${nomE}`,
-          `Parrainage du compte de ${nomE} caduque, sans réponse dans les délais`,
-          `Parrainage du compte de ${nomE} explicitement refusée`,
-          `En attente [${c.dlv - getJourJ()} jour(s)] d'acceptation ou de refus de rencontre avec ${nomE}`,
-          `Proposition de rencontre faite à ${nomE} caduque, sans réponse dans les délais`,
-          `Proposition de rencontre faite à ${nomE} explicitement refusée`
+          `En attente [${c.dlv - getJourJ()} jour(s)] d'acceptation ou de refus de ${nomAbs}`,
+          `Proposition faite à ${nomAbs} caduque, sans réponse dans les délais`,
+          `Proposition faite à ${nomAbs} explicitement refusée`,
+          `En attente [${c.dlv - getJourJ()} jour(s)] d'acceptation ou de refus du parrainage du compte de ${nomAbs}`,
+          `Parrainage du compte de ${nomAbs} caduque, sans réponse dans les délais`,
+          `Parrainage du compte de ${nomAbs} explicitement refusée`,
+          `En attente [${c.dlv - getJourJ()} jour(s)] d'acceptation ou de refus de rencontre avec ${nomAbs}`,
+          `Proposition de rencontre faite à ${nomAbs} caduque, sans réponse dans les délais`,
+          `Proposition de rencontre faite à ${nomAbs} explicitement refusée`
         ][c.ste]
       } else if (c.stp === 3) {
         return 'Couple établi'
       } else if (c.stp === 4) { // stp = 4. Couple quitté par l'autre
         return [
-          `${nomE} a quitté le couple. Continuation en solo`,
-          `${nomE} a quitté le couple et a été relancé pour y revenir: attente de sa décision`,
-          `${nomE} a quitté le couple, a été relancé pour y revenir mais n'a pas répondu dans les délais`,
-          `${nomE} a quitté le couple, a été relancé pour y revenir mais a explicitement refusé`
+          `${nomAbs} a quitté le couple. Continuation en solo`,
+          `${nomAbs} a quitté le couple et a été relancé pour y revenir: attente de sa décision`,
+          `${nomAbs} a quitté le couple, a été relancé pour y revenir mais n'a pas répondu dans les délais`,
+          `${nomAbs} a quitté le couple, a été relancé pour y revenir mais a explicitement refusé`
         ][c.ste]
-      } return `${nomE} a disparu. Continuation en solo`
+      } return `${nomAbs} a disparu. Continuation en solo`
     }
 
     function liborig (c) {

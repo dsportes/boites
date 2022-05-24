@@ -20,14 +20,10 @@
   <q-card v-for="(ax, idx) in s.lst" :key="ax.na.id"
     :class="dkli(idx) + ' zone full-width row items-start q-py-xs'">
     <img class="col-auto q-mr-sm photomax cursor-pointer" :src="ax.na.photoDef" @click="cv(ax.na)"/>
-    <div class="col column items-start">
-      <div class="titre-md text-bold cursor-pointer" @click="cv(ax.na)">{{ax.noml}}</div>
-      <div class="row">
-        <span v-for="id in ax.c" :key="id" class="m-mr-sm cursor-pointer text-underline" @click="cp(ax.na, id)">{{na(id).noml}}</span>
-      </div>
-      <div class="row">
-        <span v-for="x in ax.m" :key="x[0]+'/'+x[1]" class="m-mr-sm cursor-pointer text-underline" @click="mb(ax.na, x)">{{na(x[0]).noml}}</span>
-      </div>
+    <div class="col column q-mr-sm">
+      <div class="titre-md text-bold cursor-pointer self-center" @click="cv(ax.na)">{{ax.noml}}</div>
+      <div v-for="id in ax.c" :key="id" class="cursor-pointer text-underline self-start" @click="cp(ax.na, id)">{{na(id).noml}}</div>
+      <div v-for="x in ax.m" :key="x[0]+'/'+x[1]" class="cursor-pointer text-underline self-end" @click="mb(ax.na, x)">{{na(x[0]).noml}}</div>
     </div>
   </q-card>
 
@@ -69,6 +65,8 @@
       <q-card-section>
         <div class="titre-lg">Couple</div>
         <identite-cv :nom-avatar="nac" type="couple"/>
+        <identite-cv :nom-avatar="naI" type="avatar"/>
+        <identite-cv :nom-avatar="naE" type="avatar"/>
       </q-card-section>
     </q-card>
   </q-dialog>
@@ -82,6 +80,7 @@
       <q-card-section>
         <div class="titre-lg">Groupe</div>
         <identite-cv :nom-avatar="nac" type="groupe"/>
+        <identite-cv :nom-avatar="naI" type="avatar"/>
       </q-card-section>
     </q-card>
   </q-dialog>
@@ -116,6 +115,8 @@ export default ({
   data () {
     return {
       nac: null,
+      naI: null,
+      naE: null,
       phraserenc: false,
       isPwd: false,
       encours: false,
@@ -145,10 +146,15 @@ export default ({
     },
     cp (na, id) { // id du couple
       this.nac = data.repertoire.na(id)
+      const c = data.getCouple(id)
+      this.naI = c.naI
+      this.naE = c.naE
       this.cpident = true
     },
     mb (na, x) { // x [idg, im]
       this.nac = data.repertoire.na(x[0])
+      const mb = data.getMembre(x[0], x[1])
+      this.naI = mb.namb
       this.grident = true
     },
 

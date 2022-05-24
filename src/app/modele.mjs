@@ -956,6 +956,7 @@ export class Couple {
   get nom () { const x = this.data.x; return x[0][0] + '_' + x[1][0] }
   get nomE () { const x = this.data.x; return x[1][0] }
   get nomI () { const x = this.data.x; return x[0][0] }
+  get absentE () { return this.st1 === 0 && this.avc === 0 } // true si c'est l'externe E qui est absent
 
   naDeIm (im) { return new NomAvatar(this.data.x[im - 1][0], this.data.x[im - 1][1]) }
 

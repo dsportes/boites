@@ -1898,7 +1898,7 @@ export class NouveauCouple extends OperationUI {
       const rowCouple = await couple.toRow()
       const rowInvitcp = await new Invitcp().toRow(arg.na1.id, ni1, cc, clepub)
       const args = { sessionId: data.sessionId, idc: couple.id, id: arg.na0.id, ni, datak, rowCouple, rowInvitcp }
-      await post(this, 'm1', 'acceptRencontre', args)
+      await post(this, 'm1', 'nouveauCouple', args)
       return this.finOK()
     } catch (e) {
       return await this.finKO(e)
