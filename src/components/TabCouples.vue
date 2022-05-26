@@ -1,7 +1,7 @@
 <template>
 <div v-if="sessionok" :class="$q.screen.gt.sm ? 'ml20' : 'q-pa-xs full-width'">
 
-  <div v-if="!state.lst || !state.lst.length" class="titre-lg">Aucun couple ne correspond au critère de recherche</div>
+  <div v-if="!state.lst || !state.lst.length" class="titre-lg">Aucun contact ne correspond au critère de recherche</div>
 
   <panel-couple v-if="avatarcpform && state.lst && state.lst.length"
     :class="$q.screen.gt.sm ? 'ml20' : 'q-pa-xs full-width'"

@@ -1711,7 +1711,7 @@ export class RelancerCouple extends OperationUI {
 }
 
 /******************************************************************
-DuitterCouple : args de m1/supprimerCouple
+QuitterCouple : args de m1/supprimerCouple
 - sessionId: data.sessionId,
 - idc : id du couple
 - ni : numéro d'invitation du couple pour l'avatar avid
@@ -1731,16 +1731,13 @@ export class QuitterCouple extends OperationUI {
     try {
       const ni = crypt.hash(crypt.u8ToHex(couple.cle) + couple.avc)
       let phch = 0
-      let idx = 0
-      let nx = 0
       if (couple.stp === 1) {
         if (couple.ste === 4 || couple.ste === 7) {
           const pc = await couple.phraseContact()
           phch = pc.phch
         }
-        if (couple.ste === 1) { idx = couple.id1; nx = couple.data.nx }
       }
-      const args = { sessionId: data.sessionId, idc: couple.id, ni, avid, phch, idx, nx, avc: couple.avc }
+      const args = { sessionId: data.sessionId, idc: couple.id, ni, avid, phch, avc: couple.avc }
       await post(this, 'm1', 'quitterCouple', args)
       return this.finOK()
     } catch (e) {
@@ -1899,6 +1896,66 @@ export class NouveauCouple extends OperationUI {
       const rowInvitcp = await new Invitcp().toRow(arg.na1.id, ni1, cc, clepub)
       const args = { sessionId: data.sessionId, idc: couple.id, id: arg.na0.id, ni, datak, rowCouple, rowInvitcp }
       await post(this, 'm1', 'nouveauCouple', args)
+      return this.finOK()
+    } catch (e) {
+      return await this.finKO(e)
+    }
+  }
+}
+
+/******************************************************************
+Accepter un contact :
+/*
+args :
+  - sessionid
+  - idc: id du couple
+  - avc : avatar 0 ou 1 du couple
+  - ard: ardoise
+  - vmax : [mx10 mx20] ou [mx11 mx21]
+A_SRV, '23-Avatar non trouvé.'
+*/
+
+export class AccepterContact extends OperationUI {
+  constructor () {
+    super('Accepter un contact avec un avatar', OUI, SELONMODE)
+  }
+
+  async run (couple, avatar, ard, vmax) {
+    try {
+      const ardc = await couple.toArdc(ard)
+      const args = { sessionId: data.sessionId, idc: couple.id, avc: couple.avc, ardc, vmax }
+      await post(this, 'm1', 'accepterContact', args)
+      return this.finOK()
+    } catch (e) {
+      return await this.finKO(e)
+    }
+  }
+}
+
+/******************************************************************
+Décliner un contact :
+/*
+args :
+  - sessionid
+  - idc: id du couple
+  - id: id de l'avatar
+  - ni : numéro d'invitation au couple
+  - avc : avatar 0 ou 1 du couple
+  - ard: ardoise
+A_SRV, '23-Avatar non trouvé.'
+*/
+
+export class DeclinerContact extends OperationUI {
+  constructor () {
+    super('Décliner un contact avec un avatar', OUI, SELONMODE)
+  }
+
+  async run (couple, avatar, ard) {
+    try {
+      const ni = crypt.hash(crypt.u8ToHex(couple.cc) + couple.avc)
+      const ardc = await couple.toArdc(ard)
+      const args = { sessionId: data.sessionId, ni, idc: couple.id, id: avatar.id, avc: couple.avc, ardc }
+      await post(this, 'm1', 'declinerContact', args)
       return this.finOK()
     } catch (e) {
       return await this.finKO(e)

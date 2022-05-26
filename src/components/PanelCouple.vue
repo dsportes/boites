@@ -15,7 +15,7 @@
       <q-toolbar-title><div class="titre-md text-bold">{{s.stlib}}</div></q-toolbar-title>
     </q-toolbar>
 
-    <div v-if="s.na" class="titre-md bg-secondary text-white">Carte de visite du couple</div>
+    <div v-if="s.na" class="titre-md bg-secondary text-white">Carte de visite du contact</div>
     <identite-cv  v-if="s.na" :nom-avatar="s.na" type="couple" editable @cv-changee="cvchangee"/>
     <q-separator/>
     <div v-if="s.cvaxvis" class="titre-md bg-secondary text-white">Carte de visite de {{s.naE.nom}}</div>
@@ -28,7 +28,7 @@
       </template>
       <q-card-section>
         <div class="bord1 q-pa-xs">
-          <div class="titre-md text-italic">Volumes maximaux pour les secrets du couple</div>
+          <div class="titre-md text-italic">Volumes maximaux pour les secrets partagés</div>
           <div class="titre-md text-italic">Fixés par moi</div>
           <choix-forfaits v-model="vmaxI" :f1="s.maxI1" :f2="s.maxI2" label-valider="OK" @valider="changervmax"/>
           <div v-if="s.maxEvis" class="titre-md">Fixés par {{s.nomE}}</div>
@@ -41,7 +41,7 @@
     <q-expansion-item header-class="expansion-header-class-1 titre-md bg-secondary text-white">
       <template v-slot:header>
         <q-item-section>
-          Ardoise commune ({{!s.ard ? 'vide': s.ard.length + 'c'}}){{s.ard.length ? ' - ' + s.dh : ''}}
+          Ardoise du contact ({{!s.ard ? 'vide': s.ard.length + 'c'}}){{s.ard.length ? ' - ' + s.dh : ''}}
         </q-item-section>
       </template>
       <q-card-section>
@@ -61,16 +61,16 @@
     <q-separator/>
 
     <div class="titre-md bg-secondary text-white">Mots clés qualifiant le contact</div>
-    <apercu-motscles :motscles="s.motscles" :src="s.mc" :args-click="{}" @click-mc="mcledit=true"/>
+      <apercu-motscles :motscles="s.motscles" :src="s.mc" :args-click="{}" @click-mc="mcledit=true"/>
     <q-separator/>
 
     <q-expansion-item v-if="s.orig === 1" header-class="expansion-header-class-1 titre-md bg-secondary text-white">
       <template v-slot:header>
-        <q-item-section>Couple créé par parrainage du compte de {{s.nomE}}</q-item-section>
+        <q-item-section>Contact créé du fait du parrainage du compte de {{s.nomE}}</q-item-section>
       </template>
       <q-card-section>
         <div>Phrase de parrainage : <span class="text-italic">{{s.phrase}}</span></div>
-        <div>Forfaits attribués au compte :</div>
+        <div>Forfaits attribués au compte parrainé :</div>
         <choix-forfaits v-model="pf" :f1="s.f1" :f2="s.f2" lecture/>
         <div v-if="s.r1 || s.r2" >Réserve attribuée pour parrainage d'autres comptes :</div>
         <choix-forfaits v-if="s.r1 || s.r2" v-model="pr" :f1="s.r1" :f2="s.r2" lecture/>
@@ -80,7 +80,7 @@
 
     <q-expansion-item v-if="s.orig === 2" header-class="expansion-header-class-1 titre-md bg-secondary text-white">
       <template v-slot:header>
-        <q-item-section>Couple créé par rencontre avec l'avatar {{s.nomE}}</q-item-section>
+        <q-item-section>Contact créé par une phrase de rencontre convenue avec {{s.nomE}}</q-item-section>
       </template>
       <q-card-section>
         <div>Phrase de rencontre : <span class="text-italic">{{s.phrase}}</span></div>
@@ -174,12 +174,12 @@ export default ({
       if (c.stp <= 2) {
         return [
           '',
-          `En attente [${c.dlv - getJourJ()} jour(s)] d'acceptation ou de refus de ${nomAbs}`,
+          `En attente [${c.dlv - getJourJ()} jour(s)] d'acceptation ou de refus du contact de ${nomAbs}`,
           `Proposition faite à ${nomAbs} caduque, sans réponse dans les délais`,
           `Proposition faite à ${nomAbs} explicitement refusée`,
           `En attente [${c.dlv - getJourJ()} jour(s)] d'acceptation ou de refus du parrainage du compte de ${nomAbs}`,
           `Parrainage du compte de ${nomAbs} caduque, sans réponse dans les délais`,
-          `Parrainage du compte de ${nomAbs} explicitement refusée`,
+          `Parrainage du compte de ${nomAbs} explicitement refusé`,
           `En attente [${c.dlv - getJourJ()} jour(s)] d'acceptation ou de refus de rencontre avec ${nomAbs}`,
           `Proposition de rencontre faite à ${nomAbs} caduque, sans réponse dans les délais`,
           `Proposition de rencontre faite à ${nomAbs} explicitement refusée`
@@ -188,30 +188,30 @@ export default ({
         return 'Couple établi'
       } else if (c.stp === 4) { // stp = 4. Couple quitté par l'autre
         return [
-          `${nomAbs} a quitté le couple. Continuation en solo`,
-          `${nomAbs} a quitté le couple et a été relancé pour y revenir: attente de sa décision`,
-          `${nomAbs} a quitté le couple, a été relancé pour y revenir mais n'a pas répondu dans les délais`,
-          `${nomAbs} a quitté le couple, a été relancé pour y revenir mais a explicitement refusé`
+          `${nomAbs} a rompu le contact, les secrets restent toutefois accessibles`,
+          `${nomAbs} a rompu le contact et a été relancé pour le rétablir: attente de sa décision`,
+          `${nomAbs} a rompu le contact, a été relancé pour le rétablir mais ne l'a pas fait dans les délais`,
+          `${nomAbs} a rompu le contact, a été relancé pour le rétablir mais a explicitement refusé de le faire`
         ][c.ste]
-      } return `${nomAbs} a disparu. Continuation en solo`
+      } return `${nomAbs} a disparu, les secrets du contact restent toutefois accessibles`
     }
 
     function liborig (c) {
       const nomE = c.naE ? c.naE.nom : c.data.x[1][0]
       if (c.orig === 0) {
         return [
-          `Proposition faite à ${nomE} qui a accepté`,
-          `Proposition faite par ${nomE} et acceptée`
+          `Proposition de contact faite à ${nomE} qui a accepté`,
+          `Proposition de contact faite par ${nomE} et acceptée`
         ][c.avc]
       } else if (c.orig === 1) {
         return [
-          `A l'occasion de la création du compte ${nomE} par parrainage`,
-          `Suite à l'acceptation du parrainage du compte par ${nomE}`
+          `Contact proposé à l'occasion de la création du compte de ${nomE} par parrainage`,
+          `Contact validé suite à l'acceptation du parrainage du compte par ${nomE}`
         ][c.avc]
       } else {
         return [
-          `Rencontre proposée à ${nomE} qui a accepté`,
-          `Rencontre proposée par ${nomE} et acceptée`
+          `Contact proposé par phrase de rencontre à ${nomE} qui l'a accepté`,
+          `Contact proposé par phrase de rencontre par ${nomE} et accepté`
         ][c.avc]
       }
     }
