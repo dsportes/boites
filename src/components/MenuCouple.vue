@@ -19,21 +19,13 @@
       <q-item v-if="a" clickable v-close-popup @click="declctc=true">
         <q-item-section>Décliner la proposition de contact</q-item-section>
       </q-item>
-      <q-separator v-if="p"/>
-      <q-item v-if="p" clickable v-close-popup @click="prolonger">
-        <q-item-section>Prolonger la proposition de contact faite à {{nom}}</q-item-section>
-      </q-item>
-      <q-separator v-if="p" />
-      <q-item  v-if="r" clickable v-close-popup @click="relancer">
-        <q-item-section>Relancer une proposition de contact pour {{nom}}</q-item-section>
-      </q-item>
       <q-separator v-if="r" />
-      <q-item v-if="s" clickable v-close-popup @click="supprimer">
+      <q-item v-if="r" clickable v-close-popup @click="supprimer">
         <q-item-section>Supprimer le contact</q-item-section>
       </q-item>
-      <q-separator v-if="s" />
+      <q-separator v-if="q" />
       <q-item v-if="q" clickable v-close-popup @click="quitter">
-        <q-item-section>Se retirer du contact</q-item-section>
+        <q-item-section>Suspendre ma participation au contact</q-item-section>
       </q-item>
       <q-separator v-if="q" />
       <q-item clickable v-close-popup @click="voirsecrets">

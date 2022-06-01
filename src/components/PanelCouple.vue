@@ -171,29 +171,33 @@ export default ({
 
     function libst (c) {
       const nomAbs = c.absentE ? (c.naE ? c.naE.nom : c.data.x[1][0]) : c.naI.nom // Nom de "l'absent"
-      if (c.stp <= 2) {
+      if (c.stp === 1) {
         return [
-          '',
           `En attente [${c.dlv - getJourJ()} jour(s)] d'acceptation ou de refus du contact de ${nomAbs}`,
-          `Proposition faite à ${nomAbs} caduque, sans réponse dans les délais`,
-          `Proposition faite à ${nomAbs} explicitement refusée`,
-          `En attente [${c.dlv - getJourJ()} jour(s)] d'acceptation ou de refus du parrainage du compte de ${nomAbs}`,
-          `Parrainage du compte de ${nomAbs} caduque, sans réponse dans les délais`,
-          `Parrainage du compte de ${nomAbs} explicitement refusé`,
-          `En attente [${c.dlv - getJourJ()} jour(s)] d'acceptation ou de refus de rencontre avec ${nomAbs}`,
-          `Proposition de rencontre faite à ${nomAbs} caduque, sans réponse dans les délais`,
-          `Proposition de rencontre faite à ${nomAbs} explicitement refusée`
+          `Proposition faite à ${nomAbs} explicitement refusée`
         ][c.ste]
-      } else if (c.stp === 3) {
-        return 'Couple établi'
-      } else if (c.stp === 4) { // stp = 4. Couple quitté par l'autre
+      }
+      if (c.stp === 2) {
         return [
-          `${nomAbs} a rompu le contact, les secrets restent toutefois accessibles`,
-          `${nomAbs} a rompu le contact et a été relancé pour le rétablir: attente de sa décision`,
-          `${nomAbs} a rompu le contact, a été relancé pour le rétablir mais ne l'a pas fait dans les délais`,
-          `${nomAbs} a rompu le contact, a été relancé pour le rétablir mais a explicitement refusé de le faire`
+          `En attente [${c.dlv - getJourJ()} jour(s)] d'acceptation ou de refus du parrainage du compte de ${nomAbs}`,
+          `Parrainage du compte de ${nomAbs} explicitement refusé`,
+          `Parrainage du compte de ${nomAbs} caduque, sans réponse dans les délais`
         ][c.ste]
-      } return `${nomAbs} a disparu, les secrets du contact restent toutefois accessibles`
+      }
+      if (c.stp === 3) {
+        return [
+          `En attente [${c.dlv - getJourJ()} jour(s)] d'acceptation ou de refus de rencontre avec ${nomAbs}`,
+          `Proposition de rencontre faite à ${nomAbs} explicitement refusée`,
+          `Proposition de rencontre faite à ${nomAbs} caduque, sans réponse dans les délais`
+        ][c.ste]
+      }
+      // c.stp === 4
+      const lautre = c.avc === 0 ? 1 : 0
+      let m = ''
+      if (c.st01[c.avc] === 1) m += 'J\'ai suspendu ma participation au contact. '
+      if (c.st01[lautre] === 1) m += `${c.naE.nom} a suspendu sa participation au contact. `
+      if (c.st01[lautre] === 2) m += `${c.naE.nom} a disparu. `
+      return !m ? 'Contact actif de part et d\'autre' : m
     }
 
     function liborig (c) {

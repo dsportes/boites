@@ -903,41 +903,23 @@ schemas.forSchema({
 /*
 - `id` : id du couple
 - `v` :
-- `st` : quatre chiffres `pe` : phase / état / 0 présent / 1 présent
+- `st` : quatre chiffres `p e 0 1` : phase / état
+  - `p` : 1 2 3 4 : phase
+  - `e` : en phase 1 2 3 seulement. 0 attente, 1 refus, 2 hors délai.
+  - `0` : pour A0, 0 actif, 1 suspendu, 2 disparu.
+  - `1` : pour A1, 0 actif, 1 suspendu, 2 disparu.
 - `v1 v2` : volumes actuels des secrets.
 - `mx10 mx20` : maximum des volumes autorisés pour A0
 - `mx11 mx21` : maximum des volumes autorisés pour A1
 - `dlv` : date limite de validité éventuelle de (re)prise de contact.
 - `datac` : données cryptées par la clé `cc` du couple :
   - `x` : `[nom, rnd], [nom, rnd]` : nom et clé d'accès à la carte de visite respectivement de A0 et A1.
-  - `phrase` : phrase de contact en phases 1/4-7 (qui nécessitent une phrase).
+  - `phrase` : phrase de parrainage / rencontre.
   - `f1 f2` : en phase 1/4 (parrainage), forfaits attribués par le parrain A0 à son filleul A1.
-  - 'r1 r2' : en phase 1/4 (parrainage) et si le compte filleul est lui-même parrain, ressources attribuées.
-- `infok0 infok1` : commentaires cryptés par leur clé K, respectivement de A0 et A1.
+  - `r1 r2` : en phase 1/4 (parrainage) et si le compte filleul est lui-même parrain, ressources attribuées.- `infok0 infok1` : commentaires personnels cryptés par leur clé K, respectivement de A0 et A1.
 - `mc0 mc1` : mots clé définis respectivement par A0 et A1.
 - `ardc` : ardoise commune cryptée par la clé cc. [dh, texte]
 - `vsh` :
-
-#### Phases de vie d'un couple
-- **(1) prise de contact par A0**. Etats : 147
-- **(2) fin de vie de A0 seul après refus de A1**. Etats : 235689
-- **(3) vie à deux**. Etat : 0
-- **(4) vie de A0 OU A1 seul après _départ_ de l'autre**. Etats: 0 (pas de relance), 123
-- **(5) vie de A0 OU A1 seul après _disparition_ de l'autre**. Etat : 0
-
-Dans certaines de ces phases il y a des **états** significatifs (sinon 0).
-- (re)prise de contact standard
-  - (1) en attente de réponse
-  - (2) hors délai
-  - (3) refusée
-- parrainage
-  - (4) en attente de réponse
-  - (5) hors délai
-  - (6) refusée
-- rencontre
-  - (7) en attente de réponse
-  - (8) hors délai
-  - (9) refusée
 */
 
 export class Couple {
@@ -948,8 +930,7 @@ export class Couple {
 
   get stp () { return Math.floor(this.st / 1000) }
   get ste () { return Math.floor(this.st / 100) % 10 }
-  get st0 () { return Math.floor(this.st / 10) % 10 }
-  get st1 () { return this.st % 10 }
+  get st01 () { return [Math.floor(this.st / 10) % 10, this.st % 10] }
 
   get cle () { return data.repertoire.cle(this.id) }
   get na () { return data.repertoire.na(this.id) }
@@ -997,7 +978,7 @@ export class Couple {
   nouveauR (naI, nomf, cc, dlv, mot, pp, forfaits) {
     this.v = 0
     this.vsh = 0
-    this.st = 1710
+    this.st = 3000
     this.naI = naI
     this.idI = naI.id
     this.naE = null
@@ -1032,7 +1013,7 @@ export class Couple {
   nouveauP (naI, naE, cc, dlv, mot, pp, forfaits, ressources) {
     this.v = 0
     this.vsh = 0
-    this.st = 1410
+    this.st = 2000
     this.naI = naI
     this.idI = naI.id
     this.naE = naE
@@ -1068,7 +1049,7 @@ export class Couple {
   nouveauC (naI, naE, cc, dlv, mot, max) {
     this.v = 0
     this.vsh = 0
-    this.st = 1110
+    this.st = 1000
     this.naI = naI
     this.idI = naI.id
     this.naE = naE
@@ -1101,9 +1082,8 @@ export class Couple {
   }
 
   dlvEtat () {
-    if (this.dlv && dlvDepassee(this.dlv)) {
-      if (this.stp === 1) { this.st += 1100; return } // si attente, passe en phase 2 et états hors délai
-      if (this.stp === 4 && this.ste === 1) this.st += 100 // si attente, passe en hors délai
+    if (this.dlv && dlvDepassee(this.dlv) && this.stp < 4) {
+      this.st = ((this.stp * 10) + 2) * 100
     }
   }
 

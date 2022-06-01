@@ -16,7 +16,7 @@
       <div class="row items-start full-width">
         <div class="col row cursor-pointer" @click="afficher(idx)">
           <img class="col-auto photomax" :src="photo(c)"/>
-          <q-icon class="col-auto q-pa-xs" size="sm" :color="c.stx<2?'primary':'warning'" :name="icone(c.stp)"/>
+          <q-icon class="col-auto q-pa-xs" size="sm" :color="c.stp !== 4 || c.st01[0] || c.st01[1]?'primary':'warning'" :name="icone(c)"/>
           <div class="col-3 q-px-xs">{{nom(c)}}</div>
           <div class="col q-pr-xs">{{c.ard.substring(0,80)}}</div>
           <div class="col-auto fs-sm">{{dhstring(c.dh)}}</div>
@@ -151,8 +151,11 @@ export default ({
 
     function nom (c) { return c.naE ? c.naE.noml : c.na.nom }
 
-    function icone (p) {
-      return ['thumb_up', 'hourglass_empty', 'thumb_down', 'thumb_up', 'thumb_down_off_alt', 'person_off'][p]
+    function icone (c) {
+      if (c.stp < 4) return ['hourglass_empty', 'thumb_down', 'thumb_down_off_alt'][c.stp]
+      if (c.st01[0] === 0 && c.st01[1] === 0) return 'thumb_up'
+      if (c.st01[0] === 1 || c.st01[1] === 1) return 'thumb_down'
+      return 'person_off'
     }
 
     const state = reactive({
