@@ -11,28 +11,40 @@
       <q-item v-if="invitationattente" clickable v-close-popup @click="copier">
         <q-item-section class="titre-lg text-bold text-grey-8 bg-yellow-4 q-mx-sm text-center">[Contact !]</q-item-section>
       </q-item>
-      <q-separator v-if="a"/>
-      <q-item v-if="a" clickable v-close-popup @click="acceptctc=true">
+      <q-separator v-if="ppc"/>
+      <q-item v-if="ppc" clickable v-close-popup @click="acceptctc=true">
         <q-item-section>Accepter la proposition de contact</q-item-section>
       </q-item>
-      <q-separator v-if="a"/>
-      <q-item v-if="a" clickable v-close-popup @click="declctc=true">
+      <q-separator v-if="ppc"/>
+      <q-item v-if="ppc" clickable v-close-popup @click="declctc=true">
         <q-item-section>Décliner la proposition de contact</q-item-section>
       </q-item>
-      <q-separator v-if="r" />
-      <q-item v-if="r" clickable v-close-popup @click="supprimer">
+      <q-separator v-if="supp" />
+      <q-item v-if="supp" clickable v-close-popup @click="supprimer">
         <q-item-section>Supprimer le contact</q-item-section>
       </q-item>
-      <q-separator v-if="q" />
-      <q-item v-if="q" clickable v-close-popup @click="quitter">
+      <q-separator v-if="quit" />
+      <q-item v-if="quit" clickable v-close-popup @click="suspendre">
         <q-item-section>Suspendre ma participation au contact</q-item-section>
       </q-item>
-      <q-separator v-if="q" />
-      <q-item clickable v-close-popup @click="voirsecrets">
+      <q-separator v-if="repc" />
+      <q-item v-if="repc" clickable v-close-popup @click="reactiver">
+        <q-item-section>Réactiver ma participation au contact</q-item-section>
+      </q-item>
+      <q-separator v-if="prlp" />
+      <q-item v-if="prlp" clickable v-close-popup @click="prolonger(0)">
+        <q-item-section>Prolonger ma proposition de parrainage</q-item-section>
+      </q-item>t
+      <q-separator v-if="prlr" />
+      <q-item v-if="prlr" clickable v-close-popup @click="prolonger(1)">
+        <q-item-section>Prolonger ma proposition de contact</q-item-section>
+      </q-item>
+      <q-separator v-if="sec" />
+      <q-item v-if="sec" clickable v-close-popup @click="voirsecrets">
         <q-item-section>Voir les secrets partagés</q-item-section>
       </q-item>
-      <q-separator />
-      <q-item clickable v-close-popup @click="nouveausecret">
+      <q-separator v-if="sec" />
+      <q-item v-if="sec" clickable v-close-popup @click="nouveausecret">
         <q-item-section>Nouveau secret partagé</q-item-section>
       </q-item>
     </q-list>
@@ -41,7 +53,7 @@
   <q-dialog v-model="acceptctc">
     <q-card class="q-ma-xs moyennelargeur fs-md">
       <q-card-section class="column items-center">
-        <div class="titre-lg text-center">Accepter une proposition de contact</div>
+        <div class="titre-lg text-center">Accepter la proposition de contact</div>
       </q-card-section>
       <q-card-section>
         <div>Volumes v1 / v2 maximaux déclarés par {{nomE}} pour les secrets du contact :</div>
@@ -63,7 +75,7 @@
   <q-dialog v-model="declctc">
     <q-card class="q-ma-xs moyennelargeur fs-md">
       <q-card-section class="column items-center">
-        <div class="titre-lg text-center">Décliner une proposition de contact</div>
+        <div class="titre-lg text-center">Décliner la proposition de contact</div>
       </q-card-section>
       <q-card-section>
         <div>Remerciement / explication ... sur l'ardoise commune</div>
@@ -79,7 +91,7 @@
 import { computed, toRef } from 'vue'
 import { useStore } from 'vuex'
 import { retourInvitation } from '../app/page.mjs'
-import { ProlongerCouple, QuitterCouple, RelancerCouple, AccepterCouple, DeclinerCouple } from '../app/operations.mjs'
+import { AccepterCouple, DeclinerCouple, ProlongerCouple, SupprimerCouple, QuitterCouple, ReactiverCouple } from '../app/operations.mjs'
 import { useQuasar } from 'quasar'
 
 export default ({
@@ -88,11 +100,13 @@ export default ({
   props: { c: Object },
   computed: {
     nom () { const x = this.c ? this.c : this.couple; return x.nomE },
-    s () { const x = this.c ? this.c : this.couple; return x.stp <= 2 },
-    p () { const x = this.c ? this.c : this.couple; return x.stp === 1 },
-    q () { const x = this.c ? this.c : this.couple; return x.stp === 3 || x.stp === 4 },
-    r () { const x = this.c ? this.c : this.couple; return x.stp === 4 && x.ste !== 1 },
-    a () { const x = this.c ? this.c : this.couple; return x.stp === 1 && x.ste !== 1 }
+    sec () { const x = this.c ? this.c : this.couple; return x.stp === 4 && x.actifI },
+    repc () { const x = this.c ? this.c : this.couple; return x.stp === 4 && !x.actifI },
+    quit () { const x = this.c ? this.c : this.couple; return x.stp === 4 && !x.absentE },
+    supp () { const x = this.c ? this.c : this.couple; return (x.stp === 4 && x.absentE) || x.stp !== 4 },
+    ppc () { const x = this.c ? this.c : this.couple; return x.stp === 1 && x.ste === 0 && x.avc === 1 },
+    prlp () { const x = this.c ? this.c : this.couple; return x.stp === 2 && x.ste === 0 },
+    prlr () { const x = this.c ? this.c : this.couple; return x.stp === 3 && x.ste === 0 }
   },
 
   data () {
@@ -145,6 +159,7 @@ export default ({
       await new DeclinerCouple().run(x, this.avatar.value.id, this.ard)
     }
   },
+
   setup (props) {
     const $store = useStore()
     const $q = useQuasar()
@@ -172,17 +187,16 @@ export default ({
       set: (val) => $store.commit('db/majcouple', val)
     })
 
-    function prolonger () {
+    function prolonger (opt) {
       const x = c.value || couple.value
       const lbl = [
-        'La proposition de contact peut être prolongée de 20 jours.',
         'La proposition de parrainage peut être prolongée de 20 jours.',
         'La proposition de contact (par phrase de rencontre) peut être prolongée de 20 jours.'
       ]
       $q.dialog({
         dark: true,
         title: 'Confirmer la prolongation',
-        message: lbl[x.orig],
+        message: lbl[opt],
         cancel: { label: 'Je renonce', color: 'primary' },
         ok: { color: 'warning', label: 'Je veux la prolonger' },
         persistent: true
@@ -194,21 +208,34 @@ export default ({
       })
     }
 
-    function quitter () {
+    function suspendre () {
       const x = c.value || couple.value
-      const lbl = [
-        'Vous êtes seul(e) dans ce contact : le quitter revient à le supprimer et à perdre tous les secrets associés',
-        x.nomE + ' restera seul(e) dans le contact et pourra continuer d\'accéder aux secrets'
-      ]
       $q.dialog({
         dark: true,
-        title: 'Se retirer du contact',
-        message: x.stp === 3 ? lbl[1] : lbl[0],
-        cancel: { label: 'Je reste', color: 'primary' },
-        ok: { color: 'warning', label: x.stp === 3 ? 'Je quitte le contact' : 'Je supprime le contact' },
+        title: 'Suspendre ma participation au contact',
+        message: `Vous n'accéderez plus aux secrets de ce contact, mais ${x.nomE} le pourra toujours`,
+        cancel: { label: 'Je maintiens ma participation', color: 'primary' },
+        ok: { color: 'warning', label: 'Je suspend ma participation' },
         persistent: true
       }).onOk(async () => {
         await new QuitterCouple().run(x, avatar.value.id)
+      }).onCancel(() => {
+      }).onDismiss(() => {
+        // console.log('I am triggered on both OK and Cancel')
+      })
+    }
+
+    function reactiver () {
+      const x = c.value || couple.value
+      $q.dialog({
+        dark: true,
+        title: 'Réactiver ma participation au contact',
+        message: 'Vous accéderez à nouveau aux secrets de ce contact dont les volumes vous seront débités',
+        cancel: { label: 'Je ne réactive pas ma participation', color: 'primary' },
+        ok: { color: 'warning', label: 'Je réactive ma participation' },
+        persistent: true
+      }).onOk(async () => {
+        await new ReactiverCouple().run(x, avatar.value.id)
       }).onCancel(() => {
       }).onDismiss(() => {
         // console.log('I am triggered on both OK and Cancel')
@@ -217,40 +244,37 @@ export default ({
 
     function supprimer () {
       const x = c.value || couple.value
-      const n = x.nomE
-      const lbl = [
-        `${n} n'a pas répondu favorablement dans les temps. Vous êtes seul(e) dans ce contact.`,
-        `${n} n'a pas accepté la proposition de parrainage de son compte. Vous êtes seul(e) dans ce contact.`,
-        `${n} n'a pas accepté répondu à la proposition de contact par phrase de rencontrerencontre faite. Vous êtes seul(e) dans ce contact.`
-      ]
+      let lbl = x.nomE
+      if (x.stp === 4) {
+        lbl += x.st01[this.ava] === 1 ? ' a suspendu sa participation à ce contact.' : ' a disparu.'
+        lbl += ' Le contact va être supprimé et les secrets détruits.'
+      } else if (x.stp === 1) {
+        lbl += x.ste === 0 ? ' n\'a pas déclaré accepter ce contact.' : ' a refusé ce contact'
+        lbl += ' Le contact va être supprimé.'
+      } else if (x.stp === 2) {
+        lbl += [
+          ' n\'a pas déclaré accepter ce parrainage.',
+          ' a refusé ce parrainage',
+          ' n\'a pas déclaré dans les délais accepter ce parrainage et ne peut plus le faire.'
+        ][x.ste]
+        lbl += ' Le contact va être supprimé.'
+      } else if (x.stp === 3) {
+        lbl += [
+          ' n\'a pas déclaré accepter ce contact en invoquant la phrase de rencontre.',
+          ' a invoqué la phrase de rencontre mais a refusé le contact.',
+          ' n\'a pas invoqué la phrase de rencontre dans les délais et ne peut plus le faire.'
+        ][x.ste]
+        lbl += ' Le contact va être supprimé.'
+      }
       $q.dialog({
         dark: true,
         title: 'Confirmer la suppression du contact',
-        message: lbl[x.orig] + ' Tous les secrets seront perdus.',
+        message: lbl,
         cancel: { label: 'Je renonce à la suppression', color: 'primary' },
         ok: { color: 'warning', label: 'Je supprime le contact' },
         persistent: true
       }).onOk(async () => {
-        await new QuitterCouple().run(x, avatar.value.id)
-      }).onCancel(() => {
-      }).onDismiss(() => {
-        // console.log('I am triggered on both OK and Cancel')
-      })
-    }
-
-    function relancer () {
-      const x = c.value || couple.value
-      const n = x.nomE
-      const lbl = `${n} s'est retiré du contact. Vous pouvez essayer de la.le relancer pour qu'elle.il accepte de le rétablir`
-      $q.dialog({
-        dark: true,
-        title: `Relancer ${n}`,
-        message: lbl,
-        cancel: { label: 'Je ne relance pas', color: 'primary' },
-        ok: { color: 'warning', label: `Je relance ${n}` },
-        persistent: true
-      }).onOk(async () => {
-        await new RelancerCouple().run(x, avatar.value.id)
+        await new SupprimerCouple().run(x, avatar.value.id)
       }).onCancel(() => {
       }).onDismiss(() => {
         // console.log('I am triggered on both OK and Cancel')
@@ -259,9 +283,9 @@ export default ({
 
     return {
       prolonger,
-      quitter,
+      suspendre,
+      reactiver,
       supprimer,
-      relancer,
       couple,
       avatarcpform,
       evtfiltresecrets,

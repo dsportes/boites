@@ -934,14 +934,15 @@ export class Couple {
 
   get cle () { return data.repertoire.cle(this.id) }
   get na () { return data.repertoire.na(this.id) }
-  get nom () { const x = this.data.x; return x[0][0] + '_' + x[1][0] }
-  get nomE () { const x = this.data.x; return x[1][0] }
-  get nomI () { const x = this.data.x; return x[0][0] }
-  get absentE () { return this.st1 === 0 && this.avc === 0 } // true si c'est l'externe E qui est absent
+  get nom () { return this.data.x[0][0] + '_' + this.data.x[1][0] }
+  get nomE () { return this.data.x[this.ava][0] }
+  get nomI () { return this.data.x[this.avc][0] }
+  get absentE () { return this.stp === 4 && this.st01[this.ava] !== 0 } // true si l'externe E est absent (disparu / suspendu)
+  get actifI () { return this.stp === 4 && this.st01[this.avc] === 0 } // true si l'interne est actif
 
   naDeIm (im) { return new NomAvatar(this.data.x[im - 1][0], this.data.x[im - 1][1]) }
 
-  // origine du couple : 0) proposition standard à un contact connu, 1) parainage, 2) rencontre
+  // origine du couple : 0) proposition standard à un contact connu, 1) parrainage, 2) rencontre
   get orig () { return !this.data.phrase ? 0 : (this.data.f1 || this.data.f2 ? 1 : 2) }
 
   get nomf () { return normpath(this.nom) }
@@ -958,19 +959,12 @@ export class Couple {
   setIdIE (x, cle) { // cle : non null pour réception d'un couple HORS session (accepatation / refus parrainage)
     const id0 = x[0][1] ? crypt.hashBin(x[0][1]) : 0
     const id1 = x[1][1] ? crypt.hashBin(x[1][1]) : 0
-    if (!cle && data.repertoire.estAc(id0)) {
-      this.idI = id0
-      this.idE = id1
-      this.naE = this.idE ? new NomAvatar(x[1][0], x[1][1]) : null
-      this.naI = new NomAvatar(x[0][0], x[0][1])
-      this.avc = 0
-    } else {
-      this.idI = id1
-      this.idE = id0
-      this.naE = this.idE ? new NomAvatar(x[0][0], x[0][1]) : null
-      this.naI = new NomAvatar(x[1][0], x[1][1])
-      this.avc = 1
-    }
+    this.avc = !cle && data.repertoire.estAc(id0) ? 0 : 1 // position 0 / 1 de l'avatar du compte
+    this.ava = this.avc ? 0 : 1 // position 0 / 1 de l'autre avatar
+    this.idI = this.avc ? id1 : id0
+    this.idE = this.ava ? id1 : id0
+    this.naE = this.idE ? new NomAvatar(x[this.ava][0], x[this.ava][1]) : null
+    this.naI = new NomAvatar(x[this.avc][0], x[this.avc][1])
     const na = new NomAvatar(this.nom, cle || this.cle)
     if (!cle) data.repertoire.setCp(na); else this.naTemp = na
   }
