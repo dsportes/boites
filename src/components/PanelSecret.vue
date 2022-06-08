@@ -796,10 +796,10 @@ export default ({
       if (s.ts === 0) {
         return avatar.value.na.nom
       } else if (s.ts === 1) {
-        return s.couple.naDeIm(state.xlocal).nom
+        return s.couple.naDeIm(state.xlocal).nomc
       }
       const m = data.getMembre(s.groupe.id, state.xlocal)
-      return m ? m.namb.nom : '?'
+      return m ? m.namb.nomc : '?'
     }
 
     function editer () {

@@ -24,7 +24,8 @@
         </q-step>
 
         <q-step :name="3" title="Maximum d'espace attribués pour les secrets du couple" icon="settings" :done="step > 3" >
-          <choix-forfaits v-model="forfaits" :f1="1" :f2="1"/>
+          <div>Mettre 0 pour ne PAS partager de secrets</div>
+          <choix-forfaits v-model="max" :f1="1" :f2="1"/>
           <q-stepper-navigation>
             <q-btn flat @click="step = 2" color="primary" label="Précédent" class="q-ml-sm" />
             <q-btn flat @click="step = 4" color="primary" label="Suivant" class="q-ml-sm" />
@@ -35,9 +36,9 @@
           <div>Phrase de rencontre: <span class="font-mono q-pl-md">{{phrase}}</span></div>
           <div>Nom de l'avatar rencontré: <span class="font-mono q-pl-md">{{nom}}</span></div>
           <div>Mot de bienvenue: <span class="font-mono q-pl-md">{{mot}}</span></div>
-          <div>Volumes maximum attribués aux secret du couple :
-            <span class="font-mono q-pl-md">v1: {{ed1(forfaits[0])}}</span>
-            <span class="font-mono q-pl-lg">v2: {{ed2(forfaits[1])}}</span>
+          <div>Volumes maximum attribués aux secrets du couple :
+            <span class="font-mono q-pl-md">v1: {{ed1(max[0])}}</span>
+            <span class="font-mono q-pl-lg">v2: {{ed2(max[1])}}</span>
           </div>
           <q-stepper-navigation>
             <q-btn flat @click="corriger" color="primary" label="Corriger" class="q-ml-sm" />
@@ -74,7 +75,7 @@ export default ({
   data () {
     return {
       step: 1,
-      forfaits: [],
+      max: [],
       nom: '',
       mot: '',
       diagmot: false,
@@ -111,7 +112,7 @@ export default ({
         pp: this.phrase, // phrase de rencontre (string)
         clex: this.clex, // PBKFD de pp (u8)
         id: this.avatar.id,
-        forfaits: this.forfaits, // max volumes couple
+        max: this.max, // max volumes couple
         nomf: this.nom, // nom de l'avatar rencontré
         mot: this.mot // mot de bienvenue
       }
@@ -119,7 +120,7 @@ export default ({
       if (st) {
         this.mot = ''
         this.nom = ''
-        this.forfaits = [1, 1]
+        this.max = [1, 1]
         this.tabavatar = 'couples'
         if (this.close) this.close()
       } else {

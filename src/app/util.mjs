@@ -22,10 +22,14 @@ let $router
 let dtf
 let idbalerte
 let pako
+let lgnom
+let lgtitre
 
 export function setup (gp, appconfig, router, store, pako1) {
   pako = pako1
   $cfg = appconfig
+  lgtitre = $cfg.lgtitre || 50
+  lgnom = $cfg.lgnom || 16
   idbalerte = $cfg.idb
   globalProperties = gp
   $store = store
@@ -130,8 +134,6 @@ export async function idToIc (id) {
   return crypt.hashBin(await crypt.crypter(data.clek, crypt.intToU8(id), 1), false, false)
 }
 */
-
-let lgnom, lgtitre
 
 export function store () { return $store }
 
@@ -735,8 +737,6 @@ export function titreCompte (sid, info) {
 
 // Employé directement seulement pour un secret ???
 export function titreEd (nom, info, court) {
-  if (!lgtitre) lgtitre = cfg().lgtitre || 50
-  if (!lgnom) lgnom = cfg().lgnom || 16
   const lg = !court ? lgtitre : lgnom
   if (!info) info = ''
   const i = info.indexOf('\n')
@@ -747,6 +747,15 @@ export function titreEd (nom, info, court) {
   const n1 = j === -1 ? nom : nom.substring(0, j)
   const n = n1.length <= lgnom ? n1 : n1.substring(0, lgnom - 3) + '...'
   return t ? t + ' (' + n + ')' : n
+}
+
+export function nomCv (id, court) {
+  const cv = data.getCv(id)
+  if (!cv || !cv[1]) return ''
+  const lg = !court ? lgtitre : lgnom
+  const i = cv[1].indexOf('\n')
+  const t1 = i === -1 ? cv[1] : cv[1].substring(0, i)
+  return t1.length <= lg ? t1 : t1.substring(0, lg - 3) + '...'
 }
 
 /** NomAvatar **********************************/
@@ -761,11 +770,11 @@ export class NomAvatar {
     return new NomAvatar(this.nom, this.rnd, this.id)
   }
 
-  get nomc () { return this.nom + '@' + this.sid.substring(this.sid.length - 3, this.sid.length) + (this.disparu ? '[DISPARU]' : '') }
-  // get nomc () { return this.nom + '@ ' + this.id + (this.disparu ? '[DISPARU]' : '') }
+  get nomc () { return this.nom + '@' + this.sfx }
   get nomf () { return normpath(this.nomc) }
   get sid () { return crypt.idToSid(this.id) }
   get disparu () { return data.repertoire.disparu(this.id) }
+  get sfx () { return this.sid.substring(this.sid.length - 3, this.sid.length) + (this.disparu ? '[DISPARU]' : '') }
   get cle () { return this.rnd }
   get photo () {
     if (this.disparu) return ''

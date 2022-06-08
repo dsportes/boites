@@ -25,11 +25,11 @@
       </q-item>
       <q-separator v-if="quit" />
       <q-item v-if="quit" clickable v-close-popup @click="suspendre">
-        <q-item-section>Suspendre ma participation au contact</q-item-section>
+        <q-item-section>Suspendre mes accès aux secrets</q-item-section>
       </q-item>
       <q-separator v-if="repc" />
       <q-item v-if="repc" clickable v-close-popup @click="reactiver">
-        <q-item-section>Réactiver ma participation au contact</q-item-section>
+        <q-item-section>Réactiver mes accès aux secrets</q-item-section>
       </q-item>
       <q-separator v-if="prlp" />
       <q-item v-if="prlp" clickable v-close-popup @click="prolonger(0)">
@@ -53,18 +53,20 @@
   <q-dialog v-model="acceptctc">
     <q-card class="q-ma-xs moyennelargeur fs-md">
       <q-card-section class="column items-center">
-        <div class="titre-lg text-center">Accepter la proposition de contact</div>
+        <div class="titre-lg text-center">Accepter la proposition de contact de {{c.nomE}}</div>
       </q-card-section>
       <q-card-section>
-        <div>Volumes v1 / v2 maximaux déclarés par {{nomE}} pour les secrets du contact :</div>
-        <choix-forfaits v-model="vmax1" lecture :f1="c.avc===0 ? c.mx10 : c.mx11" :f2="c.avc===0 ? c.mx20 : c.mx21"/>
+        <div v-if="c.stE===1">{{c.nomE}} a choisi de partager des secrets par ce contact:<br>
+          <span class="font-mono q-pl-md">Maximum v1: {{ed1(c.max1E)}}</span><br>
+          <span class="font-mono q-pl-lg">Maximum v2: {{ed2(c.max2E)}}</span>
+        </div>
+        <div v-else>{{c.nomE}} a choisi de NE PAS PARTAGER de secrets par ce contact</div>
+        <div class="titre-lg">Volumes v1 / v2 maximaux déclarés par vous pour les secrets partagés par ce contact :</div>
+        <div class="titre-md text-warning">Mettre 0 pour NE PAS PARTAGER de secrets</div>
+        <choix-forfaits v-model="max" :f1="c.max1E" :f2="c.max2E"/>
       </q-card-section>
       <q-card-section>
-        <div>Volumes v1 / v2 maximaux fixés par vous-même :</div>
-        <choix-forfaits v-model="vmax" :f1="1" :f2="1" :v1="c.v1" :v2="c.v2"/>
-      </q-card-section>
-      <q-card-section>
-        <div>Message de remerciement ... sur l'ardoise commune</div>
+        <div>Message de remerciement</div>
         <editeur-md class="full-width height-8" v-model="ard" :texte="c.ard" editable modetxt/>
       </q-card-section>
     <q-card-actions>
@@ -75,10 +77,10 @@
   <q-dialog v-model="declctc">
     <q-card class="q-ma-xs moyennelargeur fs-md">
       <q-card-section class="column items-center">
-        <div class="titre-lg text-center">Décliner la proposition de contact</div>
+        <div class="titre-lg text-center">Décliner la proposition de contact de {{c.nomE}}</div>
       </q-card-section>
       <q-card-section>
-        <div>Remerciement / explication ... sur l'ardoise commune</div>
+        <div>Remerciement / explication sur l'ardoise</div>
         <editeur-md class="full-width height-8" v-model="ard" :texte="c.ard" editable modetxt/>
       </q-card-section>
     <q-card-actions>
@@ -99,22 +101,21 @@ export default ({
   components: { },
   props: { c: Object },
   computed: {
-    nom () { const x = this.c ? this.c : this.couple; return x.nomE },
-    sec () { const x = this.c ? this.c : this.couple; return x.stp === 4 && x.actifI },
-    repc () { const x = this.c ? this.c : this.couple; return x.stp === 4 && !x.actifI },
-    quit () { const x = this.c ? this.c : this.couple; return x.stp === 4 && !x.absentE },
-    supp () { const x = this.c ? this.c : this.couple; return (x.stp === 4 && x.absentE) || x.stp !== 4 },
-    ppc () { const x = this.c ? this.c : this.couple; return x.stp === 1 && x.ste === 0 && x.avc === 1 },
-    prlp () { const x = this.c ? this.c : this.couple; return x.stp === 2 && x.ste === 0 },
-    prlr () { const x = this.c ? this.c : this.couple; return x.stp === 3 && x.ste === 0 }
+    nom () { const x = this.c || this.couple; return x.nomEd },
+    sec () { const x = this.c || this.couple; return x.stp === 4 && x.stI === 1 },
+    repc () { const x = this.c || this.couple; return x.stI === 0 && x.stp === 4 },
+    quit () { const x = this.c || this.couple; return x.stI === 1 },
+    supp () { const x = this.c || this.couple; return (x.stp < 4 && x.avc === 1) || x.stp === 5 },
+    ppc () { const x = this.c || this.couple; return x.stp === 1 && x.orig === 0 && x.avc === 1 },
+    prlp () { const x = this.c || this.couple; return x.stp === 1 && x.orig === 1 },
+    prlr () { const x = this.c || this.couple; return x.stp === 1 && x.orig === 2 }
   },
 
   data () {
     return {
       acceptctc: false,
       declctc: false,
-      vmax: [1, 1],
-      vmax1: [1, 1],
+      max: [1, 1],
       ard: ''
     }
   },
@@ -133,7 +134,7 @@ export default ({
       if (this.c) this.couple = this.c
       this.tabavatar = 'secrets'
       setTimeout(() => {
-        this.evtfiltresecrets = { cmd: 'fsc', arg: this.c ? this.c : this.couple }
+        this.evtfiltresecrets = { cmd: 'fsc', arg: this.c || this.couple }
       }, 100)
     },
 
@@ -141,22 +142,22 @@ export default ({
       if (this.c) this.couple = this.c
       this.tabavatar = 'secrets'
       setTimeout(() => {
-        this.evtfiltresecrets = { cmd: 'nvc', arg: this.c ? this.c : this.couple }
+        this.evtfiltresecrets = { cmd: 'nvc', arg: this.c || this.couple }
       }, 100)
     },
 
     copier () {
-      retourInvitation(this.c ? this.c : this.couple)
+      retourInvitation(this.c || this.couple)
     },
 
     async accepter () {
       const x = this.c || this.couple
-      await new AccepterCouple().run(x, this.avatar.id, this.ard, this.vmax)
+      await new AccepterCouple().run(x, this.avatar.id, this.ard, this.max)
     },
 
     async decliner () {
       const x = this.c || this.couple
-      await new DeclinerCouple().run(x, this.avatar.value.id, this.ard)
+      await new DeclinerCouple().run(x, this.avatar.id, this.ard)
     }
   },
 

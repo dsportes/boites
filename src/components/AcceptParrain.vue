@@ -21,7 +21,7 @@
           <show-html class="full-width height-6 border1" :texte="couple.ard" />
           <q-stepper-navigation>
             <q-btn flat @click="fermer()" color="primary" label="Renoncer" class="q-ml-sm" />
-            <q-btn flat @click="step=5" color="primary" label="Refuser" class="q-ml-sm" />
+            <q-btn flat @click="step=9" color="primary" label="Refuser" class="q-ml-sm" />
             <q-btn flat @click="step=2" color="warning" label="Continuer" class="q-ml-sm" />
           </q-stepper-navigation>
         </q-step>
@@ -35,22 +35,25 @@
           </q-stepper-navigation>
         </q-step>
 
-        <q-step :name="3" title="Message de remerciement" icon="settings" :done="step > 3" >
-          <editeur-md class="full-width height-8" v-model="texte" :texte="textedef" editable modetxt hors-session/>
+        <q-step :name="3" title="Maximum d'espace attribués pour les secrets partagés par ce contact" icon="settings" :done="step > 3" >
+          <div v-if="couple.stE===1">Le parrain a choisi de partager des secrets :<br>
+            <span class="font-mono q-pl-md">Maximum v1: {{ed1(couple.mx10)}}</span><br>
+            <span class="font-mono q-pl-lg">Maximum v2: {{ed2(couple.mx11)}}</span>
+          </div>
+          <div v-else>Le parrain a choisi de NE PAS PARTAGER de secrets</div>
+          <div class="titre-md text-warning">Mettre 0 pour NE PAS PARTAGER de secrets</div>
+          <choix-forfaits v-model="max" :f1="couple.mx10" :f2="couple.mx11"/>
           <q-stepper-navigation>
-            <q-btn flat @click="step=2" color="primary" label="Corriger" class="q-ml-sm" />
-            <q-btn flat @click="fermer()" color="primary" label="Renoncer" class="q-ml-sm" />
-            <q-btn flat @click="step=5" color="primary" label="Refuser" class="q-ml-sm" />
-            <q-btn flat @click="step=4" color="warning" label="Continuer" class="q-ml-sm" />
+            <q-btn flat @click="step = 2" color="primary" label="Précédent" class="q-ml-sm" />
+            <q-btn flat @click="step = 4" color="primary" label="Suivant" class="q-ml-sm" />
           </q-stepper-navigation>
         </q-step>
 
-        <q-step :name="4" title="Confirmation" icon="check" :done="step > 5" >
+        <q-step :name="4" title="Rermerciement et acceptation" icon="check" :done="step > 3" >
+          <editeur-md class="full-width height-8" v-model="texte" :texte="textedef" editable modetxt hors-session/>
           <q-icon :name="isPwd ? 'visibility_off' : 'visibility'" class="cursor-pointer" @click="isPwd = !isPwd"/>
           <div>Phrase secrète (ligne 1): <span class="font-mono q-pl-md">{{isPwd ? '***' : ps.debut}}</span></div>
           <div>Phrase secrète (ligne 2): <span class="font-mono q-pl-md">{{isPwd ? '***' : ps.fin}}</span></div>
-          <div>Volumes v1 / v2 maximaux pour les secrets du couple avec le parrain :</div>
-          <choix-forfaits v-model="vmax" :f1="couple.mx10" :f2="couple.mx11"/>
           <q-stepper-navigation>
             <q-btn flat @click="step=1" color="primary" label="Corriger" class="q-ml-sm" />
             <q-btn flat @click="fermer()" color="primary" label="Renoncer" class="q-ml-sm" />
@@ -59,7 +62,7 @@
           </q-stepper-navigation>
         </q-step>
 
-        <q-step :name="5" title="Remerciement / explication (pourquoi décliner)" icon="check" :done="step > 3" >
+        <q-step :name="5" title="Remerciement / explication (pourquoi décliner)" icon="check" :done="step > 6" >
           <editeur-md class="full-width height-8" v-model="texte" :texte="couple.ard" editable modetxt hors-session/>
           <q-stepper-navigation>
             <q-btn flat @click="step=1" color="primary" label="Corriger" class="q-ml-sm" />
@@ -98,7 +101,7 @@ export default ({
     return {
       isPwd: false,
       jourJ: getJourJ(),
-      vmax: [],
+      max: [],
       step: 1,
       ps: null,
       apsf: false,
@@ -132,7 +135,7 @@ export default ({
     },
     async confirmer () {
       // eslint-disable-next-line no-unused-vars
-      const arg = { ps: this.ps, ard: this.texte, phch: this.phch, vmax: this.vmax, estpar: this.estpar }
+      const arg = { ps: this.ps, ard: this.texte, phch: this.phch, max: this.max, estpar: this.estpar }
       this.razps()
       await new AcceptationParrainage().run(this.couple, arg)
       this.fermer()

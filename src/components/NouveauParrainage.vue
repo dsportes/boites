@@ -55,7 +55,16 @@
           </q-stepper-navigation>
         </q-step>
 
-        <q-step :name="5" title="Confirmation" icon="check" :done="step > 5" >
+        <q-step :name="5" title="Maximum d'espace attribués pour les secrets du couple" icon="settings" :done="step > 5" >
+          <div>Mettre 0 pour ne PAS partager de secrets</div>
+          <choix-forfaits v-model="max" :f1="1" :f2="1"/>
+          <q-stepper-navigation>
+            <q-btn flat @click="step = 4" color="primary" label="Précédent" class="q-ml-sm" />
+            <q-btn flat @click="step = 6" color="primary" label="Suivant" class="q-ml-sm" />
+          </q-stepper-navigation>
+        </q-step>
+
+        <q-step :name="6" title="Confirmation" icon="check" :done="step > 6" >
           <div>Phrase de parrainage: <span class="font-mono q-pl-md">{{phrase}}</span></div>
           <div>Nom de l'avatar: <span class="font-mono q-pl-md">{{nom}}</span></div>
           <div>Mot de bienvenue: <span class="font-mono q-pl-md">{{mot}}</span></div>
@@ -66,6 +75,10 @@
           <div v-if="estParrain">+ pour les filleuls:
             <span class="font-mono q-pl-md">v1: {{ed1(ressources[0])}}</span>
             <span class="font-mono q-pl-lg">v2: {{ed2(ressources[1])}}</span>
+          </div>
+          <div>Volumes maximum attribués aux secrets du couple :
+            <span class="font-mono q-pl-md">v1: {{ed1(max[0])}}</span>
+            <span class="font-mono q-pl-lg">v2: {{ed2(max[1])}}</span>
           </div>
           <q-stepper-navigation>
             <q-btn flat @click="corriger" color="primary" label="Corriger" class="q-ml-sm" />
@@ -106,6 +119,7 @@ export default ({
       step: 1,
       forfaits: [],
       ressources: [],
+      max: [],
       estParrain: false,
       nom: '',
       phrase: '',
@@ -160,6 +174,7 @@ export default ({
         pp: this.pc.phrase, // phrase de parrainage (string)
         clex: this.pc.clex, // PBKFD de pp (u8)
         id: this.avatar.id,
+        max: this.max,
         forfaits: this.forfaits,
         ressources: this.estParrain ? this.ressources : null,
         nomf: this.nom, // nom du filleul (string)
@@ -169,7 +184,9 @@ export default ({
       if (st) {
         this.mot = ''
         this.nom = ''
+        this.max = [1, 1]
         this.forfaits = [1, 1]
+        this.ressources = [4, 4]
         this.pc = null
         this.tabavatar = 'couples'
         if (this.close) this.close()

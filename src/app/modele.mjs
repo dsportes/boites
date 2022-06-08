@@ -4,7 +4,7 @@ import { openIDB, closeIDB, debutSessionSync, saveSessionSync, getFichier } from
 import { openWS, closeWS } from './ws.mjs'
 import {
   store, appexc, dlvDepassee, NomAvatar, gzip, ungzip, dhstring,
-  getJourJ, cfg, ungzipT, normpath, titreEd, titreCompte, PhraseContact
+  getJourJ, cfg, ungzipT, normpath, titreEd, titreCompte, nomCv, PhraseContact
 } from './util.mjs'
 import { remplacePage } from './page.mjs'
 import { EXPS, UNITEV1, UNITEV2, Compteurs, t0n } from './api.mjs'
@@ -903,11 +903,11 @@ schemas.forSchema({
 /*
 - `id` : id du couple
 - `v` :
-- `st` : quatre chiffres `p e 0 1` : phase / état
-  - `p` : 1 2 3 4 : phase
-  - `e` : en phase 1 2 3 seulement. 0 attente, 1 refus, 2 hors délai.
-  - `0` : pour A0, 0 actif, 1 suspendu, 2 disparu.
-  - `1` : pour A1, 0 actif, 1 suspendu, 2 disparu.
+- `st` : quatre chiffres `p m 0 1` : phase / mode / [0, 1]
+  - `p` : phase - (1) en attente, (2) hors délai, (3) refusé, (4) actif, (5) orphelin.
+  - `m` : mode de contact initial: (0) direct, (1) parrainage, (2) rencontre.
+  - `0` : pour A0 - (0) pas de partage de secrets, (1) partage de secrets, (2) disparu.
+  - `1` : pour A1 -
 - `v1 v2` : volumes actuels des secrets.
 - `mx10 mx20` : maximum des volumes autorisés pour A0
 - `mx11 mx21` : maximum des volumes autorisés pour A1
@@ -929,23 +929,32 @@ export class Couple {
   get pkv () { return this.sid + '/' + this.v }
 
   get stp () { return Math.floor(this.st / 1000) }
-  get ste () { return Math.floor(this.st / 100) % 10 }
+  get orig () { return Math.floor(this.st / 100) % 10 }
   get st01 () { return [Math.floor(this.st / 10) % 10, this.st % 10] }
+  get stI () { return this.st01[this.avc] }
+  get stE () { return this.st01[this.ava] }
 
   get cle () { return data.repertoire.cle(this.id) }
   get na () { return data.repertoire.na(this.id) }
-  get nom () { return this.data.x[0][0] + '_' + this.data.x[1][0] }
+  get cv () { return data.getCv(this.id) }
+  get nomC () { return this.data.x[0][0] + '_' + this.data.x[1][0] }
+  get nomf () { return normpath(this.nomC) }
   get nomE () { return this.data.x[this.ava][0] }
   get nomI () { return this.data.x[this.avc][0] }
+  get max1E () { return this.avc ? this.max11 : this.max10 }
+  get max2E () { return this.avc ? this.max21 : this.max20 }
+  get max1I () { return this.avc ? this.max10 : this.max11 }
+  get max2I () { return this.avc ? this.max20 : this.max21 }
+  get nomEd () { // nom suffixé de la CV s'il y en a une
+    let n = nomCv(this.id, true)
+    if (!n) n = this.naE ? this.naE.nomC : this.nomE
+    return n + '@' + this.na.sfx
+  }
+
   get absentE () { return this.stp === 4 && this.st01[this.ava] !== 0 } // true si l'externe E est absent (disparu / suspendu)
   get actifI () { return this.stp === 4 && this.st01[this.avc] === 0 } // true si l'interne est actif
 
-  naDeIm (im) { return new NomAvatar(this.data.x[im - 1][0], this.data.x[im - 1][1]) }
-
-  // origine du couple : 0) proposition standard à un contact connu, 1) parrainage, 2) rencontre
-  get orig () { return !this.data.phrase ? 0 : (this.data.f1 || this.data.f2 ? 1 : 2) }
-
-  get nomf () { return normpath(this.nom) }
+  naDeIm (im) { return im === this.avc + 1 ? this.naI : this.naE }
 
   async phraseContact () {
     if (!this.data.phrase) return null
@@ -969,10 +978,10 @@ export class Couple {
     if (!cle) data.repertoire.setCp(na); else this.naTemp = na
   }
 
-  nouveauR (naI, nomf, cc, dlv, mot, pp, forfaits) {
+  nouveauR (naI, nomf, cc, mot, pp, max, dlv) {
     this.v = 0
     this.vsh = 0
-    this.st = 3000
+    this.st = 1200 + (max[0] ? 10 : 0) // en attente, rencontre, partage secrets ou non
     this.naI = naI
     this.idI = naI.id
     this.naE = null
@@ -983,8 +992,8 @@ export class Couple {
     data.repertoire.setCp(na)
     this.v1 = 0
     this.v2 = 0
-    this.mx10 = 1
-    this.mx20 = 1
+    this.mx10 = max[0]
+    this.mx20 = max[1]
     this.mx11 = 0
     this.mx21 = 0
     this.dlv = dlv
@@ -993,21 +1002,14 @@ export class Couple {
     this.info = null
     this.ard = mot
     this.dh = new Date().getTime()
-    this.data = {
-      x: [[naI.nom, naI.rnd], [nomf, null]],
-      phrase: pp,
-      f1: forfaits[0],
-      f2: forfaits[1],
-      r1: 0,
-      r2: 0
-    }
+    this.data = { x: [[naI.nom, naI.rnd], [nomf, null]], phrase: pp, f1: 0, f2: 0, r1: 0, r2: 0 }
     return this
   }
 
-  nouveauP (naI, naE, cc, dlv, mot, pp, forfaits, ressources) {
+  nouveauP (naI, naE, cc, mot, pp, max, dlv, forfaits, ressources) {
     this.v = 0
     this.vsh = 0
-    this.st = 2000
+    this.st = 1100 + (max[0] ? 10 : 0) // en attente, parrainage, partage secrets ou non
     this.naI = naI
     this.idI = naI.id
     this.naE = naE
@@ -1019,8 +1021,8 @@ export class Couple {
     data.repertoire.setCp(na)
     this.v1 = 0
     this.v2 = 0
-    this.mx10 = 1
-    this.mx20 = 1
+    this.mx10 = max[0]
+    this.mx20 = max[1]
     this.mx11 = 0
     this.mx21 = 0
     this.dlv = dlv
@@ -1040,10 +1042,10 @@ export class Couple {
     return this
   }
 
-  nouveauC (naI, naE, cc, dlv, mot, max) {
+  nouveauC (naI, naE, cc, mot, max) {
     this.v = 0
     this.vsh = 0
-    this.st = 1000
+    this.st = 1100 + (max[0] ? 10 : 0) // en attente, parrainage, partage secrets ou non
     this.naI = naI
     this.idI = naI.id
     this.naE = naE
@@ -1058,20 +1060,13 @@ export class Couple {
     this.mx20 = max[1]
     this.mx11 = 0
     this.mx21 = 0
-    this.dlv = dlv
+    this.dlv = 0
     this.mc0 = null
     this.mc1 = null
     this.info = null
     this.ard = mot
     this.dh = new Date().getTime()
-    this.data = {
-      x: [[naI.nom, naI.rnd], [naE.nom, naE.rnd]],
-      phrase: null,
-      f1: 0,
-      f2: 0,
-      r1: 0,
-      r2: 0
-    }
+    this.data = { x: [[naI.nom, naI.rnd], [naE.nom, naE.rnd]], phrase: null, f1: 0, f2: 0, r1: 0, r2: 0 }
     return this
   }
 
@@ -1643,8 +1638,8 @@ export class Secret {
   auteurs () {
     const l = []
     if (this.txt && this.txt.l) {
-      if (this.ts === 1) this.txt.l.forEach(im => { l.push(this.couple.naDeIm(im).nom) })
-      if (this.ts === 2) this.txt.l.forEach(im => { const m = data.getMembre(this.id, im); if (m) l.push(m.namb.nom) })
+      if (this.ts === 1) this.txt.l.forEach(im => { l.push(this.couple.naDeIm(im).nomc) })
+      if (this.ts === 2) this.txt.l.forEach(im => { const m = data.getMembre(this.id, im); if (m) l.push(m.namb.nomc) })
     }
     return l
   }
