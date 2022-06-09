@@ -28,7 +28,7 @@
         <q-item-section>Suspendre mes accès aux secrets</q-item-section>
       </q-item>
       <q-separator v-if="repc" />
-      <q-item v-if="repc" clickable v-close-popup @click="reactiver">
+      <q-item v-if="repc" clickable v-close-popup @click="reactacc=true">
         <q-item-section>Réactiver mes accès aux secrets</q-item-section>
       </q-item>
       <q-separator v-if="prlp" />
@@ -88,6 +88,30 @@
       <q-btn flat color="warning" label="Je décline" @click="decliner"/>
   </q-dialog>
 
+  <q-dialog v-model="reactacc">
+    <q-card class="q-ma-xs moyennelargeur fs-md">
+      <q-card-section class="column items-center">
+        <div class="titre-lg text-center">Réactiver l'accès aux secrets du contact avec {{c.nomE}}</div>
+      </q-card-section>
+      <q-card-section>
+        <div v-if="c.stE===1">
+          <div>{{c.nomE}} partage les secrets par ce contact:<br>
+            <span class="font-mono q-pl-md">Maximum v1: {{ed1(c.max1E)}}</span><br>
+            <span class="font-mono q-pl-lg">Maximum v2: {{ed2(c.max2E)}}</span>
+          </div>
+          <div>Volumes occupés par les secrets: {{c.v1}} / {{c.v2}}</div>
+        </div>
+        <div v-else>
+          <div>{{c.nomE}} NE PARTAGE PAS les secrets par ce contact, le volume occupé actuellement est donc nul</div>
+        </div>
+        <div class="titre-lg">Volumes v1 / v2 maximaux déclarés par vous pour les secrets partagés par ce contact :</div>
+        <choix-forfaits v-model="max" :f1="c.max1E" :f2="c.max2E" :v1="c.v1" :v2="c.v2"/>
+      </q-card-section>
+    <q-card-actions>
+      <q-btn flat color="primary" label="Je réfléchis encore" v-close-popup/>
+      <q-btn flat color="warning" label="Je réactive l'accès aux secrets" @click="accepter"/>
+  </q-dialog>
+
 </template>
 <script>
 import { computed, toRef } from 'vue'
@@ -115,6 +139,7 @@ export default ({
     return {
       acceptctc: false,
       declctc: false,
+      reactacc: false,
       max: [1, 1],
       ard: ''
     }
@@ -158,6 +183,11 @@ export default ({
     async decliner () {
       const x = this.c || this.couple
       await new DeclinerCouple().run(x, this.avatar.id, this.ard)
+    },
+
+    async reactiver () {
+      const x = this.c || this.couple
+      await new ReactiverCouple().run(x, this.avatar.id, this.max)
     }
   },
 
@@ -211,12 +241,18 @@ export default ({
 
     function suspendre () {
       const x = c.value || couple.value
+      let m
+      if (x.stI === 1) {
+        m = `Vous n'accéderez plus aux secrets de ce contact, mais ${x.nomE} y accèdera toujours.`
+      } else {
+        m = `${x.nomE} n'accèdant plus aux secrets si vous confirmez ne plus vouloir y accéder non plus, TOUS LES SECRETS SERONT DETRUITS.`
+      }
       $q.dialog({
         dark: true,
-        title: 'Suspendre ma participation au contact',
-        message: `Vous n'accéderez plus aux secrets de ce contact, mais ${x.nomE} le pourra toujours`,
-        cancel: { label: 'Je maintiens ma participation', color: 'primary' },
-        ok: { color: 'warning', label: 'Je suspend ma participation' },
+        title: 'Suspendre mon accès aux secrets du contact',
+        message: m,
+        cancel: { label: 'Je maintiens mon accès aux secrets', color: 'primary' },
+        ok: { color: 'warning', label: 'Je suspend mon accès aux secrets' },
         persistent: true
       }).onOk(async () => {
         await new QuitterCouple().run(x, avatar.value.id)
@@ -226,45 +262,27 @@ export default ({
       })
     }
 
-    function reactiver () {
-      const x = c.value || couple.value
-      $q.dialog({
-        dark: true,
-        title: 'Réactiver ma participation au contact',
-        message: 'Vous accéderez à nouveau aux secrets de ce contact dont les volumes vous seront débités',
-        cancel: { label: 'Je ne réactive pas ma participation', color: 'primary' },
-        ok: { color: 'warning', label: 'Je réactive ma participation' },
-        persistent: true
-      }).onOk(async () => {
-        await new ReactiverCouple().run(x, avatar.value.id)
-      }).onCancel(() => {
-      }).onDismiss(() => {
-        // console.log('I am triggered on both OK and Cancel')
-      })
-    }
-
     function supprimer () {
       const x = c.value || couple.value
       let lbl = x.nomE
-      if (x.stp === 4) {
-        lbl += x.st01[this.ava] === 1 ? ' a suspendu sa participation à ce contact.' : ' a disparu.'
-        lbl += ' Le contact va être supprimé et les secrets détruits.'
-      } else if (x.stp === 1) {
-        lbl += x.ste === 0 ? ' n\'a pas déclaré accepter ce contact.' : ' a refusé ce contact'
+      if (x.stp === 5) {
+        lbl += ' a disparu, le contact va être supprimé et les secrets détruits.'
+      } else if (x.orig === 0) {
+        lbl += x.stp === 0 ? ' n\'a pas déclaré accepter ce contact.' : ' a refusé ce contact'
         lbl += ' Le contact va être supprimé.'
-      } else if (x.stp === 2) {
+      } else if (x.orig === 1) {
         lbl += [
           ' n\'a pas déclaré accepter ce parrainage.',
           ' a refusé ce parrainage',
           ' n\'a pas déclaré dans les délais accepter ce parrainage et ne peut plus le faire.'
-        ][x.ste]
+        ][x.stp]
         lbl += ' Le contact va être supprimé.'
-      } else if (x.stp === 3) {
+      } else if (x.orig === 2) {
         lbl += [
           ' n\'a pas déclaré accepter ce contact en invoquant la phrase de rencontre.',
           ' a invoqué la phrase de rencontre mais a refusé le contact.',
           ' n\'a pas invoqué la phrase de rencontre dans les délais et ne peut plus le faire.'
-        ][x.ste]
+        ][x.stp]
         lbl += ' Le contact va être supprimé.'
       }
       $q.dialog({
@@ -285,7 +303,6 @@ export default ({
     return {
       prolonger,
       suspendre,
-      reactiver,
       supprimer,
       couple,
       avatarcpform,

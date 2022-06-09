@@ -939,20 +939,13 @@ export class Couple {
   get cv () { return data.getCv(this.id) }
   get nomC () { return this.data.x[0][0] + '_' + this.data.x[1][0] }
   get nomf () { return normpath(this.nomC) }
-  get nomE () { return this.data.x[this.ava][0] }
-  get nomI () { return this.data.x[this.avc][0] }
+  get nomE () { return this.naE && this.stE !== 2 ? this.naE.nomc : this.data.x[this.ava][0] }
+  get nomI () { return this.naI.nomc }
   get max1E () { return this.avc ? this.max11 : this.max10 }
   get max2E () { return this.avc ? this.max21 : this.max20 }
   get max1I () { return this.avc ? this.max10 : this.max11 }
   get max2I () { return this.avc ? this.max20 : this.max21 }
-  get nomEd () { // nom suffixé de la CV s'il y en a une
-    let n = nomCv(this.id, true)
-    if (!n) n = this.naE ? this.naE.nomC : this.nomE
-    return n + '@' + this.na.sfx
-  }
-
-  get absentE () { return this.stp === 4 && this.st01[this.ava] !== 0 } // true si l'externe E est absent (disparu / suspendu)
-  get actifI () { return this.stp === 4 && this.st01[this.avc] === 0 } // true si l'interne est actif
+  get nomEd () { return (nomCv(this.id, true) || this.nomE) + '@' + this.na.sfx }
 
   naDeIm (im) { return im === this.avc + 1 ? this.naI : this.naE }
 
@@ -1237,7 +1230,7 @@ export class Invitcp {
     return this
   }
 
-  async toRow (id, ni, cc, clepub) {
+  async toRow (id, ni, cc, sec, clepub) {
     const datap = await crypt.crypterRSA(clepub, cc)
     const r = { id, ni, datap }
     return schemas.serialize('rowinvitcp', r)

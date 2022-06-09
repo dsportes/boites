@@ -229,14 +229,16 @@ export async function getSecrets () {
   try {
     const r = {}
     const v = {}
+    const sidms = new Set()
     await data.db.secret.each(async (idb) => {
       const x = new Secret().fromIdb(await crypt.decrypter(data.clek, idb.data))
       let e = r[x.id]; if (!e) { e = {}; r[x.id] = e }
       e[x.ns] = x
       const v1 = v[x.id]
+      sidms.add(x.id)
       if (!v1 || v1 < x.v) v[x.id] = x.v
     })
-    return [r, v]
+    return [r, v, sidms]
   } catch (e) {
     throw data.setErDB(EX2(e))
   }
@@ -304,6 +306,11 @@ export async function commitRows (opBuf) {
       for (const i of opBuf.lcc) idcc.push(crypt.u8ToB64(await crypt.crypter(data.clek, crypt.idToSid(i), 1), true))
     }
 
+    const idcc2 = []
+    if (opBuf.lcc2 && opBuf.lcc2.size) {
+      for (const i of opBuf.lcc2) idcc.push(crypt.u8ToB64(await crypt.crypter(data.clek, crypt.idToSid(i), 1), true))
+    }
+
     const idac = []
     if (opBuf.lav && opBuf.lav.size) {
       for (const i of opBuf.lav) idac.push(crypt.u8ToB64(await crypt.crypter(data.clek, crypt.idToSid(i), 1), true))
@@ -332,6 +339,11 @@ export async function commitRows (opBuf) {
       for (let i = 0; i < idcc.length; i++) {
         const id = { id: idcc[i] }
         await data.db.couple.where(id).delete()
+        await data.db.secret.where(id).delete()
+      }
+
+      for (let i = 0; i < idcc2.length; i++) {
+        const id = { id: idcc2[i] }
         await data.db.secret.where(id).delete()
       }
 

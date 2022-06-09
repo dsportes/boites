@@ -33,6 +33,7 @@ class OpBuf {
     this.lsuppr = [] // objets (du moins {table id (id2))} à supprimer de IDB
     this.lav = new Set() // set des ids des avatars à purger
     this.lcc = new Set() // set des ids des couples à purger
+    this.lcc2 = new Set() // set des Ids des couples n'accédant plus aux secrets à purger
     this.lgr = new Set() // set des ids des groupes à purger
 
     this.lobj = [] // objets en attente d'être rangés en store/db : en synchro permet d'effectuer une validation cohérente
@@ -1201,9 +1202,10 @@ export class ConnexionCompte extends OperationUI {
     /* Récupération depuis IDB (éventuellement) les membres et secrets stockés
     - groupés par id de l'objet maître
     - avec la version la plus récente par objet maître
+    - sidms : set des id *maître* des secrets récupérés de IDB (avatar, couple, groupe)
     */
     const [membres, vmbIdb] = data.dbok ? await getMembres() : [{}, {}]
-    const [secrets, vscIdb] = data.dbok ? await getSecrets() : [{}, {}]
+    const [secrets, vscIdb, sidms] = data.dbok ? await getSecrets() : [{}, {}, new Set()]
 
     /* Récupération depuis le serveur des versions plus récentes des secrets et membres
     pour chaque objet maître et qu'il y en ait eu ou non trouvée en IDB
@@ -1231,7 +1233,12 @@ export class ConnexionCompte extends OperationUI {
     for (const idx in this.couples) {
       const id = parseInt(idx)
       const cp = this.couples[id]
-      if (data.netok) await this.chargerSc(id, vscIdb[id] || 0, secrets)
+      if (cp.stI === 1) { // l'avatar du compte du couple accède aux secrets
+        if (data.netok) await this.chargerSc(id, vscIdb[id] || 0, secrets)
+      } else { // secrets inutiles, ne sont pas / plus accédés
+        delete secrets[id]
+        if (sidms.add(id)) this.buf.lcc2.add(id)
+      }
       const nbs = secrets[id] ? Object.keys(secrets[id]).length : 0
       data.setSyncItem('15' + cp.sid, 1, 'Couple ' + cp.nom + ' - ' + nbs + ' secret(s)')
     }
@@ -1893,7 +1900,7 @@ export class NouveauCouple extends OperationUI {
 
       const couple = new Couple().nouveauC(arg.na0, arg.na1, cc, dlv, arg.mot, arg.max)
       const rowCouple = await couple.toRow()
-      const rowInvitcp = await new Invitcp().toRow(arg.na1.id, ni1, cc, clepub)
+      const rowInvitcp = await new Invitcp().toRow(arg.na1.id, ni1, cc, /* sec */ clepub)
       const args = { sessionId: data.sessionId, idc: couple.id, id: arg.na0.id, ni, datak, rowCouple, rowInvitcp }
       await post(this, 'm1', 'nouveauCouple', args)
       return this.finOK()
@@ -2114,6 +2121,7 @@ export class AcceptationParrainage extends OperationUI {
       const rowPrefs = await prefs.toRow()
 
       const ni = crypt.hash(crypt.u8ToHex(couple.cc) + '1')
+      // remplacer naTemp par [naTEmp, sec]
       const avatar = new Avatar().nouveau(couple.idI, ni, couple.naTemp)
       const rowAvatar = await avatar.toRow()
 
