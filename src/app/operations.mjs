@@ -365,19 +365,29 @@ export class Operation {
   }
 
   /* Recharge depuis le serveur un couple et ses secrets, et s'abonne
-    Remplit aussi la liste des membres à mettre à jour en IDB et store/db
+    Remplit aussi la liste des couple / secrets à mettre à jour en IDB et store/db
   */
-  async chargerCS (id, mapObj) {
-    const ret = this.tr(await post(this, 'm1', 'chargerCS', { sessionId: data.sessionId, id }))
+  async chargerC (id, mapObj) {
+    let sec = false
+    const ret = this.tr(await post(this, 'm1', 'chargerC', { sessionId: data.sessionId, id }))
     if (ret.rowItems.length) {
       const r = await compileToObject(deserialRowItems(ret.rowItems), mapObj)
       if (r.couple) {
         for (const pk in r.couple) {
           const obj = r.couple[pk]
+          sec = obj.stI === 1
           this.buf.setObj(obj)
           this.buf.putIDB(obj)
         }
       }
+    }
+    return sec
+  }
+
+  async chargerS (id, mapObj) {
+    const ret = this.tr(await post(this, 'm1', 'chargerS', { sessionId: data.sessionId, id }))
+    if (ret.rowItems.length) {
+      const r = await compileToObject(deserialRowItems(ret.rowItems), mapObj)
       if (r.secret) {
         for (const pk in r.secret) {
           const obj = r.secret[pk]
@@ -389,7 +399,7 @@ export class Operation {
   }
 
   /* Recharge depuis le serveur un groupe, ses membres et ses secrets, et s'abonne
-    Remplit aussi la liste des membres à mettre à jour en IDB et store/db
+    Remplit aussi la liste des groupe / membres / secrets à mettre à jour en IDB et store/db
   */
   async chargerGMS (id, mapObj) {
     const ret = this.tr(await post(this, 'm1', 'chargerGMS', { sessionId: data.sessionId, id }))
@@ -556,7 +566,10 @@ export class Operation {
     const mapObj = {}
     for (const id of this.avatarIdsP) await this.chargerAS(id, mapObj)
     for (const id of this.groupeIdsP) await this.chargerGMS(id, mapObj)
-    for (const id of this.coupleIdsP) await this.chargerCS(id, mapObj)
+    for (const id of this.coupleIdsP) {
+      const sec = await this.chargerC(id, mapObj)
+      if (sec) await this.chargerS(id, mapObj)
+    }
 
     this.acgM = this.avatarIdsM.size || this.groupeIdsM.size || this.coupleIdsM.size
     this.acgP = this.avatarIdsP.size || this.groupeIdsP.size || this.coupleIdsP.size
@@ -617,6 +630,13 @@ export class Operation {
           if (cp.idE) this.axP = true
         } else {
           if (!cp.idE) this.axM = true
+        }
+        if (av && av.stI === 1 && cp.stI === 0) {
+          // les secrets de cp sont en trop
+        }
+        if (av && av.stI === 0 && cp.stI === 1) {
+          // les secrets de cp sont manquants
+          await this.chargerS(cp.id, mapObj)
         }
       }
     }
@@ -1159,8 +1179,8 @@ export class ConnexionCompte extends OperationUI {
   Remplit aussi la liste des secrets à mettre à jour et à supprimer de IDB
   Un secret peut être supprimé : s'il figurait dans la source, il y est enlevé
   */
-  async chargerSc (id, v, src) {
-    const ret = this.tr(await post(this, 'm1', 'chargerSc', { sessionId: data.sessionId, id, v }))
+  async chargerSc (id, v, src, cpl) {
+    const ret = this.tr(await post(this, 'm1', 'chargerSc', { sessionId: data.sessionId, id, v, cpl }))
     if (ret.rowItems.length) {
       const r = await compileToObject(deserialRowItems(ret.rowItems))
       if (r.secret) {
@@ -1234,10 +1254,10 @@ export class ConnexionCompte extends OperationUI {
       const id = parseInt(idx)
       const cp = this.couples[id]
       if (cp.stI === 1) { // l'avatar du compte du couple accède aux secrets
-        if (data.netok) await this.chargerSc(id, vscIdb[id] || 0, secrets)
+        if (data.netok) await this.chargerSc(id, vscIdb[id] || 0, secrets, true)
       } else { // secrets inutiles, ne sont pas / plus accédés
         delete secrets[id]
-        if (sidms.add(id)) this.buf.lcc2.add(id)
+        if (sidms.has(id)) this.buf.lcc2.add(id)
       }
       const nbs = secrets[id] ? Object.keys(secrets[id]).length : 0
       data.setSyncItem('15' + cp.sid, 1, 'Couple ' + cp.nom + ' - ' + nbs + ' secret(s)')
