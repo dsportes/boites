@@ -1,12 +1,12 @@
 <template>
   <q-card class="q-ma-xs moyennelargeur fs-md">
     <q-card-section class="column items-center">
-      <div class="titre-lg text-center">Nouveau couple avec {{s.na1.noml}}</div>
+      <div class="titre-lg text-center">Nouveau contact avec {{s.na1.noml}}</div>
       <q-btn flat @click="close" color="primary" label="Renoncer" class="q-ml-sm" />
       <q-select v-model="s.nomavatar" class="full-width" :options="s.avatars" dense options-dense label="Choisir mon avatar concerné"
         popup-content-style="border:1px solid #777777;border-radius:3px"/>
-      <div v-if="s.deja === 0">{{s.na1.noml}} et {{s.nomavatar}} ne sont pas encore associés dans un couple</div>
-      <div v-else class="text-bold text-warning">{{s.na1.noml}} et avec {{s.nomavatar}} sont déjà associés dans {{s.deja}} couple(s)</div>
+      <div v-if="s.deja === 0">{{s.na1.noml}} et {{s.nomavatar}} ne sont pas encore en contact</div>
+      <div v-else class="text-bold text-warning">{{s.na1.noml}} et avec {{s.nomavatar}} sont déjà en contact {{s.deja}} fois</div>
     </q-card-section>
 
     <q-card-section v-if="sessionok">
@@ -19,8 +19,9 @@
           </q-stepper-navigation>
         </q-step>
 
-        <q-step :name="2" title="Maximum d'espace attribués pour les secrets du couple" icon="settings" :done="step > 2" >
-          <choix-forfaits v-model="forfaits" :f1="1" :f2="1"/>
+        <q-step :name="2" title="Maximum d'espace attribués pour les secrets du contact" icon="settings" :done="step > 2" >
+          <div>Mettre 0 pour ne PAS partager de secrets</div>
+          <choix-forfaits v-model="max" :f1="1" :f2="1"/>
           <q-stepper-navigation>
             <q-btn flat @click="step = 1" color="primary" label="Précédent" class="q-ml-sm" />
             <q-btn flat @click="step = 3" color="primary" label="Suivant" class="q-ml-sm" />
@@ -28,11 +29,11 @@
         </q-step>
 
         <q-step :name="3" title="Confirmation" icon="check" :done="step > 3" >
-          <div>Nom de l'avatar sollicité: <span class="font-mono q-pl-md">{{s.id1nom}}</span></div>
+          <div>Nom de l'avatar sollicité: <span class="font-mono q-pl-md">{{s.na1.nom}}</span></div>
           <div>Mot de bienvenue: <span class="font-mono q-pl-md">{{mot}}</span></div>
-          <div>Volumes maximum attribués aux secret du couple :
-            <span class="font-mono q-pl-md">v1: {{ed1(forfaits[0])}}</span>
-            <span class="font-mono q-pl-lg">v2: {{ed2(forfaits[1])}}</span>
+          <div>Volumes maximum attribués aux secret du contact :
+            <span class="font-mono q-pl-md">v1: {{ed1(max[0])}}</span>
+            <span class="font-mono q-pl-lg">v2: {{ed2(max[1])}}</span>
           </div>
           <q-stepper-navigation>
             <q-btn flat @click="corriger" color="primary" label="Corriger" class="q-ml-sm" />
@@ -69,7 +70,7 @@ export default ({
   data () {
     return {
       step: 1,
-      forfaits: [],
+      max: [1, 1],
       mot: '',
       diagmot: false,
       encours: false
@@ -92,15 +93,9 @@ export default ({
       }
     },
     async confirmer () {
-      const arg = {
-        na0: this.avatar.na,
-        na1: this.s.na1,
-        max: this.forfaits, // max volumes couple
-        mot: this.mot // mot de bienvenue
-      }
-      await new NouveauCouple().run(arg)
+      await new NouveauCouple().run(this.avatar.na, this.s.na1, this.max, this.mot)
       this.mot = ''
-      this.forfaits = [1, 1]
+      this.max = [1, 1]
       if (this.close) this.close()
     },
     corriger () {

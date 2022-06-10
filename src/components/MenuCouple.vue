@@ -117,7 +117,8 @@
 import { computed, toRef } from 'vue'
 import { useStore } from 'vuex'
 import { retourInvitation } from '../app/page.mjs'
-import { AccepterCouple, DeclinerCouple, ProlongerCouple, SupprimerCouple, QuitterCouple, ReactiverCouple } from '../app/operations.mjs'
+import { cfg } from '../app/util.mjs'
+import { AccepterCouple, DeclinerCouple, ProlongerParrainage, SupprimerCouple, QuitterCouple, ReactiverCouple } from '../app/operations.mjs'
 import { useQuasar } from 'quasar'
 
 export default ({
@@ -220,9 +221,10 @@ export default ({
 
     function prolonger (opt) {
       const x = c.value || couple.value
+      const nj = cfg().limitesjour.parrainage
       const lbl = [
-        'La proposition de parrainage peut être prolongée de 20 jours.',
-        'La proposition de contact (par phrase de rencontre) peut être prolongée de 20 jours.'
+        `La proposition de parrainage peut être prolongée de ${nj} jours.`,
+        `La proposition de contact (par phrase de rencontre) peut être prolongée de ${nj} jours.`
       ]
       $q.dialog({
         dark: true,
@@ -232,7 +234,7 @@ export default ({
         ok: { color: 'warning', label: 'Je veux la prolonger' },
         persistent: true
       }).onOk(async () => {
-        await new ProlongerCouple().run(x, avatar.value.id)
+        await new ProlongerParrainage().run(x)
       }).onCancel(() => {
       }).onDismiss(() => {
         // console.log('I am triggered on both OK and Cancel')

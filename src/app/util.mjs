@@ -762,8 +762,8 @@ export function nomCv (id, court) {
 export class NomAvatar {
   constructor (nom, rnd, id) {
     this.nom = nom
-    this.rnd = !rnd ? crypt.random(32) : rnd
-    this.id = !id ? crypt.hashBin(this.rnd) : id
+    this.rnd = rnd || crypt.random(32)
+    this.id = id || crypt.hashBin(this.rnd)
   }
 
   clone () {

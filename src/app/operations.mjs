@@ -522,6 +522,7 @@ export class Operation {
     this.avatarIdsM = new Set()
     this.coupleIdsP = new Set()
     this.coupleIdsM = new Set()
+    this.couple2IdsM = new Set() // couples ,N4ACCEDANT PLUS à leurs secrets
 
     /* Phase 0 : compilation du compte éventuel pour enregistrer les avatars dans le répertoire
     */
@@ -618,7 +619,10 @@ export class Operation {
       if (this.buf.lgr.size) await this.groupesZombis(this.buf.lgr)
     }
 
-    // Couples : mise à jour des données et potentiellement un Ax en plus ou en moins
+    /* Couples : mise à jour des données
+    - potentiellement un Ax en plus ou en moins
+    - si le statut d'accès aux secrets change, lire / détruire les secrets du couple
+    */
     if (mapObj.couple) {
       for (const pk in mapObj.couple) {
         const cp = mapObj.couple[pk]
@@ -631,10 +635,12 @@ export class Operation {
         } else {
           if (!cp.idE) this.axM = true
         }
-        if (av && av.stI === 1 && cp.stI === 0) {
+        if (av && av.stI === 1 && cp.stI !== 1) {
           // les secrets de cp sont en trop
+          this.couple2IdsM.add(cp.id) // pour purge du store/db
+          this.buf.lcc2.add(cp.id) // pour purge de IDB
         }
-        if (av && av.stI === 0 && cp.stI === 1) {
+        if (!av || (av && av.stI === 0 && cp.stI === 1)) {
           // les secrets de cp sont manquants
           await this.chargerS(cp.id, mapObj)
         }
@@ -721,6 +727,7 @@ export class Operation {
     if (this.avatarIdsM.size) data.purgeAvatars(this.avatarIdsM)
     if (this.groupeIdsM.size) data.purgeGroupes(this.groupeIdsM)
     if (this.coupleIdsM.size) data.purgeCouples(this.coupleIdsM)
+    if (this.couple2IdsM.size) data.purgeCouples2(this.couple2IdsM)
     this.coupleIdsDisp = new Set()
     this.membreIdsDisp = new Set()
     if (this.acgP || this.acgM || this.axP || this.axM) {
@@ -1470,7 +1477,7 @@ export class MajCv extends OperationUI {
 }
 
 /******************************************************
-Création d'un nouveau secret P
+Création d'un nouveau secret
 Args :
 - sessionId
 - ts, id, ns, mc, txts, v1, xp, st, varg, mcg, im, refs
@@ -1504,7 +1511,7 @@ export class NouveauSecret extends OperationUI {
 }
 
 /******************************************************
-Maj 1 d'un secret P : txt, mc, perm
+Maj 1 d'un secret : txt, mc, perm
 A_SRV, '13-Secret inexistant'
 X_SRV, '12-Forfait dépassé'
 */
@@ -1531,7 +1538,7 @@ export class Maj1Secret extends OperationUI {
 }
 
 /******************************************************
-Maj 1 d'un secret P : txt, mc, perm
+Suppression d'un secret
 A_SRV, '13-Secret inexistant'
 X_SRV, '12-Forfait dépassé'
 */
@@ -1693,51 +1700,6 @@ export class SupprFichier extends OperationUI {
 }
 
 /******************************************************************
-ProlongerCouple : args de m1/prolongerCouple
-- sessionId: data.sessionId,
-- rowCouple
-- rowContact
-Retour : dh
-X_SRV, '14-Cette phrase de parrainage est trop proche d\'une déjà enregistrée' + x
-*/
-
-export class ProlongerCouple extends OperationUI {
-  constructor () {
-    super('Prolonger une proposition de couple', OUI, SELONMODE)
-  }
-
-  async run (couple) {
-    try {
-      return this.finOK()
-    } catch (e) {
-      return await this.finKO(e)
-    }
-  }
-}
-
-/******************************************************************
-RelancerCouple : args de m1/prolongerCouple
-- sessionId: data.sessionId,
-- rowCouple
-Retour : dh
-X_SRV, '14-Cette phrase de parrainage est trop proche d\'une déjà enregistrée' + x
-*/
-
-export class RelancerCouple extends OperationUI {
-  constructor () {
-    super('Relancer un couple', OUI, SELONMODE)
-  }
-
-  async run (couple) {
-    try {
-      return this.finOK()
-    } catch (e) {
-      return await this.finKO(e)
-    }
-  }
-}
-
-/******************************************************************
 QuitterCouple : args de m1/supprimerCouple
 - sessionId: data.sessionId,
 - idc : id du couple
@@ -1776,9 +1738,11 @@ export class QuitterCouple extends OperationUI {
 /******************************************************************
 Parrainage :
 arg :
-  phch: // le hash de la clex (integer)
-  pp: // phrase de parrainage (string)
-  clex: // PBKFD de pp (u8)
+  phch: this.pc.phch, // le hash de la clex (integer)
+  pp: this.pc.phrase, // phrase de parrainage (string)
+  clex: this.pc.clex, // PBKFD de pp (u8)
+  id: this.avatar.id,
+  max: this.max,
   forfaits: this.forfaits,
   ressources: this.estParrain ? this.ressources : null,
   nomf: this.nom, // nom du filleul (string)
@@ -1816,7 +1780,7 @@ export class NouveauParrainage extends OperationUI {
       const naf = new NomAvatar(arg.nomf) // na de l'avatar du filleul
       const dlv = getJourJ() + cfg().limitesjour.parrainage
 
-      const couple = new Couple().nouveauP(nap, naf, cc, dlv, arg.mot, arg.pp, arg.forfaits, arg.ressources)
+      const couple = new Couple().nouveauP(nap, naf, cc, arg.mot, arg.pp, arg.max, dlv, arg.forfaits, arg.ressources)
       const rowCouple = await couple.toRow()
 
       const contact = await new Contact().nouveau(arg.phch, arg.clex, dlv, cc, arg.nomf)
@@ -1838,7 +1802,7 @@ arg = {
   pp: this.phrase, // phrase de rencontre (string)
   clex: this.clex, // PBKFD de pp (u8)
   id: this.avatar.id,
-  forfaits: this.forfaits, // max volumes couple
+  max: this.max, // max volumes couple
   nomf: this.nom, // nom de l'avatar rencontré
   mot: this.mot // mot de bienvenue
 }
@@ -1862,6 +1826,7 @@ export class NouvelleRencontre extends OperationUI {
       - id: id de l'avatar
       - ni: clé d'accès à lcck de l'avatar
       - datak : clé cc cryptée par la clé k
+      - sec : true si avatar accède aux secrets du contact
     X_SRV, '14-Cette phrase de parrainage / rencontre est trop proche d\'une déjà enregistrée'
     A_SRV, '23-Avatar non trouvé.'
     */
@@ -1872,20 +1837,50 @@ export class NouvelleRencontre extends OperationUI {
       const nap = data.repertoire.na(arg.id) // na de l'avatar créateur
       const dlv = getJourJ() + cfg().limitesjour.parrainage
 
-      const couple = new Couple().nouveauR(nap, arg.nomf, cc, dlv, arg.mot, arg.pp, arg.forfaits)
+      const couple = new Couple().nouveauR(nap, arg.nomf, cc, arg.mot, arg.pp, arg.max, dlv)
       const rowCouple = await couple.toRow()
 
       const contact = await new Contact().nouveau(arg.phch, arg.clex, dlv, cc, arg.nomf)
       const rowContact = contact.toRow()
+      const sec = arg.max[0] !== 0
 
-      const args = { sessionId: data.sessionId, rowCouple, rowContact, ni, datak, id: nap.id }
-      await post(this, 'm1', 'nouveauParrainage', args)
-      return this.finOK()
+      const args = { sessionId: data.sessionId, rowCouple, rowContact, ni, datak, sec, id: nap.id }
+      const ret = await post(this, 'm1', 'nouveauParrainage', args)
+      return this.finOK(ret)
     } catch (e) {
       return await this.finKO(e)
     }
   }
 }
+
+/******************************************************************
+ProlongerParrainage : prolonger un parrainage ou une rencontre **TODO**
+args de m1/prolongerParrainage
+- sessionId
+- idc : id du couple
+- phch : hash de la phrase de contact
+- dlv : nouvelle dlv
+Retour : dh
+X_SRV, '14-Cette phrase de parrainage est trop proche d\'une déjà enregistrée' + x
+*/
+
+export class ProlongerParrainage extends OperationUI {
+  constructor () {
+    super('Prolonger une proposition de couple par parrainage ou rencontre', OUI, SELONMODE)
+  }
+
+  async run (couple) {
+    try {
+      const dlv = getJourJ() + cfg().limitesjour.parrainage
+      const args = { sessionId: data.sessionId, idc: couple.id, phch: couple.phch, dlv }
+      await post(this, 'm1', 'prolongerParrainage', args)
+      this.finOK()
+    } catch (e) {
+      await this.finKO(e)
+    }
+  }
+}
+
 /******************************************************************
 Nouveau Couple :
 /* `lcck` : map : de avatar
@@ -1897,6 +1892,7 @@ args :
   - id: id de l'avatar,
   - ni: clé d'accès à lcck de l'avatar
   - datak : terme ni de lcck
+  - sec : true si avatar accède aux secrets du contact
   - rowCouple
   - rowInvitcp
 A_SRV, '23-Avatar non trouvé.'
@@ -1904,24 +1900,24 @@ A_SRV, '23-Avatar non trouvé.'
 
 export class NouveauCouple extends OperationUI {
   constructor () {
-    super('Création d\'un nouveau couple', OUI, SELONMODE)
+    super('Création d\'un nouveau contact', OUI, SELONMODE)
   }
 
-  async run (arg) {
+  async run (na0, na1, max, mot) {
     try {
-      const clepub = await get('m1', 'getclepub', { sessionId: data.sessionId, sid: crypt.idToSid(arg.na1.id) })
+      const clepub = await get('m1', 'getclepub', { sessionId: data.sessionId, sid: crypt.idToSid(na1.id) })
       if (!clepub) throw new AppExc(E_BRO, '23-Cle RSA publique d\'avatar non trouvé')
 
       const cc = crypt.random(32) // clé du couple
       const ni = crypt.hash(crypt.u8ToHex(cc) + '0')
       const ni1 = crypt.hash(crypt.u8ToHex(cc) + '1')
       const datak = await crypt.crypter(data.clek, cc)
-      const dlv = getJourJ() + cfg().limitesjour.parrainage
 
-      const couple = new Couple().nouveauC(arg.na0, arg.na1, cc, dlv, arg.mot, arg.max)
+      const couple = new Couple().nouveauC(na0, na1, cc, mot, max)
       const rowCouple = await couple.toRow()
-      const rowInvitcp = await new Invitcp().toRow(arg.na1.id, ni1, cc, /* sec */ clepub)
-      const args = { sessionId: data.sessionId, idc: couple.id, id: arg.na0.id, ni, datak, rowCouple, rowInvitcp }
+      const rowInvitcp = await new Invitcp().toRow(na1.id, ni1, cc, clepub)
+      const sec = max[0] !== 0
+      const args = { sessionId: data.sessionId, id: na0.id, ni, datak, sec, rowCouple, rowInvitcp }
       await post(this, 'm1', 'nouveauCouple', args)
       return this.finOK()
     } catch (e) {
@@ -1942,16 +1938,16 @@ args :
 A_SRV, '23-Avatar non trouvé.'
 */
 
-export class AccepterContact extends OperationUI {
+export class AccepterCouple extends OperationUI {
   constructor () {
     super('Accepter un contact avec un avatar', OUI, SELONMODE)
   }
 
-  async run (couple, avatar, ard, vmax) {
+  async run (couple, avid, ard, vmax) {
     try {
       const ardc = await couple.toArdc(ard)
-      const args = { sessionId: data.sessionId, idc: couple.id, avc: couple.avc, ardc, vmax }
-      await post(this, 'm1', 'accepterContact', args)
+      const args = { sessionId: data.sessionId, idc: couple.id, id: avid, ardc, vmax }
+      await post(this, 'm1', 'accepterCouple', args)
       return this.finOK()
     } catch (e) {
       return await this.finKO(e)
@@ -1967,22 +1963,21 @@ args :
   - idc: id du couple
   - id: id de l'avatar
   - ni : numéro d'invitation au couple
-  - avc : avatar 0 ou 1 du couple
   - ard: ardoise
 A_SRV, '23-Avatar non trouvé.'
 */
 
-export class DeclinerContact extends OperationUI {
+export class DeclinerCouple extends OperationUI {
   constructor () {
     super('Décliner un contact avec un avatar', OUI, SELONMODE)
   }
 
-  async run (couple, avatar, ard) {
+  async run (couple, avid, ard) {
     try {
-      const ni = crypt.hash(crypt.u8ToHex(couple.cc) + couple.avc)
+      const ni = crypt.hash(crypt.u8ToHex(couple.cc) + '1')
       const ardc = await couple.toArdc(ard)
-      const args = { sessionId: data.sessionId, ni, idc: couple.id, id: avatar.id, avc: couple.avc, ardc }
-      await post(this, 'm1', 'declinerContact', args)
+      const args = { sessionId: data.sessionId, ni, idc: couple.id, id: avid, avc: couple.avc, ardc }
+      await post(this, 'm1', 'declinerCouple', args)
       return this.finOK()
     } catch (e) {
       return await this.finKO(e)
@@ -2005,6 +2000,7 @@ args :
   - datac : datac du contact
   - vmax : [mx11 mx21]
   - ardc : du contact
+  - sec : true si l'avatar accède aux secrets du couple
 A_SRV, '23-Avatar non trouvé.'
 */
 
@@ -2019,7 +2015,8 @@ export class AcceptRencontre extends OperationUI {
       const ni = crypt.hash(crypt.u8ToHex(couple.cc) + '1')
       const ardc = await couple.toArdc(ard)
       const datak = await crypt.crypter(data.clek, couple.cc)
-      const args = { sessionId: data.sessionId, ni, datak, datac, idc: couple.id, id: avatar.id, ardc, phch, vmax }
+      const sec = vmax[0] !== 0
+      const args = { sessionId: data.sessionId, ni, datak, datac, idc: couple.id, id: avatar.id, ardc, phch, vmax, sec }
       await post(this, 'm1', 'acceptRencontre', args)
       return this.finOK()
     } catch (e) {
@@ -2030,40 +2027,24 @@ export class AcceptRencontre extends OperationUI {
 
 /******************************************************************
 Refuser une rencontre :
-/* `lcck` : map : de avatar
-    - _clé_ : `ni`, numéro pseudo aléatoire. Hash de (`cc` en hexa suivi de `0` ou `1`).
-    - _valeur_ : clé `cc` cryptée par la clé K de l'avatar cible. Le hash d'une clé d'un couple donne son id.
 args :
   - sessionid
   - idc: id du couple
   - phch: id du contact
-  - id: id de l'avatar
-  - ni: clé d'accès à lcck de l'avatar
-  - datak : terme ni de lcck
-  - datac : datac du contact
-  - vmax : [mx11 mx21]
   - ardc : du contact
 A_SRV, '23-Avatar non trouvé.'
 */
 
 export class RefusRencontre extends OperationUI {
   constructor () {
-    super('Rencontre avec un avatar', OUI, SELONMODE)
+    super('Refus d\'un parrainage / rencontre avec un avatar', OUI, SELONMODE)
   }
 
-  async run (couple, avatar, ard, phch) {
+  async run (couple, ard, phch) {
     try {
-      const datac = couple.datacRenc(avatar)
-      const ni = crypt.hash(crypt.u8ToHex(couple.cle) + '1')
       const ardc = couple.toArdc(ard)
-      let phch = 0
-      if (couple.phraseactive) {
-        const pc = await couple.phraseContact()
-        phch = pc.phch
-      }
-      const datak = await crypt.crypter(data.clek, couple.cle)
-      const args = { sessionId: data.sessionId, ni, datak, datac, idc: couple.id, id: avatar.id, ardc, phch }
-      await post(this, 'm1', 'acceptRencontre', args)
+      const args = { sessionId: data.sessionId, idc: couple.id, ardc, phch }
+      await post(this, 'm1', 'refusRencontre', args)
       return this.finOK()
     } catch (e) {
       return await this.finKO(e)
@@ -2118,7 +2099,7 @@ export class AcceptationParrainage extends OperationUI {
   /* arg :
   - ps : phrase secrète
   - ard : réponse du filleul
-  - vmax : [v1, v2] volumes max pour les secrets du couple
+  - max : [v1, v2] volumes max pour les secrets du couple
   - estpar : si le compte à créer est parrain aussi
   - phch : hash phrase de contact
   */
@@ -2141,7 +2122,6 @@ export class AcceptationParrainage extends OperationUI {
       const rowPrefs = await prefs.toRow()
 
       const ni = crypt.hash(crypt.u8ToHex(couple.cc) + '1')
-      // remplacer naTemp par [naTEmp, sec]
       const avatar = new Avatar().nouveau(couple.idI, ni, couple.naTemp)
       const rowAvatar = await avatar.toRow()
 
@@ -2174,7 +2154,8 @@ export class AcceptationParrainage extends OperationUI {
         dr2: arg.estpar ? d.r2 + d.f2 : d.f2,
         mc0: [arg.estpar ? MC.FILLEUL : MC.INTRODUIT], // array des mots clé à ajouter dans le couple
         mc1: [arg.estpar ? MC.PARRAIN : MC.INTRODUCTEUR],
-        ardc
+        ardc,
+        sec: arg.max[0] !== 0 // le filleul accède aux secrets du couple
       }
       const ret = this.tr(await post(this, 'm1', 'acceptParrainage', args))
 

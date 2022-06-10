@@ -24,7 +24,7 @@
         </q-step>
 
         <q-step :name="3" title="Maximum d'espace attribués pour les secrets du couple" icon="settings" :done="step > 3" >
-          <div>Mettre 0 pour ne PAS partager de secrets</div>
+          <div class="titre-md text-warning">Mettre 0 pour NE PAS PARTAGER de secrets</div>
           <choix-forfaits v-model="max" :f1="1" :f2="1"/>
           <q-stepper-navigation>
             <q-btn flat @click="step = 2" color="primary" label="Précédent" class="q-ml-sm" />

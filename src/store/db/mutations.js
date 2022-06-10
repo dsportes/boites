@@ -85,6 +85,14 @@ export function purgeCouples (state, val) { // val : Set des ids des couples INU
   state.couples = { ...xc }
 }
 
+/* purge des secrets des couples n'accédant plus à leurs secrets */
+export function purgeCouples2 (state, val) { // val : Set des ids des couples INUTILES
+  if (!val || !val.size) return 0
+  for (const id of val) {
+    delete state['secrets@' + id]
+  }
+}
+
 /* Stockage (et suppression) d'une liste d'objets "multiples", SAUF cvs */
 export function setObjets (state, lobj) { // lobj : array d'objets
   if (!lobj || !lobj.length) return

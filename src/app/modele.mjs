@@ -363,7 +363,9 @@ class Session {
 
   purgeGroupes (lgr) { if (lgr.size) return store().commit('db/purgeGroupes', lgr) }
 
-  purgeCouples (lgr) { if (lgr.size) return store().commit('db/purgeCouples', lgr) }
+  purgeCouples (lcp) { if (lcp.size) return store().commit('db/purgeCouples', lcp) }
+
+  purgeCouples2 (lcp) { if (lcp.size) return store().commit('db/purgeCouples2', lcp) }
 
   /* Recalcul la liste des avatars externes avaec pour chacun :
   - na : son na
@@ -1038,7 +1040,7 @@ export class Couple {
   nouveauC (naI, naE, cc, mot, max) {
     this.v = 0
     this.vsh = 0
-    this.st = 1100 + (max[0] ? 10 : 0) // en attente, parrainage, partage secrets ou non
+    this.st = 1000 + (max[0] ? 10 : 0) // en attente, direct, partage secrets ou non
     this.naI = naI
     this.idI = naI.id
     this.naE = naE
@@ -1063,14 +1065,10 @@ export class Couple {
     return this
   }
 
-  dlvEtat () {
-    if (this.dlv && dlvDepassee(this.dlv) && this.stp < 4) {
-      this.st = ((this.stp * 10) + 2) * 100
-    }
-  }
+  dlvEtat () { if (this.dlv && this.stp === 1 && dlvDepassee(this.dlv)) this.st += 1000 }
 
   // cols: ['id', 'v', 'st', 'dds', 'v1', 'v2', 'mx10', 'mx20', 'mx11', 'mx21', 'dlv', 'data', 'info0', 'info1', 'mc0', 'mc1', 'dh', 'ard', 'vsh']
-  async fromRow (row, cle) { // cle : non null pour réception d'un couple HORS session (accepatation / refus parrainage)
+  async fromRow (row, cle) { // cle : non null pour réception d'un couple HORS session (acceptation / refus parrainage)
     if (cle) this.cc = cle // NON persistante, utile pour acceptation de parrainage
     this.vsh = row.vsh || 0
     this.id = row.id
@@ -1099,7 +1097,7 @@ export class Couple {
     return this
   }
 
-  async toRow () { // pour création de couple
+  async toRow () { // pour création de couple seulement
     const r = { ...this }
     r.datac = await crypt.crypter(this.cle, serial(r.data))
     r.ardc = await crypt.crypter(this.cle, serial([r.dh, r.ard]))
@@ -1127,6 +1125,12 @@ export class Couple {
     this.dlvEtat()
     this.setIdIE(this.data.x)
     return this
+  }
+
+  async phch () {
+    const pc = new PhraseContact()
+    await pc.init(this.data.phrase)
+    return pc.phch
   }
 }
 
@@ -1230,7 +1234,7 @@ export class Invitcp {
     return this
   }
 
-  async toRow (id, ni, cc, sec, clepub) {
+  async toRow (id, ni, cc, clepub) {
     const datap = await crypt.crypterRSA(clepub, cc)
     const r = { id, ni, datap }
     return schemas.serialize('rowinvitcp', r)

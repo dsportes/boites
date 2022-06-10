@@ -23,7 +23,7 @@
             <span class="font-mono q-pl-lg">Maximum v2: {{ed2(couple.mx11)}}</span>
           </div>
           <div v-else>Le contact a choisi de NE PAS PARTAGER de secrets.</div>
-          <div class="titre-md text-wrning">Mettre 0 pour NE PAS PARTAGER de secrets</div>
+          <div class="titre-md text-warning">Mettre 0 pour NE PAS PARTAGER de secrets</div>
           <choix-forfaits v-model="max" :f1="couple.mx10" :f2="couple.mx11"/>
           <q-stepper-navigation>
             <q-btn flat @click="step = 1" color="primary" label="Précédent" class="q-ml-sm" />
@@ -103,7 +103,7 @@ export default ({
       this.fermer()
     },
     async refuser () {
-      await new RefusRencontre().run(this.couple, this.avatar, this.texte, this.phch)
+      await new RefusRencontre().run(this.couple, this.texte, this.phch)
       this.fermer()
     }
   },
