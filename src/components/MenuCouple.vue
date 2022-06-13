@@ -34,7 +34,7 @@
       <q-separator v-if="prlp" />
       <q-item v-if="prlp" clickable v-close-popup @click="prolonger(0)">
         <q-item-section>Prolonger ma proposition de parrainage</q-item-section>
-      </q-item>t
+      </q-item>
       <q-separator v-if="prlr" />
       <q-item v-if="prlr" clickable v-close-popup @click="prolonger(1)">
         <q-item-section>Prolonger ma proposition de contact</q-item-section>
@@ -57,8 +57,8 @@
       </q-card-section>
       <q-card-section>
         <div v-if="c.stE===1">{{c.nomE}} a choisi de partager des secrets par ce contact:<br>
-          <span class="font-mono q-pl-md">Maximum v1: {{ed1(c.max1E)}}</span><br>
-          <span class="font-mono q-pl-lg">Maximum v2: {{ed2(c.max2E)}}</span>
+          <div class="font-mono q-pl-md">Maximum v1: {{ed1(c.max1E)}}</div>
+          <div class="font-mono q-pl-md">Maximum v2: {{ed2(c.max2E)}}</div>
         </div>
         <div v-else>{{c.nomE}} a choisi de NE PAS PARTAGER de secrets par ce contact</div>
         <div class="titre-lg">Volumes v1 / v2 maximaux déclarés par vous pour les secrets partagés par ce contact :</div>
@@ -69,9 +69,11 @@
         <div>Message de remerciement</div>
         <editeur-md class="full-width height-8" v-model="ard" :texte="c.ard" editable modetxt/>
       </q-card-section>
-    <q-card-actions>
-      <q-btn flat color="primary" label="Je réfléchis encore" v-close-popup/>
-      <q-btn flat color="warning" label="J'accepte" @click="accepter"/>
+      <q-card-actions>
+        <q-btn flat color="primary" label="Je réfléchis encore" v-close-popup/>
+        <q-btn flat color="warning" label="J'accepte" @click="accepter"/>
+      </q-card-actions>
+    </q-card>
   </q-dialog>
 
   <q-dialog v-model="declctc">
@@ -83,9 +85,11 @@
         <div>Remerciement / explication sur l'ardoise</div>
         <editeur-md class="full-width height-8" v-model="ard" :texte="c.ard" editable modetxt/>
       </q-card-section>
-    <q-card-actions>
-      <q-btn flat color="primary" label="Je réfléchis encore" v-close-popup/>
-      <q-btn flat color="warning" label="Je décline" @click="decliner"/>
+      <q-card-actions>
+        <q-btn flat color="primary" label="Je réfléchis encore" v-close-popup/>
+        <q-btn flat color="warning" label="Je décline" @click="decliner"/>
+      </q-card-actions>
+    </q-card>
   </q-dialog>
 
   <q-dialog v-model="reactacc">
@@ -99,7 +103,7 @@
             <span class="font-mono q-pl-md">Maximum v1: {{ed1(c.max1E)}}</span><br>
             <span class="font-mono q-pl-lg">Maximum v2: {{ed2(c.max2E)}}</span>
           </div>
-          <div>Volumes occupés par les secrets: {{c.v1}} / {{c.v2}}</div>
+          <div>Volumes occupés par les secrets: {{edvol(c.v1)}} / {{edvol(c.v2)}}</div>
         </div>
         <div v-else>
           <div>{{c.nomE}} NE PARTAGE PAS les secrets par ce contact, le volume occupé actuellement est donc nul</div>
@@ -107,9 +111,11 @@
         <div class="titre-lg">Volumes v1 / v2 maximaux déclarés par vous pour les secrets partagés par ce contact :</div>
         <choix-forfaits v-model="max" :f1="c.max1E" :f2="c.max2E" :v1="c.v1" :v2="c.v2"/>
       </q-card-section>
-    <q-card-actions>
-      <q-btn flat color="primary" label="Je réfléchis encore" v-close-popup/>
-      <q-btn flat color="warning" label="Je réactive l'accès aux secrets" @click="accepter"/>
+      <q-card-actions>
+        <q-btn flat color="primary" label="Je réfléchis encore" v-close-popup/>
+        <q-btn flat color="warning" label="Je réactive l'accès aux secrets" @click="accepter"/>
+      </q-card-actions>
+    </q-card>
   </q-dialog>
 
 </template>
@@ -117,13 +123,16 @@
 import { computed, toRef } from 'vue'
 import { useStore } from 'vuex'
 import { retourInvitation } from '../app/page.mjs'
-import { cfg } from '../app/util.mjs'
-import { AccepterCouple, DeclinerCouple, ProlongerParrainage, SupprimerCouple, QuitterCouple, ReactiverCouple } from '../app/operations.mjs'
+import { cfg, edvol } from '../app/util.mjs'
+import { AccepterCouple, DeclinerCouple, ProlongerParrainage, SupprimerCouple, SuspendreCouple, ReactiverCouple } from '../app/operations.mjs'
 import { useQuasar } from 'quasar'
+import ChoixForfaits from './ChoixForfaits.vue'
+import EditeurMd from './EditeurMd.vue'
+import { UNITEV1, UNITEV2 } from '../app/api.mjs'
 
 export default ({
   name: 'MenuCouple',
-  components: { },
+  components: { ChoixForfaits, EditeurMd },
   props: { c: Object },
   computed: {
     nom () { const x = this.c || this.couple; return x.nomEd },
@@ -142,11 +151,14 @@ export default ({
       declctc: false,
       reactacc: false,
       max: [1, 1],
-      ard: ''
+      ard: '',
+      edvol: edvol
     }
   },
 
   methods: {
+    ed1 (f) { return edvol(f * UNITEV1) },
+    ed2 (f) { return edvol(f * UNITEV2) },
     detail () {
       if (this.c) this.couple = this.c
       this.avatarcpform = true
@@ -257,7 +269,7 @@ export default ({
         ok: { color: 'warning', label: 'Je suspend mon accès aux secrets' },
         persistent: true
       }).onOk(async () => {
-        await new QuitterCouple().run(x, avatar.value.id)
+        await new SuspendreCouple().run(x, avatar.value.id)
       }).onCancel(() => {
       }).onDismiss(() => {
         // console.log('I am triggered on both OK and Cancel')

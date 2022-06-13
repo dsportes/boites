@@ -1700,18 +1700,72 @@ export class SupprFichier extends OperationUI {
 }
 
 /******************************************************************
-QuitterCouple : args de m1/supprimerCouple
+SuspendreCouple : args de m1/suspendreCouple
 - sessionId: data.sessionId,
 - idc : id du couple
-- ni : numéro d'invitation du couple pour l'avatar avid
 - avid : id de l'avatar demandeur
-- phch : id du contact ou 0 si non active
 - avc : l'avatar demandeur est le 0 ou le 1
 Retour : dh
 
 */
 
-export class QuitterCouple extends OperationUI {
+export class SuspendreCouple extends OperationUI {
+  constructor () {
+    super('Supprimer l\'accès aux secrets d\'un couple', OUI, SELONMODE)
+  }
+
+  async run (couple, avid) {
+    try {
+      const args = { sessionId: data.sessionId, idc: couple.id, avid, avc: couple.avc }
+      await post(this, 'm1', 'suspendreCouple', args)
+      return this.finOK()
+    } catch (e) {
+      return await this.finKO(e)
+    }
+  }
+}
+
+/******************************************************************
+ReactiverCouple : args de m1/supprimerCouple
+- sessionId: data.sessionId,
+- idc : id du couple
+- avid : id de l'avatar demandeur
+- max : volumes max
+- avc : l'avatar demandeur est le 0 ou le 1
+Retour : dh
+
+*/
+
+export class ReactiverCouple extends OperationUI {
+  constructor () {
+    super('Supprimer l\'accès aux secrets d\'un couple', OUI, SELONMODE)
+  }
+
+  async run (couple, avid, max) {
+    try {
+      const args = { sessionId: data.sessionId, idc: couple.id, avid, avc: couple.avc, max }
+      await post(this, 'm1', 'suspendreCouple', args)
+      return this.finOK()
+    } catch (e) {
+      return await this.finKO(e)
+    }
+  }
+}
+
+/******************************************************************
+SupprimerCouple : args de m1/supprimerCouple
+- sessionId: data.sessionId,
+- idc : id du couple
+- ni : numéro d'invitation du couple pour l'avatar avid
+- ni1 : numéro d'invitation du couple pour l'avatar 1
+- avid : id de l'avatar demandeur
+- phch : rencontre / parrainage en cours
+- avc : l'avatar demandeur est le 0 ou le 1
+Retour : dh
+
+*/
+
+export class SupprimerCouple extends OperationUI {
   constructor () {
     super('Supprimer un couple', OUI, SELONMODE)
   }
@@ -1719,15 +1773,13 @@ export class QuitterCouple extends OperationUI {
   async run (couple, avid) {
     try {
       const ni = crypt.hash(crypt.u8ToHex(couple.cle) + couple.avc)
-      let phch = 0
-      if (couple.stp === 1) {
-        if (couple.ste === 4 || couple.ste === 7) {
-          const pc = await couple.phraseContact()
-          phch = pc.phch
-        }
+      let pc = null, ni1 = 0
+      if (couple.stp === 1 && couple.orig !== 0) {
+        ni1 = crypt.hash(crypt.u8ToHex(couple.cle) + '1')
+        pc = couple.phraseContact()
       }
-      const args = { sessionId: data.sessionId, idc: couple.id, ni, avid, phch, avc: couple.avc }
-      await post(this, 'm1', 'quitterCouple', args)
+      const args = { sessionId: data.sessionId, idc: couple.id, ni, ni1, avid, phch: pc ? pc.phch : 0, avc: couple.avc }
+      await post(this, 'm1', 'supprimerCouple', args)
       return this.finOK()
     } catch (e) {
       return await this.finKO(e)

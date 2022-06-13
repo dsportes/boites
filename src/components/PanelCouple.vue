@@ -8,7 +8,7 @@
       <q-btn :disable="!suivant" flat round dense icon="last_page" size="md" class="q-mr-sm" @click="suiv(0)" />
       <q-toolbar-title></q-toolbar-title>
       <q-btn size="md" color="white" icon="menu" flat dense>
-        <menu-couple/>
+        <menu-couple :c="s.c"/>
       </q-btn>
     </q-toolbar>
     <q-toolbar v-if="s.c" inset class="bg-primary text-white">

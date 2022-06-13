@@ -969,7 +969,7 @@ export class Couple {
     this.idE = this.ava ? id1 : id0
     this.naE = this.idE ? new NomAvatar(x[this.ava][0], x[this.ava][1]) : null
     this.naI = new NomAvatar(x[this.avc][0], x[this.avc][1])
-    const na = new NomAvatar(this.nom, cle || this.cle)
+    const na = new NomAvatar(this.nomC, cle || this.cle)
     if (!cle) data.repertoire.setCp(na); else this.naTemp = na
   }
 
