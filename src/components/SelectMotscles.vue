@@ -1,10 +1,12 @@
 <template>
-<div :class="'border q-ma-sm q-pa-sm column '+ dark" style="width:100%">
-  <div>
-    <span class="titre-3 q-pr-md">Sélection des mots clés</span>
-    <q-btn class="q-ml-md" dense color="primary" flat icon="undo" label="Annuler" @click="undo"/>
-    <q-btn class="q-ml-md" :disable="!modif" dense color="warning" icon="check" label="OK" @click="ok"/>
-    <bouton-help page="p1" />
+<div :class="'q-pa-sm column '+ dark">
+  <div class="row justify-center">
+    <div class="titre-lg q-pr-md">Sélection des mots clés</div>
+    <div>
+      <q-btn class="q-ml-md" dense color="primary" flat icon="undo" label="Annuler" @click="undo"/>
+      <q-btn class="q-ml-md" :disable="!modif" dense color="warning" icon="check" label="OK" @click="ok"/>
+      <bouton-help page="p1" />
+    </div>
   </div>
   <div class="q-pa-md col row justify-start">
     <div v-for="idx in srclocal" :key="idx" class="radius q-ma-xs q-px-xs bg-yellow text-black cursor-pointer">

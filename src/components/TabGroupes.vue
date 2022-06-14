@@ -94,7 +94,7 @@
     </q-card>
   </q-dialog>
 
-  <q-dialog v-if="!$q.screen.gt.sm && sessionok" v-model="avatargrrech" position="left">
+  <q-dialog v-if="!$q.screen.gt.sm && sessionok" v-model="avatargrrech" full-height position="left">
     <panel-filtre-groupes @ok="rechercher" :motscles="motscles" :etat-interne="recherche" :fermer="fermerfiltre"/>
   </q-dialog>
 

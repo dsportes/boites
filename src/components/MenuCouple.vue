@@ -57,8 +57,8 @@
       </q-card-section>
       <q-card-section>
         <div v-if="c.stE===1">{{c.nomE}} a choisi de partager des secrets par ce contact:<br>
-          <div class="font-mono q-pl-md">Maximum v1: {{ed1(c.max1E)}}</div>
-          <div class="font-mono q-pl-md">Maximum v2: {{ed2(c.max2E)}}</div>
+          <div class="font-mono q-pl-md">Maximum v1: {{c.max1E}} - {{ed1(c.max1E)}}</div>
+          <div class="font-mono q-pl-md">Maximum v2: {{c.max2E}} - {{ed2(c.max2E)}}</div>
         </div>
         <div v-else>{{c.nomE}} a choisi de NE PAS PARTAGER de secrets par ce contact</div>
         <div class="titre-lg">Volumes v1 / v2 maximaux déclarés par vous pour les secrets partagés par ce contact :</div>
@@ -190,7 +190,7 @@ export default ({
 
     async accepter () {
       const x = this.c || this.couple
-      await new AccepterCouple().run(x, this.avatar.id, this.ard, this.max)
+      await new AccepterCouple().run(x, this.ard, this.max)
     },
 
     async decliner () {
@@ -319,6 +319,7 @@ export default ({
       suspendre,
       supprimer,
       couple,
+      avatar,
       avatarcpform,
       evtfiltresecrets,
       tabavatar,

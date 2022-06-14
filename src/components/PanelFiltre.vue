@@ -166,12 +166,12 @@ export default ({
       m3: 'Ordre alphabétique inverse du titre'
     }
     const optionscp1 = [
-      { label: 'Aucun secret partagé en couple', value: 0 },
-      { label: 'Secrets partagés en couple avec n\'importe qui', value: -1 }
+      { label: 'Aucun secret partagé avec des contacts', value: 0 },
+      { label: 'Secrets partagés avec n\'importe quel contact', value: -1 }
     ]
     const optionscp2 = [
-      { label: 'Aucun secret partagé en couple', value: 0 },
-      { label: 'Secrets partagés en couple avec n\'importe qui', value: -1 }
+      { label: 'Aucun secret partagé avec des contacts', value: 0 },
+      { label: 'Secrets partagés avec n\'importe quel contact', value: -1 }
     ]
     const optionsgr1 = [
       { label: 'Aucun secret partagé avec un groupe', value: 0 },
@@ -186,14 +186,14 @@ export default ({
       optionsgr2.splice(2, 1, { label: 'Secrets partagés avec le groupe ' + groupe.value.nom, value: groupe.value.id })
     })
     watch(() => couple.value, (ap, av) => {
-      optionscp2.splice(2, 1, { label: 'Secrets partagés avec ' + couple.value.nom, value: couple.value.id })
+      optionscp2.splice(2, 1, { label: 'Secrets partagés avec ' + couple.value.nomE, value: couple.value.id })
     })
 
     if (couple.value) {
-      optionscp2.splice(2, 1, { label: 'Secrets partagés avec ' + couple.value.na.nom, value: couple.value.id })
+      optionscp2.splice(2, 1, { label: 'Secrets partagés avec ' + couple.value.nomE, value: couple.value.id })
     }
     if (groupe.value) {
-      optionsgr2.splice(2, 1, { label: 'Secrets partagés avec le groupe ' + groupe.value.na.nom, value: groupe.value.id })
+      optionsgr2.splice(2, 1, { label: 'Secrets partagés avec le groupe ' + groupe.value.nom, value: groupe.value.id })
     }
 
     watch(() => state.value, (ap, av) => {

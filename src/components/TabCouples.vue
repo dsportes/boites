@@ -29,7 +29,7 @@
     </div>
   </div>
 
-  <q-dialog v-if="!$q.screen.gt.sm && sessionok" v-model="avatarcprech" position="left">
+  <q-dialog v-if="!$q.screen.gt.sm && sessionok" v-model="avatarcprech" full-height position="left">
     <panel-filtre-couples @ok="rechercher" :motscles="motscles" :etat-interne="recherche" :fermer="fermerfiltre"/>
   </q-dialog>
 
@@ -152,10 +152,7 @@ export default ({
     function nom (c) { return c.naE ? c.naE.noml : c.na.nom }
 
     function icone (c) {
-      if (c.stp < 4) return ['hourglass_empty', 'thumb_down', 'thumb_down_off_alt'][c.stp]
-      if (c.st01[0] === 0 && c.st01[1] === 0) return 'thumb_up'
-      if (c.st01[0] === 1 || c.st01[1] === 1) return 'thumb_down'
-      return 'person_off'
+      return ['hourglass_empty', 'thumb_down', 'thumb_down_off_alt', 'thumb_up', 'person_off'][c.stp - 1]
     }
 
     const state = reactive({

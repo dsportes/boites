@@ -1,5 +1,5 @@
 <template>
-  <span :class="'mc ' + (argsClick ? 'cursor-pointer' : '')" @click="clic()">{{ed}}
+  <span :class="'font-mono fs-sm ' + (argsClick ? 'cursor-pointer' : '')" @click="clic()">{{ed}}
     <q-tooltip v-if="court">{{edl}}</q-tooltip>
   </span>
 </template>
@@ -11,7 +11,7 @@ export default ({
   props: { motscles: Object, src: Object, court: Boolean, argsClick: Object, groupeId: Number },
 
   computed: {
-    ed () { return this.motscles.edit(this.src, this.court, this.groupeId) || '(aucun mot clé)' },
+    ed () { return this.motscles.edit(this.src, this.court, this.groupeId) || '(aucun)' },
     edl () { return this.motscles.edit(this.src, false, this.groupeId) }
   },
 
@@ -30,7 +30,4 @@ export default ({
 
 <style lang="sass" scoped>
 @import '../css/app.sass'
-.mc
-  font-family: 'Roboto Mono'
-  font-size: 0.9rem
 </style>

@@ -1995,10 +1995,10 @@ export class AccepterCouple extends OperationUI {
     super('Accepter un contact avec un avatar', OUI, SELONMODE)
   }
 
-  async run (couple, avid, ard, vmax) {
+  async run (couple, ard, vmax) {
     try {
       const ardc = await couple.toArdc(ard)
-      const args = { sessionId: data.sessionId, idc: couple.id, id: avid, ardc, vmax }
+      const args = { sessionId: data.sessionId, idc: couple.id, ardc, vmax }
       await post(this, 'm1', 'accepterCouple', args)
       return this.finOK()
     } catch (e) {

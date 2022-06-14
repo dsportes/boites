@@ -68,7 +68,7 @@
     </div>
   </div>
 
-  <q-dialog  v-if="!$q.screen.gt.sm && sessionok" v-model="avatarscrech" position="left">
+  <q-dialog  v-if="!$q.screen.gt.sm && sessionok" v-model="avatarscrech" full-height position="left">
     <panel-filtre @ok="rechercher" :motscles="motscles" :etat-interne="recherche" :fermer="fermerfiltre"/>
   </q-dialog>
 

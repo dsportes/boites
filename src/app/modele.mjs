@@ -943,10 +943,10 @@ export class Couple {
   get nomf () { return normpath(this.nomC) }
   get nomE () { return this.naE && this.stE !== 2 ? this.naE.nomc : this.data.x[this.ava][0] }
   get nomI () { return this.naI.nomc }
-  get max1E () { return this.avc ? this.max11 : this.max10 }
-  get max2E () { return this.avc ? this.max21 : this.max20 }
-  get max1I () { return this.avc ? this.max10 : this.max11 }
-  get max2I () { return this.avc ? this.max20 : this.max21 }
+  get max1E () { return this.avc ? this.mx11 : this.mx10 }
+  get max2E () { return this.avc ? this.mx21 : this.mx20 }
+  get max1I () { return this.avc ? this.mx10 : this.mx11 }
+  get max2I () { return this.avc ? this.mx20 : this.mx21 }
   get nomEd () { return (nomCv(this.id, true) || this.nomE) + '@' + this.na.sfx }
 
   naDeIm (im) { return im === this.avc + 1 ? this.naI : this.naE }
@@ -1619,7 +1619,7 @@ export class Secret {
 
   get partage () {
     if (this.ts === 0) return 'Secret personnel'
-    if (this.ts === 1) return 'Secret du couple ' + this.couple.nom
+    if (this.ts === 1) return 'Secret du contact ' + this.couple.nomE
     return 'Secret du groupe ' + this.groupe.nom
   }
 
