@@ -1,6 +1,6 @@
 <template>
 <div v-if="sessionok" :class="$q.screen.gt.sm ? 'ml20' : 'q-pa-xs full-width'">
-  <q-btn class="q-ma-sm" dense icon="add" label="Créer un nouveau groupe"
+  <q-btn v-if="!avatargrform" class="q-ma-sm" dense icon="add" label="Créer un nouveau groupe"
     color="primary" @click="nouvgr = true"/>
 
   <div v-if="!state.lst || !state.lst.length" class="titre-lg">
@@ -40,9 +40,9 @@
               <show-html class="col" style="height:1.8rem;overflow:hidden" :texte="x.m.ard" :idx="idx"/>
               <div class="col-auto q-pl-sm fs-sm">{{x.m.dhed}}</div>
             </div>
-            <div v-else class="text-italic">(rien sur l'ardoise partagée avec le groupe)</div>
+            <div v-else class="fs-sm">(rien sur l'ardoise partagée avec le groupe)</div>
             <show-html v-if="x.m.info && x.m.info.length" class="height-2" :texte="x.m.info" :idx="idx"/>
-            <div v-else class="text-italic">(pas de commentaires personnels à propos du groupe)</div>
+            <div v-else class="fs-sm">(pas de commentaires à propos du groupe)</div>
             <apercu-motscles :motscles="motscles" :src="x.m.mc" :groupe-id="x.m.id"/>
           </div>
         </div>
@@ -76,22 +76,7 @@
   </div>
 
   <q-dialog v-if="sessionok" v-model="nouvgr" class="petitelargeur">
-    <q-card class="petitelargeur shadow-8">
-      <q-card-section>
-        <div class="titre-lg">Création d'un nouveau groupe</div>
-        <div class="titre-md">Nom du groupe</div>
-        <nom-avatar icon-valider="check" verif groupe label-valider="Valider" @ok-nom="oknom" />
-        <q-separator/>
-        <div v-if="nomgr">
-          <div class="titre-md">Forfaits attribués</div>
-          <choix-forfaits v-model="forfaits" :f1="1" :f2="1"/>
-        </div>
-      </q-card-section>
-      <q-card-actions>
-        <q-btn flat dense color="primary" icon="close" label="renoncer" @click="nouvgr=false" />
-        <q-btn flat dense color="warning" :disable="!nomgr" icon="check" label="Créer le groupe" @click="creergroupe"/>
-      </q-card-actions>
-    </q-card>
+    <nouveau-groupe :close="closegrp"/>
   </q-dialog>
 
   <q-dialog v-if="!$q.screen.gt.sm && sessionok" v-model="avatargrrech" full-height position="left">
@@ -110,29 +95,27 @@ import { Motscles, FiltreGrp, cfg, getJourJ } from '../app/util.mjs'
 import PanelFiltreGroupes from './PanelFiltreGroupes.vue'
 import PanelGroupe from './PanelGroupe.vue'
 import ShowHtml from './ShowHtml.vue'
-import ChoixForfaits from './ChoixForfaits.vue'
-import NomAvatar from './NomAvatar.vue'
 import ApercuMotscles from './ApercuMotscles.vue'
+import NouveauGroupe from './NouveauGroupe.vue'
 import { data } from '../app/modele.mjs'
 import { CreationGroupe, AcceptInvitGroupe, RefusInvitGroupe } from '../app/operations.mjs'
 
 export default ({
   name: 'TabGroupes',
 
-  components: { PanelFiltreGroupes, PanelGroupe, ApercuMotscles, ShowHtml, ChoixForfaits, NomAvatar },
+  components: { PanelFiltreGroupes, PanelGroupe, ApercuMotscles, ShowHtml, NouveauGroupe },
 
-  computed: {
-  },
+  computed: { },
 
   data () {
     return {
-      nouvgr: false,
-      forfaits: [1, 1],
-      nomgr: ''
+      nouvgr: false
     }
   },
 
   methods: {
+    closegrp () { this.nouvgr = false },
+
     nbj (j) { return j - getJourJ() + cfg().limitesjour.groupenonheb },
 
     voirsecrets (g) {

@@ -14,20 +14,20 @@
     </div>
 
     <div v-if="m.ard" class="row justify-between cursor-pointer zone items-start" @click="ouvmajard">
-      <div class="col-auto q-pr-sm titre-md text-italic">Ardoise :</div>
+      <div class="col-auto q-pr-sm titre-md">Ardoise :</div>
       <show-html class="col" style="height:1.8rem;overflow:hidden" :texte="m.ard" :idx="idx"/>
       <div class="col-auto q-pl-sm fs-sm">{{m.dhed}}</div>
     </div>
-    <div v-else class="text-italic cursor-pointer zone" @click="ouvmajard">(rien sur l'ardoise partagée avec le groupe)</div>
+    <div v-else class="fs-sm cursor-pointer zone" @click="ouvmajard">(rien sur l'ardoise partagée avec le groupe)</div>
 
     <div v-if="m.estAc">
       <div v-if="m.info" class="zone cursor-pointer" @click="ouvmajinfo">
-        <div class="titre-md text-italic">Titre et commentaires personnels à propos du groupe</div>
+        <div class="titre-md">Titre et commentaires à propos du groupe</div>
         <show-html class="height-2" :texte="m.info" :idx="idx"/>
       </div>
-      <div v-else class="text-italic cursor-pointer zone" @click="ouvmajinfo">(pas de commentaires personnels à propos du groupe)</div>
+      <div v-else class="fs-sm cursor-pointer zone" @click="ouvmajinfo">(pas de commentaire à propos du groupe)</div>
       <div class="zone cursor-pointer" @click="ouvrirmc">
-        <span class="titre-md text-italic q-pr-sm">Mots clés :</span>
+        <span class="titre-sm q-pr-sm">Mots clés :</span>
         <apercu-motscles :motscles="state.motsclesGr" :src="m.mc" :groupe-id="g.id" :args-click="m" @click-mc="ouvrirmc"/>
       </div>
     </div>

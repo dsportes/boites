@@ -1744,7 +1744,7 @@ export class ReactiverCouple extends OperationUI {
   async run (couple, avid, max) {
     try {
       const args = { sessionId: data.sessionId, idc: couple.id, avid, avc: couple.avc, max }
-      await post(this, 'm1', 'suspendreCouple', args)
+      await post(this, 'm1', 'reactiverCouple', args)
       return this.finOK()
     } catch (e) {
       return await this.finKO(e)

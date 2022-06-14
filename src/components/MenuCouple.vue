@@ -1,10 +1,10 @@
 <template>
   <q-menu transition-show="scale" transition-hide="scale">
     <q-list dense style="min-width: 10rem">
-      <q-item v-if="c" clickable v-close-popup @click="detail">
+      <q-item v-if="!depuisDetail" clickable v-close-popup @click="detail">
         <q-item-section>Détail et édition du contact</q-item-section>
       </q-item>
-      <q-item v-if="!c" clickable v-close-popup @click="liste">
+      <q-item v-if="depuisDetail" clickable v-close-popup @click="liste">
         <q-item-section>Liste des contacts</q-item-section>
       </q-item>
       <q-separator />
@@ -50,11 +50,12 @@
     </q-list>
   </q-menu>
 
-  <q-dialog v-model="acceptctc">
-    <q-card class="q-ma-xs moyennelargeur fs-md">
-      <q-card-section class="column items-center">
-        <div class="titre-lg text-center">Accepter la proposition de contact de {{c.nomE}}</div>
-      </q-card-section>
+  <q-dialog v-model="acceptctc" position="right" full-height>
+    <q-card class="q-ma-xs petitelargeur fs-md">
+      <q-toolbar class="bg-secondary text-white">
+        <q-btn class="chl" dense flat size="md" icon="chevron_left" @click="declctc=false"/>
+        <div class="titre-lg">Accepter la proposition de contact de {{c.nomE}}</div>
+      </q-toolbar>
       <q-card-section>
         <div v-if="c.stE===1">{{c.nomE}} a choisi de partager des secrets par ce contact:<br>
           <div class="font-mono q-pl-md">Maximum v1: {{c.max1E}} - {{ed1(c.max1E)}}</div>
@@ -76,11 +77,12 @@
     </q-card>
   </q-dialog>
 
-  <q-dialog v-model="declctc">
-    <q-card class="q-ma-xs moyennelargeur fs-md">
-      <q-card-section class="column items-center">
-        <div class="titre-lg text-center">Décliner la proposition de contact de {{c.nomE}}</div>
-      </q-card-section>
+  <q-dialog v-model="declctc" position="right" full-height>
+    <q-card class="q-ma-xs petitelargeur fs-md">
+      <q-toolbar class="bg-secondary text-white">
+        <q-btn class="chl" dense flat size="md" icon="chevron_left" @click="declctc=false"/>
+        <div class="titre-lg">Décliner la proposition de contact de {{c.nomE}}</div>
+      </q-toolbar>
       <q-card-section>
         <div>Remerciement / explication sur l'ardoise</div>
         <editeur-md class="full-width height-8" v-model="ard" :texte="c.ard" editable modetxt/>
@@ -92,28 +94,32 @@
     </q-card>
   </q-dialog>
 
-  <q-dialog v-model="reactacc">
-    <q-card class="q-ma-xs moyennelargeur fs-md">
-      <q-card-section class="column items-center">
-        <div class="titre-lg text-center">Réactiver l'accès aux secrets du contact avec {{c.nomE}}</div>
-      </q-card-section>
+  <q-dialog v-model="reactacc" position="right" full-height>
+    <q-card class="q-ma-xs petitelargeur fs-md">
+      <q-toolbar class="bg-secondary text-white">
+        <q-btn class="chl" dense flat size="md" icon="chevron_left" @click="reactacc=false"/>
+        <div class="titre-lg">Réactiver l'accès aux secrets du contact avec {{c.nomE}}</div>
+      </q-toolbar>
+      <div class="q-mt-md text-center">Volumes occupés actuellement par les secrets du contact :
+        <br><span>Volume V1 : {{edvol(c.v1)}}</span>
+        <br><span>Volume V2 : {{edvol(c.v2)}}</span>
+      </div>
       <q-card-section>
         <div v-if="c.stE===1">
-          <div>{{c.nomE}} partage les secrets par ce contact:<br>
-            <span class="font-mono q-pl-md">Maximum v1: {{ed1(c.max1E)}}</span><br>
-            <span class="font-mono q-pl-lg">Maximum v2: {{ed2(c.max2E)}}</span>
+          <div class="titre-md q-mt-lg">{{c.nomE}} partage les secrets par ce contact:
+            <br><span class="font-mono q-pl-md">Maximum V1: {{c.max1E + ' - ' + ed1(c.max1E)}}</span>
+            <br><span class="font-mono q-pl-md">Maximum V2: {{c.max2E + ' - ' + ed2(c.max2E)}}</span>
           </div>
-          <div>Volumes occupés par les secrets: {{edvol(c.v1)}} / {{edvol(c.v2)}}</div>
         </div>
         <div v-else>
-          <div>{{c.nomE}} NE PARTAGE PAS les secrets par ce contact, le volume occupé actuellement est donc nul</div>
+          <div class="titre-md q-mt-lg">{{c.nomE}} NE PARTAGE PAS les secrets par ce contact, le volume occupé actuellement est donc nul</div>
         </div>
-        <div class="titre-lg">Volumes v1 / v2 maximaux déclarés par vous pour les secrets partagés par ce contact :</div>
+        <div class="titre-md q-mt-lg">Volumes maximaux déclarés par vous pour les secrets partagés par ce contact :</div>
         <choix-forfaits v-model="max" :f1="c.max1E" :f2="c.max2E" :v1="c.v1" :v2="c.v2"/>
       </q-card-section>
       <q-card-actions>
-        <q-btn flat color="primary" label="Je réfléchis encore" v-close-popup/>
-        <q-btn flat color="warning" label="Je réactive l'accès aux secrets" @click="accepter"/>
+        <q-btn flat class="q-ma-xs" color="primary" label="Je réfléchis encore" v-close-popup/>
+        <q-btn flat class="q-ma-xs" color="warning" label="Je réactive l'accès aux secrets" @click="reactiver"/>
       </q-card-actions>
     </q-card>
   </q-dialog>
@@ -133,7 +139,7 @@ import { UNITEV1, UNITEV2 } from '../app/api.mjs'
 export default ({
   name: 'MenuCouple',
   components: { ChoixForfaits, EditeurMd },
-  props: { c: Object },
+  props: { c: Object, depuisDetail: Boolean },
   computed: {
     nom () { const x = this.c || this.couple; return x.nomEd },
     sec () { const x = this.c || this.couple; return x.stp === 4 && x.stI === 1 },
@@ -191,16 +197,19 @@ export default ({
     async accepter () {
       const x = this.c || this.couple
       await new AccepterCouple().run(x, this.ard, this.max)
+      this.acceptctc = false
     },
 
     async decliner () {
       const x = this.c || this.couple
       await new DeclinerCouple().run(x, this.avatar.id, this.ard)
+      this.declctc = false
     },
 
     async reactiver () {
       const x = this.c || this.couple
       await new ReactiverCouple().run(x, this.avatar.id, this.max)
+      this.reactacc = false
     }
   },
 
@@ -332,4 +341,10 @@ export default ({
 @import '../css/app.sass'
 .q-list
   border: 3px solid $grey !important
+.chl
+  position: relative
+  left: -10px
+.q-toolbar
+  padding: 2px !important
+  min-height: 0 !important
 </style>

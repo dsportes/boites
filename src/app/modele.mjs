@@ -943,10 +943,10 @@ export class Couple {
   get nomf () { return normpath(this.nomC) }
   get nomE () { return this.naE && this.stE !== 2 ? this.naE.nomc : this.data.x[this.ava][0] }
   get nomI () { return this.naI.nomc }
-  get max1E () { return this.avc ? this.mx11 : this.mx10 }
-  get max2E () { return this.avc ? this.mx21 : this.mx20 }
-  get max1I () { return this.avc ? this.mx10 : this.mx11 }
-  get max2I () { return this.avc ? this.mx20 : this.mx21 }
+  get max1E () { return this.avc === 1 ? this.mx10 : this.mx11 }
+  get max2E () { return this.avc === 1 ? this.mx20 : this.mx21 }
+  get max1I () { return this.avc === 1 ? this.mx11 : this.mx10 }
+  get max2I () { return this.avc === 1 ? this.mx21 : this.mx20 }
   get nomEd () { return (nomCv(this.id, true) || this.nomE) + '@' + this.na.sfx }
 
   naDeIm (im) { return im === this.avc + 1 ? this.naI : this.naE }

@@ -1100,7 +1100,7 @@ export class FiltreGrp {
   }
 
   filtre (g, m) {
-    const sx = new Set(m.mc)
+    const sx = new Set(m ? m.mc : [])
     if (difference(this.f1, sx).size) return false
     if (intersection(this.f2, sx).size) return false
 

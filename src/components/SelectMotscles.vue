@@ -1,7 +1,7 @@
 <template>
 <div :class="'q-pa-sm column '+ dark">
   <div class="row justify-center">
-    <div class="titre-lg q-pr-md">Sélection des mots clés</div>
+    <div v-if="!sansTitre" class="titre-lg q-pr-md">Sélection des mots clés</div>
     <div>
       <q-btn class="q-ml-md" dense color="primary" flat icon="undo" label="Annuler" @click="undo"/>
       <q-btn class="q-ml-md" :disable="!modif" dense color="warning" icon="check" label="OK" @click="ok"/>
@@ -42,7 +42,7 @@ import { equ8, select, deselect } from '../app/util.mjs'
 export default ({
   name: 'SelectMotscles',
 
-  props: { motscles: Object, src: Object, close: Function },
+  props: { motscles: Object, src: Object, close: Function, sansTitre: Boolean },
 
   components: { BoutonHelp },
 

@@ -8,7 +8,7 @@
       <q-btn :disable="!suivant" flat round dense icon="last_page" size="md" class="q-mr-sm" @click="suiv(0)" />
       <q-toolbar-title></q-toolbar-title>
       <q-btn size="md" color="white" icon="menu" flat dense>
-        <menu-couple :c="s.c"/>
+        <menu-couple :c="s.c" depuis-detail/>
       </q-btn>
     </q-toolbar>
     <q-toolbar v-if="s.c" inset class="bg-primary text-white">
@@ -29,22 +29,26 @@
       <identite-cv :nom-avatar="s.c.na" type="couple" editable @cv-changee="cvchangee"/>
     </div>
 
-    <div v-if="s.c" class="q-my-md">
+    <div v-if="s.c && s.c.stI===1" class="q-my-md">
       <div class="row justify-between">
-        <div class="titre-md">Volumes maximaux autorisés pour les secrets du contact</div>
+        <div class="titre-md">Volumes des secrets du contact</div>
         <q-btn flat dense size="sm" icon="chevron_right" @click="voledit = !voledit"/>
       </div>
-      <div class="q-pl-sm fs-sm">v1: {{s.max1}} / v2: {{s.max2}}</div>
+      <div class="q-pl-sm fs-sm">Occupés actuellement - V1: {{s.v1}} / V2: {{s.v2}}</div>
+      <div class="q-pl-sm fs-sm">Maximum autorisés - V1: {{s.max1}} / V2: {{s.max2}}</div>
     </div>
 
     <q-dialog v-model="voledit" full-height position="right">
       <q-card class="petitelargeur q-pa-sm">
-        <q-btn class="chl" dense flat size="md" icon="chevron_left" @click="voledit=false"/>
-        <div class="q-my-md titre-lg text-center">Volumes maximaux autorisés</div>
+        <q-toolbar class="bg-secondary text-white">
+          <q-btn class="chl" dense flat size="md" icon="chevron_left" @click="voledit=false"/>
+          <div class="titre-md">Volumes maximaux autorisés</div>
+        </q-toolbar>
         <q-card-section>
-          <div class="titre-md">Fixés par moi</div>
+          <div class="q-py-sm fs-md">Volumes occupés actuellement - V1: {{s.v1}} / V2: {{s.v2}}</div>
+          <div class="titre-md">Volumes maximaux fixés par moi</div>
           <choix-forfaits v-model="vmaxI" :f1="s.c.max1I" :f2="s.c.max2I" label-valider="OK" @valider="changervmax"/>
-          <div v-if="s.c.stE===1" class="q-mt-lg titre-md">Pour information, fixés par {{s.c.nomE}}</div>
+          <div v-if="s.c.stE===1" class="q-mt-lg titre-md">Pour information, maximaux fixés par {{s.c.nomE}}</div>
           <choix-forfaits v-if="s.c.stE===1" v-model="vmaxE" :f1="s.c.max1E" :f2="s.c.max2E" lecture/>
         </q-card-section>
        </q-card>
@@ -52,7 +56,7 @@
 
     <div v-if="s.c" class="q-my-md">
       <div class="row justify-between">
-        <div class="titre-md text-white">Ardoise partagée avec mon contact
+        <div class="titre-md">Ardoise partagée avec mon contact
           <span v-if="s.c.ard" class="q-pl-sm font-mno fs-sm">{{'(' + s.c.ard.length + 'c) - ' + s.dh}}</span>
         </div>
         <q-btn flat dense size="sm" icon="chevron_right" @click="ardedit = !ardedit"/>
@@ -63,9 +67,11 @@
 
     <q-dialog v-model="ardedit" full-height position="right">
       <q-card class="petitelargeur q-pa-sm">
-        <q-btn class="chl" dense flat size="md" icon="chevron_left" @click="ardedit=false"/>
-        <div class="q-my-md titre-lg text-center">Ardoise partagée</div>
-        <editeur-md class="height-8" v-model="ardTemp" :texte="s.c.ard ? s.c.ard : ''" editable modetxt label-ok="OK" @ok="changerard"/>
+        <q-toolbar class="bg-secondary text-white">
+          <q-btn class="chl" dense flat size="md" icon="chevron_left" @click="ardedit=false"/>
+          <div class="titre-lg">Ardoise partagée</div>
+        </q-toolbar>
+        <editeur-md class="height-8 q-mt-lg" v-model="ardTemp" :texte="s.c.ard ? s.c.ard : ''" editable modetxt label-ok="OK" @ok="changerard"/>
        </q-card>
     </q-dialog>
 
@@ -82,8 +88,10 @@
 
     <q-dialog v-model="comedit" full-height position="right">
       <q-card class="petitelargeur q-pa-sm">
-        <q-btn class="chl" dense flat size="md" icon="chevron_left" @click="comedit=false"/>
-        <div class="q-my-md titre-lg text-center">Commentaires personnels</div>
+        <q-toolbar class="bg-secondary text-white">
+          <q-btn class="chl" dense flat size="md" icon="chevron_left" @click="comedit=false"/>
+          <div class="titre-lg">Commentaires personnels</div>
+        </q-toolbar>
         <editeur-md class="height-8" v-model="infoTemp" :texte="s.c.info ? s.c.info : ''" editable modetxt label-ok="OK" @ok="changerinfo"/>
       </q-card>
     </q-dialog>
@@ -97,8 +105,12 @@
     </div>
 
     <q-dialog v-model="mcledit" full-height position="right">
-      <q-card class="petitelargeur">
-      <select-motscles :motscles="s.motscles" :src="s.c.mc" @ok="changermc" :close="fermermcl"></select-motscles>
+      <q-card class="petitelargeur q-pa-sm">
+        <q-toolbar class="bg-secondary text-white">
+          <q-btn class="chl" dense flat size="md" icon="chevron_left" @click="mcledit=false"/>
+          <div class="titre-lg">Sélection des mots clés associés</div>
+        </q-toolbar>
+        <select-motscles class="q-mt-md" :motscles="s.motscles" :src="s.c.mc" @ok="changermc" :close="fermermcl" sans-titre/>
       </q-card>
     </q-dialog>
 
@@ -111,9 +123,12 @@
 
     <q-dialog v-model="paredit" full-height position="right">
       <q-card class="petitelargeur q-pa-sm">
-        <q-btn class="chl" dense flat size="md" icon="chevron_left" @click="paredit=false"/>
-        <div class="q-mt-lg titre-lg">Phrase de parrainage :</div>
-        <div class="q-ml-md font-mono fs-md text-italic">{{s.c.data.phrase}}</div>
+        <q-toolbar class="bg-secondary text-white">
+          <q-btn class="chl" dense flat size="md" icon="chevron_left" @click="paredit=false"/>
+          <div class="titre-lg">Parrainage du compte</div>
+        </q-toolbar>
+        <div class="q-mt-md titre-lg">Phrase convenue :</div>
+        <div class="q-ml-md font-mono fs-md">{{s.c.data.phrase}}</div>
         <div class="q-mt-lg titre-lg">Forfaits attribués au compte parrainé :</div>
         <choix-forfaits v-model="pf" :f1="s.c.data.f1" :f2="s.c.data.f2" lecture/>
         <div class="q-mt-lg titre-lg" v-if="s.c.data.r1 || s.c.data.r2" >Réserve attribuée pour parrainage d'autres comptes :</div>

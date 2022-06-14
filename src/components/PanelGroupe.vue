@@ -1,12 +1,15 @@
 <template>
   <q-card v-if="sessionok && groupe" class="full-height full-width fs-md column">
     <q-toolbar class="bg-primary text-white">
-      <q-btn :disable="!precedent" flat round dense icon="first_page" size="md" class="q-mr-sm" @click="prec(0)" />
-      <q-btn :disable="!precedent" flat round dense icon="arrow_back_ios" size="md" class="q-mr-sm" @click="prec(1)" />
-      <span class="q-pa-sm">{{index + 1}} sur {{sur}}</span>
-      <q-btn :disable="!suivant" flat round dense icon="arrow_forward_ios" size="md" class="q-mr-sm" @click="suiv(1)" />
-      <q-btn :disable="!suivant" flat round dense icon="last_page" size="md" class="q-mr-sm" @click="suiv(0)" />
+      <q-btn :disable="!precedent" flat round dense icon="first_page" size="sm" class="q-mr-xs" @click="prec(0)" />
+      <q-btn :disable="!precedent" flat round dense icon="arrow_back_ios" size="sm" class="q-mr-xs" @click="prec(1)" />
+      <span>{{index + 1}} / {{sur}}</span>
+      <q-btn :disable="!suivant" flat round dense icon="arrow_forward_ios" size="sm" class="q-mr-xs" @click="suiv(1)" />
+      <q-btn :disable="!suivant" flat round dense icon="last_page" size="sm" class="q-mr-xs" @click="suiv(0)" />
       <q-toolbar-title></q-toolbar-title>
+      <q-btn class="q-ma-sm" dense flat icon="add" label="Nouveau" size="md"
+        text-color="white" @click="nouvgr = true"/>
+
       <q-btn size="md" color="white" icon="menu" flat dense>
         <q-menu touch-position transition-show="scale" transition-hide="scale">
           <q-list dense style="min-width: 10rem">
@@ -26,89 +29,105 @@
       </q-btn>
     </q-toolbar>
 
-    <q-btn v-if="state.g && state.g.maxStp() >= 1" class="q-ma-xs" flat dense color="primary" icon="add"
-        label="Ajouter un contact pressenti au groupe" @click="panelinvit=true"/>
-    <q-separator/>
+    <identite-cv v-if="state.g" :nom-avatar="state.g.na" type="groupe" :editable="anim" @cv-changee="cvchangee"/>
 
-    <q-expansion-item v-if="state.g" group="etc" default-opened
-        header-class="expansion-header-class-1 titre-lg bg-secondary text-white">
-      <template v-slot:header>
-        <q-item-section>
-          <div>{{state.g.nomEdMb(state.mbav)}}</div>
-        </q-item-section>
-      </template>
-      <identite-cv :nom-avatar="state.g.na" type="groupe" :editable="anim" @cv-changee="cvchangee"/>
+    <div class="titre-md">
+      <q-toggle v-model="state.arch" left-label :disable="!anim" size="sm" :color="state.arch ? 'warning' : 'green'"
+        :label="state.arch ? 'Création de secrets et mises à jour bloquées' : 'Création de secrets et mises à jour libres'"/>
+    </div>
 
-      <q-toggle v-model="state.arch" :disable="!anim" size="md" :color="state.arch ? 'warning' : 'green'"
-          :label="state.arch ? 'Création de secrets et mises à jour bloquées' : 'Création de secrets et mises à jour libres'"/>
-      <div v-if="state.g.stx === 2" class="q-mb-sm">
-        <div class="text-bold text-warning titre-md">Invitations encore bloquées par :</div>
-        <div class="row items-center">
-          <div v-for="m in state.votes" :key="m.pkv" class="q-px-md">
-            <span>{{m.namb.nom}}</span>
-            <q-btn v-if="m.estAc" class="q-xl-xs" dense size="sm" color="primary" label="débloquer" @click="debloquer(m)"/>
-          </div>
+    <div v-if="state.g && state.g.stx === 2">
+      <div class="text-bold text-warning titre-md">Invitations encore bloquées par :</div>
+      <div class="row items-center">
+        <div v-for="m in state.votes" :key="m.pkv" class="q-px-md">
+          <span>{{m.namb.nom}}</span>
+          <q-btn v-if="m.estAc" class="q-ml-xs" dense size="sm" color="primary" label="débloquer" @click="debloquer(m)"/>
         </div>
       </div>
-      <div v-if="state.g.stx === 1" class="q-mb-sm">
-        <div class="text-italic">Les invitations sont libres</div>
-        <q-btn v-if="anim" class="q-ma-xs" size="md" dense icon="lock" label="Bloquer les invitations" @click="bloquer" />
+    </div>
+    <div v-if="state.g && state.g.stx === 1">
+      <div class="titre-md">Les invitations sont libres
+        <q-btn v-if="anim" class="q-ml-md" size="md" flat text-color="primary" dense icon="lock" label="Les bloquer" @click="bloquer" />
       </div>
-    </q-expansion-item>
-    <q-separator/>
+    </div>
 
-    <q-expansion-item v-if="state.g" group="etc" color="secondary"
-        header-class="expansion-header-class-1 bg-primary text-white">
-      <template v-slot:header>
-        <q-item-section>
-        <div class="titre-lg text-white">
+    <div v-if="state.g">
+      <div class="row justify-between">
+        <div class="titre-md">
           <span v-if="state.g.dfh" class="text-negative bg-yellow-4 text-bold q-ml-sm q-px-xs">PAS D'HEBERGEMENT - </span>
           <span v-else>Hébergement - </span>
           <span :class="state.g.pc1 > 80 || state.g.pc2 > 80 ? 'text-warning bg-yellow-4' : ''">Volumes : {{state.g.pc1}}% / {{state.g.pc2}}%</span>
         </div>
-        </q-item-section>
-      </template>
-      <q-card class="shadow-8 q-ma-sm">
-        <div v-if="state.g.dfh" class="text-negative bg-yellow-4 text-bold q-mx-xs q-pa-xs">
-          Le groupe n'a pas d'avatar qui l'héberge. Mises à jour et créations de secrets bloquées.
-          S'auto-détruira dans {{nbj(state.g.dfh)}} jour(s).
-          <q-btn dense color="primary" label="Héberger le groupe" @click="debheb"/>
-        </div>
-        <q-btn v-if="state.g.estHeb(avatar.id)" dense color="secondary" class="q-ma-xs" label="Fin d'hébergement du groupe" @click="finheb"/>
-        <div>Volumes occupés (arrondis en Mo): {{Math.round(state.g.v1 / 1000000)}}Mo / {{Math.round(state.g.v2 / 1000000)}}Mo</div>
+        <q-btn flat dense size="sm" icon="chevron_right" @click="hebedit = !hebedit"/>
+      </div>
+    </div>
+
+    <q-dialog v-model="hebedit" full-height position="right">
+      <q-card class="petitelargeur q-pa-sm">
+        <q-toolbar class="bg-secondary text-white">
+          <q-btn class="chl" dense flat size="md" icon="chevron_left" @click="hebedit=false"/>
+          <div class="titre-lg">
+            <span v-if="state.g.dfh" class="text-negative bg-yellow-4 text-bold q-ml-sm q-px-xs">PAS D'HEBERGEMENT - </span>
+            <span v-else>Hébergement - </span>
+            <span :class="state.g.pc1 > 80 || state.g.pc2 > 80 ? 'text-warning bg-yellow-4' : ''">Volumes : {{state.g.pc1}}% / {{state.g.pc2}}%</span>
+          </div>
+        </q-toolbar>
+        <div class="q-my-md titre-md">Volumes occupés - V1: {{edvol(state.g.v1)}} / V2: {{edvol(state.g.v2)}}</div>
         <div v-if="state.g.pc1 > 80 || state.g.pc2 > 80" class="q-ma-xs">
           <q-icon name="warning" size="md" color="warning"/>
           <span class="text-warning q-px-sm text-bold">Alerte sur les volumes - v1: {{state.g.pc1}}% / v2: {{state.g.pc2}}%</span>
         </div>
-        <div>
+
+        <div v-if="state.g.dfh" class="q-mt-md text-negative bg-yellow-4 text-bold q-mx-xs q-pa-xs">
+          Le groupe n'a pas d'avatar qui l'héberge. Mises à jour et créations de secrets bloquées.
+          S'auto-détruira dans {{nbj(state.g.dfh)}} jour(s).
+          <q-btn dense color="primary" label="Héberger le groupe" @click="debheb"/>
+        </div>
+        <q-btn v-if="state.g.estHeb(avatar.id)" dense color="secondary" class="q-mt-md" label="Fin d'hébergement du groupe" @click="finheb"/>
+        <div class="q-my-md">
           <div class="titre-md">Forfaits attribués</div>
           <choix-forfaits v-model="state.forfaits" :lecture="!state.g.estHeb(avatar.id)" :f1="state.g.f1" :f2="state.g.f2" :v1="state.g.v1" :v2="state.g.v2"
             label-valider="Changer les volumes maximum autorisés" @valider="chgvolmax"/>
         </div>
       </q-card>
-    </q-expansion-item>
-    <q-separator/>
+    </q-dialog>
 
-    <q-expansion-item v-if="state.g" group="etc" label="Mots clés spécifiques du groupe" color="secondary"
-        header-class="expansion-header-class-1 titre-lg bg-primary text-white">
-      <mots-cles :motscles="state.motsclesGr" :lecture="!anim" @ok="changermcl"/>
-    </q-expansion-item>
-    <q-separator/>
+    <div v-if="state.g" class="q-my-sm">
+      <div class="row justify-between">
+        <div class="titre-md">Mots clés spécifiques du groupe</div>
+        <q-btn flat dense size="sm" icon="chevron_right" @click="mcgedit = !mcgedit"/>
+      </div>
+    </div>
 
-    <q-expansion-item v-if="state.g" group="etc" label="Liste des membres du groupe" color="secondary"
-        header-class="expansion-header-class-1 titre-lg bg-primary text-white">
+    <q-dialog v-model="mcgedit" full-height position="right">
+      <q-card class="petitelargeur q-pa-sm">
+        <q-toolbar class="bg-secondary text-white">
+          <q-btn class="chl" dense flat size="md" icon="chevron_left" @click="mcgedit=false"/>
+          <div class="titre-lg">Mots clés spécifiques du groupe</div>
+        </q-toolbar>
+        <mots-cles class="q-mt-md" :motscles="state.motsclesGr" :lecture="!anim" @ok="changermcl"/>
+      </q-card>
+    </q-dialog>
+
+    <div v-if="state.g" class="bg-secondary text-white q-my-sm row justify-between">
+      <div class="titre-lg ">Membres du groupe</div>
+      <q-btn v-if="state.g && state.g.maxStp() >= 1" size="sm" dense color="primary" icon="add"
+        label="Ajouter un contact" @click="panelinvit=true"/>
+    </div>
+
+    <div v-if="state.g" class="q-mt-md">
       <div v-for="(m, idx) in state.lst" :key="m.pkv">
         <panel-membre :groupe="state.g" :membre="m" :idx="idx"/>
         <q-separator v-if="idx !== state.lst.length - 1" class="q-my-md"/>
       </div>
-    </q-expansion-item>
+    </div>
 
-    <q-dialog v-if="sessionok" v-model="panelinvit">
-      <q-card class="petitelargeur shadow-8">
-      <q-card-section>
-        <div class="titre-lg">Enregistrement d'un membre pressenti (pas encore "invité") du groupe</div>
-      </q-card-section>
-      <q-separator/>
+    <q-dialog v-if="sessionok" v-model="panelinvit" full-height position="right">
+      <q-card class="petitelargeur q-pa-sm">
+        <q-toolbar class="bg-secondary text-white">
+          <q-btn class="chl" dense flat size="md" icon="chevron_left" @click="panelinvit=false"/>
+          <div class="titre-lg">Enregistrement d'un membre pressenti (pas encore "invité") du groupe</div>
+        </q-toolbar>
       <q-card-section>
         <div v-if="clipboard === null">
           <div class="text-italic titre-md">Sélectionner dans les listes de contacts ou des membres des groupes l'avatar à enregistrer comme simple contact du groupe.</div>
@@ -135,13 +154,17 @@
       </q-card>
     </q-dialog>
 
+    <q-dialog v-if="sessionok" v-model="nouvgr" class="petitelargeur">
+      <nouveau-groupe :close="closegrp"/>
+    </q-dialog>
+
   </q-card>
 </template>
 <script>
-import { computed, reactive, watch, toRef, onMounted } from 'vue'
+import { computed, reactive, watch, toRef, onMounted, ref } from 'vue'
 import { useStore } from 'vuex'
 import { useQuasar } from 'quasar'
-import { Motscles, cfg, FiltreMbr, getJourJ, afficherdiagnostic } from '../app/util.mjs'
+import { Motscles, cfg, edvol, FiltreMbr, getJourJ, afficherdiagnostic } from '../app/util.mjs'
 import { data } from '../app/modele.mjs'
 import { MajMcGroupe, MajArchGroupe, MajBIGroupe, MajDBIGroupe, FinHebGroupe, DebHebGroupe, MajvmaxGroupe, ContactGroupe, MajCv } from '../app/operations.mjs'
 import ShowHtml from './ShowHtml.vue'
@@ -149,11 +172,12 @@ import IdentiteCv from './IdentiteCv.vue'
 import PanelMembre from './PanelMembre.vue'
 import MotsCles from './MotsCles.vue'
 import ChoixForfaits from './ChoixForfaits.vue'
+import NouveauGroupe from './NouveauGroupe.vue'
 
 export default ({
   name: 'PanelGroupe',
 
-  components: { ShowHtml, MotsCles, ChoixForfaits, IdentiteCv, PanelMembre },
+  components: { ShowHtml, MotsCles, ChoixForfaits, IdentiteCv, PanelMembre, NouveauGroupe },
 
   props: { groupe: Object, suivant: Function, precedent: Function, index: Number, sur: Number },
 
@@ -161,9 +185,15 @@ export default ({
     anim () { return this.state.maxstp === 2 }
   },
 
-  data () { return { } },
+  data () {
+    return {
+      edvol: edvol,
+      nouvgr: false
+    }
+  },
 
   methods: {
+    closegrp () { this.nouvgr = false },
     dkli (idx) { return this.$q.dark.isActive ? (idx ? 'sombre' + (idx % 2) : 'sombre0') : (idx ? 'clair' + (idx % 2) : 'clair0') },
     nbj (j) { return j - getJourJ() },
 
@@ -186,6 +216,7 @@ export default ({
     },
     async changermcl (mmc) {
       new MajMcGroupe().run(this.state.g, mmc)
+      this.mcgedit = false
     },
     async bloquer () {
       await new MajBIGroupe().run(this.state.g)
@@ -242,6 +273,8 @@ export default ({
   setup (props) {
     const $q = useQuasar()
     const $store = useStore()
+    const hebedit = ref(false)
+    const mcgedit = ref(false)
     const sessionok = computed(() => { return $store.state.ui.sessionok })
     const tabavatar = computed({
       get: () => $store.state.ui.tabavatar,
@@ -453,6 +486,8 @@ export default ({
       watch(() => sessionok.value, (ap, av) => {
         if (ap) {
           panelinvit.value = false
+          hebedit.value = false
+          mcgedit.value = false
         }
       })
     }
@@ -475,6 +510,8 @@ export default ({
     })
 
     return {
+      hebedit,
+      mcgedit,
       sessionok,
       tabavatar,
       evtfiltresecrets,
@@ -501,6 +538,9 @@ export default ({
 .q-toolbar
   padding: 2px !important
   min-height: 0 !important
+.chl
+  position: relative
+  left: -10px
 .photomax
   position: relative
   top: 5px
