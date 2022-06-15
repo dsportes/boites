@@ -4,7 +4,8 @@
     <div class="text-warning">Ce nom NE POURRA PLUS être changé.
       Caractères <span class="q-px-sm text-negative bg-yellow text-bold">{{interdits}}</span> et non imprimables (CR TAB ...) interdits.</div>
     <q-input dense counter v-model="nom"
-      :label="groupe ? 'Nom du groupe' : 'Nom de l\'avatar'" :rules="[r1,r2]" maxlength="32"
+      :label="groupe ? 'Nom du groupe' : 'Nom de l\'avatar'"
+      :rules="[r1,r2]" maxlength="32"
       @keydown.enter.prevent="ok" type="text" hint="Presser 'Entrée' à la fin de la saisie">
       <template v-slot:append>
         <span :class="nom.length === 0 ? 'disabled' : ''"><q-icon name="cancel" class="cursor-pointer"  @click="nom=''"/></span>

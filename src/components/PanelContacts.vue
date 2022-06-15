@@ -11,7 +11,6 @@
         <q-radio v-model="opt" val="d" label="débute par" />
         <q-input v-model="txt" class="q-ml-lg" style="width:4rem" label="abc"/>
       </div>
-      <q-btn :disable="mode < 1 || mode > 2" flat color="warning" icon="add_circle" label="Rencontre ..." @click="ouvrirrenc"/>
     </div>
   </div>
 
@@ -26,27 +25,6 @@
       <div v-for="x in ax.m" :key="x[0]+'/'+x[1]" class="cursor-pointer text-underline self-end" @click="mb(ax.na, x)">{{na(x[0]).noml}}</div>
     </div>
   </q-card>
-
-  <q-dialog v-model="phraserenc">
-    <q-card class="fs-md bord1 petitelargeur text-center q-mb-sm renc">
-      <div class="titre-lg">Phrase de rencontre</div>
-      <q-select v-model="nomavatar" :options="avatars" dense options-dense label="Choisir mon avatar concerné"
-        popup-content-style="border:1px solid #777777;border-radius:3px"/>
-      <q-input class="full-width" dense v-model="phrase" label="Phrase" :type="isPwd ? 'password' : 'text'">
-      <template v-slot:append>
-        <q-icon :name="isPwd ? 'visibility_off' : 'visibility'" class="cursor-pointer" @click="isPwd = !isPwd"/>
-        <span :class="phrase.length === 0 ? 'disabled' : ''"><q-icon name="cancel" class="cursor-pointer"  @click="phrase=''"/></span>
-      </template>
-      </q-input>
-      <div v-if="encours" class="fs-md text-italic text-primary">Cryptage en cours ...
-        <q-spinner color="primary" size="2rem" :thickness="3" />
-      </div>
-      <q-card-actions>
-        <q-btn flat color="primaty" icon="close" label="Je renonce" v-close-popup/>
-        <q-btn flat color="warning" icon="check" label="Poursuivre" @click="crypterphrase" v-close-popup/>
-      </q-card-actions>
-    </q-card>
-  </q-dialog>
 
   <q-dialog v-model="cvident">
     <q-card class="bord1">
@@ -63,7 +41,7 @@
   <q-dialog v-model="cpident">
     <q-card class="bord1">
       <q-card-section>
-        <div class="titre-lg">Couple</div>
+        <div class="titre-lg">Contact</div>
         <identite-cv :nom-avatar="nac" type="couple"/>
         <identite-cv :nom-avatar="naI" type="avatar"/>
         <identite-cv :nom-avatar="naE" type="avatar"/>
@@ -85,14 +63,6 @@
     </q-card>
   </q-dialog>
 
-  <q-dialog v-model="nvrenc">
-    <nouvelle-rencontre :phrase="phrase2" :clex="clex" :phch="phch" :close="closerenc"/>
-  </q-dialog>
-
-  <q-dialog v-model="acceptrenc">
-    <accept-rencontre :couple="coupleloc" :phch="phch" :close="closeacceptrenc"/>
-  </q-dialog>
-
 </div>
 </template>
 
@@ -100,34 +70,20 @@
 import { useStore } from 'vuex'
 import { computed, reactive, watch, ref } from 'vue'
 import IdentiteCv from '../components/IdentiteCv.vue'
-import AcceptRencontre from './AcceptRencontre.vue'
-import NouvelleRencontre from './NouvelleRencontre.vue'
 import NouveauCouple from './NouveauCouple.vue'
-import { data, Contact, Couple } from '../app/modele.mjs'
-import { deserial } from '../app/schemas.mjs'
-import { get, dlvDepassee, PhraseContact } from '../app/util.mjs'
+import { data } from '../app/modele.mjs'
 
 export default ({
   name: 'PanelContacts',
 
-  components: { IdentiteCv, AcceptRencontre, NouvelleRencontre, NouveauCouple },
+  components: { IdentiteCv, NouveauCouple },
 
   data () {
     return {
       nac: null,
       naI: null,
       naE: null,
-      phraserenc: false,
-      isPwd: false,
-      encours: false,
-      nvrenc: false,
-      acceptrenc: false,
       nvcouple: false,
-      phrase: '',
-      phrase2: '',
-      coupleloc: null,
-      phch: 0,
-      clex: null,
       avatars: [],
       nomavatar: ''
     }
@@ -158,73 +114,7 @@ export default ({
       this.grident = true
     },
 
-    closenvcouple () { this.nvcouple = false; this.cvident = false },
-
-    ouvrirrenc () {
-      const c = data.getCompte()
-      this.avatars = c.avatars()
-      if (this.avatar) {
-        this.nomavatar = this.avatar.na.nom
-      } else {
-        this.nomavatar = this.avatars[0]
-        this.avatar = data.getAvatar(c.avatarDeNom(this.nomavatar))
-      }
-      this.phraserenc = true
-    },
-
-    closerenc () { this.nvrenc = false },
-
-    closeacceptrenc () { this.acceptrenc = false },
-
-    crypterphrase () {
-      if (!this.phrase) return
-
-      this.encours = true
-      setTimeout(async () => {
-        const pc = await new PhraseContact().init(this.phrase)
-        this.phch = pc.phch
-        this.encours = false
-        const resp = await get('m1', 'getContact', { phch: pc.phch })
-        if (!resp || !resp.length) {
-          this.clex = pc.clex
-          this.phrase2 = this.phrase
-          this.raz()
-          this.nvrenc = true
-        } else {
-          try {
-            const row = deserial(new Uint8Array(resp))
-            const contact = await new Contact().fromRow(row)
-            if (dlvDepassee(contact.dlv)) {
-              this.diagnostic = 'Cette phrase de rencontre n\'est plus valide'
-              this.raz()
-              return
-            }
-            const [cc, id, nom] = await contact.getCcId(pc.clex)
-            if (nom !== this.avatar.na.nom) {
-              this.diagnostic = 'Cette phrase de rencontre n\'est pas associée à votre nom'
-              this.raz()
-              return
-            }
-            const resp2 = await get('m1', 'getCouple', { id })
-            if (!resp2) {
-              this.diagnostic = 'Pas de rencontre en attente avec cette phrase'
-              this.raz()
-              return
-            }
-            const row2 = deserial(new Uint8Array(resp2))
-            this.coupleloc = await new Couple().fromRow(row2, cc)
-            this.raz()
-            this.acceptrenc = true
-          } catch (e) {
-            this.raz()
-          }
-        }
-      }, 1)
-    },
-    raz () {
-      this.phraserenc = false
-      this.phrase = ''
-    }
+    closenvcouple () { this.nvcouple = false; this.cvident = false }
   },
 
   setup () {
@@ -313,7 +203,7 @@ export default ({
 
 <style lang="sass" scoped>
 @import '../css/app.sass'
-$haut: 9rem
+$haut: 7rem
 $larg: 330px
 .top
   position: absolute

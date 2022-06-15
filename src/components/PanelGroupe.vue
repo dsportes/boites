@@ -1,33 +1,6 @@
 <template>
   <q-card v-if="sessionok && groupe" class="full-height full-width fs-md column">
-    <q-toolbar class="bg-primary text-white">
-      <q-btn :disable="!precedent" flat round dense icon="first_page" size="sm" class="q-mr-xs" @click="prec(0)" />
-      <q-btn :disable="!precedent" flat round dense icon="arrow_back_ios" size="sm" class="q-mr-xs" @click="prec(1)" />
-      <span>{{index + 1}} / {{sur}}</span>
-      <q-btn :disable="!suivant" flat round dense icon="arrow_forward_ios" size="sm" class="q-mr-xs" @click="suiv(1)" />
-      <q-btn :disable="!suivant" flat round dense icon="last_page" size="sm" class="q-mr-xs" @click="suiv(0)" />
-      <q-toolbar-title></q-toolbar-title>
-      <q-btn class="q-ma-sm" dense flat icon="add" label="Nouveau" size="md"
-        text-color="white" @click="nouvgr = true"/>
-
-      <q-btn size="md" color="white" icon="menu" flat dense>
-        <q-menu touch-position transition-show="scale" transition-hide="scale">
-          <q-list dense style="min-width: 10rem">
-            <q-item clickable v-close-popup @click="avatargrform = false">
-              <q-item-section>Liste des groupes</q-item-section>
-            </q-item>
-            <q-separator />
-            <q-item clickable v-close-popup @click="voirsecrets">
-              <q-item-section>Voir les secrets du groupe</q-item-section>
-            </q-item>
-            <q-separator />
-            <q-item clickable v-close-popup @click="nouveausecret">
-              <q-item-section>Nouveau secret de groupe</q-item-section>
-            </q-item>
-          </q-list>
-        </q-menu>
-      </q-btn>
-    </q-toolbar>
+    <div style="min-height:60px"></div>
 
     <identite-cv v-if="state.g" :nom-avatar="state.g.na" type="groupe" :editable="anim" @cv-changee="cvchangee"/>
 
@@ -158,6 +131,37 @@
       <nouveau-groupe :close="closegrp"/>
     </q-dialog>
 
+  <q-page-sticky class="full-width" position="top-left" expand :offset="[50,0]">
+    <q-toolbar :class="tbc">
+      <q-btn :disable="!precedent" flat round dense icon="first_page" size="sm" class="q-mr-xs" @click="prec(0)" />
+      <q-btn :disable="!precedent" flat round dense icon="arrow_back_ios" size="sm" class="q-mr-xs" @click="prec(1)" />
+      <span>{{index + 1}} / {{sur}}</span>
+      <q-btn :disable="!suivant" flat round dense icon="arrow_forward_ios" size="sm" class="q-mr-xs" @click="suiv(1)" />
+      <q-btn :disable="!suivant" flat round dense icon="last_page" size="sm" class="q-mr-xs" @click="suiv(0)" />
+      <q-toolbar-title></q-toolbar-title>
+      <q-btn dense flat icon="add" label="Nouveau" size="md"
+        text-color="white" @click="nouvgr = true"/>
+
+      <q-btn size="md" color="white" icon="menu" flat dense>
+        <q-menu touch-position transition-show="scale" transition-hide="scale">
+          <q-list dense style="min-width: 10rem">
+            <q-item clickable v-close-popup @click="avatargrform = false">
+              <q-item-section>Liste des groupes</q-item-section>
+            </q-item>
+            <q-separator />
+            <q-item clickable v-close-popup @click="voirsecrets">
+              <q-item-section>Voir les secrets du groupe</q-item-section>
+            </q-item>
+            <q-separator />
+            <q-item clickable v-close-popup @click="nouveausecret">
+              <q-item-section>Nouveau secret de groupe</q-item-section>
+            </q-item>
+          </q-list>
+        </q-menu>
+      </q-btn>
+    </q-toolbar>
+
+  </q-page-sticky>
   </q-card>
 </template>
 <script>
@@ -182,6 +186,7 @@ export default ({
   props: { groupe: Object, suivant: Function, precedent: Function, index: Number, sur: Number },
 
   computed: {
+    tbc () { return 'bg-primary text-white' + (this.$q.screen.gt.sm ? ' ml23' : '') },
     anim () { return this.state.maxstp === 2 }
   },
 
@@ -551,4 +556,6 @@ export default ({
   border: 1px solid $warning
 .itemcourant
   border: 1px solid transparent
+.ml23
+  margin-left: 23rem
 </style>

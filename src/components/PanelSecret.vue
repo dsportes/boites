@@ -1,36 +1,6 @@
 <template>
   <q-card class="full-height full-width fs-md column">
-    <q-toolbar class="bg-primary text-white maToolBar">
-      <q-btn :disable="ed" flat round dense icon="view_list" size="md" class="q-mr-sm" @click="avatarscform=false" />
-      <q-btn :disable="!precedent || ed" flat round dense icon="first_page" size="md" class="q-mr-sm" @click="prec(0)" />
-      <q-btn :disable="!precedent || ed" flat round dense icon="arrow_back_ios" size="md" class="q-mr-sm" @click="prec(1)" />
-      <span class="q-pa-sm">{{index + 1}} sur {{sur}}</span>
-      <q-btn :disable="!suivant || ed" flat round dense icon="arrow_forward_ios" size="md" class="q-mr-sm" @click="suiv(1)" />
-      <q-btn :disable="!suivant || ed" flat round dense icon="last_page" size="md" class="q-mr-sm" @click="suiv(0)" />
-      <q-toolbar-title>
-        <div v-if="secret.suppr" class="col text-negative text-italic text-bold">Secret SUPPRIMÉ</div>
-      </q-toolbar-title>
-      <q-btn v-if="tabsecret==='texte' && !secret.suppr && !ed && !c1() && mode <= 2" size="sm" color="warning" icon="edit" dense label="Modifier" @click="editer"/>
-      <q-btn v-if="tabsecret==='texte' && !secret.suppr && ed" class="q-mx-xs" size="sm" :color="modif() ? 'warning' : 'secondary'" icon="undo" dense @click="undo"/>
-      <q-btn v-if="tabsecret==='texte' && !secret.suppr && ed" :disable="!modif() || (state.erreur !== '')" size="sm" color="green-5" icon="check" dense @click="valider"/>
-    </q-toolbar>
-    <q-toolbar inset v-if="mode > 2" class="maToolBar2 fs-sm text-bold text-negative bg-yellow-5">
-      <div class="q-px-sm text-center">Les secrets ne peuvent être QUE consultés en mode avion ou visio (pas mis à jour)</div>
-    </q-toolbar>
-    <q-toolbar v-if="tabsecret==='texte' && !secret.suppr" inset class="col-auto bg-primary text-white maToolBar">
-      <q-btn class="q-mx-sm" dense push size="sm" icon="push_pin" :color="aPin() ? 'green-5' : 'grey-5'" @click="togglePin"/>
-      <q-toolbar-title><div class="titre-md tit text-center">{{secret.partage}}</div></q-toolbar-title>
-      <q-btn v-if="!secret.suppr && mode <= 2" size="sm" color="warning" icon="delete" dense @click="confirmsuppr=true"/>
-    </q-toolbar>
-    <q-toolbar v-if="!secret.suppr" inset class="col-auto bg-secondary text-white maToolBar">
-      <div class="full-width font-cf">
-        <q-tabs v-model="tabsecret" inline-label no-caps dense>
-          <q-tab name="texte" :disable="ed" label="Détail du secret" />
-          <q-tab name="fa" :disable="ed" label="Fichiers attachés" />
-          <q-tab name="voisins" :disable="ed" label="Secrets voisins" />
-        </q-tabs>
-      </div>
-    </q-toolbar>
+    <div style="min-height:90px"></div>
 
     <div v-if="!secret.suppr && tabsecret==='texte'" class='col column q-mt-sm'>
       <q-btn v-if="ed && c8()" class="btnt" size="sm" icon="edit_off" dense color="negative" label="non modifiable">
@@ -320,6 +290,35 @@
       </q-card>
     </q-dialog>
 
+  <q-page-sticky class="full-width" position="top-left" expand :offset="[50,0]">
+    <q-toolbar :class="tbc">
+      <q-btn v-if="tabsecret==='texte' && !secret.suppr" dense push size="sm" icon="push_pin" :color="aPin() ? 'green-5' : 'grey-5'" @click="togglePin"/>
+      <q-btn :disable="!precedent || ed" flat round dense icon="first_page" size="sm" @click="prec(0)" />
+      <q-btn :disable="!precedent || ed" flat round dense icon="arrow_back_ios" size="sm" @click="prec(1)" />
+      <span class="fs-sm">{{index + 1}}/{{sur}}</span>
+      <q-btn :disable="!suivant || ed" flat round dense icon="arrow_forward_ios" size="sm" @click="suiv(1)" />
+      <q-btn :disable="!suivant || ed" flat round dense icon="last_page" size="sm" @click="suiv(0)" />
+      <q-toolbar-title>
+        <div v-if="secret.suppr" class="col text-negative text-italic text-bold">Secret SUPPRIMÉ</div>
+        <div v-if="!secret.suppr" class="titre-md tit text-center">{{secret.partage}}</div>
+      </q-toolbar-title>
+      <q-btn v-if="tabsecret==='texte' && !secret.suppr && !ed && !c1() && mode <= 2" size="sm" color="warning" icon="edit" dense label="Modifier" @click="editer"/>
+      <q-btn v-if="tabsecret==='texte' && !secret.suppr && ed" class="q-ml-xs" size="sm" :color="modif() ? 'warning' : 'secondary'" icon="undo" dense @click="undo"/>
+      <q-btn v-if="tabsecret==='texte' && !secret.suppr && ed" class="q-ml-xs" :disable="!modif() || (state.erreur !== '')" size="sm" color="green-5" icon="check" dense @click="valider"/>
+      <q-btn v-if="tabsecret==='texte' && !secret.suppr && mode <= 2" class="q-ml-xs" size="sm" color="warning" icon="delete" dense @click="confirmsuppr=true"/>
+    </q-toolbar>
+    <q-toolbar inset v-if="mode > 2" :class="tbc">
+      <div class="q-px-sm text-center fs-sm text-bold text-negative bg-yellow-5">Les secrets ne peuvent être QUE consultés en mode avion ou visio (pas mis à jour)</div>
+    </q-toolbar>
+    <q-toolbar v-if="!secret.suppr" inset :class="tbc">
+      <q-tabs v-model="tabsecret" class="font-cf" inline-label no-caps dense>
+        <q-tab name="texte" :disable="ed" label="Détail du secret" />
+        <q-tab name="fa" :disable="ed" label="Fichiers attachés" />
+        <q-tab name="voisins" :disable="ed" label="Secrets voisins" />
+      </q-tabs>
+    </q-toolbar>
+
+  </q-page-sticky>
   </q-card>
 </template>
 
@@ -346,6 +345,7 @@ export default ({
   props: { aPin: Function, estFiltre: Function, sec: Object, suivant: Function, precedent: Function, pinSecret: Function, index: Number, sur: Number },
 
   computed: {
+    tbc () { return 'bg-primary text-white full-width ' + (this.$q.screen.gt.sm ? ' ml23' : '') },
     ed () { return this.state.enedition },
     tbclass () { return this.$q.dark.isActive ? ' sombre' : ' clair' },
     msgtemp () {
@@ -1025,14 +1025,11 @@ export default ({
 </script>
 <style lang="sass" scoped>
 @import '../css/app.sass'
-.maToolBar
-  padding: 0 !important
-  min-height: 2rem !important
-  max-height: 2rem !important
-.maToolBar2
-  padding: 0 !important
-  min-height: 1.3rem !important
-  max-height: 1.3rem !important
+.q-toolbar
+  padding: 2px !important
+  min-height: 0 !important
+.q-tabs--dense
+  min-height: 0 !important
 .qc
   padding: 5px
   background-color: $yellow-5
@@ -1062,4 +1059,6 @@ export default ({
   position: absolute
   right: 3px
   z-index: 10
+.ml23
+  margin-left: 23rem !important
 </style>

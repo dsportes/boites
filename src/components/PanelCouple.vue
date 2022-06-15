@@ -1,19 +1,6 @@
 <template>
   <q-card v-if="sessionok" class="full-height fs-md column">
-    <q-toolbar class="bg-primary text-white">
-      <q-btn :disable="!precedent" flat round dense icon="first_page" size="md" class="q-mr-sm" @click="prec(0)" />
-      <q-btn :disable="!precedent" flat round dense icon="arrow_back_ios" size="md" class="q-mr-sm" @click="prec(1)" />
-      <span class="q-pa-sm">{{index + 1}} sur {{sur}}</span>
-      <q-btn :disable="!suivant" flat round dense icon="arrow_forward_ios" size="md" class="q-mr-sm" @click="suiv(1)" />
-      <q-btn :disable="!suivant" flat round dense icon="last_page" size="md" class="q-mr-sm" @click="suiv(0)" />
-      <q-toolbar-title></q-toolbar-title>
-      <q-btn size="md" color="white" icon="menu" flat dense>
-        <menu-couple :c="s.c" depuis-detail/>
-      </q-btn>
-    </q-toolbar>
-    <q-toolbar v-if="s.c" inset class="bg-primary text-white">
-      <q-toolbar-title><div class="titre-md text-bold">Contact {{s.c.nomEd}}</div></q-toolbar-title>
-    </q-toolbar>
+    <div style="min-height:60px"></div>
 
     <div v-if="s.c">
       <div class="titre-md">{{s.stlib}}</div>
@@ -98,7 +85,7 @@
 
     <div v-if="s.c" class="q-my-md">
       <div class="row justify-between">
-        <div class="titre-md text-white">Mots clés associés au contact</div>
+        <div class="titre-md">Mots clés associés au contact</div>
         <q-btn flat dense size="sm" icon="chevron_right" @click="mcledit = !mcledit"/>
       </div>
       <apercu-motscles class="q-ml-md" :motscles="s.motscles" :src="s.c.mc"/>
@@ -137,10 +124,27 @@
     </q-dialog>
 
     <div v-if="s.c && s.c.orig === 2" class="q-mt-md">
-      <div class="row justify-between">
-        <div class="titre-md text-white">Contact créé suite à rencontre avec le contact</div>
-        <div class="q-ml-md fs-sm">Phrase de rencontre : <span class="text-italic">{{s.c.data.phrase}}</span></div>      </div>
+      <div class="titre-md text-white">Contact créé suite à rencontre avec le contact</div>
+      <div class="q-ml-md fs-sm">Phrase de rencontre : <span class="text-italic">{{s.c.data.phrase}}</span></div>
     </div>
+
+  <q-page-sticky class="full-width" position="top-left" expand
+    :offset="[50, 0]">
+    <q-toolbar :class="tbc">
+      <q-btn :disable="!precedent" flat round dense icon="first_page" size="md" class="q-mr-sm" @click="prec(0)" />
+      <q-btn :disable="!precedent" flat round dense icon="arrow_back_ios" size="md" class="q-mr-sm" @click="prec(1)" />
+      <span class="q-pa-sm">{{index + 1}} sur {{sur}}</span>
+      <q-btn :disable="!suivant" flat round dense icon="arrow_forward_ios" size="md" class="q-mr-sm" @click="suiv(1)" />
+      <q-btn :disable="!suivant" flat round dense icon="last_page" size="md" class="q-mr-sm" @click="suiv(0)" />
+      <q-toolbar-title></q-toolbar-title>
+      <q-btn size="md" color="white" icon="menu" flat dense>
+        <menu-couple :c="s.c" depuis-detail/>
+      </q-btn>
+    </q-toolbar>
+    <q-toolbar v-if="s.c" inset :class="tbc">
+      <q-toolbar-title><div class="titre-md text-bold">Contact {{s.c.nomEd}}</div></q-toolbar-title>
+    </q-toolbar>
+  </q-page-sticky>
 
   </q-card>
 </template>
@@ -167,7 +171,9 @@ export default ({
 
   props: { couple: Object, suivant: Function, precedent: Function, index: Number, sur: Number },
 
-  computed: { },
+  computed: {
+    tbc () { return 'bg-primary text-white' + (this.$q.screen.gt.sm ? ' ml23' : '') }
+  },
 
   data () {
     return {
@@ -348,4 +354,6 @@ export default ({
 .l1
   max-height: 1.1rem
   overflow: hidden
+.ml23
+  margin-left: 23rem
 </style>

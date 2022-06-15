@@ -4,7 +4,7 @@
   <div v-if="!state.lst || !state.lst.length" class="titre-lg">Aucun contact ne correspond au critère de recherche</div>
 
   <panel-couple v-if="avatarcpform && state.lst && state.lst.length"
-    :class="$q.screen.gt.sm ? 'ml20' : 'q-pa-xs full-width'"
+    class="q-pa-xs full-width"
     :couple="couple"
     :suivant="state.idx < state.lst.length - 1 ? suiv : null"
     :precedent="state.idx > 0 ? prec : null"

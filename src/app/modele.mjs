@@ -1618,9 +1618,9 @@ export class Secret {
   get groupe () { return this.ts !== 2 ? null : data.getGroupe(this.id) }
 
   get partage () {
-    if (this.ts === 0) return 'Secret personnel'
-    if (this.ts === 1) return 'Secret du contact ' + this.couple.nomE
-    return 'Secret du groupe ' + this.groupe.nom
+    if (this.ts === 0) return 'Personnel'
+    if (this.ts === 1) return 'Contact ' + this.couple.nomE
+    return 'Groupe ' + this.groupe.nom
   }
 
   get mcg () { return this.ts === 2 && this.mc ? this.mc[0] || new Uint8Array([]) : new Uint8Array([]) }

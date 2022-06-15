@@ -82,7 +82,7 @@
         <div class="window-width font-cf">
           <q-tabs class="" v-model="tabavatar" inline-label no-caps dense>
             <q-btn v-if="tabavatar==='secrets' && $q.screen.lt.md" size="md" dense icon="search" color="secondary" @click="avatarscrech = !avatarscrech"/>
-            <q-btn v-if="tabavatar==='secrets'" size="md" dense :icon="avatarcpform ? 'view_list' : 'wysiwyg'" color="secondary" @click="togglescform"/>
+            <q-btn v-if="tabavatar==='secrets'" size="md" dense :icon="avatarscform ? 'view_list' : 'wysiwyg'" color="secondary" @click="togglescform"/>
             <q-tab name="secrets" label="Secrets" />
             <q-btn v-if="tabavatar==='couples' && $q.screen.lt.md" size="md" dense icon="search" color="secondary" @click="avatarcprech = !avatarcprech"/>
             <q-btn v-if="tabavatar==='couples'" size="md" dense :icon="avatarcpform ? 'view_list' : 'wysiwyg'" color="secondary" @click="togglecpform"/>
@@ -90,7 +90,6 @@
             <q-btn v-if="tabavatar==='groupes' && $q.screen.lt.md" size="md" dense icon="search" color="secondary" @click="avatargrrech = !avatargrrech"/>
             <q-btn v-if="tabavatar==='groupes'" size="md" dense :icon="avatargrform ? 'view_list' : 'wysiwyg'" color="secondary" @click="togglegrform"/>
             <q-tab name="groupes" label="Groupes" />
-            <q-tab name="etc" label="Etc." />
           </q-tabs>
         </div>
       </q-toolbar>

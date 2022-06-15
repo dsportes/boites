@@ -85,7 +85,7 @@ export default ({
 
   watch: {
     mot (ap, av) {
-      this.diagmot = ap.length < 10 || ap.length > 140
+      this.diagmot = !ap || (ap.length < 10 || ap.length > 140)
     }
   },
 
