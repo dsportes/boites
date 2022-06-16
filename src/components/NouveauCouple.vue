@@ -20,7 +20,7 @@
         </q-step>
 
         <q-step :name="2" title="Maximum d'espace attribués pour les secrets du contact" icon="settings" :done="step > 2" >
-          <div>Mettre 0 pour ne PAS partager de secrets</div>
+          <div class="text-warning">Mettre 0 pour ne PAS partager de secrets</div>
           <choix-forfaits v-model="max" :f1="1" :f2="1"/>
           <q-stepper-navigation>
             <q-btn flat @click="step = 1" color="primary" label="Précédent" class="q-ml-sm" />
@@ -31,10 +31,11 @@
         <q-step :name="3" title="Confirmation" icon="check" :done="step > 3" >
           <div>Nom de l'avatar sollicité: <span class="font-mono q-pl-md">{{s.na1.nom}}</span></div>
           <div>Mot de bienvenue: <span class="font-mono q-pl-md">{{mot}}</span></div>
-          <div>Volumes maximum attribués aux secret du contact :
+          <div v-if="max[0]">Volumes maximum des secrets du contact :<br>
             <span class="font-mono q-pl-md">v1: {{ed1(max[0])}}</span>
             <span class="font-mono q-pl-lg">v2: {{ed2(max[1])}}</span>
           </div>
+          <div v-else>Pas d'accès aux secrets du contact</div>
           <q-stepper-navigation>
             <q-btn flat @click="corriger" color="primary" label="Corriger" class="q-ml-sm" />
             <q-btn @click="confirmer" color="warning" label="Confirmer" icon="check" class="q-ml-sm" />

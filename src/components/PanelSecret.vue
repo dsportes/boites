@@ -299,22 +299,30 @@
       <q-btn :disable="!suivant || ed" flat round dense icon="arrow_forward_ios" size="sm" @click="suiv(1)" />
       <q-btn :disable="!suivant || ed" flat round dense icon="last_page" size="sm" @click="suiv(0)" />
       <q-toolbar-title>
-        <div v-if="secret.suppr" class="col text-negative text-italic text-bold">Secret SUPPRIMÉ</div>
-        <div v-if="!secret.suppr" class="titre-md tit text-center">{{secret.partage}}</div>
+        <div v-if="secret.suppr" class="titre-md text-negative text-italic">Secret SUPPRIMÉ</div>
+        <div v-if="!secret.suppr && secret.ts === 0" class="titre-md">Personnel</div>
+        <div v-if="!secret.suppr && secret.ts === 1" class="titre-md">
+          <titre-banner class-titre="titre-md" :titre="secret.couple.nomEd"
+            :titre2="'Couple ' + secret.couple.nomEd + ' [' + secret.couple.nomEs + '#' + secret.couple.na.sfx + ']'" :id-objet="secret.couple.id"/>
+        </div>
+        <div v-if="!secret.suppr && secret.ts === 2" class="titre-md">
+          <titre-banner class-titre="titre-md" :titre="secret.groupe.nomEd"
+            :titre2="'Groupe ' + secret.groupe.nomEd + ' [' + secret.groupe.na.nom + '#' + secret.groupe.na.sfx + ']'" :id-objet="secret.groupe.id"/>
+        </div>
       </q-toolbar-title>
-      <q-btn v-if="tabsecret==='texte' && !secret.suppr && !ed && !c1() && mode <= 2" size="sm" color="warning" icon="edit" dense label="Modifier" @click="editer"/>
+      <q-btn v-if="tabsecret==='texte' && !secret.suppr && !ed && !c1() && mode <= 2" size="sm" color="warning" icon="edit" dense @click="editer"/>
       <q-btn v-if="tabsecret==='texte' && !secret.suppr && ed" class="q-ml-xs" size="sm" :color="modif() ? 'warning' : 'secondary'" icon="undo" dense @click="undo"/>
       <q-btn v-if="tabsecret==='texte' && !secret.suppr && ed" class="q-ml-xs" :disable="!modif() || (state.erreur !== '')" size="sm" color="green-5" icon="check" dense @click="valider"/>
       <q-btn v-if="tabsecret==='texte' && !secret.suppr && mode <= 2" class="q-ml-xs" size="sm" color="warning" icon="delete" dense @click="confirmsuppr=true"/>
     </q-toolbar>
     <q-toolbar inset v-if="mode > 2" :class="tbc">
-      <div class="q-px-sm text-center fs-sm text-bold text-negative bg-yellow-5">Les secrets ne peuvent être QUE consultés en mode avion ou visio (pas mis à jour)</div>
+      <div class="q-px-sm text-center fs-sm text-bold text-negative bg-yellow-5">En mode avion ou visio, les secrets ne peuvent être QUE consultés (pas mis à jour)</div>
     </q-toolbar>
     <q-toolbar v-if="!secret.suppr" inset :class="tbc">
       <q-tabs v-model="tabsecret" class="font-cf" inline-label no-caps dense>
-        <q-tab name="texte" :disable="ed" label="Détail du secret" />
-        <q-tab name="fa" :disable="ed" label="Fichiers attachés" />
-        <q-tab name="voisins" :disable="ed" label="Secrets voisins" />
+        <q-tab name="texte" :disable="ed" label="Détail" />
+        <q-tab name="fa" :disable="ed" label="Fichiers" />
+        <q-tab name="voisins" :disable="ed" label="Sec. voisins" />
       </q-tabs>
     </q-toolbar>
 
@@ -330,6 +338,7 @@ import FichierAttache from './FichierAttache.vue'
 import SelectMotscles from './SelectMotscles.vue'
 import EditeurTexteSecret from './EditeurTexteSecret.vue'
 import ShowHtml from './ShowHtml.vue'
+import TitreBanner from '../components/TitreBanner.vue'
 import { equ8, getJourJ, cfg, Motscles, dhstring, afficherdiagnostic, edvol } from '../app/util.mjs'
 import { NouveauSecret, Maj1Secret, SupprFichier, SupprSecret } from '../app/operations.mjs'
 import { data, Secret } from '../app/modele.mjs'
@@ -340,7 +349,7 @@ import { saveAs } from 'file-saver'
 export default ({
   name: 'PanelSecret',
 
-  components: { ApercuMotscles, SelectMotscles, EditeurTexteSecret, ShowHtml, FichierAttache },
+  components: { TitreBanner, ApercuMotscles, SelectMotscles, EditeurTexteSecret, ShowHtml, FichierAttache },
 
   props: { aPin: Function, estFiltre: Function, sec: Object, suivant: Function, precedent: Function, pinSecret: Function, index: Number, sur: Number },
 

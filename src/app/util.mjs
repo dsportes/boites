@@ -729,10 +729,17 @@ export class MdpAdmin {
 export function titreCompte (sid, info) {
   if (!info) return sid
   if (!lgnom) lgnom = cfg().lgnom || 16
-  let l = info.substring(0, lgnom)
+  const l = info.substring(0, lgnom)
   const i = l.indexOf('\n')
-  if (i !== -1) l = l.substring(0, i)
-  return l + '(@' + sid + ')'
+  return i === -1 ? l : l.substring(0, i)
+}
+
+export function titreGroupe (sid, info) {
+  if (!info) return sid
+  if (!lgnom) lgnom = cfg().lgnom || 16
+  const l = info.substring(0, lgnom)
+  const i = l.indexOf('\n')
+  return i === -1 ? l : l.substring(0, i)
 }
 
 // Employé directement seulement pour un secret ???
@@ -770,7 +777,7 @@ export class NomAvatar {
     return new NomAvatar(this.nom, this.rnd, this.id)
   }
 
-  get nomc () { return this.nom + '@' + this.sfx }
+  get nomc () { return this.nom + '#' + this.sfx }
   get nomf () { return normpath(this.nomc) }
   get sid () { return crypt.idToSid(this.id) }
   get disparu () { return data.repertoire.disparu(this.id) }
@@ -800,10 +807,9 @@ export class NomAvatar {
     const info = cv[1]
     if (!info) return this.nomc
     if (!lgnom) lgnom = cfg().lgnom || 16
-    let l = info.substring(0, lgnom)
+    const l = info.substring(0, lgnom)
     const i = l.indexOf('\n')
-    if (i !== -1) l = l.substring(0, i)
-    return l + '(' + this.nomc + ')'
+    return i === -1 ? l : l.substring(0, i)
   }
 }
 

@@ -1,6 +1,6 @@
 <template>
   <q-card v-if="sessionok && groupe" class="full-height full-width fs-md column">
-    <div style="min-height:60px"></div>
+    <div style="min-height:35px"></div>
 
     <identite-cv v-if="state.g" :nom-avatar="state.g.na" type="groupe" :editable="anim" @cv-changee="cvchangee"/>
 
@@ -133,12 +133,15 @@
 
   <q-page-sticky class="full-width" position="top-left" expand :offset="[50,0]">
     <q-toolbar :class="tbc">
-      <q-btn :disable="!precedent" flat round dense icon="first_page" size="sm" class="q-mr-xs" @click="prec(0)" />
-      <q-btn :disable="!precedent" flat round dense icon="arrow_back_ios" size="sm" class="q-mr-xs" @click="prec(1)" />
-      <span>{{index + 1}} / {{sur}}</span>
-      <q-btn :disable="!suivant" flat round dense icon="arrow_forward_ios" size="sm" class="q-mr-xs" @click="suiv(1)" />
-      <q-btn :disable="!suivant" flat round dense icon="last_page" size="sm" class="q-mr-xs" @click="suiv(0)" />
-      <q-toolbar-title></q-toolbar-title>
+      <q-btn :disable="!precedent" flat round dense icon="first_page" size="sm" @click="prec(0)" />
+      <q-btn :disable="!precedent" flat round dense icon="arrow_back_ios" size="sm" @click="prec(1)" />
+      <span class="fs-sm">{{index + 1}}/{{sur}}</span>
+      <q-btn :disable="!suivant" flat round dense icon="arrow_forward_ios" size="sm" @click="suiv(1)" />
+      <q-btn :disable="!suivant" flat round dense icon="last_page" size="sm" @click="suiv(0)" />
+      <q-toolbar-title>
+        <titre-banner v-if="state.g" class-titre="titre-md" :titre="state.g.nomEd"
+          :titre2="state.g.nomEd + ' [' + state.g.na.nom + '#' + state.g.na.sfx + ']'" :id-objet="state.g.id"/>
+      </q-toolbar-title>
       <q-btn dense flat icon="add" label="Nouveau" size="md"
         text-color="white" @click="nouvgr = true"/>
 
@@ -177,11 +180,12 @@ import PanelMembre from './PanelMembre.vue'
 import MotsCles from './MotsCles.vue'
 import ChoixForfaits from './ChoixForfaits.vue'
 import NouveauGroupe from './NouveauGroupe.vue'
+import TitreBanner from '../components/TitreBanner.vue'
 
 export default ({
   name: 'PanelGroupe',
 
-  components: { ShowHtml, MotsCles, ChoixForfaits, IdentiteCv, PanelMembre, NouveauGroupe },
+  components: { TitreBanner, ShowHtml, MotsCles, ChoixForfaits, IdentiteCv, PanelMembre, NouveauGroupe },
 
   props: { groupe: Object, suivant: Function, precedent: Function, index: Number, sur: Number },
 

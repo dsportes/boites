@@ -4,7 +4,7 @@ import { openIDB, closeIDB, debutSessionSync, saveSessionSync, getFichier } from
 import { openWS, closeWS } from './ws.mjs'
 import {
   store, appexc, dlvDepassee, NomAvatar, gzip, ungzip, dhstring,
-  getJourJ, cfg, ungzipT, normpath, titreEd, titreCompte, nomCv, PhraseContact
+  getJourJ, cfg, ungzipT, normpath, titreEd, titreCompte, titreGroupe, nomCv, PhraseContact
 } from './util.mjs'
 import { remplacePage } from './page.mjs'
 import { EXPS, UNITEV1, UNITEV2, Compteurs, t0n } from './api.mjs'
@@ -941,13 +941,14 @@ export class Couple {
   get cv () { return data.getCv(this.id) }
   get nomC () { return this.data.x[0][0] + '_' + this.data.x[1][0] }
   get nomf () { return normpath(this.nomC) }
-  get nomE () { return this.naE && this.stE !== 2 ? this.naE.nomc : this.data.x[this.ava][0] }
-  get nomI () { return this.naI.nomc }
+  get nomE () { return this.naE && this.stE !== 2 ? this.naE.noml : this.data.x[this.ava][0] }
+  get nomEs () { return this.data.x[this.ava][0] }
+  get nomI () { return this.naI.noml }
   get max1E () { return this.avc === 1 ? this.mx10 : this.mx11 }
   get max2E () { return this.avc === 1 ? this.mx20 : this.mx21 }
   get max1I () { return this.avc === 1 ? this.mx11 : this.mx10 }
   get max2I () { return this.avc === 1 ? this.mx21 : this.mx20 }
-  get nomEd () { return (nomCv(this.id, true) || this.nomE) + '@' + this.na.sfx }
+  get nomEd () { return nomCv(this.id, true) || this.nomE }
 
   naDeIm (im) { return im === this.avc + 1 ? this.naI : this.naE }
 
@@ -1276,7 +1277,7 @@ export class Groupe {
   get cle () { return data.repertoire.cle(this.id) }
   get na () { return data.repertoire.na(this.id) }
   get nom () { return this.na.nom }
-  get nomEd () { return titreEd(this.na.nom || '', this.info) }
+  get nomEd () { return titreGroupe(this.sid, this.info || this.na.nom) }
   nomEdMb (m) { const t = m.titre; return t ? (t + ' [' + this.nomEd + ']') : this.nomEd }
 
   get nomf () { return normpath(this.na.nom) }

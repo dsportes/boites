@@ -10,10 +10,10 @@
             </span>
           </span>
           <q-icon v-if="sessionok && compte.estComptable" size="sm" color="secondary" name="savings" aria-label="Compte de comptable"/>
-          <span v-if="sessionok" :class="page!=='Avatar' ? 'disabled' : 'cursor-pointer'" @click="tocompte">
-            <q-icon size="sm" name="home" aria-label="Accueil du compte"/>
-            <span v-if="prefs" class="fs-md q-px-sm">{{ prefs.titre }}</span>
-            <span v-else class="fs-md q-px-sm">{{ compte.sid }}</span>
+          <span v-if="sessionok">
+            <q-btn :class="page!=='Avatar' ? 'disabled' : ''" flat dense size="sm"
+              icon="home" label="Accueil" @click="tocompte"/>
+            <titre-banner class-titre="titre-md" :titre="prefs.titre" :id-objet="compte.id"/>
           </span>
         </q-toolbar-title>
 
@@ -63,15 +63,15 @@
           <div v-if="page==='Login'" class="tbpage">Connexion à un compte</div>
           <div v-if="page==='Synchro'" class="tbpage">Synchronisation des données</div>
           <div v-if="sessionok && page==='Compte'" class="tbpage fs-md">
-            <span class="q-pr-sm">Compte :</span>
-            <span v-if="prefs">{{ prefs.titre }}</span>
-            <span v-else>{{ compte.sid }}</span>
+            <span class="q-pr-sm titre-md">Compte :</span>
+            <titre-banner class-titre="titre-md" :titre="prefs ? prefs.titre : compte.sid" :id-objet="compte.id"/>
           </div>
 
           <div v-if="sessionok && page==='Avatar' && avatar" class="tbpage titre-lg">
             <div class="row justify-center no-wrap">
               <img class="photo" :src="avphoto()"/>
-              <span class="q-px-sm">{{avatar.na.noml}}</span>
+              <titre-banner class-titre="titre-md" :titre="avatar.na.noml"
+                :titre2="avatar.na.noml + ' [' + avatar.na.nomc + ']'" :id-objet="avatar.id"/>
             </div>
           </div>
 
@@ -202,6 +202,7 @@ import DialogueCrypto from 'components/DialogueCrypto.vue'
 import RapportSynchro from 'components/RapportSynchro.vue'
 import DialogueHelp from 'components/DialogueHelp.vue'
 import PanelContacts from 'components/PanelContacts.vue'
+import TitreBanner from '../components/TitreBanner.vue'
 import { data, MODES } from '../app/modele.mjs'
 import { cfg } from '../app/util.mjs'
 import { remplacePage, onBoot, retourInvitation } from '../app/page.mjs'
@@ -211,7 +212,7 @@ export default {
   name: 'MainLayout',
 
   components: {
-    RapportSynchro, PanelMenu, PanelContacts, DialogueErreur, DialogueCrypto, DialogueCreationCompte, DialogueTestPing, DialogueInfoMode, DialogueInfoReseau, DialogueInfoIdb, DialogueHelp
+    TitreBanner, RapportSynchro, PanelMenu, PanelContacts, DialogueErreur, DialogueCrypto, DialogueCreationCompte, DialogueTestPing, DialogueInfoMode, DialogueInfoReseau, DialogueInfoIdb, DialogueHelp
   },
 
   computed: {

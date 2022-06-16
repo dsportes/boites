@@ -2,8 +2,8 @@
 <div class="fs-md">
   <div class="top bg-secondary text-white">
     <q-toolbar>
-      <q-toolbar-title class="titre-lg">Tous les contacts</q-toolbar-title>
-      <q-btn dense size="md" icon="close" @click="panelcontacts=false"/>
+      <q-btn dense size="md" icon="chevron_left" @click="panelcontacts=false"/>
+      <q-toolbar-title class="titre-lg full-width text-right q-pr-sm">Tous les contacts</q-toolbar-title>
     </q-toolbar>
     <div class="column justify-center">
       <div class="row items-end">
@@ -16,53 +16,49 @@
 
   <div class="filler"></div>
 
-  <q-card v-for="(ax, idx) in s.lst" :key="ax.na.id"
-    :class="dkli(idx) + ' zone full-width row items-start q-py-xs'">
-    <img class="col-auto q-mr-sm photomax cursor-pointer" :src="ax.na.photoDef" @click="cv(ax.na)"/>
-    <div class="col column q-mr-sm">
-      <div class="titre-md text-bold cursor-pointer self-center" @click="cv(ax.na)">{{ax.noml}}</div>
-      <div v-for="id in ax.c" :key="id" class="cursor-pointer text-underline self-start" @click="cp(ax.na, id)">{{na(id).noml}}</div>
-      <div v-for="x in ax.m" :key="x[0]+'/'+x[1]" class="cursor-pointer text-underline self-end" @click="mb(ax.na, x)">{{na(x[0]).noml}}</div>
-    </div>
-  </q-card>
+  <div v-for="(ax, idx) in s.lst" :key="ax.na.id" :class="dkli(idx) + ' zone cursor-pointer full-width q-mb-sm'" @click="detail(ax)">
+    <q-card class="row justify-start items-center">
+      <img class="col-auto photomax q-mr-md" :src="ax.na.photoDef"/>
+      <div class="col column">
+        <div class="titre-md">{{ax.noml}}</div>
+        <div class="fs-sm">
+          <span v-if="ax.c.size" class="q-mr-sm">{{ax.c.size + (ax.c.size>1?' contacts':' contact')}}</span>
+          <span v-if="ax.m.size">{{ax.m.size + (ax.m.size>1?' groupes':' groupe')}}</span>
+        </div>
+      </div>
+    </q-card>
+    <q-separator class="q-my-xs"/>
+  </div>
 
-  <q-dialog v-model="cvident">
-    <q-card class="bord1">
+  <q-dialog v-model="detaildial">
+    <q-card class="shadow-8 petitelargeur">
       <q-card-section>
-        <div class="titre-lg">Avatar</div>
-        <identite-cv :nom-avatar="nac" :invitable="invit != null" type="avatar"/>
+        <identite-cv :nom-avatar="ax.na" :invitable="invit != null" type="avatar"/>
+      </q-card-section>
+      <q-card-section>
+        <div v-if="lstc.length">
+          <span class="titre-sm text-italic">En contact avec:</span>
+          <span class="q-ml-md" v-for="c in lstc" :key="c.id">{{c.naI.nom}}</span>
+        </div>
+        <div v-else class="titre-md text-italic">En contact avec personne</div>
+      </q-card-section>
+      <q-card-section>
+        <div v-if="lstg.length">
+          <div class="titre-sm text-italic">Membre de:</div>
+          <div class="q-ml-lg" v-for="g in lstg" :key="g.id">{{g.nomEd}}</div>
+        </div>
+        <div v-else class="titre-md text-italic">Membre d'aucun groupe</div>
       </q-card-section>
       <q-card-actions>
+        <q-btn flat dense color="primary" icon="close" label="Fermer" v-close-popup/>
         <q-btn flat dense color="primary" icon="add" label="Nouveau Couple" v-close-popup @click="nvcouple=true"/>
       </q-card-actions>
     </q-card>
   </q-dialog>
 
-  <q-dialog v-model="cpident">
-    <q-card class="bord1">
-      <q-card-section>
-        <div class="titre-lg">Contact</div>
-        <identite-cv :nom-avatar="nac" type="couple"/>
-        <identite-cv :nom-avatar="naI" type="avatar"/>
-        <identite-cv :nom-avatar="naE" type="avatar"/>
-      </q-card-section>
-    </q-card>
-  </q-dialog>
-
   <q-dialog v-model="nvcouple">
-    <nouveau-couple :id1="nac.id" :close="closenvcouple" />
+    <nouveau-couple :id1="ax.na.id" :close="closenvcouple" />
   </q-dialog>
-
-  <q-dialog v-model="grident">
-    <q-card class="bord1">
-      <q-card-section>
-        <div class="titre-lg">Groupe</div>
-        <identite-cv :nom-avatar="nac" type="groupe"/>
-        <identite-cv :nom-avatar="naI" type="avatar"/>
-      </q-card-section>
-    </q-card>
-  </q-dialog>
-
 </div>
 </template>
 
@@ -85,7 +81,10 @@ export default ({
       naE: null,
       nvcouple: false,
       avatars: [],
-      nomavatar: ''
+      nomavatar: '',
+      ax: null,
+      lstc: [],
+      lstg: []
     }
   },
 
@@ -95,26 +94,15 @@ export default ({
 
   methods: {
     dkli (idx) { return this.$q.dark.isActive ? (idx ? 'sombre' + (idx % 2) : 'sombre0') : (idx ? 'clair' + (idx % 2) : 'clair0') },
+    detail (ax) {
+      this.ax = ax
+      this.lstc = []
+      ax.c.forEach(id => { this.lstc.push(data.getCouple(id)) })
+      ax.m.forEach(k => { this.lstg.push(data.getGroupe(k[0])) })
+      this.detaildial = true
+    },
     na (id) { return data.repertoire.na(id) },
-    cv (na) { // na de l'avatar
-      this.nac = na
-      this.cvident = true
-    },
-    cp (na, id) { // id du couple
-      this.nac = data.repertoire.na(id)
-      const c = data.getCouple(id)
-      this.naI = c.naI
-      this.naE = c.naE
-      this.cpident = true
-    },
-    mb (na, x) { // x [idg, im]
-      this.nac = data.repertoire.na(x[0])
-      const mb = data.getMembre(x[0], x[1])
-      this.naI = mb.namb
-      this.grident = true
-    },
-
-    closenvcouple () { this.nvcouple = false; this.cvident = false }
+    closenvcouple () { this.nvcouple = false; this.detaildial = false }
   },
 
   setup () {
@@ -124,6 +112,7 @@ export default ({
     const cvident = ref(false)
     const cpident = ref(false)
     const grident = ref(false)
+    const detaildial = ref(false)
     const panelcontacts = computed({
       get: () => $store.state.ui.panelcontacts,
       set: (val) => $store.commit('ui/majpanelcontacts', val)
@@ -176,6 +165,7 @@ export default ({
     watch(() => txt.value, (ap, av) => { filtre() })
     watch(() => panelcontacts.value, (ap, av) => {
       if (!ap) {
+        detaildial.value = false
         cvident.value = false
         cpident.value = false
         grident.value = false
@@ -195,7 +185,8 @@ export default ({
       mode,
       cvident,
       cpident,
-      grident
+      grident,
+      detaildial
     }
   }
 })
@@ -203,7 +194,8 @@ export default ({
 
 <style lang="sass" scoped>
 @import '../css/app.sass'
-$haut: 7rem
+@import '../css/input.sass'
+$haut: 5.5rem
 $larg: 330px
 .top
   position: absolute
@@ -216,15 +208,11 @@ $larg: 330px
 .filler
   height: $haut
   width: 100%
+.q-toolbar
+  padding: 2px !important
+  min-height: 0 !important
 .photomax
   margin-top: 4px
 .q-card > div
   box-shadow: inherit !important
-.bord1
-  border: 1px solid $grey-5
-  border-radius: 5px
-  padding: 3px
-.text-underline
-  text-decoration: underline
-  color: $blue-8
 </style>

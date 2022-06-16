@@ -1,52 +1,48 @@
 <template>
 <q-page class="fs-md q-pa-sm">
   <q-card v-if="sessionok" class="moyennelargeur maauto">
-    <q-card-section>
-      <div>
-        <span class="titre-lg">Code du compte : {{compte.sid}}</span>
-        <bouton-help page="page1"/>
-      </div>
 
-      <div class="q-my-md">
-        <div class="row justify-between">
-          <div class="titre-md">Mémo du compte
-            <span v-if="state.memo" class="q-pl-sm font-mno fs-sm">({{state.memo.length + 'c'}})</span>
-          </div>
-          <q-btn flat dense size="sm" icon="chevron_right" @click="memoedit = !memoedit"/>
+    <div class="q-my-md">
+      <div class="row justify-between">
+        <div class="titre-md">Mémo du compte
+          <span v-if="state.memo" class="q-pl-sm font-mno fs-sm">({{state.memo.length + 'c'}})</span>
         </div>
-        <div v-if="!state.memo" class="q-pl-sm">(vide)</div>
-        <show-html v-else class="l1 q-pl-sm" :texte="state.memo"/>
+        <q-btn flat dense size="sm" icon="chevron_right" @click="memoedit = !memoedit"/>
       </div>
+      <div v-if="!state.memo" class="q-pl-sm">(vide)</div>
+      <show-html v-else class="l1 q-pl-sm" :texte="state.memo"/>
+    </div>
 
-      <div class="q-my-md">
-        <div class="row justify-between">
-          <div class="titre-md">Mots clés du compte</div>
-          <q-btn flat dense size="sm" icon="chevron_right" @click="mcledit = !mcledit"/>
-        </div>
+    <div class="q-my-md">
+      <div class="row justify-between">
+        <div class="titre-md">Mots clés du compte</div>
+        <q-btn flat dense size="sm" icon="chevron_right" @click="mcledit = !mcledit"/>
       </div>
+    </div>
 
-      <q-btn size="sm" icon="add" label="Nouvel avatar" color="primary" dense @click="ouvrirnv"/>
-    </q-card-section>
+    <q-separator/>
 
-    <q-card-section>
-      <div v-for="x in state.lst" :key="x.av.id"
-        :class="'q-my-md zone' + (avatar && x.av.id === avatar.id ? ' courant' : '')">
-        <identite-cv :nom-avatar="x.av.na" type="avatar" editable invitable @cv-changee="cvchangee"/>
-        <div class="text-right">
-          <q-btn v-if="x.parrain" flat class="q-mx-xs" dense color="primary" size="sm"
-            icon="add" label="Parrainage" @click="ouvrirpar(x.av)"/>
-          <q-btn class="q-mx-xs" flat dense color="primary" size="sm"
-            icon="add" label="Rencontre" @click="ouvrirpr(x.av)"/>
-          <q-btn class="q-mx-xs" flat dense color="primary" size="sm"
-            label="Comptabilité" @click="ouvrircompta(x)"/>
-          <q-btn dense color="warning" size="md"
-            icon="check" label="Page" @click="toAvatar(x.av)"/>
-        </div>
+    <q-btn class="q-my-sm" size="sm" icon="add" label="Nouvel avatar" color="primary" dense @click="ouvrirnv"/>
+
+    <div v-for="x in state.lst" :key="x.av.id"
+      :class="'q-my-md zone' + (avatar && x.av.id === avatar.id ? ' courant' : '')">
+      <identite-cv :nom-avatar="x.av.na" type="avatar" editable invitable @cv-changee="cvchangee"/>
+      <div class="text-right">
+        <q-btn v-if="x.parrain" flat class="q-mx-xs" dense color="primary" size="sm"
+          icon="add" label="Parrainage" @click="ouvrirpar(x.av)"/>
+        <q-btn class="q-mx-xs" flat dense color="primary" size="sm"
+          icon="add" label="Rencontre" @click="ouvrirpr(x.av)"/>
+        <q-btn class="q-mx-xs" flat dense color="primary" size="sm"
+          label="Comptabilité" @click="ouvrircompta(x)"/>
+        <q-btn dense color="warning" size="md"
+          icon="check" label="Page" @click="toAvatar(x.av)"/>
       </div>
-    </q-card-section>
+      <q-separator class="q-my-sm"/>
+    </div>
+
   </q-card>
 
- <q-dialog v-model="memoedit" full-height position="right">
+  <q-dialog v-model="memoedit" full-height position="right">
     <q-card class="petitelargeur q-pa-sm">
       <q-toolbar class="bg-secondary text-white">
         <q-btn class="chl" dense flat size="md" icon="chevron_left" @click="memoedit=false"/>
@@ -182,7 +178,6 @@ import { computed, ref, reactive, watch } from 'vue'
 import { useStore } from 'vuex'
 import { onBoot, remplacePage } from '../app/page.mjs'
 import EditeurMd from '../components/EditeurMd.vue'
-import BoutonHelp from '../components/BoutonHelp.vue'
 import MotsCles from '../components/MotsCles.vue'
 import ChoixForfaits from '../components/ChoixForfaits.vue'
 import IdentiteCv from '../components/IdentiteCv.vue'
@@ -215,7 +210,7 @@ import { UNITEV1, UNITEV2, Compteurs } from '../app/api.mjs'
 
 export default ({
   name: 'Compte',
-  components: { ShowHtml, EditeurMd, BoutonHelp, MotsCles, IdentiteCv, NomAvatar, ChoixForfaits, NouveauParrainage, PanelRencontre },
+  components: { ShowHtml, EditeurMd, MotsCles, IdentiteCv, NomAvatar, ChoixForfaits, NouveauParrainage, PanelRencontre },
   data () {
     return {
       nomav: '',

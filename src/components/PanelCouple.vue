@@ -1,6 +1,6 @@
 <template>
   <q-card v-if="sessionok" class="full-height fs-md column">
-    <div style="min-height:60px"></div>
+    <div style="min-height:30px"></div>
 
     <div v-if="s.c">
       <div class="titre-md">{{s.stlib}}</div>
@@ -128,21 +128,20 @@
       <div class="q-ml-md fs-sm">Phrase de rencontre : <span class="text-italic">{{s.c.data.phrase}}</span></div>
     </div>
 
-  <q-page-sticky class="full-width" position="top-left" expand
-    :offset="[50, 0]">
+  <q-page-sticky class="full-width" position="top-left" expand :offset="[50, 0]">
     <q-toolbar :class="tbc">
-      <q-btn :disable="!precedent" flat round dense icon="first_page" size="md" class="q-mr-sm" @click="prec(0)" />
-      <q-btn :disable="!precedent" flat round dense icon="arrow_back_ios" size="md" class="q-mr-sm" @click="prec(1)" />
-      <span class="q-pa-sm">{{index + 1}} sur {{sur}}</span>
-      <q-btn :disable="!suivant" flat round dense icon="arrow_forward_ios" size="md" class="q-mr-sm" @click="suiv(1)" />
-      <q-btn :disable="!suivant" flat round dense icon="last_page" size="md" class="q-mr-sm" @click="suiv(0)" />
-      <q-toolbar-title></q-toolbar-title>
+      <q-btn :disable="!precedent" flat round dense icon="first_page" size="sm" @click="prec(0)" />
+      <q-btn :disable="!precedent" flat round dense icon="arrow_back_ios" size="sm" @click="prec(1)" />
+      <span>{{index + 1}}/{{sur}}</span>
+      <q-btn :disable="!suivant" flat round dense icon="arrow_forward_ios" size="sm" @click="suiv(1)" />
+      <q-btn :disable="!suivant" flat round dense icon="last_page" size="sm" @click="suiv(0)" />
+      <q-toolbar-title>
+        <titre-banner class-titre="titre-md" :titre="s.c.nomEd"
+          :titre2="s.c.nomEd + ' [' + s.c.nomEs + '#' + s.c.na.sfx + ']'" :id-objet="s.c.id"/>
+      </q-toolbar-title>
       <q-btn size="md" color="white" icon="menu" flat dense>
         <menu-couple :c="s.c" depuis-detail/>
       </q-btn>
-    </q-toolbar>
-    <q-toolbar v-if="s.c" inset :class="tbc">
-      <q-toolbar-title><div class="titre-md text-bold">Contact {{s.c.nomEd}}</div></q-toolbar-title>
     </q-toolbar>
   </q-page-sticky>
 
@@ -161,13 +160,14 @@ import ChoixForfaits from './ChoixForfaits.vue'
 import IdentiteCv from './IdentiteCv.vue'
 import MenuCouple from './MenuCouple.vue'
 import ShowHtml from './ShowHtml.vue'
+import TitreBanner from '../components/TitreBanner.vue'
 import { retourInvitation } from '../app/page.mjs'
 import { UNITEV1, UNITEV2 } from '../app/api.mjs'
 
 export default ({
   name: 'PanelCouple',
 
-  components: { EditeurMd, MenuCouple, ApercuMotscles, SelectMotscles, IdentiteCv, ChoixForfaits, ShowHtml },
+  components: { TitreBanner, EditeurMd, MenuCouple, ApercuMotscles, SelectMotscles, IdentiteCv, ChoixForfaits, ShowHtml },
 
   props: { couple: Object, suivant: Function, precedent: Function, index: Number, sur: Number },
 
@@ -239,24 +239,24 @@ export default ({
               'En attente d\'acceptation ou de refus',
               'En attente d\'acceptation ou de refus',
               'Proposition explicitement refusée'
-            ][c.stp]
+            ][c.stp - 1]
           }
           if (c.orig === 1) {
             return [
               `En attente [${c.dlv - getJourJ()} jour(s)] d'acceptation ou de refus du parrainage du compte`,
               'Parrainage du compte caduque, sans réponse dans les délais',
               'Parrainage du compte explicitement refusé'
-            ][c.stp]
+            ][c.stp - 1]
           }
           if (c.orig === 2) {
             return [
               `En attente [${c.dlv - getJourJ()} jour(s)] d'acceptation ou de refus de contact`,
               'Proposition de contact caduque, sans réponse dans les délais',
               'Proposition de contact explicitement refusée'
-            ][c.stp]
+            ][c.stp - 1]
           }
         }
-        if (c.stp === 4) return `Contact avec ${c.nomE} actif`
+        if (c.stp === 4) return 'Contact actif'
         return `Contact orphelin, ${c.nomE} a disparu`
       } else {
         if (c.stp < 4) {
@@ -265,7 +265,7 @@ export default ({
               'En attente d\'acceptation ou de refus de la proposition de contact',
               'En attente d\'acceptation ou de refus de la proposition de contact',
               `Proposition faite par ${c.nomE} explicitement refusée` // ne doit pas apparaître
-            ][c.stp]
+            ][c.stp - 1]
           }
         }
         if (c.stp === 4) return 'Contact actif'
