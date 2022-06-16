@@ -6,6 +6,9 @@ groupes: {}, // Tous les groupes listés sur les avatars
 couples: {}, // Tous les couples listés sur les avatars
 cvs: {}, // Toutes les cartes de visite
 
+LRUgr: [], // derniers groupes utilisés
+LRUcp: [], // derniers couples utilisés
+
 Groupés par id de groupe : membres@id
 Groupés par id d'avatar ou de groupe ou de couple : secrets@id
 
@@ -29,18 +32,41 @@ const l1 = new Set(['compte', 'prefs', 'avatar', 'groupe', 'couple', 'secret'])
 // objets multiples à un seul niveau représenté par une map
 const l2 = new Set(['avatars', 'comptas', 'groupes', 'couples', 'cvs', 'fetats', 'avsecrets'])
 
+// LRU
+const l3 = new Set(['LRUgr', 'LRUcp'])
+
 export function raz (state) {
-  for (const e in state) if (l1.has(e)) state[e] = null; else if (l2.has(e)) state[e] = {}; else delete state[e]
+  for (const e in state) {
+    if (l1.has(e)) {
+      state[e] = null
+    } else if (l2.has(e)) {
+      state[e] = {}
+    } else if (l3.has(e)) {
+      state[e] = []
+    } else {
+      delete state[e]
+    }
+  }
 }
 
 /* Déclaration de l'avatar courant */
 export function majavatar (state, val) { state.avatar = val }
 
 /* Déclaration du couple courant */
-export function majcouple (state, val) { state.couple = val }
+export function majcouple (state, val) {
+  const x = [val.id]
+  state.LRUcp.forEach(t => { if (t !== val.id) x.push(t) })
+  state.LRUcp = x
+  state.couple = val
+}
 
 /* Déclaration du groupe courant */
-export function majgroupe (state, val) { state.groupe = val }
+export function majgroupe (state, val) {
+  const x = [val.id]
+  state.LRUgr.forEach(t => { if (t !== val.id) x.push(t) })
+  state.LRUgr = x
+  state.groupe = val
+}
 
 /* Déclaration du membre courant */
 export function majmembre (state, val) { state.membre = val }

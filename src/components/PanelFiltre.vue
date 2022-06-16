@@ -9,8 +9,18 @@
     <q-separator/>
     <div class="q-pa-sm column justify-start ful-width">
         <q-checkbox v-model="state.a.perso" dense size="md" label="Secrets personnels" />
-        <q-option-group class="q-my-sm" :options="couple ? optionscp2 : optionscp1" dense v-model="state.a.cp"/>
-        <q-option-group class="q-my-sm" :options="groupe ? optionsgr2 : optionsgr1" dense v-model="state.a.gr"/>
+        <div class="row items-center">
+          <div class="titre-sm">Contacts: </div>
+          <q-radio left-label size="sm" dense class="q-ml-sm col-auto" v-model="state.a.cp" :val="-1" label="Tous" />
+          <q-radio left-label size="sm" dense class="q-ml-sm col-auto" v-model="state.a.cp" :val="0" label="Aucun" />
+          <q-select class="col q-ml-sm" dense v-model="selcp" :options="lru.cp" label="Récents" />
+        </div>
+        <div class="row items-center">
+          <div class="titre-sm">Groupes: </div>
+          <q-radio left-label size="sm" dense class="q-ml-sm col-auto" v-model="state.a.gr" :val="-1" label="Tous" />
+          <q-radio left-label size="sm" dense class="q-ml-sm col-auto" v-model="state.a.gr" :val="0" label="Aucun" />
+          <q-select class="col q-ml-sm" dense v-model="selgr" :options="lru.gr" label="Récents" />
+        </div>
     </div>
     <q-separator/>
     <div class="q-pa-sm column justify-start">
@@ -85,8 +95,9 @@
 
 <script>
 import { useStore } from 'vuex'
-import { computed, toRef, watch } from 'vue'
+import { computed, toRef, watch, reactive } from 'vue'
 import { Filtre } from '../app/util.mjs'
+import { data } from '../app/modele.mjs'
 import { serial, deserial } from '../app/schemas.mjs'
 import ApercuMotscles from './ApercuMotscles.vue'
 import SelectMotscles from './SelectMotscles.vue'
@@ -108,8 +119,15 @@ export default ({
     }
   },
 
+  watch: {
+    selcp (ap, av) { this.state.a.cp = ap.value },
+    selgr (ap, av) { this.state.a.gr = ap.value }
+  },
+
   data () {
     return {
+      selcp: null,
+      selgr: null,
       mcedit1: false,
       mcedit2: false,
       menudd1: false,
@@ -144,6 +162,9 @@ export default ({
     const mode = computed(() => $store.state.ui.mode)
     const couple = computed(() => { return $store.state.db.couple })
     const groupe = computed(() => { return $store.state.db.groupe })
+    const LRUcp = computed(() => { return $store.state.db.LRUcp })
+    const LRUgr = computed(() => { return $store.state.db.LRUgr })
+
     const state = toRef(props, 'etatInterne')
     toRef(props, 'motscles')
 
@@ -165,42 +186,33 @@ export default ({
       p3: 'Ordre alphabétique du titre',
       m3: 'Ordre alphabétique inverse du titre'
     }
-    const optionscp1 = [
-      { label: 'Aucun secret partagé avec des contacts', value: 0 },
-      { label: 'Secrets partagés avec n\'importe quel contact', value: -1 }
-    ]
-    const optionscp2 = [
-      { label: 'Aucun secret partagé avec des contacts', value: 0 },
-      { label: 'Secrets partagés avec n\'importe quel contact', value: -1 }
-    ]
-    const optionsgr1 = [
-      { label: 'Aucun secret partagé avec un groupe', value: 0 },
-      { label: 'Secrets partagés avec n\'importe quel groupe', value: -1 }
-    ]
-    const optionsgr2 = [
-      { label: 'Aucun partagé avec un groupe', value: 0 },
-      { label: 'Secrets partagés avec n\'importe quel groupe', value: -1 }
-    ]
 
-    watch(() => groupe.value, (ap, av) => {
-      optionsgr2.splice(2, 1, { label: 'Secrets partagés avec le groupe ' + groupe.value.nom, value: groupe.value.id })
-    })
-    watch(() => couple.value, (ap, av) => {
-      optionscp2.splice(2, 1, { label: 'Secrets partagés avec ' + couple.value.nomE, value: couple.value.id })
-    })
+    const lru = reactive({ cp: [], gr: [] })
 
-    if (couple.value) {
-      optionscp2.splice(2, 1, { label: 'Secrets partagés avec ' + couple.value.nomE, value: couple.value.id })
+    function initLRUs () {
+      lru.cp.length = 0
+      LRUcp.value.forEach(id => {
+        const cp = data.getCouple(id)
+        lru.cp.push({ label: cp.nomEd, value: id })
+      })
+      lru.gr.length = 0
+      LRUgr.value.forEach(id => {
+        const gr = data.getGroupe(id)
+        lru.gr.push({ label: gr.nomEd, value: id })
+      })
     }
-    if (groupe.value) {
-      optionsgr2.splice(2, 1, { label: 'Secrets partagés avec le groupe ' + groupe.value.nom, value: groupe.value.id })
-    }
+
+    watch(() => LRUcp.value, (ap, av) => { initLRUs() })
+    watch(() => LRUgr.value, (ap, av) => { initLRUs() })
 
     watch(() => state.value, (ap, av) => {
       console.log(ap.a.coupleId)
     })
 
+    initLRUs()
+
     return {
+      lru,
       avatar,
       mode,
       couple,
@@ -208,10 +220,6 @@ export default ({
       labelm,
       labelt,
       labeltri,
-      optionscp1,
-      optionscp2,
-      optionsgr1,
-      optionsgr2,
       state
     }
   }

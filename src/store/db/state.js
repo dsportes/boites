@@ -8,6 +8,8 @@ export default function () {
     membre: null, // membre courant
     couple: null, // couple courant
     secret: null, // secret courant
+    LRUgr: [], // derniers groupes utilisés
+    LRUcp: [], // derniers couples utilisés
 
     avatars: {}, // Tous les avatars listés sur le compte
     comptas: {}, // Toutes les lignes comptables des avatars listés sur le compte

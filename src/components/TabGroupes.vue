@@ -339,7 +339,7 @@ export default ({
 
     function afficher (idx) {
       state.idx = idx
-      groupe.value = state.lst[state.idx]
+      groupe.value = state.lst[state.idx].g
       avatargrform.value = true
     }
 
