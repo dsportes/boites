@@ -235,7 +235,7 @@ export default ({
     ouvrirpar (av) { this.avatar = av; this.nvpar = true },
     fermerParrain () { this.nvpar = false },
     ouvrirpr (av) { this.avatar = av; this.phraserenc = true },
-    fermerpr () { this.phraserenc = true },
+    fermerpr () { this.phraserenc = false },
 
     ouvrirnv () {
       this.nvav = true

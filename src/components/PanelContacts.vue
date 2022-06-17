@@ -51,7 +51,7 @@
       </q-card-section>
       <q-card-actions>
         <q-btn flat dense color="primary" icon="close" label="Fermer" v-close-popup/>
-        <q-btn flat dense color="primary" icon="add" label="Nouveau Couple" v-close-popup @click="nvcouple=true"/>
+        <q-btn flat dense color="primary" icon="add" label="Nouveau Contact" v-close-popup @click="nvcouple=true"/>
       </q-card-actions>
     </q-card>
   </q-dialog>
