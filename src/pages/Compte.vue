@@ -25,17 +25,17 @@
     <q-btn class="q-my-sm" size="sm" icon="add" label="Nouvel avatar" color="primary" dense @click="ouvrirnv"/>
 
     <div v-for="x in state.lst" :key="x.av.id"
-      :class="'q-my-md zone' + (avatar && x.av.id === avatar.id ? ' courant' : '')">
-      <identite-cv :nom-avatar="x.av.na" type="avatar" editable invitable @cv-changee="cvchangee"/>
-      <div class="text-right">
+      :class="'q-my-md zone row' + (avatar && x.av.id === avatar.id ? ' courant' : '')">
+      <identite-cv class="col" :nom-avatar="x.av.na" type="avatar" editable invitable @cv-changee="cvchangee"/>
+      <div class="col-auto column justify-center">
+        <q-btn dense color="warning" size="sm"
+          icon="check" label="Page" @click="toAvatar(x.av)"/>
         <q-btn v-if="x.parrain" flat class="q-mx-xs" dense color="primary" size="sm"
           icon="add" label="Parrainage" @click="ouvrirpar(x.av)"/>
         <q-btn class="q-mx-xs" flat dense color="primary" size="sm"
           icon="add" label="Rencontre" @click="ouvrirpr(x.av)"/>
         <q-btn class="q-mx-xs" flat dense color="primary" size="sm"
           label="Comptabilité" @click="ouvrircompta(x)"/>
-        <q-btn dense color="warning" size="md"
-          icon="check" label="Page" @click="toAvatar(x.av)"/>
       </div>
       <q-separator class="q-my-sm"/>
     </div>

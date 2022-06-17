@@ -1,25 +1,25 @@
 <template>
   <q-scroll-area style="height:80vh;width:22rem">
   <q-card class="shadow-8">
-   <q-card-actions align="between">
-      <q-btn v-if="$q.screen.lt.md" size="md" flat dense color="negative" icon="close" @click="fermeture" />
-      <q-btn :disable="!modifie" size="md" flat dense color="primary" icon="undo" label="Annuler" @click="annuler" />
-      <q-btn :disable="!modifie" size="md" flat dense color="warning" icon="search" label="Rechercher" @click="ok" />
-    </q-card-actions>
-    <q-separator/>
+    <q-toolbar dense class="bg-primary text-white">
+      <q-btn v-if="$q.screen.lt.md" size="md" flat dense icon="chevron_left" @click="fermeture" />
+      <q-space/>
+      <q-btn :disable="!modifie" size="md" dense class="q-mr-sm" icon="undo" @click="annuler" />
+      <q-btn :disable="!modifie" size="md" dense color="warning" icon="search" label="Rechercher" @click="ok" />
+    </q-toolbar>
     <div class="q-pa-sm column justify-start ful-width">
         <q-checkbox v-model="state.a.perso" dense size="md" label="Secrets personnels" />
         <div class="row items-center">
           <div class="titre-sm">Contacts: </div>
           <q-radio left-label size="sm" dense class="q-ml-sm col-auto" v-model="state.a.cp" :val="-1" label="Tous" />
           <q-radio left-label size="sm" dense class="q-ml-sm col-auto" v-model="state.a.cp" :val="0" label="Aucun" />
-          <q-select class="col q-ml-sm" dense v-model="selcp" :options="lru.cp" label="Récents" />
+          <q-select class="col q-ml-sm" dense options-dense popup-content-style="border:1px solid grey" v-model="selcp" :options="lru.cp" label="Récents" />
         </div>
         <div class="row items-center">
           <div class="titre-sm">Groupes: </div>
           <q-radio left-label size="sm" dense class="q-ml-sm col-auto" v-model="state.a.gr" :val="-1" label="Tous" />
           <q-radio left-label size="sm" dense class="q-ml-sm col-auto" v-model="state.a.gr" :val="0" label="Aucun" />
-          <q-select class="col q-ml-sm" dense v-model="selgr" :options="lru.gr" label="Récents" />
+          <q-select class="col q-ml-sm" dense options-dense popup-content-style="border:1px solid grey" v-model="selgr" :options="lru.gr" label="Récents" />
         </div>
     </div>
     <q-separator/>
@@ -230,4 +230,7 @@ export default ({
 @import '../css/app.sass'
 .q-btn--dense
   padding: 1px !important
+.q-toolbar
+  padding: 2px !important
+  min-height: 0 !important
 </style>

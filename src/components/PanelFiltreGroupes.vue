@@ -1,12 +1,12 @@
 <template>
   <q-scroll-area style="height:80vh;width:22rem">
   <q-card class="shadow-8">
-    <q-card-actions align="between">
-      <q-btn v-if="$q.screen.lt.md" size="md" flat dense color="negative" icon="close" @click="fermeture" />
-      <q-btn :disable="!modifie" size="md" flat dense color="primary" icon="undo" label="Annuler" @click="annuler" />
-      <q-btn :disable="!modifie" size="md" flat dense color="warning" icon="search" label="Rechercher" @click="ok" />
-    </q-card-actions>
-    <q-separator/>
+    <q-toolbar dense class="bg-primary text-white">
+      <q-btn v-if="$q.screen.lt.md" size="md" flat dense icon="chevron_left" @click="fermeture" />
+      <q-space/>
+      <q-btn :disable="!modifie" size="md" dense class="q-mr-sm" icon="undo" @click="annuler" />
+      <q-btn :disable="!modifie" size="md" dense color="warning" icon="search" label="Rechercher" @click="ok" />
+    </q-toolbar>
     <div class="q-pa-sm column justify-start">
       <div class="titre-4 text-primary">Ayant TOUS les mots clés suivants :</div>
       <apercu-motscles :motscles="motscles" :src="state.a.mc1" :args-click="{n:2}" @click-mc="mcedit1 = true"></apercu-motscles>
@@ -122,4 +122,7 @@ export default ({
 @import '../css/app.sass'
 .q-btn--dense
   padding: 1px !important
+.q-toolbar
+  padding: 2px !important
+  min-height: 0 !important
 </style>

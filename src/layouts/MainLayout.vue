@@ -11,8 +11,8 @@
           </span>
           <q-icon v-if="sessionok && compte.estComptable" size="sm" color="secondary" name="savings" aria-label="Compte de comptable"/>
           <span v-if="sessionok">
-            <q-btn :class="page!=='Avatar' ? 'disabled' : ''" flat dense size="sm"
-              icon="home" label="Accueil" @click="tocompte"/>
+            <q-btn :class="page!=='Avatar' ? 'disabled' : ''" flat dense size="md"
+              icon="home" no-caps label="Compte" @click="tocompte"/>
             <titre-banner class-titre="titre-md" :titre="prefs.titre" :id-objet="compte.id"/>
           </span>
         </q-toolbar-title>
@@ -81,14 +81,14 @@
       <q-toolbar inset v-if="page === 'Avatar'">
         <div class="window-width font-cf">
           <q-tabs class="" v-model="tabavatar" inline-label no-caps dense>
-            <q-btn v-if="tabavatar==='secrets' && $q.screen.lt.md" size="md" dense icon="search" color="secondary" @click="avatarscrech = !avatarscrech"/>
-            <q-btn v-if="tabavatar==='secrets'" size="md" dense :icon="avatarscform ? 'view_list' : 'wysiwyg'" color="secondary" @click="togglescform"/>
+            <q-btn class="btx" v-if="tabavatar==='secrets' && $q.screen.lt.md" size="md" dense icon="search" color="secondary" @click="avatarscrech = !avatarscrech"/>
+            <q-btn class="btx" v-if="tabavatar==='secrets'" size="md" dense :icon="avatarscform ? 'view_list' : 'wysiwyg'" color="secondary" @click="togglescform"/>
             <q-tab name="secrets" label="Secrets" />
-            <q-btn v-if="tabavatar==='couples' && $q.screen.lt.md" size="md" dense icon="search" color="secondary" @click="avatarcprech = !avatarcprech"/>
-            <q-btn v-if="tabavatar==='couples'" size="md" dense :icon="avatarcpform ? 'view_list' : 'wysiwyg'" color="secondary" @click="togglecpform"/>
+            <q-btn class="btx" v-if="tabavatar==='couples' && $q.screen.lt.md" size="md" dense icon="search" color="secondary" @click="avatarcprech = !avatarcprech"/>
+            <q-btn class="btx" v-if="tabavatar==='couples'" size="md" dense :icon="avatarcpform ? 'view_list' : 'wysiwyg'" color="secondary" @click="togglecpform"/>
             <q-tab name="couples" label="Contacts" />
-            <q-btn v-if="tabavatar==='groupes' && $q.screen.lt.md" size="md" dense icon="search" color="secondary" @click="avatargrrech = !avatargrrech"/>
-            <q-btn v-if="tabavatar==='groupes'" size="md" dense :icon="avatargrform ? 'view_list' : 'wysiwyg'" color="secondary" @click="togglegrform"/>
+            <q-btn class="btx" v-if="tabavatar==='groupes' && $q.screen.lt.md" size="md" dense icon="search" color="secondary" @click="avatargrrech = !avatargrrech"/>
+            <q-btn class="btx" v-if="tabavatar==='groupes'" size="md" dense :icon="avatargrform ? 'view_list' : 'wysiwyg'" color="secondary" @click="togglegrform"/>
             <q-tab name="groupes" label="Groupes" />
           </q-tabs>
         </div>
@@ -461,4 +461,9 @@ export default {
   height: 1.8rem
   border-radius: 0.9rem
   border: 1px solid $grey-5
+
+.btx
+  position: relative
+  margin-left: 2px
+  left: 1.2rem
 </style>

@@ -1,12 +1,15 @@
 <template>
 <div v-if="sessionok" :class="$q.screen.gt.sm ? 'ml20' : 'q-pa-xs full-width'">
   <q-card  v-if="!avatarscform && (mode === 1 || mode === 2)" class="shadow-8">
-    <q-card-actions vertical>
-      <q-btn flat dense color="primary" size="md" icon="add" label="Nouveau secret personnel" @click="nvsecret(0)"/>
-      <q-btn v-if="couple" flat dense size="md" color="primary" icon="add" :label="'Nouveau secret du couple ' +  couple.nom" @click="nvsecret(1)"/>
-      <q-btn v-if="groupe" flat dense size="md" color="primary" icon="add" :label="'Nouveau secret du groupe ' +  groupe.nom" @click="nvsecret(2)"/>
+    <q-card-section>
+      <div class="titre-md row items-center">
+        <span class="titre-md q-mx-sm">Nouveau secret...</span>
+        <q-btn dense class="titre-md q-ml-sm" no-caps color="primary" size="sm" label="Personnel" @click="nvsecret(0)"/>
+        <panel-grcp class="titre-md q-ml-sm" icon="chevron_right" label="du contact" color="primary" grcp="cp" @ok="nvsecret(1)"/>
+        <panel-grcp class="titre-md q-ml-sm" icon="chevron_right" label="du groupe" color="primary" grcp="gr" @ok="nvsecret(2)"/>
+      </div>
       <q-btn flat dense icon="save" color="primary" label="Télécharger les secrets" @click="ouvrirdl" />
-    </q-card-actions>
+    </q-card-section>
   </q-card>
 
   <div v-if="!state.lst || !state.nbs" class="titre-lg text-italic">Aucun secret trouvé répondant à ce filtre</div>
@@ -131,6 +134,7 @@ import ShowHtml from '../components/ShowHtml.vue'
 import ApercuMotscles from '../components/ApercuMotscles.vue'
 import PanelSecret from '../components/PanelSecret.vue'
 import PanelFiltre from '../components/PanelFiltre.vue'
+import PanelGrcp from '../components/PanelGrcp.vue'
 import { crypt } from '../app/crypto.mjs'
 import { useQuasar } from 'quasar'
 
@@ -139,7 +143,7 @@ const enc = new TextEncoder()
 export default ({
   name: 'TabSecrets',
 
-  components: { ApercuMotscles, PanelSecret, PanelFiltre, ShowHtml },
+  components: { PanelGrcp, ApercuMotscles, PanelSecret, PanelFiltre, ShowHtml },
 
   props: { },
 
@@ -167,6 +171,9 @@ export default ({
   },
 
   methods: {
+    okgr (idg) {
+      console.log(idg)
+    },
     rechercher (f) { this.state.filtre = f },
 
     dkli (idx) { return this.$q.dark.isActive ? (idx ? 'sombre' + (idx % 2) : 'sombre0') : (idx ? 'clair' + (idx % 2) : 'clair0') },

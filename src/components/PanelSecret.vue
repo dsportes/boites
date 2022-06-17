@@ -1,6 +1,6 @@
 <template>
   <q-card class="full-height full-width fs-md column">
-    <div style="min-height:90px"></div>
+    <div style="min-height:4.5rem"></div>
 
     <div v-if="!secret.suppr && tabsecret==='texte'" class='col column q-mt-sm'>
       <q-btn v-if="ed && c8()" class="btnt" size="sm" icon="edit_off" dense color="negative" label="non modifiable">
@@ -222,9 +222,13 @@
     </div>
 
     <div v-if="!secret.suppr && tabsecret==='voisins'" class='col'>
-      <q-btn flat dense color="primary" size="md" icon="add" label="Nouveau secret voisin personnel" @click="action0"/>
-      <q-btn v-if="couple" flat dense size="md" color="primary" icon="add" :label="'Nouveau secret voisin partagé avec ' +  couple.nom" @click="action1(couple.id)"/>
-      <q-btn v-if="groupe" flat dense size="md" color="primary" icon="add" :label="'Nouveau secret voisin du groupe ' +  groupe.nom" @click="action2(groupe.id)"/>
+      <div class="titre-md row items-center">
+        <span class="titre-md q-mx-sm">Nouveau secret voisin...</span>
+        <q-btn dense class="titre-md q-ml-sm" no-caps color="primary" size="sm" label="Personnel" @click="action0"/>
+        <panel-grcp class="titre-md q-ml-sm" icon="chevron_right" label="du contact" color="primary" grcp="cp" @ok="action1(couple.id)"/>
+        <panel-grcp class="titre-md q-ml-sm" icon="chevron_right" label="du groupe" color="primary" grcp="gr" @ok="action2(groupe.id)"/>
+      </div>
+
       <div v-for="(s, idx) in state.listevoisins" :key="s.vk"
         :class="dkli(idx) + ' zonex full-width q-py-xs zone' + (s === secret ? '2' :'1')">
         <div v-if="s.suppr" class="col text-negative text-italic text-bold">
@@ -240,27 +244,6 @@
             <show-html v-if="row[s.vk]" class="col height-8 full-width overlay-y-auto bottomborder" :texte="s.txt.t" :idx="idx"/>
             <div v-else class="col full-width text-bold top5">{{s.titre}}</div>
           </div>
-          <q-btn class="col-auto" flat dense push size="md" icon="menu">
-            <q-menu transition-show="scale" transition-hide="scale">
-              <q-list dense style="min-width: 10rem">
-                <q-item>
-                  <q-item-section class="text-italic">Nouveau secret voisin ...</q-item-section>
-                </q-item>
-                <q-separator />
-                <q-item clickable v-close-popup @click="nvsecret(0, s)">
-                  <q-item-section>...personnel</q-item-section>
-                </q-item>
-                <q-separator />
-                <q-item v-if="s.couple" clickable v-close-popup @click="nvsecret(1, s)">
-                  <q-item-section>...partagé avec {{s.couple.nom}}</q-item-section>
-                </q-item>
-                <q-separator v-if="s.groupe" />
-                <q-item v-if="s.groupe" clickable v-close-popup @click="nvsecret(2, s)">
-                  <q-item-section>...partagé avec {{s.groupe.nom}}</q-item-section>
-                </q-item>
-              </q-list>
-            </q-menu>
-          </q-btn>
         </div>
         <div v-if="!s.suppr" class="full-width row items-center q-pl-xl cursor-pointer"  @click="ouvrirvoisin(s)">
           <apercu-motscles class="col-6" :motscles="state.motscles" :src="s.mc" :groupe-id="s.ts===2?s.id:0"/>
@@ -318,7 +301,7 @@
     <q-toolbar inset v-if="mode > 2" :class="tbc">
       <div class="q-px-sm text-center fs-sm text-bold text-negative bg-yellow-5">En mode avion ou visio, les secrets ne peuvent être QUE consultés (pas mis à jour)</div>
     </q-toolbar>
-    <q-toolbar v-if="!secret.suppr" inset :class="tbc">
+    <q-toolbar v-if="!secret.suppr" inset :class="tbc + ' row justify-center'">
       <q-tabs v-model="tabsecret" class="font-cf" inline-label no-caps dense>
         <q-tab name="texte" :disable="ed" label="Détail" />
         <q-tab name="fa" :disable="ed" label="Fichiers" />
@@ -339,6 +322,7 @@ import SelectMotscles from './SelectMotscles.vue'
 import EditeurTexteSecret from './EditeurTexteSecret.vue'
 import ShowHtml from './ShowHtml.vue'
 import TitreBanner from '../components/TitreBanner.vue'
+import PanelGrcp from '../components/PanelGrcp.vue'
 import { equ8, getJourJ, cfg, Motscles, dhstring, afficherdiagnostic, edvol } from '../app/util.mjs'
 import { NouveauSecret, Maj1Secret, SupprFichier, SupprSecret } from '../app/operations.mjs'
 import { data, Secret } from '../app/modele.mjs'
@@ -349,7 +333,7 @@ import { saveAs } from 'file-saver'
 export default ({
   name: 'PanelSecret',
 
-  components: { TitreBanner, ApercuMotscles, SelectMotscles, EditeurTexteSecret, ShowHtml, FichierAttache },
+  components: { PanelGrcp, TitreBanner, ApercuMotscles, SelectMotscles, EditeurTexteSecret, ShowHtml, FichierAttache },
 
   props: { aPin: Function, estFiltre: Function, sec: Object, suivant: Function, precedent: Function, pinSecret: Function, index: Number, sur: Number },
 
@@ -449,7 +433,7 @@ export default ({
       const ref = s.ref ? s.ref : [s.id, s.ns]
       const g = this.groupe
       if (g) {
-        if (g.sty === 0) {
+        if (g.sty === 1) {
           afficherdiagnostic('Le groupe ' + g.nom + ' est "protégé en écriture", création et modification de secrets impossible.')
           return
         }
@@ -1037,8 +1021,8 @@ export default ({
 .q-toolbar
   padding: 2px !important
   min-height: 0 !important
-.q-tabs--dense
-  min-height: 0 !important
+.q-tabs--dense .q-tab
+  min-height: 1px !important
 .qc
   padding: 5px
   background-color: $yellow-5
