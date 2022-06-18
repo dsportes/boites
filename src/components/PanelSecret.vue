@@ -1,55 +1,54 @@
 <template>
   <q-card class="full-height full-width fs-md column">
-    <div style="min-height:4.5rem"></div>
+    <div style="min-height:4rem"></div>
 
     <div v-if="!secret.suppr && tabsecret==='texte'" class='col column q-mt-sm'>
-      <q-btn v-if="ed && c8()" class="btnt" size="sm" icon="edit_off" dense color="negative" label="non modifiable">
-        <q-menu><q-card class="qc">{{lc[c8()]}}</q-card></q-menu></q-btn>
+      <info-txt class="col-auto" v-if="ed && cx1()" label="Texte non modifiable" :info="lc[cx1()]"/>
       <editeur-texte-secret class="col" v-model="state.textelocal" :texte-ref="secret.txt.t"
-        :editable="ed && !c8()" :erreur="state.erreur" :apropos="secret.dh"/>
+        :editable="ed && !cx1()" :erreur="state.erreur" :apropos="secret.dh"/>
 
       <div class="col-auto q-px-xs full-width row justify-between items-center">
         <div class="col">
           <span v-if="state.plocal">Protection d'écriture</span>
           <span v-else>Pas de protection d'écriture</span>
         </div>
-        <q-btn v-if="ed && (c2() || c3())" class="col-auto" size="sm" icon="edit_off" dense color="negative" label="non modifiable">
-          <q-menu><q-card class="qc">{{lc[c2() || c4()]}}</q-card></q-menu></q-btn>
-        <q-btn v-if="ed && !c2() && !c3()" class="col-auto" size="md" flat dense color="primary" label="Protection d'écriture" @click="protectionP"/>
-        <q-btn v-if="ed && !c2() && !c3()" class="col-auto" :disable="!state.modifp" size="sm" dense push icon="undo" color="primary" @click="undop"/>
+        <info-txt v-if="ed && cx3()" label="Protection" :info="lc[cx3()]"/>
+        <q-btn v-if="ed && !cx3()" class="col-auto" size="md" flat dense color="primary" label="Protection" @click="protectionP"/>
+        <q-btn v-if="ed && !cx3()" class="col-auto" :disable="!state.modifp" size="sm" dense push icon="undo" color="primary" @click="undop"/>
       </div>
+
       <div v-if="secret.ts !== 0" class="col-auto q-px-xs full-width row justify-between items-center">
         <div class="col">
           <span v-if="state.xlocal">Exclusité d'écriture à {{excluNom()}}</span>
           <span v-else>Pas d'exclusité d'écriture </span>
         </div>
-        <q-btn v-if="ed && (c2() || c3())" class="col-auto" size="sm" icon="edit_off" dense color="negative" label="non modifiable">
-          <q-menu><q-card class="qc">{{lc[c2() || c3()]}}</q-card></q-menu></q-btn>
-        <q-btn v-if="ed && !c2() && !c3()" class="col-auto" size="md" flat dense color="primary" label="Exclusivité d'écriture" @click="protectionX"/>
-        <q-btn v-if="ed && !c2() && !c3()" class="col-auto" :disable="!state.modifx" size="sm" dense push icon="undo" color="primary" @click="undox"/>
-     </div>
+        <info-txt v-if="ed && cx6()" label="Exclusivité" :info="lc[cx3()]"/>
+        <q-btn v-if="ed && !cx6()" class="col-auto" size="md" flat dense color="primary" label="Exclusivité" @click="protectionX"/>
+        <q-btn v-if="ed && !cx6()" class="col-auto" :disable="!state.modifx" size="sm" dense push icon="undo" color="primary" @click="undox"/>
+      </div>
+
       <div class="col-auto q-px-xs full-width row justify-between items-center">
+        <div class="col-auto q-mr-sm">Mots clés:</div>
         <apercu-motscles class="col" :motscles="state.motscles" :src="state.mclocal"/>
         <q-btn v-if="ed" class="col-auto" color="primary" flat dense label="Mots clés personnels" @click="ouvrirmcl"/>
         <q-btn v-if="ed" class="col-auto" :disable="!state.modifmcl" size="sm" dense push icon="undo" color="primary" @click="undomcl"/>
       </div>
+
       <div v-if="state.ts === 2" class="col-auto q-px-xs full-width row justify-between items-center">
         <apercu-motscles class="col" :motscles="state.motscles" :src="state.mcglocal"/>
-        <q-btn v-if="ed && (c4())" class="col-auto" size="sm" icon="edit_off" dense color="negative" label="non modifiable">
-          <q-menu><q-card class="qc">{{lc[c4()]}}</q-card></q-menu></q-btn>
-        <q-btn v-if="ed && !c4()" class="col-auto" flat dense color="primary" label="Mots clés du groupe" @click="ouvrirmcg"/>
-        <q-btn v-if="ed && !c4()" class="col-auto" :disable="!state.modifmcg" size="sm" dense push icon="undo" color="primary" @click="undomcg"/>
+        <info-txt v-if="ed && cx4()" label="Mots clés du groupe" :info="lc[cx3()]"/>
+        <q-btn v-if="ed && !cx4()" class="col-auto" flat dense color="primary" label="Mots clés du groupe" @click="ouvrirmcg"/>
+        <q-btn v-if="ed && !cx4()" class="col-auto" :disable="!state.modifmcg" size="sm" dense push icon="undo" color="primary" @click="undomcg"/>
       </div>
 
       <div class="col-auto q-px-xs full-width row justify-between items-center">
         <div class="col">{{msgtemp}}</div>
-        <q-btn v-if="ed && (c9())" class="col-auto" size="sm" icon="edit_off" dense color="negative" label="non modifiable">
-          <q-menu><q-card class="qc">{{lc[c9()]}}</q-card></q-menu></q-btn>
-        <q-btn v-if="state.templocal && ed && !c9()" class="col-auto" flat dense color="primary" label="Le rendre 'PERMANENT'" @click="state.templocal=false"/>
-        <q-btn v-if="!state.templocal && ed && !c9()" class="col-auto" flat dense color="primary" label="Le rendre 'TEMPORAIRE'"  @click="state.templocal=true"/>
-        <q-btn v-if="ed && !c9()" :disable="!state.modiftp" class="col-auto" size="sm" dense push icon="undo" color="primary" @click="undotp"/>
+        <info-txt v-if="ed && cx2()" label="Temporaire / Permanent" :info="lc[cx3()]"/>
+        <q-btn v-if="state.templocal && ed && !cx2()" class="col-auto" flat dense color="primary" label="Le rendre 'PERMANENT'" @click="state.templocal=false"/>
+        <q-btn v-if="!state.templocal && ed && !cx2()" class="col-auto" flat dense color="primary" label="Le rendre 'TEMPORAIRE'"  @click="state.templocal=true"/>
+        <q-btn v-if="ed && !cx2()" :disable="!state.modiftp" class="col-auto" size="sm" dense push icon="undo" color="primary" @click="undotp"/>
       </div>
-
+      <q-separator class="q-my-xs"/>
       <div class="col-auto q-px-xs full-width">
         <div class="fs-md">Taille du texte du secret : <span class="font-mono">{{secret.v1}}</span></div>
         <div class="fs-md">Volume total des pièces jointes : <span class="font-mono">{{secret.v2}}</span></div>
@@ -67,13 +66,13 @@
       <q-dialog v-if="sessionok" v-model="confirmsuppr">
         <q-card class="petitelargeur fs-md">
           <q-card-section>
-            <div v-if="!(c1() || c2() || c3() || c5() || c7())" class="titre-md text-bold">
+            <div v-if="!cx5()" class="titre-md text-bold">
               Supprimer un secret est irréversible. Pour simplement ne plus le voir mais le garder existant,
               lui attribuer le mot clé "Poubelle" et filtrer les secrets n'ayant pas ce mot-clé (ou l'ayant pour retrouver le contenu de la poublelle).
             </div>
-            <div v-else>Suppression non autorisée : {{lc[c1() || c2() || c3() || c5() || c7()]}}</div>
+            <div v-else>Suppression non autorisée : {{lc[cx5()]}}</div>
           </q-card-section>
-          <q-card-actions v-if="!(c1() || c2() || c3() || c5() || c7())" vertical>
+          <q-card-actions v-if="!cx5()" vertical>
             <q-btn flat dense v-close-popup color="primary" label="Je renonce à le suprimer"/>
             <q-btn flat dense v-close-popup color="warning" label="Je confirme la suppression" @click="supprimer"/>
           </q-card-actions>
@@ -293,10 +292,12 @@
             :titre2="'Groupe ' + secret.groupe.nomEd + ' [' + secret.groupe.na.nom + '#' + secret.groupe.na.sfx + ']'" :id-objet="secret.groupe.id"/>
         </div>
       </q-toolbar-title>
-      <q-btn v-if="tabsecret==='texte' && !secret.suppr && !ed && !c1() && mode <= 2" size="sm" color="warning" icon="edit" dense @click="editer"/>
+      <info-ico v-if="tabsecret==='texte' && !secret.suppr && !ed && cx7()" icon="edit_off" color="warning" :info="lc[cx1()]"/>
+      <q-btn v-if="tabsecret==='texte' && !secret.suppr && !ed && !cx7() && mode <= 2" size="sm" color="warning" icon="edit" dense @click="editer"/>
       <q-btn v-if="tabsecret==='texte' && !secret.suppr && ed" class="q-ml-xs" size="sm" :color="modif() ? 'warning' : 'secondary'" icon="undo" dense @click="undo"/>
-      <q-btn v-if="tabsecret==='texte' && !secret.suppr && ed" class="q-ml-xs" :disable="!modif() || (state.erreur !== '')" size="sm" color="green-5" icon="check" dense @click="valider"/>
-      <q-btn v-if="tabsecret==='texte' && !secret.suppr && mode <= 2" class="q-ml-xs" size="sm" color="warning" icon="delete" dense @click="confirmsuppr=true"/>
+      <q-btn v-if="tabsecret==='texte' && !secret.suppr && ed" class="q-ml-xs" :disable="!modif() || (state.erreur !== '')"
+        size="sm" color="green-5" icon="check" dense label="OK" @click="valider"/>
+      <q-btn v-if="tabsecret==='texte' && !secret.suppr && mode <= 2 && !cx5()" class="q-ml-xs" size="sm" color="warning" icon="delete" dense @click="confirmsuppr=true"/>
     </q-toolbar>
     <q-toolbar inset v-if="mode > 2" :class="tbc">
       <div class="q-px-sm text-center fs-sm text-bold text-negative bg-yellow-5">En mode avion ou visio, les secrets ne peuvent être QUE consultés (pas mis à jour)</div>
@@ -323,6 +324,8 @@ import EditeurTexteSecret from './EditeurTexteSecret.vue'
 import ShowHtml from './ShowHtml.vue'
 import TitreBanner from '../components/TitreBanner.vue'
 import PanelGrcp from '../components/PanelGrcp.vue'
+import InfoTxt from './InfoTxt.vue'
+import InfoIco from './InfoIco.vue'
 import { equ8, getJourJ, cfg, Motscles, dhstring, afficherdiagnostic, edvol } from '../app/util.mjs'
 import { NouveauSecret, Maj1Secret, SupprFichier, SupprSecret } from '../app/operations.mjs'
 import { data, Secret } from '../app/modele.mjs'
@@ -333,7 +336,7 @@ import { saveAs } from 'file-saver'
 export default ({
   name: 'PanelSecret',
 
-  components: { PanelGrcp, TitreBanner, ApercuMotscles, SelectMotscles, EditeurTexteSecret, ShowHtml, FichierAttache },
+  components: { InfoIco, InfoTxt, PanelGrcp, TitreBanner, ApercuMotscles, SelectMotscles, EditeurTexteSecret, ShowHtml, FichierAttache },
 
   props: { aPin: Function, estFiltre: Function, sec: Object, suivant: Function, precedent: Function, pinSecret: Function, index: Number, sur: Number },
 
@@ -863,17 +866,18 @@ export default ({
     function undox () { const s = secret.value; if (s) { state.xlocal = s.exclu } }
     function undop () { const s = secret.value; if (s) { state.plocal = s.protect } }
 
-    function modif () { return state.modift || state.modifmcl || state.modifmcg || state.modifx || state.modift || state.modiftp }
+    function modif () { return state.modift || state.modifmcl || state.modifmcg || state.modifx || state.modifp || state.modiftp }
 
     const lc = [
       '',
-      'Le groupe de ce secret est protégé contre toute modification',
+      'Le groupe de ce secret est protégé contre toute modification', // 1
       'L\'exclusivité d\'écriture de ce secret a été attribuée à l\'autre dans le couple',
       'L\'exclusivité d\'écriture de ce secret a été attribuée à un autre membre du groupe ET vous n\'êtes pas animateur du groupe et ',
-      'Vous n\'êtes pas animateur du groupe',
+      'Vous n\'êtes pas animateur du groupe', // 4
       'Vous êtes lecteur dans le groupe sans droit d\'écriture',
       'L\'exclusivité d\'écriture a été attribuée à un autre membre du groupe',
-      'Le secret est protégé contre l\'écriture et la suppression'
+      'Le secret est protégé contre l\'écriture (et la suppression)',
+      'Le groupe de ce secret n\'a plus d\'animateur qui l\'héberge' // 8
     ]
 
     function c1 () { // groupe protégé en écriture (archivé)
@@ -907,8 +911,17 @@ export default ({
       const s = secret.value
       return !s || s.protect ? 7 : 0
     }
-    function c8 () { return c7() || c5() || c2() || c6() }
-    function c9 () { return c5() || c2() || c6() }
+    function c8 () { // groupe non hébergé
+      const s = secret.value
+      return !s || (s.groupe && s.groupe.imh === 0) ? 8 : 0
+    }
+    function cx1 () { return c1() || c8() || c2() || c5() || c6() || c7() } // texte editable
+    function cx2 () { return c1() || c8() || c5() || c2() || c6() } // statut temporaire
+    function cx3 () { return c1() || c8() || c2() || c4() } // protection d'écriture
+    function cx6 () { return c1() || c8() || c3() } // exclusivité d'écriture
+    function cx4 () { return c1() || c8() || c4() } // mots clés
+    function cx5 () { return c1() || c8() || c2() || c3() || c5() || c7() } // suppression
+    function cx7 () { return c1() || c8() } // mode édition
 
     const mc = reactive({ categs: new Map(), lcategs: [], st: { enedition: false, modifie: false } })
 
@@ -998,15 +1011,13 @@ export default ({
       undox,
       undop,
       modif,
-      c1,
-      c2,
-      c3,
-      c4,
-      c5,
-      c6,
-      c7,
-      c8,
-      c9,
+      cx1,
+      cx2,
+      cx3,
+      cx4,
+      cx5,
+      cx6,
+      cx7,
       lc,
       excluNom,
       editer,

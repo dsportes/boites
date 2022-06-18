@@ -2,7 +2,7 @@
     "build" : 2,
     "debug" : 1,
     "urlserveur": "https://test.sportes.fr:8443",
-    "urlserveur2": "https://192.168.1.10:8443",
+    "urlserveur2": "https://192.168.1.2:8443",
     "urlserveur1": "https://localhost:8443",
     "phrases" : [
       ["leszsanglotszLONGSz", "garezauzGORILLEz"],

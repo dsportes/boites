@@ -1785,16 +1785,24 @@ export class Secret {
   - im : pour un couple seulement, 0 ou 1 (position de l'avatar du compte dans le couple)
   */
   volarg () {
-    const a = { id: this.id, ts: this.ts, dv1: 0, dv2: 0, vt: 0, idc2: null }
+    const a = { id: this.id, ts: this.ts, dv1: 0, dv2: 0, vt: 0, idc: 0, idc2: 0 }
     if (this.ts === 0) {
       a.idc = this.id
     } else if (this.ts === 1) {
-      a.idc = this.couple.idI
-      a.idc2 = this.couple.idE
-      a.im = this.couple.avc
+      const c = this.couple
+      if (c.stp >= 4) { // sinon idc = 0, couple sans secret
+        if (c.stI === 1 && c.stE === 1) {
+          a.idc = c.idI
+          a.idc2 = c.idE
+        } else if (c.stI === 1) {
+          a.idc = c.idI
+        } else if (c.stE === 1) {
+          a.idc = c.idE
+        }
+      }
     } else {
       const na = this.groupe.naHeb
-      a.idc = na ? na.id : 0
+      a.idc = na ? na.id : 0 // 0 : groupe non hébergé
     }
     return a
   }

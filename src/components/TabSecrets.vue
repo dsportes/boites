@@ -526,20 +526,30 @@ export default ({
         editerSecret(new Secret().nouveauP(avatar.value.id, ref), true)
       } else if (n === 1) {
         const c = couple.value
-        if (c) editerSecret(new Secret().nouveauC(c.id, ref, c.avc), true)
+        if (c) {
+          if (c.stp < 4) {
+            afficherdiagnostic(`Votre contact ${c.nomEd} n'étant pas actif il ne supporte pas le partage de nouveaux secrets.`)
+            return
+          }
+          if (c.stI === 0) {
+            afficherdiagnostic(`Vous n'avez pas accepté de partager des secrets avec votre contact ${c.nomE}, ajout de nouveaux secrets impossibles.`)
+            return
+          }
+          editerSecret(new Secret().nouveauC(c.id, ref, c.avc), true)
+        }
       } else if (n === 2) {
         const g = groupe.value
-        if (!g) {
-          afficherdiagnostic('Le groupe ? n\'est pas en état d\'accepter le partage de nouveaux secrets.')
+        if (!g || g.imh === 0) {
+          afficherdiagnostic(`Aucum administrateur n'a accepté d'héberger le groupe ${g.nomEd}: partage de nouveaux secrets impossible.`)
           return
         }
         if (g.sty === 1) {
-          afficherdiagnostic('Le groupe ' + g.nom + ' est "archivé", création et modification de secrets impossible.')
+          afficherdiagnostic(`Le groupe ${g.nomEd} est protégé contre l'écriture, création et modification de secrets impossibles.`)
           return
         }
         const membre = g.membreParId(avatar.value.id)
         if (!membre || !membre.stp) {
-          afficherdiagnostic('Seuls les membres de niveau "auteur" et "animateur" du groupe ' + g.nom + ' peuvent créer ou modifier des secrets.')
+          afficherdiagnostic(`Seuls les membres de niveau "auteur" et "animateur" du groupe ${g.nomEd} peuvent créer ou modifier des secrets.`)
           return
         }
         editerSecret(new Secret().nouveauG(g.id, ref, membre.im), true)
@@ -595,10 +605,6 @@ export default ({
   border: 1px solid $grey-5
 .zonex:hover
   background-color: rgba(130, 130, 130, 0.5)
-.zone1
-  border-left: 4px solid transparent
-.zone2
-  border-left: 4px solid $warning
 .top5
   position: relative
   top: -5px
