@@ -285,27 +285,27 @@ export default ({
       })
     }
 
-    function supprimer () {
+    function supprimer () { // x.stp < 4 && x.avc === 1) || x.stp === 5
       const x = c.value || couple.value
       let lbl = x.nomE
       if (x.stp === 5) {
         lbl += ' a disparu, le contact va être supprimé et les secrets détruits.'
       } else if (x.orig === 0) {
-        lbl += x.stp === 0 ? ' n\'a pas déclaré accepter ce contact.' : ' a refusé ce contact'
+        lbl += x.stp === 1 ? ' n\'a pas déclaré accepter ce contact.' : ' a refusé ce contact'
         lbl += ' Le contact va être supprimé.'
       } else if (x.orig === 1) {
         lbl += [
           ' n\'a pas déclaré accepter ce parrainage.',
-          ' a refusé ce parrainage',
-          ' n\'a pas déclaré dans les délais accepter ce parrainage et ne peut plus le faire.'
-        ][x.stp]
+          ' n\'a pas déclaré dans les délais accepter ce parrainage et ne peut plus le faire.',
+          ' a refusé ce parrainage.'
+        ][x.stp + 1]
         lbl += ' Le contact va être supprimé.'
       } else if (x.orig === 2) {
         lbl += [
           ' n\'a pas déclaré accepter ce contact en invoquant la phrase de rencontre.',
-          ' a invoqué la phrase de rencontre mais a refusé le contact.',
-          ' n\'a pas invoqué la phrase de rencontre dans les délais et ne peut plus le faire.'
-        ][x.stp]
+          ' n\'a pas invoqué la phrase de rencontre dans les délais et ne peut plus le faire.',
+          ' a invoqué la phrase de rencontre mais a refusé le contact.'
+        ][x.stp + 1]
         lbl += ' Le contact va être supprimé.'
       }
       $q.dialog({
