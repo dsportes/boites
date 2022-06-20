@@ -311,7 +311,7 @@ export default ({
           const parrain = cp && cp.idp === 0
           state.lst.push({ av, cv, cp, parrain })
         })
-        state.lst.sort((a, b) => { return a.av.nom < b.av.nom ? -1 : (a.av.nom > b.av.nom ? 1 : 0) })
+        state.lst.sort((a, b) => { return a.av.na.nom < b.av.na.nom ? -1 : (a.av.na.nom > b.av.na.nom ? 1 : 0) })
         if (!avatar.value) avatar.value = state.lst[0].av
       }
     }

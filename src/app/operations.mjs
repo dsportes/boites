@@ -1774,7 +1774,7 @@ export class SupprimerCouple extends OperationUI {
     try {
       const ni = crypt.hash(crypt.u8ToHex(couple.cle) + couple.avc)
       const ni1 = crypt.hash(crypt.u8ToHex(couple.cle) + '1')
-      const avid1 = couple.stp <= 2 && couple.orig === 0 ? couple.na1.id : 0 // accès au couple dans avatar 1 à supprimer chez 1
+      const avid1 = couple.stp <= 2 && couple.orig === 0 ? couple.idE : 0 // accès au couple dans avatar 1 à supprimer chez 1
       const pc = couple.stp === 1 && couple.orig > 1 ? await couple.phraseContact() : null // contact (parrainage / recontre) à supprimer
       const args = { sessionId: data.sessionId, idc: couple.id, ni, ni1, avid, avid1, phch: pc ? pc.phch : 0, avc: couple.avc }
       await post(this, 'm1', 'supprimerCouple', args)

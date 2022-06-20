@@ -145,7 +145,7 @@ export default ({
     sec () { const x = this.c || this.couple; return x.stp === 4 && x.stI === 1 },
     repc () { const x = this.c || this.couple; return x.stI === 0 && x.stp === 4 },
     quit () { const x = this.c || this.couple; return x.stI === 1 },
-    supp () { const x = this.c || this.couple; return (x.stp < 4 && x.avc === 1) || x.stp === 5 },
+    supp () { const x = this.c || this.couple; return (x.stp < 4 && x.avc === 0) || x.stp === 5 },
     ppc () { const x = this.c || this.couple; return x.stp === 1 && x.orig === 0 && x.avc === 1 },
     prlp () { const x = this.c || this.couple; return x.stp === 1 && x.orig === 1 },
     prlr () { const x = this.c || this.couple; return x.stp === 1 && x.orig === 2 }
@@ -298,14 +298,14 @@ export default ({
           ' n\'a pas déclaré accepter ce parrainage.',
           ' n\'a pas déclaré dans les délais accepter ce parrainage et ne peut plus le faire.',
           ' a refusé ce parrainage.'
-        ][x.stp + 1]
+        ][x.stp - 1]
         lbl += ' Le contact va être supprimé.'
       } else if (x.orig === 2) {
         lbl += [
           ' n\'a pas déclaré accepter ce contact en invoquant la phrase de rencontre.',
           ' n\'a pas invoqué la phrase de rencontre dans les délais et ne peut plus le faire.',
           ' a invoqué la phrase de rencontre mais a refusé le contact.'
-        ][x.stp + 1]
+        ][x.stp - 1]
         lbl += ' Le contact va être supprimé.'
       }
       $q.dialog({

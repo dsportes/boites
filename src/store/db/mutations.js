@@ -54,18 +54,36 @@ export function majavatar (state, val) { state.avatar = val }
 
 /* Déclaration du couple courant */
 export function majcouple (state, val) {
-  const x = [val.id]
-  state.LRUcp.forEach(t => { if (t !== val.id) x.push(t) })
-  state.LRUcp = x
-  state.couple = val
+  if (!val) { // suppression du courant
+    const av = state.couple
+    if (!av) return
+    const x = []
+    state.LRUcp.forEach(t => { if (t !== av.id) x.push(t) })
+    state.LRUcp = x
+    state.couple = null
+  } else {
+    const x = [val.id]
+    state.LRUcp.forEach(t => { if (t !== val.id) x.push(t) })
+    state.LRUcp = x
+    state.couple = val
+  }
 }
 
 /* Déclaration du groupe courant */
 export function majgroupe (state, val) {
-  const x = [val.id]
-  state.LRUgr.forEach(t => { if (t !== val.id) x.push(t) })
-  state.LRUgr = x
-  state.groupe = val
+  if (!val) { // suppression du courant
+    const av = state.groupe
+    if (!av) return
+    const x = []
+    state.LRUgr.forEach(t => { if (t !== av.id) x.push(t) })
+    state.LRUgr = x
+    state.groupe = null
+  } else {
+    const x = [val.id]
+    state.LRUgr.forEach(t => { if (t !== val.id) x.push(t) })
+    state.LRUgr = x
+    state.groupe = val
+  }
 }
 
 /* Déclaration du membre courant */

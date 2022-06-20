@@ -69,9 +69,9 @@ export default ({
 
     fermer () { if (this.close) this.close() },
 
-    closerenc () { this.nvrenc = false },
+    closerenc () { this.nvrenc = false; this.fermer() },
 
-    closeacceptrenc () { this.acceptrenc = false },
+    closeacceptrenc () { this.acceptrenc = false; this.fermer() },
 
     crypterphrase () {
       this.diagnostic = ''
