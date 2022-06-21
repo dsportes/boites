@@ -97,6 +97,7 @@ export default ({
     detail (ax) {
       this.ax = ax
       this.lstc = []
+      this.lstg = []
       ax.c.forEach(id => { this.lstc.push(data.getCouple(id)) })
       ax.m.forEach(k => { this.lstg.push(data.getGroupe(k[0])) })
       this.detaildial = true

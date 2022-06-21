@@ -466,4 +466,5 @@ export default {
   position: relative
   margin-left: 2px
   left: 1.2rem
+  z-index: 10
 </style>

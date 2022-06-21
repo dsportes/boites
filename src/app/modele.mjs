@@ -1742,10 +1742,13 @@ export class Secret {
   }
 
   get toIdb () {
-    const t = this.txt.t
-    this.txt.t = gzip(this.txt.t)
+    let t
+    if (!this.x) {
+      t = this.txt.t
+      this.txt.t = gzip(this.txt.t)
+    }
     const idb = schemas.serialize('idbSecret', this)
-    this.txt.t = t
+    if (!this.x) this.txt.t = t
     return idb
   }
 
