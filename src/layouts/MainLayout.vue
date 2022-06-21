@@ -58,6 +58,8 @@
       <q-toolbar inset :class="tbclass">
         <q-btn v-if="sessionok && (page==='Compte' || page==='Avatar')" class="q-pr-sm" dense color="primary" round size="md" icon="people"
           aria-label="Mes contacts" @click="panelcontacts = !panelcontacts"/>
+        <q-btn v-if="sessionok && (page==='Compte' || page==='Avatar')" class="q-pr-sm" dense color="primary" round size="md" icon="save"
+          aria-label="Fichiers hors ligne" @click="fichiersavion = !fichiersavion"/>
         <q-toolbar-title class="text-center fs-md">
           <div v-if="page==='Org'" class="tbpage">Choix de l'organisation</div>
           <div v-if="page==='Login'" class="tbpage">Connexion à un compte</div>
@@ -99,6 +101,10 @@
 
     <q-drawer v-model="panelcontacts" :width="330" elevated side="left">
       <panel-contacts/>
+    </q-drawer>
+
+    <q-drawer v-model="fichiersavion" :width="330" elevated side="left">
+      <fichiers-avion/>
     </q-drawer>
 
     <q-page-container>
@@ -202,6 +208,7 @@ import DialogueCrypto from 'components/DialogueCrypto.vue'
 import RapportSynchro from 'components/RapportSynchro.vue'
 import DialogueHelp from 'components/DialogueHelp.vue'
 import PanelContacts from 'components/PanelContacts.vue'
+import FichiersAvion from 'components/FichiersAvion.vue'
 import TitreBanner from '../components/TitreBanner.vue'
 import { data, MODES } from '../app/modele.mjs'
 import { cfg } from '../app/util.mjs'
@@ -212,7 +219,7 @@ export default {
   name: 'MainLayout',
 
   components: {
-    TitreBanner, RapportSynchro, PanelMenu, PanelContacts, DialogueErreur, DialogueCrypto, DialogueCreationCompte, DialogueTestPing, DialogueInfoMode, DialogueInfoReseau, DialogueInfoIdb, DialogueHelp
+    FichiersAvion, TitreBanner, RapportSynchro, PanelMenu, PanelContacts, DialogueErreur, DialogueCrypto, DialogueCreationCompte, DialogueTestPing, DialogueInfoMode, DialogueInfoReseau, DialogueInfoIdb, DialogueHelp
   },
 
   computed: {
@@ -310,7 +317,10 @@ export default {
       get: () => $store.state.ui.panelcontacts,
       set: (val) => $store.commit('ui/majpanelcontacts', val)
     })
-
+    const fichiersavion = computed({
+      get: () => $store.state.ui.fichiersavion,
+      set: (val) => $store.commit('ui/majfichiersavion', val)
+    })
     const tabavatar = computed({
       get: () => $store.state.ui.tabavatar,
       set: (val) => $store.commit('ui/majtabavatar', val)
@@ -401,6 +411,7 @@ export default {
 
       menuouvert,
       panelcontacts,
+      fichiersavion,
       confirmerdrc,
       infomode,
       inforeseau,

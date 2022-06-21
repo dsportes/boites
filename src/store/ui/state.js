@@ -9,6 +9,7 @@ export default function () {
     // MainLayout
     menuouvert: false,
     panelcontacts: false,
+    fichiersavion: false,
     confirmerdrc: false,
     infomode: false,
     inforeseau: false,

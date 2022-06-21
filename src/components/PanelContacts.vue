@@ -110,9 +110,6 @@ export default ({
     const $store = useStore()
     const opt = ref('c')
     const txt = ref('')
-    const cvident = ref(false)
-    const cpident = ref(false)
-    const grident = ref(false)
     const detaildial = ref(false)
     const panelcontacts = computed({
       get: () => $store.state.ui.panelcontacts,
@@ -167,9 +164,6 @@ export default ({
     watch(() => panelcontacts.value, (ap, av) => {
       if (!ap) {
         detaildial.value = false
-        cvident.value = false
-        cpident.value = false
-        grident.value = false
       }
     })
 
@@ -184,9 +178,6 @@ export default ({
       s,
       avatar,
       mode,
-      cvident,
-      cpident,
-      grident,
       detaildial
     }
   }
