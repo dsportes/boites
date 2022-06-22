@@ -1632,6 +1632,27 @@ export class Secret {
 
   get mcg () { return this.ts === 2 && this.mc ? this.mc[0] || new Uint8Array([]) : new Uint8Array([]) }
 
+  /*
+  Si id est celui d'un avatar accédant au secret, retourne id
+  Sinon retourne l'un des avatars du compte accédant au secret
+  */
+  avatarAcc (id) {
+    if (this.ts === 0) {
+      return this.id === id ? id : this.id
+    }
+    if (this.ts === 1) {
+      const c = this.couple
+      return c.idI === id ? id : c.idI
+    }
+    const g = this.groupe
+    if (g.membreParId(id)) return id
+    let idr = id
+    data.getCompte().avatarIds().forEach(idm => {
+      if (g.membreParId(idm)) idr = idm
+    })
+    return idr
+  }
+
   im (avid) { return this.ts === 0 ? 0 : (this.ts === 1 ? this.couple.avc + 1 : this.groupe.imDeId(avid)) }
   membre (avid) { return this.ts === 2 ? data.getMembre(this.groupe.id, this.im(avid)) : null }
   mcl (avid) {

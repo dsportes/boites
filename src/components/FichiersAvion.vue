@@ -57,6 +57,7 @@ import { computed, reactive, watch, ref } from 'vue'
 import { data } from '../app/modele.mjs'
 import { afficherdiagnostic, edvol, dhstring } from '../app/util.mjs'
 import { saveAs } from 'file-saver'
+import { remplacePage } from '../app/page.mjs'
 
 export default ({
   name: 'FichiersAvion',
@@ -81,6 +82,10 @@ export default ({
 
     voirsecret () {
       this.secret = this.fc.s
+      const id1 = this.avatar ? this.avatar.id : 0
+      const id2 = this.secret.avatarAcc(id1)
+      if (id1 !== id2) this.avatar = data.getAvatar(id2)
+      if (this.page !== 'Avatar') remplacePage('Avatar')
       this.tabavatar = 'secrets'
       setTimeout(() => {
         this.evtfiltresecrets = { cmd: ['vsa', 'vsc', 'vsg'][this.fc.s.ts], arg: this.fc.s }
@@ -138,6 +143,11 @@ export default ({
       get: () => $store.state.ui.evtfiltresecrets,
       set: (val) => $store.commit('ui/majevtfiltresecrets', val)
     })
+    const avatar = computed({
+      get: () => $store.state.db.avatar,
+      set: (val) => $store.commit('db/majavatar', val)
+    })
+    const page = computed(() => $store.state.ui.page)
 
     const s = reactive({ blst: [], lst: [] })
 
@@ -191,6 +201,8 @@ export default ({
     filtre()
 
     return {
+      avatar,
+      page,
       evtfiltresecrets,
       fichiersavion,
       secret,
