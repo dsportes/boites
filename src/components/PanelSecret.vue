@@ -315,7 +315,7 @@
 </template>
 
 <script>
-import { reactive, watch, computed, ref, toRef } from 'vue'
+import { reactive, watch, computed, toRef } from 'vue'
 import { useStore } from 'vuex'
 import ApercuMotscles from './ApercuMotscles.vue'
 import FichierAttache from './FichierAttache.vue'
@@ -695,11 +695,14 @@ export default ({
   setup (props) {
     const $store = useStore()
     const pinSecret = toRef(props, 'pinSecret')
-    const tabsecret = ref('texte')
     const sessionok = computed(() => { return $store.state.ui.sessionok })
     const avatarscform = computed({
       get: () => $store.state.ui.avatarscform,
       set: (val) => $store.commit('ui/majavatarscform', val)
+    })
+    const tabsecret = computed({
+      get: () => $store.state.ui.tabsecret,
+      set: (val) => $store.commit('ui/majtabsecret', val)
     })
     const prefs = computed(() => { return data.getPrefs() })
     const avatar = computed(() => { return $store.state.db.avatar })

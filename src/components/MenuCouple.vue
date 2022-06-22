@@ -41,11 +41,11 @@
       </q-item>
       <q-separator v-if="sec" />
       <q-item v-if="sec" clickable v-close-popup @click="voirsecrets">
-        <q-item-section>Voir les secrets partagés</q-item-section>
+        <q-item-section>Voir les secrets du contact</q-item-section>
       </q-item>
       <q-separator v-if="sec" />
       <q-item v-if="sec" clickable v-close-popup @click="nouveausecret">
-        <q-item-section>Nouveau secret partagé</q-item-section>
+        <q-item-section>Nouveau secret du contact</q-item-section>
       </q-item>
     </q-list>
   </q-menu>

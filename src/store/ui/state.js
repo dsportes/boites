@@ -58,6 +58,7 @@ export default function () {
     sessionsync: null,
 
     tabavatar: 'secrets',
+    tabsecret: 'texte',
     evtavatarsc: null,
     evtavatarcp: null,
     evtavatargr: null,

@@ -70,6 +70,7 @@ export function majerreur (state, err) { state.erreur = err }
 export function majdialogueerreur (state, val) { state.dialogueerreur = val }
 
 export function majtabavatar (state, val) { state.tabavatar = val }
+export function majtabsecret (state, val) { state.tabsecret = val }
 
 export function majstatutidb (state, val) { state.statutidb = val }
 export function majdialoguecrypto (state, val) { state.dialoguecrypto = val }

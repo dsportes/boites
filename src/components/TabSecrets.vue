@@ -302,6 +302,11 @@ export default ({
       set: (val) => $store.commit('ui/majavatarscform', val)
     })
 
+    const tabsecret = computed({
+      get: () => $store.state.ui.tabsecret,
+      set: (val) => $store.commit('ui/majtabsecret', val)
+    })
+
     const refSecrets = reactive({ })
 
     const state = reactive({
@@ -475,17 +480,22 @@ export default ({
       if (cmd === 'fsc' || cmd === 'fsg') ouvrirfiltre()
       setTimeout(() => {
         const f = new Filtre(avatar.value.id)
-        if (cmd === 'fsc') { f.coupleId = c.id; f.groupeId = null }
-        if (cmd === 'fsg') { f.coupleId = null; f.groupeId = c.id }
-        f.perso = false
+        if (cmd === 'fsc' || cmd === 'vsc') { f.coupleId = c.id; f.groupeId = null }
+        if (cmd === 'fsg' || cmd === 'vsg') { f.coupleId = null; f.groupeId = c.id }
+        if (cmd === 'fsc' || cmd === 'fsg') f.perso = false
+        if (cmd.startsWith('vs')) f.perso = cmd === 'vsa'
         recherche.a = f.etat() // pour que le panel de filtre affiche le filtre choisi
         recherche.p = deserial(serial(recherche.a))
-        state.filtre = f // pour activer la rechercher selon ce filtre sans avoir à appuyer sur "Rechercher"
+        state.filtre = f // pour activer la recherche selon ce filtre sans avoir à appuyer sur "Rechercher"
         if (cmd === 'nvc') {
           nvsecret(1)
         }
         if (cmd === 'nvg') {
           nvsecret(2)
+        }
+        if (cmd.startsWith('vs')) {
+          tabsecret.value = 'fa'
+          avatarscform.value = true
         }
       }, 100)
     })

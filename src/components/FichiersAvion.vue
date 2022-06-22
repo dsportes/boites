@@ -3,7 +3,7 @@
   <div class="top bg-secondary text-white">
     <q-toolbar>
       <q-btn dense size="md" icon="chevron_left" @click="fichiersavion=false"/>
-      <q-toolbar-title class="titre-lg full-width text-right q-pr-sm">Fichiers accessibles en mode avion</q-toolbar-title>
+      <q-toolbar-title class="titre-md full-width text-right q-pr-sm">Fichiers accessibles en mode avion</q-toolbar-title>
     </q-toolbar>
     <div class="column justify-center">
       <div class="row items-end">
@@ -18,9 +18,9 @@
 
   <div v-for="(fc, idx) in s.lst" :key="fc" :class="dkli(idx) + ' zone cursor-pointer full-width q-mb-sm'" @click="detail(fc)">
     <q-card class="q-mx-xs">
-      <div class="row justify-between items-center">
-        <div class="fs-md">{{fc.data.nom}}</div>
-        <div class="font-mono fs-md">{{edvol(fc.data.lg)}}</div>
+      <div class="row justify-between items-center fs-md font-mono">
+        <div>{{fc.data.nom}}</div>
+        <div>{{edvol(fc.data.lg)}}</div>
       </div>
       <div>{{fc.t}}</div>
       <div>{{fc.p}}</div>
@@ -31,18 +31,19 @@
   <q-dialog v-model="detaildial">
     <q-card class="shadow-8 petitelargeur">
       <q-card-section>
-        <div class="fs-md">Nom : {{fc.data.nom}}</div>
+        <div class="fs-md">Nom : <span  class="font-mono fs-md">{{fc.data.nom}}</span></div>
         <div class="fs-md">Info : {{fc.data.info}}</div>
         <div>Secret : {{fc.t}}</div>
         <div>De : {{fc.p}}</div>
-        <div>Taille : {{edvol(fc.data.lg)}}</div>
-        <div>Type : {{fc.data.type}}</div>
-        <div>Date-heure : {{dhstring(new Date(fc.data.dh))}}</div>
+        <div>Taille : <span  class="font-mono fs-md">{{edvol(fc.data.lg)}}</span></div>
+        <div>Type : <span  class="font-mono fs-md">{{fc.data.type}}</span></div>
+        <div>Date-heure : <span  class="font-mono fs-md">{{dhstring(new Date(fc.data.dh))}}</span></div>
       </q-card-section>
       <q-card-actions vertical>
-        <q-btn class="q-my-xs" color="warning" dense flat label="Voir le secret" @click="voirsecret"/>
-        <q-btn class="q-my-xs" color="primary" dense flat label="Afficher" @click="affFic"/>
-        <q-btn class="q-my-xs" color="primary" dense flat label="Sauvegarder" @click="enregFic"/>
+        <q-btn class="q-my-xs" color="warning" icon="check" dense flat label="Voir le secret" @click="voirsecret"/>
+        <q-btn class="q-my-xs" color="primary" icon="open_in_new" dense flat label="Afficher" @click="affFic"/>
+        <q-btn class="q-my-xs" color="primary" icon="save_alt" dense flat label="Sauvegarder" @click="enregFic"/>
+        <q-btn class="q-my-xs" color="primary" icon="close" dense flat label="Fermer" v-close-popup/>
       </q-card-actions>
     </q-card>
   </q-dialog>
@@ -79,6 +80,13 @@ export default ({
     },
 
     voirsecret () {
+      this.secret = this.fc.s
+      this.tabavatar = 'secrets'
+      setTimeout(() => {
+        this.evtfiltresecrets = { cmd: ['vsa', 'vsc', 'vsg'][this.fc.s.ts], arg: this.fc.s }
+      }, 100)
+      this.detaildial = false
+      this.fichiersavion = false
     },
 
     async blobde (b) {
@@ -122,6 +130,14 @@ export default ({
     })
     const avsecrets = computed(() => $store.state.db.avsecrets)
     const fetats = computed(() => $store.state.db.fetats)
+    const secret = computed({ // secret courant
+      get: () => $store.state.db.secret,
+      set: (val) => $store.commit('db/majsecret', val)
+    })
+    const evtfiltresecrets = computed({ // secret courant
+      get: () => $store.state.ui.evtfiltresecrets,
+      set: (val) => $store.commit('ui/majevtfiltresecrets', val)
+    })
 
     const s = reactive({ blst: [], lst: [] })
 
@@ -175,7 +191,9 @@ export default ({
     filtre()
 
     return {
+      evtfiltresecrets,
       fichiersavion,
+      secret,
       opt,
       txt,
       s,
