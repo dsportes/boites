@@ -742,8 +742,15 @@ export function titreGroupe (sid, info) {
   return i === -1 ? l : l.substring(0, i)
 }
 
-// Employé directement seulement pour un secret ???
-export function titreEd (nom, info, court) {
+export function titreSecret (info, court) {
+  const lg = !court ? lgtitre : lgnom
+  if (!info) info = ''
+  const i = info.indexOf('\n')
+  const t1 = i === -1 ? info : info.substring(0, i)
+  return t1.length <= lg ? t1 : t1.substring(0, lg - 3) + '...'
+}
+
+export function titreMembre (nom, info, court) { // membre et groupe
   const lg = !court ? lgtitre : lgnom
   if (!info) info = ''
   const i = info.indexOf('\n')

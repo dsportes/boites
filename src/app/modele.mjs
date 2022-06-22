@@ -4,7 +4,7 @@ import { openIDB, closeIDB, debutSessionSync, saveSessionSync, getFichier } from
 import { openWS, closeWS } from './ws.mjs'
 import {
   store, appexc, dlvDepassee, NomAvatar, gzip, ungzip, dhstring,
-  getJourJ, cfg, ungzipT, normpath, titreEd, titreCompte, titreGroupe, nomCv, PhraseContact
+  getJourJ, cfg, ungzipT, normpath, titreSecret, titreCompte, titreGroupe, titreMembre, nomCv, PhraseContact
 } from './util.mjs'
 import { remplacePage } from './page.mjs'
 import { EXPS, UNITEV1, UNITEV2, Compteurs, t0n } from './api.mjs'
@@ -417,6 +417,11 @@ export class Compte {
     return s || s1
   }
 
+  unAvatarId () {
+    // eslint-disable-next-line no-unreachable-loop
+    for (const sid in this.mac) return this.mac[sid].na.id
+  }
+
   avatarIds (s) {
     const s1 = new Set()
     for (const sid in this.mac) if (s) s.add(this.mac[sid].na.id); else s1.add(this.mac[sid].na.id)
@@ -708,6 +713,7 @@ export class Avatar {
 
   get na () { return data.repertoire.na(this.id) }
   get cle () { return this.na.cle }
+  get nomEd () { return this.na.noml }
 
   constructor () {
     this.m1gr = new Map() // clé:ni val: { na du groupe, im de l'avatar dans le groupe }
@@ -1457,7 +1463,7 @@ export class Membre {
   get photom () { const cv = this.cvm; return cv ? cv[0] : '' }
   get infom () { const cv = this.cvm; return cv ? cv[1] : '' }
   get clem () { return data.repertoire.cle(this.namb.id) }
-  get nomEd () { return titreEd(this.namb.nom || '', this.info) }
+  get nomEd () { return titreMembre(this.namb.nom || '', this.info) }
 
   get titre () {
     if (!this.info) return ''
@@ -1467,12 +1473,8 @@ export class Membre {
   }
 
   // Du groupe
-  get cvg () { return data.getCv(this.id) }
-  get photog () { const cv = this.cv; return cv ? cv.photo : '' }
-  get infog () { const cv = this.cv; return cv ? cv.info : '' }
   get cleg () { return data.repertoire.cle(this.id) }
   get na () { return data.repertoire.na(this.id) }
-  get nomEdg () { return titreEd(this.na.nom || '', this.infog) }
 
   get dhed () { return dhstring(this.dh) }
 
@@ -1601,7 +1603,7 @@ export class Secret {
   get ts () { return this.ns % 3 } // 0:personnel 1:couple 2:groupe
   get exclu () { return Math.floor(this.xp / 10) }
   get protect () { return this.xp % 10 }
-  get titre () { return this.suppr ? 'SUPPRIMÉ' : titreEd(null, this.txt.t) }
+  get titre () { return this.suppr ? 'SUPPRIMÉ' : titreSecret(this.txt && this.txt.t ? this.txt.t : '???') }
   get nbj () { return this.st <= 0 || this.st === 99999 ? 0 : (this.st - getJourJ()) }
   get dh () { return this.suppr ? '?' : dhstring(new Date(this.txt.d * 1000)) }
 
@@ -1617,6 +1619,10 @@ export class Secret {
   get avatar () { return this.ts !== 0 ? null : data.getAvatar(this.id) }
   get couple () { return this.ts !== 1 ? null : data.getCouple(this.id) }
   get groupe () { return this.ts !== 2 ? null : data.getGroupe(this.id) }
+
+  get nomEdACG () {
+    return this.ts === 0 ? this.avatar.nomEd : (this.ts === 1 ? this.couple.nomEd : this.groupe.nomEd)
+  }
 
   get partage () {
     if (this.ts === 0) return 'Personnel'
@@ -1823,7 +1829,7 @@ export class Secret {
       const b = await getFichier(idf)
       buf = await crypt.decrypter(this.cle, b)
     } else {
-      buf = await this.downloadFichier(idf, ida)
+      buf = ida ? await this.downloadFichier(idf, ida) : null
     }
     if (!buf) return null
     const f = this.mfa[idf]

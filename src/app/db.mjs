@@ -453,6 +453,7 @@ export async function gestionFichierCnx (secrets) {
 
   // Liste des fetat utiles et mise en db/store ou delete
   for (const fetat of nvFa) {
+    fetat.dhc = new Date().getTime()
     if (fetat.suppr) delete fetats[fetat.idf]; else fetats[fetat.idf] = fetat
   }
   data.setFetats(Object.values(fetats))
@@ -644,6 +645,12 @@ class AvSecret {
     return [nv, nvFa]
   }
 
+  lstIdf () {
+    const idfs = new Set(this.lidf)
+    for (const nx in this.mnom) idfs.add(this.mnom[nx])
+    return idfs
+  }
+
   maj (s, plus, idf, nom) {
     /* plus : true: ajout de idf ou d'un nom, false: enlève un idf ou un nom */
     const idfs = new Set(this.lidf) // set des idf actuels
@@ -743,7 +750,9 @@ function startDemon () {
       while (id) {
         const e = data.getFetat(id)
         try {
-          const args = { sessionId: data.sessionId, id: e.ids, ts: e.ns % 3, idf: e.id, idc: data.getCompte().id, vt: e.lg }
+          const a = store().state.db.avatar
+          const ida = a ? a.id : data.getCompte().unAvatarId()
+          const args = { sessionId: data.sessionId, id: e.ids, ts: e.ns % 3, idf: e.id, ida, vt: e.lg }
           const r = await get('m1', 'getUrl', args)
           if (!r) throw new AppExc(E_BRO, `Fichier ${Sid(e.id)} non accessible sur le serveur`)
           const url = dec.decode(r)

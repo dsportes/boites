@@ -16,23 +16,34 @@
 
   <div class="filler"></div>
 
-  <div v-for="(ax, idx) in s.lst" :key="ax.na.id" :class="dkli(idx) + ' zone cursor-pointer full-width q-mb-sm'" @click="detail(ax)">
-    <q-card class="row justify-start items-center">
-      <img class="col-auto photomax q-mr-md" :src="ax.na.photoDef"/>
-      <div class="col column">
-        <div class="titre-md">{{ax.noml}}</div>
-        <div class="fs-sm">
-          <span v-if="ax.c.size" class="q-mr-sm">{{ax.c.size + (ax.c.size>1?' contacts':' contact')}}</span>
-          <span v-if="ax.m.size">{{ax.m.size + (ax.m.size>1?' groupes':' groupe')}}</span>
-        </div>
+  <div v-for="(fc, idx) in s.lst" :key="fc" :class="dkli(idx) + ' zone cursor-pointer full-width q-mb-sm'" @click="detail(fc)">
+    <q-card class="q-mx-xs">
+      <div class="row justify-between items-center">
+        <div class="fs-md">{{fc.data.nom}}</div>
+        <div class="font-mono fs-md">{{edvol(fc.data.lg)}}</div>
       </div>
+      <div>{{fc.t}}</div>
+      <div>{{fc.p}}</div>
     </q-card>
     <q-separator class="q-my-xs"/>
   </div>
 
   <q-dialog v-model="detaildial">
     <q-card class="shadow-8 petitelargeur">
-
+      <q-card-section>
+        <div class="fs-md">Nom : {{fc.data.nom}}</div>
+        <div class="fs-md">Info : {{fc.data.info}}</div>
+        <div>Secret : {{fc.t}}</div>
+        <div>De : {{fc.p}}</div>
+        <div>Taille : {{edvol(fc.data.lg)}}</div>
+        <div>Type : {{fc.data.type}}</div>
+        <div>Date-heure : {{dhstring(new Date(fc.data.dh))}}</div>
+      </q-card-section>
+      <q-card-actions vertical>
+        <q-btn class="q-my-xs" color="warning" dense flat label="Voir le secret" @click="voirsecret"/>
+        <q-btn class="q-my-xs" color="primary" dense flat label="Afficher" @click="affFic"/>
+        <q-btn class="q-my-xs" color="primary" dense flat label="Sauvegarder" @click="enregFic"/>
+      </q-card-actions>
     </q-card>
   </q-dialog>
 
@@ -43,7 +54,8 @@
 import { useStore } from 'vuex'
 import { computed, reactive, watch, ref } from 'vue'
 import { data } from '../app/modele.mjs'
-import { unpk } from '../app/util.mjs'
+import { afficherdiagnostic, edvol, dhstring } from '../app/util.mjs'
+import { saveAs } from 'file-saver'
 
 export default ({
   name: 'FichiersAvion',
@@ -52,11 +64,51 @@ export default ({
 
   data () {
     return {
+      fc: null, // fichier courant
+      edvol: edvol,
+      dhstring: dhstring
     }
   },
 
   methods: {
-    dkli (idx) { return this.$q.dark.isActive ? (idx ? 'sombre' + (idx % 2) : 'sombre0') : (idx ? 'clair' + (idx % 2) : 'clair0') }
+    dkli (idx) { return this.$q.dark.isActive ? (idx ? 'sombre' + (idx % 2) : 'sombre0') : (idx ? 'clair' + (idx % 2) : 'clair0') },
+
+    detail (fc) {
+      this.fc = fc
+      this.detaildial = true
+    },
+
+    voirsecret () {
+    },
+
+    async blobde (b) {
+      const buf = await this.fc.s.getFichier(this.fc.idf)
+      if (!buf || !buf.length) return null
+      const blob = new Blob([buf], { type: this.fc.data.type })
+      return b ? blob : URL.createObjectURL(blob)
+    },
+
+    wop (url) { // L'appel direct de wndow.open ne semble pas marcher dans une fonction async. Etrange !
+      window.open(url, '_blank')
+    },
+
+    async affFic () {
+      const url = await this.blobde()
+      if (url) {
+        setTimeout(() => { this.wop(url) }, 500)
+      } else {
+        afficherdiagnostic('Contenu du fichier non disponible (corrompu ? effacé ?)')
+      }
+    },
+
+    async enregFic () {
+      const blob = await this.blobde(true)
+      if (blob) {
+        saveAs(blob, this.fc.s.nomFichier(this.fc.idf))
+      } else {
+        afficherdiagnostic('Contenu du fichier non disponible (corrompu ? effacé ?)')
+      }
+    }
   },
 
   setup () {
@@ -68,28 +120,50 @@ export default ({
       get: () => $store.state.ui.fichiersavion,
       set: (val) => $store.commit('ui/majfichiersavion', val)
     })
-    const avsecrets = computed(() => $store.state.ui.avsecrets)
+    const avsecrets = computed(() => $store.state.db.avsecrets)
+    const fetats = computed(() => $store.state.db.fetats)
 
-    const mode = computed(() => $store.state.ui.mode)
-    const avatar = computed({
-      get: () => $store.state.db.avatar,
-      set: (val) => $store.commit('db/majavatar', val)
-    })
-
-    const s = reactive({
-      blst: []
-    })
+    const s = reactive({ blst: [], lst: [] })
 
     function init1 () {
       const lst = []
       for (const pk in avsecrets.value) {
-        const k = unpk(pk)
         const avs = avsecrets.value[pk]
-        const sec = data.getSecrets(k.id, k.ns)
-        lst.push({ sec, avs })
+        const sec = data.getSecret(avs.id, avs.ns)
+        avs.lstIdf().forEach(idf => {
+          const e = data.getFetat(idf)
+          // `data` : { nom, info, dh, type, gz, lg, sha }
+          if (e && e.estCharge) lst.push({ k: sec.pk + '/' + idf, t: sec.titre, p: sec.nomEdACG, s: sec, idf, data: sec.mfa[idf] })
+        })
       }
+      lst.sort((a, b) => {
+        return a.data.lg > b.data.lg ? -1 : (a.data.lg < b.data.lg ? 1 : 0)
+      })
       s.blst = lst
     }
+
+    function filtre () {
+      const lst = []
+      const c = opt.value === 'c'
+      const t = txt.value
+      s.blst.forEach(ax => {
+        if (!t) {
+          lst.push(ax)
+        } else {
+          if (c) {
+            if (ax.t.indexOf(t) !== -1 || ax.data.nom.indexOf(t) !== -1) lst.push(ax)
+          } else {
+            if (ax.t.startsWith(t) || ax.data.nom.startsWith(t)) lst.push(ax)
+          }
+        }
+      })
+      s.lst = lst
+    }
+
+    watch(() => opt.value, (ap, av) => { filtre() })
+    watch(() => txt.value, (ap, av) => { filtre() })
+    watch(() => avsecrets.value, (ap, av) => { init1(); filtre() })
+    watch(() => fetats.value, (ap, av) => { init1(); filtre() })
 
     watch(() => fichiersavion.value, (ap, av) => {
       if (!ap) {
@@ -98,14 +172,13 @@ export default ({
     })
 
     init1()
+    filtre()
 
     return {
       fichiersavion,
       opt,
       txt,
       s,
-      avatar,
-      mode,
       detaildial
     }
   }
