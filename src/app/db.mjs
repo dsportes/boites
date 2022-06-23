@@ -372,7 +372,7 @@ async function getFetats (map) {
   try {
     await data.db.fetat.each(async (idb) => {
       const x = new Fetat().fromIdb(await crypt.decrypter(data.clek, idb.data))
-      map[x.pk] = x
+      map[x.id] = x
     })
   } catch (e) {
     throw data.setErDB(EX2(e))
@@ -453,7 +453,7 @@ export async function gestionFichierCnx (secrets) {
 
   // Liste des fetat utiles et mise en db/store ou delete
   for (const fetat of nvFa) {
-    fetat.dhc = new Date().getTime()
+    // fetat.dhc = new Date().getTime()
     if (fetat.suppr) delete fetats[fetat.idf]; else fetats[fetat.idf] = fetat
   }
   data.setFetats(Object.values(fetats))
@@ -693,6 +693,8 @@ async function setFa (fetat, buf) { // buf : contenu du fichier non crypté
       await data.db.fetat.put(row1)
       await data.db.fdata.put(row2)
     })
+    console.log('IDB fetat to PUT', fetat.id, fetat.dhc)
+    console.log('IDB fdata to PUT', fetat.id)
   } catch (e) {
     throw data.setErDB(EX2(e))
   }
@@ -702,20 +704,23 @@ async function setFa (fetat, buf) { // buf : contenu du fichier non crypté
 async function commitFic (lstAvSecrets, lstFetats) { // lst : array / set d'idfs
   try {
     const x = []
+    const y = []
     for (const obj of lstAvSecrets) {
       const row = {}
       row.id = crypt.u8ToB64(await crypt.crypter(data.clek, Sid(obj.id), 1), true)
       row.id2 = crypt.u8ToB64(await crypt.crypter(data.clek, Sid(obj.id2), 1), true)
       row.data = obj.suppr ? null : await crypt.crypter(data.clek, obj.toIdb)
       x.push(row)
+      console.log('IDB avsecret to ', obj.suppr ? 'DEL' : 'PUT', obj.pk)
     }
 
-    const y = []
     for (const obj of lstFetats) {
       const row = {}
       row.id = crypt.u8ToB64(await crypt.crypter(data.clek, Sid(obj.id), 1), true)
       row.data = obj.suppr ? null : await crypt.crypter(data.clek, obj.toIdb)
       y.push(row)
+      console.log('IDB fetat to ', obj.suppr ? 'DEL' : 'PUT', obj.id, obj.dhc)
+      if (obj.suppr) console.log('IDB fdata to DEL', obj.id)
     }
 
     await data.db.transaction('rw', TABLES, async () => {
