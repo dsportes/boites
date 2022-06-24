@@ -586,15 +586,6 @@ class AvSecret {
     return this
   }
 
-  aIdf (idf) {
-    let n = 0
-    if (this.lidf.indexOf(idf) !== -1) n = 1
-    for (const nx in this.mnom) {
-      if (this.mnom[nx] === idf) { n += 2; break }
-    }
-    return n
-  }
-
   setNvFa (s, idfs, idfs2) { // calcul des fetat en plus et en moins
     // difference (setA, setB) { // element de A pas dans B
     const x1 = difference(idfs, idfs2) // idf disparus

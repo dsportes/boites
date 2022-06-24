@@ -22,7 +22,7 @@
           <span v-if="state.xlocal">Exclusité d'écriture à {{excluNom()}}</span>
           <span v-else>Pas d'exclusité d'écriture </span>
         </div>
-        <info-txt v-if="ed && cx6()" label="Exclusivité" :info="lc[cx3()]"/>
+        <info-txt v-if="ed && cx6()" label="Exclusivité" :info="lc[cx6()]"/>
         <q-btn v-if="ed && !cx6()" class="col-auto" size="md" flat dense color="primary" label="Exclusivité" @click="protectionX"/>
         <q-btn v-if="ed && !cx6()" class="col-auto" :disable="!state.modifx" size="sm" dense push icon="undo" color="primary" @click="undox"/>
       </div>
@@ -36,14 +36,14 @@
 
       <div v-if="state.ts === 2" class="col-auto q-px-xs full-width row justify-between items-center">
         <apercu-motscles class="col" :motscles="state.motscles" :src="state.mcglocal"/>
-        <info-txt v-if="ed && cx4()" label="Mots clés du groupe" :info="lc[cx3()]"/>
+        <info-txt v-if="ed && cx4()" label="Mots clés du groupe" :info="lc[cx4()]"/>
         <q-btn v-if="ed && !cx4()" class="col-auto" flat dense color="primary" label="Mots clés du groupe" @click="ouvrirmcg"/>
         <q-btn v-if="ed && !cx4()" class="col-auto" :disable="!state.modifmcg" size="sm" dense push icon="undo" color="primary" @click="undomcg"/>
       </div>
 
       <div class="col-auto q-px-xs full-width row justify-between items-center">
         <div class="col">{{msgtemp}}</div>
-        <info-txt v-if="ed && cx2()" label="Temporaire / Permanent" :info="lc[cx3()]"/>
+        <info-txt v-if="ed && cx2()" label="Temporaire / Permanent" :info="lc[cx2()]"/>
         <q-btn v-if="state.templocal && ed && !cx2()" class="col-auto" flat dense color="primary" label="Le rendre 'PERMANENT'" @click="state.templocal=false"/>
         <q-btn v-if="!state.templocal && ed && !cx2()" class="col-auto" flat dense color="primary" label="Le rendre 'TEMPORAIRE'"  @click="state.templocal=true"/>
         <q-btn v-if="ed && !cx2()" :disable="!state.modiftp" class="col-auto" size="sm" dense push icon="undo" color="primary" @click="undotp"/>
@@ -129,10 +129,10 @@
     </div>
 
     <div v-if="!secret.suppr && tabsecret==='fa'" class='col column items-center'>
-      <q-btn :disable="state.ro !== 0" flat dense color="primary" class="q-mt-sm" size="md" icon="add"
+      <q-btn v-if="cx1()" flat dense color="primary" class="q-mt-sm" size="md" icon="add"
         label="Ajouter un fichier" @click="nomfic='';saisiefichier=true"/>
       <div v-if="mode === 3" class="bg-yellow text-bold text-negative text-center">
-        En mode avion, le secret est en lecture seule. Seuls les fichiers de nom déclaré accessible dans en mode avion peuvent visualisés (ni ajouts, ni suppressions).</div>
+        En mode avion, le secret est en lecture seule. Seuls ses fichiers déclarés "avion" peuvent visualisés (ni ajouts, ni suppressions).</div>
       <div v-if="mode === 4" class="bg-yellow text-bold text-negative text-center">
         En mode dégradé visio, le secret est en lecture seule et les fichiers sont inaccessibles.</div>
       <div v-if="mode < 3 && state.ro !== 0" class="bg-yellow text-bold text-negative text-center">
@@ -151,70 +151,35 @@
                 </div>
               </q-item-section>
             </template>
-            <q-card-section v-for="f in it.l" :key="f.idf" class="ma-qcard-section q-my-sm">
-              <div class="row justify-between items-center">
-                <div class="col">
-                  <span class="text-bold q-pr-lg">{{f.info}}</span>
-                  <span class="fs-md">{{vol(f)}} - {{f.type}} - </span>
-                  <span class="font-mono fs-sm">{{f.sidf}}</span>
-                </div>
-                <div class="col-auto">
-                  <span class="btnav2 font-mono fs-sm q-mr-sm">{{dhed(f)}}</span>
-                  <q-btn class="btnav2 btnav col-auto" dense size="md" icon="airplanemode_active" :color="f.av ? 'warning' : 'primary'">
-                    <q-menu transition-show="scale" transition-hide="scale">
-                      <q-list dense style="min-width: 15rem">
-                        <q-item v-if="f.av === 0">
-                          <q-item-section class="text-italic">Cette version N'EST PAS chargée localement, elle N'EST PAS lisible en mode avion ...</q-item-section>
-                        </q-item>
-                        <q-item v-if="f.av === 1">
-                          <q-item-section class="text-italic">Cette version est chargée localement pour être lisible en mode avion ...</q-item-section>
-                        </q-item>
-                        <q-item v-if="f.av === 2">
-                          <q-item-section class="text-italic">Cette version est chargée localement pour être lisible en mode avion
-                            parce que c'est la plus récente, PAS en tant que telle</q-item-section>
-                        </q-item>
-                        <q-item v-if="f.av === 3">
-                          <q-item-section class="text-italic">Cette version, en tant que telle,est chargée localement pour être lisible en mode avion.
-                            Elle l'est DE PLUS parce que c'est la plus récente portant ce nom</q-item-section>
-                        </q-item>
-                        <q-separator/>
-                        <q-item v-if="f.av === 1 || f.av === 3" clickable v-close-popup @click="avidf(false, f.idf)">
-                          <q-item-section>Ne plus garder CETTE version localement</q-item-section>
-                        </q-item>
-                        <q-item v-if="f.av === 0 || f.av === 2" clickable v-close-popup @click="avidf(true, f.idf)">
-                          <q-item-section>Rendre CETTE version lisible en mode avion</q-item-section>
-                        </q-item>
-                      </q-list>
-                    </q-menu>
-                  </q-btn>
-                </div>
+            <q-card-section>
+              <div class="row items-center">
+                <span>{{'Dernière version toujours visible en avion: ' + (it.avn ? 'OUI' : 'NON')}}</span>
+                <q-btn v-if="mode == 1" size="sm" dense class="q-ml-sm" @click="avnom(!it.avn, it.n)" color="primary" :icon="it.avn ? 'visibility_off' : 'visibility'"/>
               </div>
-              <div class="row justify-end q-gutter-xs">
-                <q-btn :disable="!stf1(f)" size="sm" dense color="primary" icon="visibility" label="Aff." @click="affFic(f)"/>
-                <q-btn :disable="!stf1(f)" size="sm" dense color="primary" icon="save" label="Enreg." @click="enregFic(f)"/>
-                <q-btn :disable="!stf2()" size="sm" dense color="warning" icon="delete" label="Suppr." @click="supprFic(f)"/>
+              <div v-for="f in it.l" :key="f.idf" class="ma-qcard-section q-my-sm">
+                <q-separator class="q-mb-sm"/>
+                <div class="row justify-between items-center">
+                  <div class="col">
+                    <span class="text-bold q-pr-lg">{{f.info}}</span>
+                    <span class="fs-md">{{vol(f)}} - {{f.type}} - </span>
+                    <span class="font-mono fs-sm">{{f.sidf}}</span>
+                  </div>
+                  <div class="col-auto font-mono fs-sm">{{dhed(f)}}</div>
+                </div>
+                <div class="row justify-between">
+                  <div class="col row items-center">
+                    <span>{{'Version visible en avion: ' + (f.av ? 'OUI' : 'NON')}}</span>
+                    <q-btn v-if="mode == 1" class="q-ml-sm" size="sm" dense @click="avidf(!f.av, f.idf)" color="primary" :icon="f.av ? 'visibility_off' : 'visibility'"/>
+                  </div>
+                  <div class="col-auto row justify-end q-gutter-xs">
+                    <q-btn :disable="!stf1(f)" size="sm" dense color="primary" icon="open_in_new" label="Aff." @click="affFic(f)"/>
+                    <q-btn :disable="!stf1(f)" size="sm" dense color="primary" icon="save" label="Enreg." @click="enregFic(f)"/>
+                    <q-btn :disable="!stf2()" size="sm" dense color="warning" icon="delete" label="Suppr." @click="supprFic(f)"/>
+                  </div>
+                </div>
               </div>
             </q-card-section>
           </q-expansion-item>
-          <q-btn class="col-auto btnav" dense icon="airplanemode_active" :color="it.av ? 'warning' : 'primary'">
-            <q-menu transition-show="scale" transition-hide="scale">
-              <q-list dense style="min-width: 15rem">
-                <q-item v-if="it.av">
-                  <q-item-section class="text-italic">La version la plus récente est chargée localement pour être lisible en mode avion ...</q-item-section>
-                </q-item>
-                <q-item v-if="!it.av">
-                  <q-item-section class="text-italic">La version la plus récente N'EST PAS chargée localement, elle N'EST PAS lisible en mode avion ...</q-item-section>
-                </q-item>
-                <q-separator />
-                <q-item v-if="it.av" clickable v-close-popup @click="avnom(false, it.n)">
-                  <q-item-section>Ne plus la garder localement</q-item-section>
-                </q-item>
-                <q-item v-if="!it.av" clickable v-close-popup @click="avnom(true, it.n)">
-                  <q-item-section>La rendre lisible en mode avion</q-item-section>
-                </q-item>
-              </q-list>
-            </q-menu>
-          </q-btn>
         </div>
         <q-separator size="2px"/>
       </div>
@@ -948,17 +913,22 @@ export default ({
     function listefichiers (s, avs) {
       const lst = []
       const mnom = {}
-      for (const idf in s.mfa) {
+      for (const x in s.mfa) {
+        const idf = parseInt(x)
         const f = s.mfa[idf]
         let e = mnom[f.nom]; if (!e) { e = []; mnom[f.nom] = e; lst.push(f.nom) }
-        e.push({ ...f, sidf: crypt.idToSid(f.idf), av: avs ? avs.aIdf(f.idf) : 0 })
+        // eslint-disable-next-line no-unneeded-ternary
+        const av = avs && (avs.lidf.indexOf(idf) !== -1) ? true : false
+        e.push({ ...f, sidf: crypt.idToSid(f.idf), av })
       }
       lst.sort((a, b) => { return a < b ? -1 : (a > b ? 1 : 0) })
       const res = []
       lst.forEach(n => {
         const l = mnom[n]
+        // eslint-disable-next-line no-unneeded-ternary
+        const avn = avs && avs.mnom[n] ? true : false
         l.sort((a, b) => { return a.dh < b.dh ? 1 : (a.dh > b.dh ? -1 : 0) })
-        res.push({ n, l, av: avs && avs.mnom[n] })
+        res.push({ n, l, av: avs && avs.mnom[n], avn })
       })
       return res
     }
@@ -1058,12 +1028,6 @@ export default ({
   right: 5px
 .ma-qcard-section
   padding: 0 !important
-.btnav
-  height: 1.8rem
-  width:  1.8rem
-.btnav2
-  position: relative
-  right: -1.8rem
 .btnt
   position: absolute
   right: 3px
