@@ -1022,31 +1022,6 @@ export class ConnexionCompte extends OperationUI {
     return [compte, prefs, ret.estComptable]
   }
 
-  async phase0 () { // compte / prefs : abonnement à compte
-    const compteIdb = !data.dbok ? null : await getCompte()
-    if (!data.netok && (!compteIdb || compteIdb.pcbh !== data.ps.pcbh)) {
-      throw new AppExc(F_BRO, 'Compte non enregistré localement : aucune session synchronisée ne s\'est préalablement exécutée sur ce poste avec cette phrase secrète. Erreur dans la saisie de la ligne 2 de la phrase ?')
-    }
-    const prefsIdb = !data.dbok ? null : await getPrefs()
-    const [compteSrv, prefsSrv, estComptable] = !data.netok ? [null, null, null, false]
-      : await this.chargerCP(compteIdb ? compteIdb.v : 0, prefsIdb ? prefsIdb.v : 0)
-    this.compte = compteSrv || compteIdb
-    // Changement de phrase secrète
-    if (data.ps.pcbh !== this.compte.pcbh) throw EXPS
-    // Bien que l'utilisateur ait saisie la bonne phrase secrète, elle a pu changer : celle du serveur est installée
-    if (data.dbok) enregLScompte(this.compte.sid)
-    data.estComptable = estComptable
-
-    this.compte.repAvatars()
-    const prefs = prefsSrv || prefsIdb
-    data.setCompte(this.compte)
-    data.setPrefs(prefs)
-    this.buf.putIDB(this.compte)
-    this.buf.putIDB(prefs)
-    data.setSyncItem('01', 1, 'Compte et comptabilité')
-    return true
-  }
-
   /* Recharge depuis le serveur les avatars du compte, abonnement aux avatars */
   async chargerAvatars (idsVers, cptidsVers, idc, vc) {
     const args = { sessionId: data.sessionId, idsVers, cptidsVers, idc, vc }
@@ -1079,7 +1054,7 @@ export class ConnexionCompte extends OperationUI {
     avrequis.forEach(id => { const av = this.avatars[id]; avidsVers[id] = av ? av.v : 0 })
     const cptidsVers = {}
     avrequis.forEach(id => { const cpt = this.comptas[id]; cptidsVers[id] = cpt ? cpt.v : 0 })
-    const [avnouveaux, cptnouveaux] = !data.netok ? {} : await this.chargerAvatars(avidsVers, cptidsVers, this.compte.id, this.compte.v)
+    const [avnouveaux, cptnouveaux] = !data.netok ? [{}, {}] : await this.chargerAvatars(avidsVers, cptidsVers, this.compte.id, this.compte.v)
     if (avnouveaux === false) return false// le compte a changé de version, reboucler
     // avnouveaux contient tous les avatars ayant une version plus récente que celle (éventuellement) obtenue de IDB
     for (const pk in avnouveaux) { const av = avnouveaux[pk]; this.buf.putIDB(av); this.avatars[av.id] = av }
@@ -1378,29 +1353,61 @@ export class ConnexionCompte extends OperationUI {
     data.setSyncItem('20', 1, msg)
   }
 
+  async phase0 (razdb) { // compte / prefs : abonnement à compte
+    let prefs
+    // En mode avion, vérifie que la phrase secrète a bien une propriété en localstorage donnant le nom de la base
+    if (data.mode === 3) {
+      if (!idbSidCompte()) {
+        throw new AppExc(F_BRO, 'Compte non enregistré localement : aucune session synchronisée ne s\'est préalablement exécutée sur ce poste avec cette phrase secrète. Erreur dans la saisie de la ligne 1 de la phrase ?')
+      }
+      await openIDB()
+      this.compte = await getCompte()
+      if (!this.compte || (this.compte.pcbh !== data.ps.pcbh)) {
+        throw new AppExc(F_BRO, 'Compte non enregistré localement : aucune session synchronisée ne s\'est préalablement exécutée sur ce poste avec cette phrase secrète. Erreur dans la saisie de la ligne 2 de la phrase ?')
+      }
+      prefs = await getPrefs()
+      data.estComptable = false
+    }
+
+    if (data.mode === 1 || data.mode === 2) {
+      const [compteSrv, prefsSrv, estComptable] = await this.chargerCP(0, 0)
+      // est sorti en exception si non authentifié
+      if (data.ps.pcbh !== compteSrv.pcbh) throw EXPS // Changement de phrase secrète
+      this.compte = compteSrv
+      prefs = prefsSrv
+      data.estComptable = estComptable
+      if (data.mode === 1) {
+        enregLScompte(compteSrv.sid)
+        if (razdb) {
+          await deleteIDB()
+          await sleep(100)
+          console.log('RAZ db')
+        }
+        await openIDB()
+        this.buf.putIDB(this.compte)
+        this.buf.putIDB(prefs)
+      }
+    }
+
+    data.setCompte(this.compte)
+    data.setPrefs(prefs)
+    this.compte.repAvatars()
+    this.sessionSync = await data.debutConnexion()
+    data.setSyncItem('01', 1, 'Compte et comptabilité')
+  }
+
   async run (ps, razdb) {
     try {
-      this.sessionSync = await data.debutConnexion()
       this.buf = new OpBuf()
       this.dh = 0
       data.ps = ps
-
-      if (razdb) {
-        await deleteIDB()
-        await sleep(100)
-        console.log('RAZ db')
-      }
-      // En mode avion, vérifie que la phrase secrète a bien une propriété en localstorage donnant le nom de la base
-      if (data.mode === 3 && !idbSidCompte()) {
-        throw new AppExc(F_BRO, 'Compte non enregistré localement : aucune session synchronisée ne s\'est préalablement exécutée sur ce poste avec cette phrase secrète. Erreur dans la saisie de la ligne 1 de la phrase ?')
-      }
-      await data.connexion()
+      await data.connexion(true) // sans IDB, compte encore inconnu
 
       for (let nb = 0; nb < 10; nb++) {
         if (nb >= 5) throw new AppExc(E_BRO, 'Plus de 5 tentatives de connexions. Bug ou incident temporaire. Ré-essayer un peu plus tard')
         data.resetPhase012()
         data.repertoire.raz()
-        if (!await this.phase0()) continue // obtention du compte / prefs / compta
+        await this.phase0(razdb) // obtention du compte / prefs
         if (!await this.phase1()) continue // obtention des avatars du compte
         if (!await this.phase2()) continue // obtention des groupes et couples des avatars du compte
         break

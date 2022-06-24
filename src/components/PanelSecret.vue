@@ -305,7 +305,9 @@
     <q-toolbar v-if="!secret.suppr" inset :class="tbc + ' row justify-center'">
       <q-tabs v-model="tabsecret" class="font-cf" inline-label no-caps dense>
         <q-tab name="texte" :disable="ed" label="Détail" />
-        <q-tab name="fa" :disable="ed" label="Fichiers" />
+        <q-tab name="fa" :disable="ed" label="Fichiers">
+          <q-badge v-if="state.listefic.length" color="warning" floating>{{state.listefic.length}}</q-badge>
+        </q-tab>
         <q-tab name="voisins" :disable="ed" label="Sec. voisins" />
       </q-tabs>
     </q-toolbar>

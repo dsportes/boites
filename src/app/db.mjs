@@ -411,7 +411,7 @@ export async function gestionFichierSync (lst) {
     if (!avs || avs.v >= s.v) continue // pas d'avsecret associé ou déjà à jour (??)
     const [nv, nvf] = avs.diff(s) // nouvel AvSecret compte tenu du nouveau s
     nvAvs.push(nv) // changé, au moins la version : il y a peut-être, des idfs en plus et en moins
-    if (nvf) for (const idf of nvf) nvFa.push(nvf[idf])
+    if (nvf) for (const x of nvf) nvFa.push(x)
   }
   // Mise en db/store des fetat créés / supprimés
   data.setFetats(nvFa)
@@ -448,7 +448,7 @@ export async function gestionFichierCnx (secrets) {
     const [nv, nvf] = avs.diff(s) // nouvel AVS compte tenu du nouveau s ou de son absence (peut-être à supprimer)
     if (!nv.suppr) lavs.push(nv) // ceux utiles seulement, pas les supprimés
     nvAvs.push(nv) // changé, au moins la version : il y a peut-être, des idfs en plus et en moins
-    if (nvf) for (const idf of nvf) nvFa.push(nvf[idf])
+    if (nvf) for (const x of nvf) nvFa.push(x)
   }
 
   // Liste des fetat utiles et mise en db/store ou delete
