@@ -35,7 +35,7 @@ import { computed, reactive, watch, ref, toRef } from 'vue'
 import { data } from '../app/modele.mjs'
 
 export default ({
-  name: 'PanelContacts',
+  name: 'PanelGrcp',
   props: { label: String, icon: String, grcp: String, color: String },
 
   components: { },

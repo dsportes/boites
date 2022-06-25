@@ -129,7 +129,7 @@
     </div>
 
     <div v-if="!secret.suppr && tabsecret==='fa'" class='col column items-center'>
-      <q-btn v-if="cx1()" flat dense color="primary" class="q-mt-sm" size="md" icon="add"
+      <q-btn v-if="!cx1()" flat dense color="primary" class="q-mt-sm" size="md" icon="add"
         label="Ajouter un fichier" @click="nomfic='';saisiefichier=true"/>
       <div v-if="mode === 3" class="bg-yellow text-bold text-negative text-center">
         En mode avion, le secret est en lecture seule. Seuls ses fichiers déclarés "avion" peuvent visualisés (ni ajouts, ni suppressions).</div>
@@ -137,9 +137,9 @@
         En mode dégradé visio, le secret est en lecture seule et les fichiers sont inaccessibles.</div>
       <div v-if="mode < 3 && state.ro !== 0" class="bg-yellow text-bold text-negative text-center">
         Le secret est en lecture seule, les fichiers peuvent visualisés (ni ajout, ni suppression).</div>
-      <div v-for="it in state.listefic" :key="it.nom" class="full-width">
+      <div v-for="(it, idx) in state.listefic" :key="it.nom" class="full-width">
         <div class="row">
-          <q-expansion-item group="fnom" class="col" switch-toggle-side
+          <q-expansion-item :default-opened="!idx" group="fnom" class="col" switch-toggle-side
             header-class="expansion-header-class-1 titre-md bg-secondary text-white">
             <template v-slot:header>
               <q-item-section>
@@ -153,8 +153,9 @@
             </template>
             <q-card-section>
               <div class="row items-center">
-                <span>{{'Dernière version toujours visible en avion: ' + (it.avn ? 'OUI' : 'NON')}}</span>
-                <q-btn v-if="mode == 1" size="sm" dense class="q-ml-sm" @click="avnom(!it.avn, it.n)" color="primary" :icon="it.avn ? 'visibility_off' : 'visibility'"/>
+                <toggle-btn :src="it.avn" color="warning" :lecture="mode !== 1" :args="{nom:it.n}" @change="avnom"
+                  label="Dernière version forcée à être visible en avion"
+                  label-off="Dernière version NON forcée à être visible en avion"/>
               </div>
               <div v-for="f in it.l" :key="f.idf" class="ma-qcard-section q-my-sm">
                 <q-separator class="q-mb-sm"/>
@@ -168,8 +169,9 @@
                 </div>
                 <div class="row justify-between">
                   <div class="col row items-center">
-                    <span>{{'Version visible en avion: ' + (f.av ? 'OUI' : 'NON')}}</span>
-                    <q-btn v-if="mode == 1" class="q-ml-sm" size="sm" dense @click="avidf(!f.av, f.idf)" color="primary" :icon="f.av ? 'visibility_off' : 'visibility'"/>
+                <toggle-btn :src="f.av" :lecture="mode !== 1" color="warning" :args="{idf:f.idf}" @change="avidf"
+                  label="Version visible en avion"
+                  label-off="Version NON visible en avion"/>
                   </div>
                   <div class="col-auto row justify-end q-gutter-xs">
                     <q-btn :disable="!stf1(f)" size="sm" dense color="primary" icon="open_in_new" label="Aff." @click="affFic(f)"/>
@@ -228,7 +230,7 @@
       <q-card>
         <q-card-section>
           Ce secret ne répond pas aux critères de filtre actuels. Enlever la punaise
-          fait qu'il ne sera plus visible (qui que toujours existant).
+          fait qu'il ne sera plus visible (quoique toujours existant).
         </q-card-section>
         <q-card-actions vertical>
           <q-btn flat dense color="warning" label="J\'enlève la punaise" v-close-popup @click="punaiseoff"/>
@@ -293,6 +295,7 @@ import TitreBanner from '../components/TitreBanner.vue'
 import PanelGrcp from '../components/PanelGrcp.vue'
 import InfoTxt from './InfoTxt.vue'
 import InfoIco from './InfoIco.vue'
+import ToggleBtn from './ToggleBtn.vue'
 import { equ8, getJourJ, cfg, Motscles, dhstring, afficherdiagnostic, edvol } from '../app/util.mjs'
 import { NouveauSecret, Maj1Secret, SupprFichier, SupprSecret } from '../app/operations.mjs'
 import { data, Secret } from '../app/modele.mjs'
@@ -303,7 +306,7 @@ import { saveAs } from 'file-saver'
 export default ({
   name: 'PanelSecret',
 
-  components: { InfoIco, InfoTxt, PanelGrcp, TitreBanner, ApercuMotscles, SelectMotscles, EditeurTexteSecret, ShowHtml, FichierAttache },
+  components: { ToggleBtn, InfoIco, InfoTxt, PanelGrcp, TitreBanner, ApercuMotscles, SelectMotscles, EditeurTexteSecret, ShowHtml, FichierAttache },
 
   props: { aPin: Function, estFiltre: Function, sec: Object, suivant: Function, precedent: Function, pinSecret: Function, index: Number, sur: Number },
 
@@ -450,15 +453,15 @@ export default ({
       await new SupprFichier().run(this.secret, f.idf)
     },
 
-    avnom (plus, nom) {
+    avnom (arg) {
       setTimeout(() => {
-        gestionFichierMaj(this.secret, plus, null, nom)
+        gestionFichierMaj(this.secret, arg.value, null, arg.args.nom)
       }, 50)
     },
 
-    avidf (plus, idf) {
+    avidf (arg) {
       setTimeout(() => {
-        gestionFichierMaj(this.secret, plus, idf, null)
+        gestionFichierMaj(this.secret, arg.value, arg.args.idf, null)
       }, 50)
     },
 
