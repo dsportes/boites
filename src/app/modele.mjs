@@ -909,13 +909,15 @@ schemas.forSchema({
   cols: ['id', 'v', 'st', 'v1', 'v2', 'mx10', 'mx20', 'mx11', 'mx21', 'dlv', 'data', 'idI', 'idE', 'info', 'mc', 'dh', 'ard', 'vsh']
 })
 /*
-- `id` : id du couple
+- `id` : id du contact
 - `v` :
-- `st` : quatre chiffres `p m 0 1` : phase / mode / [0, 1]
+- `st` : quatre chiffres `p o 0 1` : phase / état
   - `p` : phase - (1) en attente, (2) hors délai, (3) refusé, (4) actif, (5) orphelin.
-  - `m` : mode de contact initial: (0) direct, (1) parrainage, (2) rencontre.
+  - `o` : origine du contact: (0) direct, (1) parrainage, (2) rencontre.
   - `0` : pour A0 - (0) pas de partage de secrets, (1) partage de secrets, (2) disparu.
   - `1` : pour A1 -
+- `tp` : 0: na, 1: A0 est parrain de A1, 2: A1 est parrain de A0
+- `autp` : code d'autorisation donné par le futur parrain pour le devenir sur action du filleul.
 - `v1 v2` : volumes actuels des secrets.
 - `mx10 mx20` : maximum des volumes autorisés pour A0
 - `mx11 mx21` : maximum des volumes autorisés pour A1
@@ -924,7 +926,7 @@ schemas.forSchema({
   - `x` : `[nom, rnd], [nom, rnd]` : nom et clé d'accès à la carte de visite respectivement de A0 et A1.
   - `phrase` : phrase de parrainage / rencontre.
   - `f1 f2` : en phase 1/4 (parrainage), forfaits attribués par le parrain A0 à son filleul A1.
-  - `r1 r2` : en phase 1/4 (parrainage) et si le compte filleul est lui-même parrain, ressources attribuées.- `infok0 infok1` : commentaires personnels cryptés par leur clé K, respectivement de A0 et A1.
+  - `r1 r2` : en phase 1 (parrainage) et si le compte filleul est lui-même parrain, ressources attribuées. `infok0 infok1` : commentaires personnels cryptés par leur clé K, respectivement de A0 et A1.
 - `mc0 mc1` : mots clé définis respectivement par A0 et A1.
 - `ardc` : ardoise commune cryptée par la clé cc. [dh, texte]
 - `vsh` :
