@@ -9,7 +9,7 @@
               <q-tooltip>Changer d'organisation</q-tooltip>
             </span>
           </span>
-          <q-icon v-if="sessionok && compte.estComptable" size="sm" color="secondary" name="savings" aria-label="Compte de comptable"/>
+          <info-ico v-if="sessionok && compte.estComptable" size="sm" color="secondary" icon="savings" info="Ce compte a le pouvoir comptable"/>
           <span v-if="sessionok">
             <q-btn :class="page!=='Avatar' ? 'disabled' : ''" flat dense size="md"
               icon="home" no-caps label="Compte" @click="tocompte"/>
@@ -65,7 +65,7 @@
           <div v-if="page==='Login'" class="tbpage">Connexion à un compte</div>
           <div v-if="page==='Synchro'" class="tbpage">Synchronisation des données</div>
           <div v-if="sessionok && page==='Compte'" class="tbpage fs-md">
-            <span class="q-pr-sm titre-md">Compte :</span>
+            <span class="q-pr-sm titre-md">Compte {{compte.estParrain ? '(parrain):' :':'}}</span>
             <titre-banner class-titre="titre-md" :titre="prefs ? prefs.titre : compte.sid" :id-objet="compte.id"/>
           </div>
 

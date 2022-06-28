@@ -1,4 +1,4 @@
-import { NomAvatar, store, post, get, affichermessage, cfg, sleep, affichererreur, appexc, difference, getJourJ, afficherdiagnostic, gzipT, putData, getData } from './util.mjs'
+import { NomAvatar, NomGroupe, store, post, get, affichermessage, cfg, sleep, affichererreur, appexc, difference, getJourJ, afficherdiagnostic, gzipT, putData, getData } from './util.mjs'
 import { remplacePage } from './page.mjs'
 import {
   deleteIDB, idbSidCompte, commitRows, getCompte, getComptas, getPrefs, getCvs,
@@ -6,7 +6,7 @@ import {
   openIDB, enregLScompte, getVIdCvs, saveListeCvIds, gestionFichierSync, gestionFichierCnx
 } from './db.mjs'
 import { Compte, Avatar, deserialRowItems, compileToObject, data, Prefs, Contact, Invitgr, Invitcp, Compta, Groupe, Membre, Cv, Couple } from './modele.mjs'
-import { AppExc, EXBRK, EXPS, F_BRO, E_BRO, X_SRV, E_WS, MC } from './api.mjs'
+import { AppExc, EXBRK, EXPS, F_BRO, E_BRO, X_SRV, E_WS } from './api.mjs'
 
 import { crypt } from './crypto.mjs'
 import { schemas, serial } from './schemas.mjs'
@@ -949,7 +949,8 @@ export class CreationCompte extends OperationUI {
 
   ouvrircreation () {
     deconnexion()
-    setTimeout(() => {
+    setTimeout(async () => {
+      await remplacePage('login')
       this.ouvrircreationcompte()
     }, 100)
   }
@@ -958,7 +959,7 @@ export class CreationCompte extends OperationUI {
 
   excActions () { return { d: deconnexion, c: this.ouvrircreation, default: null } }
 
-  async run (ps, nom, forfaits) {
+  async run (ps, nom, forfaits, ressources) {
     try {
       data.ps = ps
 
@@ -976,8 +977,8 @@ export class CreationCompte extends OperationUI {
       const prefs = new Prefs().nouveau(compte.id)
       const rowPrefs = await prefs.toRow()
 
-      const compta = new Compta().nouveau(nomAvatar.id, 0)
-      compta.compteurs.setRes([64, 64])
+      const compta = new Compta().nouveau(nomAvatar.id, 1) // 1: avatar primaire parrain
+      compta.compteurs.setRes([ressources[0], ressources[1]])
       compta.compteurs.setF1(forfaits[0])
       compta.compteurs.setF2(forfaits[1])
       const rowCompta = await compta.toRow()
@@ -1068,13 +1069,19 @@ export class ConnexionCompte extends OperationUI {
     return true
   }
 
-  /* Recharge depuis le serveur les groupes et couples des avatars du compte et s'y abonne */
+  /* Recharge depuis le serveur les groupes et couples des avatars du compte, abonnements et signatures */
   async chargerGroupesCouples (gridsVers, cpidsVers, avidsVers, idc, vc) {
     const args = { sessionId: data.sessionId, gridsVers, cpidsVers, avidsVers, idc, vc }
     const ret = this.tr(await post(this, 'm1', 'chargerGrCp', args))
     if (!ret.ok) return false
     const r = await compileToObject(deserialRowItems(ret.rowItems))
     return [r.groupe || {}, r.couple || {}]
+  }
+
+  /* abonnements 2 des couples accédant aux secrets */
+  async aboCpSec (lids) {
+    const args = { sessionId: data.sessionId, lids }
+    await post(this, 'm1', 'aboCpSec', args)
   }
 
   /* Récupération de tous les couples et les groupes cités dans les avatars du compte
@@ -1151,6 +1158,10 @@ export class ConnexionCompte extends OperationUI {
     // couples contient la version au top des objets couples du compte requis par ses avatars et seulement eux
     const lcp = Object.values(this.couples)
     data.setCouples(lcp) // mis en store/db
+
+    const idCpSecs = [] // id des couples accédant aux secret
+    lcp.forEach(cp => { if (cp.stI === 1) idCpSecs.push(cp.id) })
+    await this.aboCpSec(idCpSecs)
 
     lgr.forEach(gr => { data.setSyncItem('10' + gr.sid, 0, 'Groupe ' + gr.na.nom) })
     lcp.forEach(cp => { data.setSyncItem('15' + cp.sid, 0, 'Couple ' + cp.nom) })
@@ -1409,7 +1420,7 @@ export class ConnexionCompte extends OperationUI {
         data.repertoire.raz()
         await this.phase0(razdb) // obtention du compte / prefs
         if (!await this.phase1()) continue // obtention des avatars du compte
-        if (!await this.phase2()) continue // obtention des groupes et couples des avatars du compte
+        if (!await this.phase2()) continue // obtention des groupes et contacts des avatars du compte
         break
       }
       this.BRK()
@@ -2185,11 +2196,11 @@ export class AcceptationParrainage extends OperationUI {
       const compta = new Compta()
       if (arg.estpar) {
         // parrain lui-même
-        compta.nouveau(avatar.id, 0)
+        compta.nouveau(avatar.id, 1)
         compta.compteurs.setRes([d.r1, d.r2])
       } else {
         // filleul
-        compta.nouveau(avatar.id, couple.idE)
+        compta.nouveau(avatar.id, 2)
       }
       compta.compteurs.setF1(d.f1)
       compta.compteurs.setF2(d.f2)
@@ -2209,9 +2220,8 @@ export class AcceptationParrainage extends OperationUI {
         idavp: couple.idE, // id de l'avatar parrain
         dr1: arg.estpar ? d.r1 + d.f1 : d.f1, // montant à réduire de sa réserve
         dr2: arg.estpar ? d.r2 + d.f2 : d.f2,
-        mc0: [arg.estpar ? MC.FILLEUL : MC.INTRODUIT], // array des mots clé à ajouter dans le couple
-        mc1: [arg.estpar ? MC.PARRAIN : MC.INTRODUCTEUR],
         ardc,
+        estPar: arg.estpar,
         sec: arg.max[0] !== 0 // le filleul accède aux secrets du couple
       }
       const ret = this.tr(await post(this, 'm1', 'acceptParrainage', args))
@@ -2486,7 +2496,7 @@ export class CreationGroupe extends OperationUI {
 
   async run (avatar, nom, forfaits) { // arguments : nom (string), forfaits [f1, f2]
     try {
-      const na = new NomAvatar(nom)
+      const na = new NomGroupe(nom)
       data.repertoire.setGr(na) // enregistrement de la clé / nom du groupe
       const groupe = new Groupe().nouveau(na.id, forfaits)
       const rowGroupe = await groupe.toRow()

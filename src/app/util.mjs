@@ -129,12 +129,6 @@ export function affidbmsg (msg) {
   }
 }
 
-/*
-export async function idToIc (id) {
-  return crypt.hashBin(await crypt.crypter(data.clek, crypt.intToU8(id), 1), false, false)
-}
-*/
-
 export function store () { return $store }
 
 export function cfg () { return $cfg }
@@ -774,16 +768,17 @@ export function nomCv (id, court) {
 
 /** NomAvatar **********************************/
 export class NomAvatar {
-  constructor (nom, rnd, id) {
+  constructor (nom, rnd) {
     this.nom = nom
     this.rnd = rnd || crypt.random(32)
-    this.id = id || crypt.hashBin(this.rnd)
+    this.id = crypt.hashBin(this.rnd)
   }
 
   clone () {
-    return new NomAvatar(this.nom, this.rnd, this.id)
+    return new NomAvatar(this.nom, this.rnd)
   }
 
+  get t () { return this.id % 4 }
   get nomc () { return this.nom + '#' + this.sfx }
   get nomf () { return normpath(this.nomc) }
   get sid () { return crypt.idToSid(this.id) }
@@ -817,6 +812,28 @@ export class NomAvatar {
     const l = info.substring(0, lgnom)
     const i = l.indexOf('\n')
     return i === -1 ? l : l.substring(0, i)
+  }
+}
+
+export class NomContact extends NomAvatar {
+  constructor (nom, rnd) {
+    super(nom, rnd)
+    this.id += 1
+  }
+
+  clone () {
+    return new NomContact(this.nom, this.rnd)
+  }
+}
+
+export class NomGroupe extends NomAvatar {
+  constructor (nom, rnd) {
+    super(nom, rnd)
+    this.id += 2
+  }
+
+  clone () {
+    return new NomContact(this.nom, this.rnd)
   }
 }
 

@@ -45,7 +45,7 @@
               <q-toggle v-model="estParrain" size="md" color="primary" :label="estParrain ? 'Compte parrain lui-même' : 'Compte filleul standard'"/>
             </div>
             <div v-if="estParrain">
-              <div>Ressources maximales attribuables aux filleuls</div>
+              <div>Ressources attribuables aux filleuls</div>
               <choix-forfaits v-model="ressources" :f1="4" :f2="4"/>
             </div>
           </div>

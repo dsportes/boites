@@ -30,7 +30,7 @@
       <div class="col-auto column justify-center">
         <q-btn dense color="warning" size="sm"
           icon="check" label="Page" @click="toAvatar(x.av)"/>
-        <q-btn v-if="x.parrain" flat class="q-mx-xs" dense color="primary" size="sm"
+        <q-btn v-if="x.av.estParrain" flat class="q-mx-xs" dense color="primary" size="sm"
           icon="add" label="Parrainage" @click="ouvrirpar(x.av)"/>
         <q-btn class="q-mx-xs" flat dense color="primary" size="sm"
           icon="add" label="Rencontre" @click="ouvrirpr(x.av)"/>
@@ -311,7 +311,7 @@ export default ({
           const parrain = cp && cp.idp === 0
           state.lst.push({ av, cv, cp, parrain })
         })
-        state.lst.sort((a, b) => { return a.av.na.nom < b.av.na.nom ? -1 : (a.av.na.nom > b.av.na.nom ? 1 : 0) })
+        state.lst.sort((a, b) => { return a.av.estPrimaire || (a.av.na.nom < b.av.na.nom) ? -1 : (a.av.na.nom > b.av.na.nom ? 1 : 0) })
         if (!avatar.value) avatar.value = state.lst[0].av
       }
     }

@@ -2,8 +2,8 @@
   <q-dialog v-model="dialoguecreationcompte">
   <q-card class="q-ma-xs moyennelargeur fs-md">
     <q-card-section class="column items-center">
-      <div class="titre-lg text-center">Création du compte d'un comptable</div>
-      <div class="titre-sm text-center text-italic">!!! l'autorisation doit avoir été enregistrée en configuration !!!</div>
+      <div class="titre-lg text-center">Création d'un compte parrain avec pouvoir comptable</div>
+      <div class="titre-sm text-center text-italic">!!! l'autorisation doit avoir été enregistrée en configuration de l'organisation!!!</div>
       <q-btn flat @click="close" color="primary" label="Renoncer" class="q-ml-sm" />
     </q-card-section>
 
@@ -14,15 +14,18 @@
           <phrase-secrete :init-val="ps" class="q-ma-xs" v-on:ok-ps="okps" verif icon-valider="check" label-valider="Suivant"></phrase-secrete>
         </q-step>
 
-        <q-step :name="2" title="Nom du premier avatar du compte" icon="settings" :done="step > 3" >
+        <q-step :name="2" title="Nom de l'avatar primaire du compte" icon="settings" :done="step > 3" >
           <nom-avatar class="q-ma-xs" v-on:ok-nom="oknom" verif icon-valider="check" label-valider="Suivant"></nom-avatar>
           <q-stepper-navigation>
             <q-btn flat @click="step = 2" color="primary" label="Précédent" class="q-ml-sm" />
           </q-stepper-navigation>
         </q-step>
 
-        <q-step :name="3" title="Forfaits auto-attribués" icon="settings" :done="step > 4" >
-          <choix-forfaits v-model="forfaits" :f1="1" :f2="1"/>
+        <q-step :name="3" title="Forfaits et ressources auto-attribuées" icon="settings" :done="step > 4" >
+          <div>Forfaits du compte</div>
+          <choix-forfaits v-model="forfaits" :f1="4" :f2="4"/>
+          <div>Ressources attribuables à ses filleuls</div>
+          <choix-forfaits v-model="ressources" :f1="4" :f2="4"/>
           <q-stepper-navigation>
             <q-btn flat @click="step = 2" color="primary" label="Précédent" class="q-ml-sm" />
             <q-btn flat @click="step = 4" color="primary" label="Suivant" class="q-ml-sm" />
@@ -34,9 +37,13 @@
           <div>Phrase secrète (ligne 1): <span class="font-mono q-pl-md">{{isPwd ? '***' : ps.debut}}</span></div>
           <div>Phrase secrète (ligne 2): <span class="font-mono q-pl-md">{{isPwd ? '***' : ps.fin}}</span></div>
           <div>Nom de l'avatar: <span class="font-mono q-pl-md">{{nom}}</span></div>
-          <div>Forfaits:
-            <span class="font-mono q-pl-md">{{'v1: ' + forfaits[0] + 'MB'}}</span>
-            <span class="font-mono q-pl-lg">{{'v2: ' + forfaits[1] + '*100MB'}}</span>
+          <div>Forfaits du compte:
+            <span class="font-mono q-pl-md">v1: {{ed1(forfaits[0])}}</span>
+            <span class="font-mono q-pl-lg">v2: {{ed2(forfaits[1])}}</span>
+          </div>
+          <div>+ pour les filleuls:
+            <span class="font-mono q-pl-md">v1: {{ed1(ressources[0])}}</span>
+            <span class="font-mono q-pl-lg">v2: {{ed2(ressources[1])}}</span>
           </div>
           <q-stepper-navigation>
             <q-btn flat @click="step = 3" color="primary" label="Corriger" class="q-ml-sm" />
@@ -57,6 +64,8 @@ import PhraseSecrete from './PhraseSecrete.vue'
 import ChoixForfaits from './ChoixForfaits.vue'
 import NomAvatar from './NomAvatar.vue'
 import { CreationCompte } from '../app/operations.mjs'
+import { UNITEV1, UNITEV2 } from '../app/api.mjs'
+import { edvol } from '../app/util.mjs'
 
 export default ({
   name: 'DialogueCreationCompte',
@@ -71,11 +80,14 @@ export default ({
       step: 1,
       ps: null,
       forfaits: [4, 4],
+      ressources: [4, 4],
       nom: ''
     }
   },
 
   methods: {
+    ed1 (f) { return edvol(f * UNITEV1) },
+    ed2 (f) { return edvol(f * UNITEV2) },
     close () {
       this.dialoguecreationcompte = false
     },
@@ -92,9 +104,10 @@ export default ({
       }
     },
     async confirmer () {
-      await new CreationCompte().run(this.ps, this.nom, this.forfaits)
+      await new CreationCompte().run(this.ps, this.nom, this.forfaits, this.ressources)
       this.ps = null
       this.forfaits = [4, 4]
+      this.ressources = [4, 4]
       this.nom = ''
       this.step = 1
     }

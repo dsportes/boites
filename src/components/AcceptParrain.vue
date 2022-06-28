@@ -7,13 +7,13 @@
     <q-card-section>
       <q-stepper v-model="step" vertical color="primary" animated>
         <q-step :name="1" title="Proposition de parrainage" icon="settings" :done="step > 1">
-          <div>Premier avatar du nouveau compte: <span class="font-mono q-pl-md">{{couple.nomI}}</span></div>
+          <div>Avatar primaire du nouveau compte: <span class="font-mono q-pl-md">{{couple.nomI}}</span></div>
           <div>Nom du parrain: <span class="font-mono q-pl-md">{{couple.nomE}}</span></div>
           <div>Forfaits du compte:
             <span class="font-mono q-pl-md">v1: {{ed1(couple.data.f1)}}</span>
             <span class="font-mono q-pl-lg">v2: {{ed2(couple.data.f2)}}</span>
           </div>
-          <div v-if="estpar">+ pour les filleuls:
+          <div v-if="estpar">Le nouveau compte est lui-même parrain: ressources pour les filleuls:
             <span class="font-mono q-pl-md">v1: {{ed1(couple.data.r1)}}</span>
             <span class="font-mono q-pl-lg">v2: {{ed2(couple.data.r2)}}</span>
           </div>
@@ -93,7 +93,7 @@ export default ({
   components: { PhraseSecrete, EditeurMd, ShowHtml, ChoixForfaits },
 
   computed: {
-    estpar () { return this.couple && (this.couple.data.r1 || this.couple.data.r2) },
+    estpar () { return this.couple && this.couple.data.r1 },
     textedef () { return 'Merci ' + this.couple.nomE + ',\n\n' + this.couple.ard }
   },
 
