@@ -1793,7 +1793,7 @@ export class SupprimerCouple extends OperationUI {
       const ni = crypt.hash(crypt.u8ToHex(couple.cle) + couple.avc)
       const ni1 = crypt.hash(crypt.u8ToHex(couple.cle) + '1')
       const avid1 = couple.stp <= 2 && couple.orig === 0 ? couple.idE : 0 // accès au couple dans avatar 1 à supprimer chez 1
-      const pc = couple.stp === 1 && couple.orig > 1 ? await couple.phraseContact() : null // contact (parrainage / recontre) à supprimer
+      const pc = couple.stp === 1 && couple.orig > 0 ? await couple.phraseContact() : null // contact (parrainage / recontre) à supprimer
       const args = { sessionId: data.sessionId, idc: couple.id, ni, ni1, avid, avid1, phch: pc ? pc.phch : 0, avc: couple.avc }
       await post(this, 'm1', 'supprimerCouple', args)
       return this.finOK()
@@ -2218,8 +2218,10 @@ export class AcceptationParrainage extends OperationUI {
         idCouple: couple.id, // id du couple
         phch: arg.phch, // hash de la phrase de contact
         idavp: couple.idE, // id de l'avatar parrain
-        dr1: arg.estpar ? d.r1 + d.f1 : d.f1, // montant à réduire de sa réserve
-        dr2: arg.estpar ? d.r2 + d.f2 : d.f2,
+        r1: arg.estpar ? d.r1 : 0, // montant à réduire de sa réserve
+        r2: arg.estpar ? d.r2 : 0,
+        f1: d.f1,
+        f2: d.f2,
         ardc,
         estPar: arg.estpar,
         sec: arg.max[0] !== 0 // le filleul accède aux secrets du couple
@@ -2251,15 +2253,16 @@ export class RefusParrainage extends OperationUI {
   - ard : réponse du filleul
   - pph : hash phrase de parrainage
   */
-  async run (parrain, ard) {
+  async run (couple, phch, ard) {
     try {
       await data.connexion(true) // On force A NE PAS OUVRIR IDB (compte pas encore connu)
       const args = {
         sessionId: data.sessionId,
-        pph: parrain.pph,
-        ardc: await crypt.crypter(parrain.data.cc, serial([new Date().getTime(), ard]))
+        idc: couple.id,
+        phch,
+        ardc: await couple.toArdc(ard)
       }
-      await post(this, 'm1', 'refusParrainage', args)
+      await post(this, 'm1', 'refusRencontre', args)
       await data.deconnexion()
     } catch (e) {
       await this.finKO(e)
@@ -2331,7 +2334,7 @@ export class CreationAvatar extends OperationUI {
     super('Création d\'un nouvel avatar', OUI, SELONMODE)
   }
 
-  async run (nom, forfaits, idPrimitif) { // argument : nom du nouvel avatar, forfaits attribués
+  async run (nom, forfaits, idPrimaire) { // argument : nom du nouvel avatar, forfaits attribués, id avatar primaire
     let n = 1
     try {
       while (true) {
@@ -2344,10 +2347,10 @@ export class CreationAvatar extends OperationUI {
         const avatar = new Avatar().nouveau(nomAvatar.id)
         const rowAvatar = await avatar.toRow()
 
-        const compta = new Compta().nouveau(nomAvatar.id, null)
+        const compta = new Compta().nouveau(nomAvatar.id, 2)
         const rowCompta = await compta.toRow()
 
-        const args = { sessionId: data.sessionId, idc: compte.id, vcav: compte.v, clePub: kpav.publicKey, mack, rowAvatar, rowCompta, forfaits, idPrimitif }
+        const args = { sessionId: data.sessionId, idc: compte.id, vcav: compte.v, clePub: kpav.publicKey, mack, rowAvatar, rowCompta, forfaits }
         const ret = await post(this, 'm1', 'creationAvatar', args)
         if (ret.statut === 1) {
           affichermessage('(' + n++ + ')-Petit incident, nouvel essai en cours, merci d\'attendre', true)
@@ -2497,7 +2500,7 @@ export class CreationGroupe extends OperationUI {
   async run (avatar, nom, forfaits) { // arguments : nom (string), forfaits [f1, f2]
     try {
       const na = new NomGroupe(nom)
-      data.repertoire.setGr(na) // enregistrement de la clé / nom du groupe
+      data.repertoire.setNa(na) // enregistrement de la clé / nom du groupe
       const groupe = new Groupe().nouveau(na.id, forfaits)
       const rowGroupe = await groupe.toRow()
 

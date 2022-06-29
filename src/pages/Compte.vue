@@ -45,8 +45,8 @@
   <q-dialog v-model="memoedit" full-height position="right">
     <q-card class="petitelargeur q-pa-sm">
       <q-toolbar class="bg-secondary text-white">
-        <q-btn class="chl" dense flat size="md" icon="chevron_left" @click="memoedit=false"/>
-        <div class="titre-lg full-width text-right">Mémo du compte</div>
+        <q-toolbar-title class="titre-lg full-width text-right">Mémo du compte</q-toolbar-title>
+        <q-btn class="chl" dense flat size="md" icon="chevron_right" @click="memoedit=false"/>
       </q-toolbar>
       <editeur-md ref="memoed" class="q-mt-md height-10" :texte="state.memo" editable modetxt label-ok="OK" v-on:ok="memook"></editeur-md>
     </q-card>
@@ -73,8 +73,8 @@
   <q-dialog v-if="sessionok" v-model="comptadial" full-height position="right">
     <q-card class="moyennelargeur q-pa-sm">
       <q-toolbar class="bg-secondary text-white">
-        <q-btn class="chl" dense flat size="md" icon="chevron_left" @click="fermercompta"/>
-        <div class="titre-lg full-width text-right">Comptabilité de {{cpt.av}}</div>
+        <q-toolbar-title class="titre-lg full-width text-right">Comptabilité de {{cpt.av}}</q-toolbar-title>
+        <q-btn class="chl" dense flat size="md" icon="chevron_right" @click="fermercompta"/>
       </q-toolbar>
       <div class="fullwidth">
         <div class="row items-start">
@@ -239,8 +239,7 @@ export default ({
 
     ouvrirnv () {
       this.nvav = true
-      this.prim = data.getComptaPrimitif()
-      const c = this.prim.compteurs
+      const c = this.state.cprim.compteurs
       this.mxff[0] = Math.floor(((c.f1 * UNITEV1) - c.v1) / UNITEV1) - 1
       this.mxff[1] = Math.floor(((c.f2 * UNITEV2) - c.v2) / UNITEV2) - 1
     },
@@ -252,7 +251,7 @@ export default ({
     },
 
     async nvAvatar () {
-      await new CreationAvatar().run(this.nomav, this.forfaits, this.prim.id)
+      await new CreationAvatar().run(this.nomav, this.forfaits, this.state.cprim.id)
       this.nvav = false
     },
 
@@ -298,20 +297,22 @@ export default ({
       get: () => $store.state.db.avatar,
       set: (val) => $store.commit('db/majavatar', val)
     })
-    const state = reactive({ lst: [], memo: '' })
+    const state = reactive({ lst: [], memo: '', estParrain: false, cprim: null })
 
     function init1 () {
       if (sessionok.value) {
-        state.lst = []
+        const lst = []
         state.cvs = {}
         compte.value.avatarIds().forEach(id => {
           const av = avatars.value[id]
           const cv = cvs.value[id]
           const cp = comptas.value[id]
-          const parrain = cp && cp.idp === 0
-          state.lst.push({ av, cv, cp, parrain })
+          if (cp.estParrain) state.estParrain = true
+          lst.push({ av, cv, cp })
         })
-        state.lst.sort((a, b) => { return a.av.estPrimaire || (a.av.na.nom < b.av.na.nom) ? -1 : (a.av.na.nom > b.av.na.nom ? 1 : 0) })
+        lst.sort((a, b) => { return a.av.estPrimaire || (a.av.na.nom < b.av.na.nom) ? -1 : (a.av.na.nom > b.av.na.nom ? 1 : 0) })
+        state.cprim = lst[0].cp
+        state.lst = lst
         if (!avatar.value) avatar.value = state.lst[0].av
       }
     }

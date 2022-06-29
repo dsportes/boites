@@ -122,34 +122,21 @@ class Repertoire {
   constructor () { this.raz() }
 
   raz () {
-    this.idac = new Set()
-    this.idax = new Set()
-    this.idgr = new Set()
-    this.idcp = new Set()
     this.rep = {}
   }
 
   cle (id) { const e = this.rep[id]; return e ? e.na.rnd : null }
   na (id) { const e = this.rep[id]; return e ? e.na : null }
   disparu (id) { const e = this.rep[id]; return !e || e.x }
-  estAc (id) { return this.idac.has(id) }
-  estAx (id) { return this.idax.has(id) }
-  estGr (id) { return this.idgr.has(id) }
-  estCp (id) { return this.idcp.has(id) }
 
   disparition (id) { const e = this.rep[id]; if (e) e.x = true }
 
-  setXX (na) {
+  setNa (na) {
     const id = na.id
     let obj = this.rep[id]; if (!obj) { obj = { }; this.rep[id] = obj }
     obj.na = na
     return id
   }
-
-  setAc (na) { this.idac.add(this.setXX(na)) }
-  setGr (na) { this.idgr.add(this.setXX(na)) }
-  setCp (na) { this.idcp.add(this.setXX(na)) }
-  setAx (na) { this.idax.add(this.setXX(na)) }
 }
 
 /* état de session ************************************************************/
@@ -416,15 +403,16 @@ export class Compte {
   get estComptable () { return data.estComptable }
   get estParrain () { return data.getCompta(this.id).estParrain }
 
+  estAc (id) {
+    const sid = crypt.idToSid(id)
+    // eslint-disable-next-line no-unneeded-ternary
+    return this.mac[sid] ? true : false
+  }
+
   avatarNas (s) {
     const s1 = new Set()
     for (const sid in this.mac) if (s) s.add(this.mac[sid].na); else s1.add(this.mac[sid].na)
     return s || s1
-  }
-
-  unAvatarId () {
-    // eslint-disable-next-line no-unreachable-loop
-    for (const sid in this.mac) return this.mac[sid].na.id
   }
 
   avatarIds (s) {
@@ -433,7 +421,7 @@ export class Compte {
     return s || s1
   }
 
-  repAvatars () { this.avatarNas().forEach(na => { data.repertoire.setAc(na, na.id) }) }
+  repAvatars () { this.avatarNas().forEach(na => { data.repertoire.setNa(na) }) }
 
   avatarDeNom (n) {
     for (const sid in this.mac) if (this.mac[sid].na.nom === n) return crypt.sidToId(sid)
@@ -461,7 +449,7 @@ export class Compte {
     data.clek = this.k
     this.mac = { }
     this.mac[nomAvatar.sid] = { na: nomAvatar, cpriv: cprivav }
-    data.repertoire.setAc(nomAvatar, this.id)
+    data.repertoire.setNa(nomAvatar)
     this.vsh = 0
     return this
   }
@@ -503,7 +491,7 @@ export class Compte {
       m[sid] = [x.na.nom, x.na.rnd, x.cpriv]
     }
     m[na.sid] = [na.nom, na.rnd, kpav.privateKey]
-    data.repertoire.setAc(na)
+    data.repertoire.setNa(na)
     return await crypt.crypter(data.clek, serial(m))
   }
 
@@ -527,7 +515,7 @@ export class Compte {
     }
     this.mac = m
     // TODO utilité à vérifier
-    for (const sid in this.mac) data.repertoire.setAc(this.mac[sid].na)
+    for (const sid in this.mac) data.repertoire.setNa(this.mac[sid].na)
     return this
   }
 
@@ -758,7 +746,7 @@ export class Avatar {
     return s || s1
   }
 
-  repGroupes () { this.m1gr.forEach(e => { data.repertoire.setGr(e.na) }) }
+  repGroupes () { this.m1gr.forEach(e => { data.repertoire.setNa(e.na) }) }
 
   coupleIds (s) {
     const s1 = new Set()
@@ -772,7 +760,7 @@ export class Avatar {
     return s || s1
   }
 
-  repCouples () { this.mcc.forEach(na => { data.repertoire.setCp(na) }) }
+  repCouples () { this.mcc.forEach(na => { data.repertoire.setNa(na) }) }
 
   nouveau (id, niCouple, naCouple) { // naCouple : création lors d'une acceptation de parrainage
     this.id = id
@@ -959,6 +947,7 @@ export class Couple {
   get nomE () { return this.naE && this.stE !== 2 ? this.naE.noml : this.data.x[this.ava][0] }
   get nomEs () { return this.data.x[this.ava][0] }
   get nomI () { return this.naI.noml }
+  get nomIs () { return this.data.x[this.avc][0] }
   get max1E () { return this.avc === 1 ? this.mx10 : this.mx11 }
   get max2E () { return this.avc === 1 ? this.mx20 : this.mx21 }
   get max1I () { return this.avc === 1 ? this.mx11 : this.mx10 }
@@ -974,19 +963,19 @@ export class Couple {
     return pc
   }
 
-  setRepE () { if (this.naE) data.repertoire.setAx(this.naE) }
+  setRepE () { if (this.naE) data.repertoire.setNa(this.naE) }
 
   setIdIE (x, cle) { // cle : non null pour réception d'un couple HORS session (accepatation / refus parrainage)
     const id0 = x[0][1] ? crypt.hashBin(x[0][1]) : 0
     const id1 = x[1][1] ? crypt.hashBin(x[1][1]) : 0
-    this.avc = !cle && data.repertoire.estAc(id0) ? 0 : 1 // position 0 / 1 de l'avatar du compte
+    this.avc = !cle && data.getCompte().estAc(id0) ? 0 : 1 // position 0 / 1 de l'avatar du compte
     this.ava = this.avc ? 0 : 1 // position 0 / 1 de l'autre avatar
     this.idI = this.avc ? id1 : id0
     this.idE = this.ava ? id1 : id0
     this.naE = this.idE ? new NomAvatar(x[this.ava][0], x[this.ava][1]) : null
     this.naI = new NomAvatar(x[this.avc][0], x[this.avc][1])
     const na = new NomContact(this.nomC, cle || this.cle)
-    if (!cle) data.repertoire.setCp(na); else this.naTemp = na
+    if (!cle) data.repertoire.setNa(na); else this.naTemp = na
   }
 
   nouveauR (naI, nomf, cc, mot, pp, max, dlv) {
@@ -1002,7 +991,7 @@ export class Couple {
     this.avc = 0
     const na = new NomContact(naI.nom + '_' + nomf, cc)
     this.id = na.id
-    data.repertoire.setCp(na)
+    data.repertoire.setNa(na)
     this.v1 = 0
     this.v2 = 0
     this.mx10 = max[0]
@@ -1030,10 +1019,10 @@ export class Couple {
     this.naE = naE
     this.idE = naE.id
     this.avc = 0
-    data.repertoire.setAx(naE)
+    data.repertoire.setNa(naE)
     const na = new NomContact(naI.nom + '_' + naE.nom, cc)
     this.id = na.id
-    data.repertoire.setCp(na)
+    data.repertoire.setNa(na)
     this.v1 = 0
     this.v2 = 0
     this.mx10 = max[0]
@@ -1070,7 +1059,7 @@ export class Couple {
     this.avc = 0
     const na = new NomContact(naI.nom + '_' + naE.nom, cc)
     this.id = na.id
-    data.repertoire.setCp(na)
+    data.repertoire.setNa(na)
     this.v1 = 0
     this.v2 = 0
     this.mx10 = max[0]
@@ -1475,7 +1464,7 @@ export class Membre {
   get stp () { return this.st < 0 ? -1 : this.st % 10 }
 
   // De l'avatar membre
-  get estAc () { return data.repertoire.estAc(this.namb.id) }
+  get estAc () { return data.data.getCompte().estAc(this.namb.id) }
   get cvm () { return data.getCv(this.namb.id) }
   get photom () { const cv = this.cvm; return cv ? cv[0] : '' }
   get infom () { const cv = this.cvm; return cv ? cv[1] : '' }
@@ -1497,7 +1486,7 @@ export class Membre {
 
   setRepE () {
     if (!this.estAc) {
-      data.repertoire.setAx(this.namb)
+      data.repertoire.setNa(this.namb)
     }
   }
 

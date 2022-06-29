@@ -747,7 +747,7 @@ function startDemon () {
         const e = data.getFetat(id)
         try {
           const a = store().state.db.avatar
-          const ida = a ? a.id : data.getCompte().unAvatarId()
+          const ida = a ? a.id : data.getCompte().id
           const args = { sessionId: data.sessionId, id: e.ids, ts: e.ns % 3, idf: e.id, ida, vt: e.lg }
           const r = await get('m1', 'getUrl', args)
           if (!r) throw new AppExc(E_BRO, `Fichier ${Sid(e.id)} non accessible sur le serveur`)

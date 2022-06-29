@@ -68,15 +68,15 @@
           <div>Phrase de parrainage: <span class="font-mono q-pl-md">{{phrase}}</span></div>
           <div>Nom de l'avatar: <span class="font-mono q-pl-md">{{nom}}</span></div>
           <div>Mot de bienvenue: <span class="font-mono q-pl-md">{{mot}}</span></div>
-          <div>Forfaits du compte:
+          <div>Forfaits du compte:<br>
             <span class="font-mono q-pl-md">v1: {{ed1(forfaits[0])}}</span>
             <span class="font-mono q-pl-lg">v2: {{ed2(forfaits[1])}}</span>
           </div>
-          <div v-if="estParrain">+ pour les filleuls:
+          <div v-if="estParrain">+ pour les filleuls:<br>
             <span class="font-mono q-pl-md">v1: {{ed1(ressources[0])}}</span>
             <span class="font-mono q-pl-lg">v2: {{ed2(ressources[1])}}</span>
           </div>
-          <div>Volumes maximum attribués aux secrets du couple :
+          <div>Volumes maximum attribués aux secrets du couple:<br>
             <span class="font-mono q-pl-md">v1: {{ed1(max[0])}}</span>
             <span class="font-mono q-pl-lg">v2: {{ed2(max[1])}}</span>
           </div>

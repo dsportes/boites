@@ -28,8 +28,8 @@
     <q-dialog v-model="voledit" full-height position="right">
       <q-card class="petitelargeur q-pa-sm">
         <q-toolbar class="bg-secondary text-white">
-          <q-btn class="chl" dense flat size="md" icon="chevron_left" @click="voledit=false"/>
-          <div class="titre-md">Volumes maximaux autorisés</div>
+          <q-toolbar-title class="titre-md">Volumes maximaux autorisés</q-toolbar-title>
+          <q-btn class="chl" dense flat size="md" icon="chevron_right" @click="voledit=false"/>
         </q-toolbar>
         <q-card-section>
           <div class="q-py-sm fs-md">Volumes occupés actuellement - V1: {{s.v1}} / V2: {{s.v2}}</div>
@@ -55,8 +55,8 @@
     <q-dialog v-model="ardedit" full-height position="right">
       <q-card class="petitelargeur q-pa-sm">
         <q-toolbar class="bg-secondary text-white">
-          <q-btn class="chl" dense flat size="md" icon="chevron_left" @click="ardedit=false"/>
-          <div class="titre-lg">Ardoise partagée</div>
+          <q-toolbar-title class="titre-lg">Ardoise partagée</q-toolbar-title>
+          <q-btn class="chl" dense flat size="md" icon="chevron_right" @click="ardedit=false"/>
         </q-toolbar>
         <editeur-md class="height-8 q-mt-lg" v-model="ardTemp" :texte="s.c.ard ? s.c.ard : ''" editable modetxt label-ok="OK" @ok="changerard"/>
        </q-card>
@@ -76,8 +76,8 @@
     <q-dialog v-model="comedit" full-height position="right">
       <q-card class="petitelargeur q-pa-sm">
         <q-toolbar class="bg-secondary text-white">
-          <q-btn class="chl" dense flat size="md" icon="chevron_left" @click="comedit=false"/>
-          <div class="titre-lg">Commentaires personnels</div>
+          <q-toolbar-title class="titre-lg">Commentaires personnels</q-toolbar-title>
+          <q-btn class="chl" dense flat size="md" icon="chevron_right" @click="comedit=false"/>
         </q-toolbar>
         <editeur-md class="height-8" v-model="infoTemp" :texte="s.c.info ? s.c.info : ''" editable modetxt label-ok="OK" @ok="changerinfo"/>
       </q-card>
@@ -94,8 +94,8 @@
     <q-dialog v-model="mcledit" full-height position="right">
       <q-card class="petitelargeur q-pa-sm">
         <q-toolbar class="bg-secondary text-white">
-          <q-btn class="chl" dense flat size="md" icon="chevron_left" @click="mcledit=false"/>
-          <div class="titre-lg">Sélection des mots clés associés</div>
+          <q-toolbar-title class="titre-lg">Sélection des mots clés associés</q-toolbar-title>
+          <q-btn class="chl" dense flat size="md" icon="chevron_right" @click="mcledit=false"/>
         </q-toolbar>
         <select-motscles class="q-mt-md" :motscles="s.motscles" :src="s.c.mc" @ok="changermc" :close="fermermcl" sans-titre/>
       </q-card>
@@ -111,8 +111,8 @@
     <q-dialog v-model="paredit" full-height position="right">
       <q-card class="petitelargeur q-pa-sm">
         <q-toolbar class="bg-secondary text-white">
-          <q-btn class="chl" dense flat size="md" icon="chevron_left" @click="paredit=false"/>
-          <div class="titre-lg">Parrainage du compte</div>
+          <q-toolbar-title class="titre-lg">Parrainage du compte</q-toolbar-title>
+          <q-btn class="chl" dense flat size="md" icon="chevron_right" @click="paredit=false"/>
         </q-toolbar>
         <div class="q-mt-md titre-lg">Phrase convenue :</div>
         <div class="q-ml-md font-mono fs-md">{{s.c.data.phrase}}</div>

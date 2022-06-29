@@ -7,13 +7,13 @@
     <q-card-section>
       <q-stepper v-model="step" vertical color="primary" animated>
         <q-step :name="1" title="Proposition de parrainage" icon="settings" :done="step > 1">
-          <div>Avatar primaire du nouveau compte: <span class="font-mono q-pl-md">{{couple.nomI}}</span></div>
-          <div>Nom du parrain: <span class="font-mono q-pl-md">{{couple.nomE}}</span></div>
+          <div>Avatar primaire du nouveau compte: <span class="font-mono q-pl-md">{{couple.nomIs}}</span></div>
+          <div>Nom du parrain: <span class="font-mono q-pl-md">{{couple.nomEs}}</span></div>
           <div>Forfaits du compte:
             <span class="font-mono q-pl-md">v1: {{ed1(couple.data.f1)}}</span>
             <span class="font-mono q-pl-lg">v2: {{ed2(couple.data.f2)}}</span>
           </div>
-          <div v-if="estpar">Le nouveau compte est lui-même parrain: ressources pour les filleuls:
+          <div v-if="estpar">Le nouveau compte est lui-même parrain. Ressources pour les filleuls:<br>
             <span class="font-mono q-pl-md">v1: {{ed1(couple.data.r1)}}</span>
             <span class="font-mono q-pl-lg">v2: {{ed2(couple.data.r2)}}</span>
           </div>
@@ -21,7 +21,7 @@
           <show-html class="full-width height-6 border1" :texte="couple.ard" />
           <q-stepper-navigation>
             <q-btn flat @click="fermer()" color="primary" label="Renoncer" class="q-ml-sm" />
-            <q-btn flat @click="step=9" color="primary" label="Refuser" class="q-ml-sm" />
+            <q-btn flat @click="step=5" color="primary" label="Refuser" class="q-ml-sm" />
             <q-btn flat @click="step=2" color="warning" label="Continuer" class="q-ml-sm" />
           </q-stepper-navigation>
         </q-step>
@@ -80,7 +80,7 @@
 import PhraseSecrete from './PhraseSecrete.vue'
 import EditeurMd from './EditeurMd.vue'
 import ShowHtml from './ShowHtml.vue'
-import { AcceptationParrainage, RefusRencontre } from '../app/operations.mjs'
+import { AcceptationParrainage, RefusParrainage } from '../app/operations.mjs'
 import { getJourJ, edvol } from '../app/util.mjs'
 import ChoixForfaits from './ChoixForfaits.vue'
 import { UNITEV1, UNITEV2 } from '../app/api.mjs'
@@ -94,7 +94,7 @@ export default ({
 
   computed: {
     estpar () { return this.couple && this.couple.data.r1 },
-    textedef () { return 'Merci ' + this.couple.nomE + ',\n\n' + this.couple.ard }
+    textedef () { return 'Merci ' + this.couple.nomEs + ',\n\n' + this.couple.ard }
   },
 
   data () {
@@ -141,7 +141,7 @@ export default ({
     },
     async refuser () {
       this.razps()
-      await new RefusRencontre().run(this.couple, this.texte, this.phch)
+      await new RefusParrainage().run(this.couple, this.phch, this.texte)
       this.fermer()
     }
   },

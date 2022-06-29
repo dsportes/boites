@@ -38,12 +38,12 @@
     <q-dialog v-model="hebedit" full-height position="right">
       <q-card class="petitelargeur q-pa-sm">
         <q-toolbar class="bg-secondary text-white">
-          <q-btn class="chl" dense flat size="md" icon="chevron_left" @click="hebedit=false"/>
-          <div class="titre-lg">
+          <q-toolbar-title class="titre-lg">
             <span v-if="state.g.dfh" class="text-negative bg-yellow-4 text-bold q-ml-sm q-px-xs">PAS D'HEBERGEMENT - </span>
             <span v-else>Hébergement - </span>
             <span :class="state.g.pc1 > 80 || state.g.pc2 > 80 ? 'text-warning bg-yellow-4' : ''">Volumes : {{state.g.pc1}}% / {{state.g.pc2}}%</span>
-          </div>
+          </q-toolbar-title>
+          <q-btn class="chl" dense flat size="md" icon="chevron_right" @click="hebedit=false"/>
         </q-toolbar>
         <div class="q-my-md titre-md">Volumes occupés - V1: {{edvol(state.g.v1)}} / V2: {{edvol(state.g.v2)}}</div>
         <div v-if="state.g.pc1 > 80 || state.g.pc2 > 80" class="q-ma-xs">
@@ -75,8 +75,8 @@
     <q-dialog v-model="mcgedit" full-height position="right">
       <q-card class="petitelargeur q-pa-sm">
         <q-toolbar class="bg-secondary text-white">
-          <q-btn class="chl" dense flat size="md" icon="chevron_left" @click="mcgedit=false"/>
-          <div class="titre-lg">Mots clés spécifiques du groupe</div>
+          <q-toolbar-title class="titre-lg">Mots clés spécifiques du groupe</q-toolbar-title>
+          <q-btn class="chl" dense flat size="md" icon="chevron_right" @click="mcgedit=false"/>
         </q-toolbar>
         <mots-cles class="q-mt-md" :motscles="state.motsclesGr" :lecture="!anim" @ok="changermcl"/>
       </q-card>
@@ -98,8 +98,8 @@
     <q-dialog v-if="sessionok" v-model="panelinvit" full-height position="right">
       <q-card class="petitelargeur q-pa-sm">
         <q-toolbar class="bg-secondary text-white">
-          <q-btn class="chl" dense flat size="md" icon="chevron_left" @click="panelinvit=false"/>
-          <div class="titre-lg">Enregistrement d'un membre pressenti (pas encore "invité") du groupe</div>
+          <q-toolbar-title class="titre-lg">Enregistrement d'un membre pressenti (pas encore "invité") du groupe</q-toolbar-title>
+          <q-btn class="chl" dense flat size="md" icon="chevron_right" @click="panelinvit=false"/>
         </q-toolbar>
       <q-card-section>
         <div v-if="clipboard === null">
