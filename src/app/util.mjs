@@ -1,6 +1,6 @@
 import axios from 'axios'
 import { data } from './modele.mjs'
-import { AppExc, version, E_BRO, E_SRV, EXBRK } from './api.mjs'
+import { AppExc, version, E_BRO, E_SRV, EXBRK, IDCOMPTABLE } from './api.mjs'
 import { serial, deserial } from './schemas.mjs'
 import { u8ToB64, crypt } from './crypto.mjs'
 
@@ -771,7 +771,7 @@ export class NomAvatar {
   constructor (nom, rnd) {
     this.nom = nom
     this.rnd = rnd || crypt.random(32)
-    this.id = crypt.hashBin(this.rnd)
+    this.id = nom !== 'Comptable' ? crypt.hashBin(this.rnd) : IDCOMPTABLE
   }
 
   clone () {

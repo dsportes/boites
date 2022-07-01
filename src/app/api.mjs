@@ -2,6 +2,8 @@ import { schemas, serial, deserial } from './schemas.mjs'
 
 export const version = '1'
 
+export const IDCOMPTABLE = 9007199254740988
+
 export const UNITEV1 = 250000
 export const UNITEV2 = 25000000
 export const PINGTO = 10000 // en secondes. valeur élevée en test

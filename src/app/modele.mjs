@@ -7,7 +7,7 @@ import {
   getJourJ, cfg, ungzipT, normpath, titreSecret, titreCompte, titreGroupe, titreMembre, nomCv, PhraseContact
 } from './util.mjs'
 import { remplacePage } from './page.mjs'
-import { EXPS, UNITEV1, UNITEV2, Compteurs, t0n } from './api.mjs'
+import { EXPS, UNITEV1, UNITEV2, IDCOMPTABLE, Compteurs, t0n } from './api.mjs'
 import { DownloadFichier } from './operations.mjs'
 
 export const MODES = ['inconnu', 'synchronisé', 'incognito', 'avion', 'visio']
@@ -400,8 +400,8 @@ export class Compte {
   get table () { return 'compte' }
   get sid () { return crypt.idToSid(this.id) }
   get pk () { return '1' }
-  get estComptable () { return data.estComptable }
   get estParrain () { return data.getCompta(this.id).estParrain }
+  get estComptable () { return this.id === IDCOMPTABLE }
 
   estAc (id) {
     const sid = crypt.idToSid(id)

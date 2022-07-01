@@ -118,8 +118,6 @@ export class Operation {
     this.sessionId = data.sessionId
   }
 
-  ouvrircreationcompte () { store().commit('ui/majdialoguecreationcompte', true) }
-
   majopencours (op) { store().commit('ui/majopencours', op) }
 
   razidblec () { store().commit('ui/razidblec') }
@@ -798,7 +796,7 @@ export class Operation {
   }
 }
 
-/* ********************************************************* */
+/* **********************************************************/
 export class OperationUI extends Operation {
   constructor (nomop, net, idb) {
     super(nomop, net, idb)
@@ -806,11 +804,15 @@ export class OperationUI extends Operation {
     this.majopencours(this)
   }
 
+  /*
+  1) Après création du compte comptable
+  2) Après acceptation d'un parrainage (compte est celui créé)
+  */
   async postCreation (ret) {
-    data.estComptable = ret.estComptable
     const mapRows = deserialRowItems(ret.rowItems)
 
     const compte = await new Compte().fromRow(mapRows.compte)
+    data.estComptable = compte.estComptable
     compte.repAvatars()
     data.setCompte(compte)
 
@@ -929,7 +931,7 @@ export class ProcessQueue extends OperationWS {
 E_WS, '01-Session interrompue. Se déconnecter et tenter de se reconnecter'
 */
 
-/* Création d'un compte comptable******************************************
+/* Création du compte Comptable******************************************
 On poste :
 - les rows Compte, Compta, Prefs, v et dds à 0
 - les clés publiques du compte et de l'avatar pour la table avrsa
@@ -941,9 +943,9 @@ X_SRV, '02-Cette phrase secrète n\'est pas reconnue comme étant l\'une des com
 X_SRV, '03-Phrase secrète probablement déjà utilisée. Vérifier que le compte n\'existe pas déjà en essayant de s\'y connecter avec la phrase secrète'
 X_SRV, '04-Une phrase secrète semblable est déjà utilisée. Changer a minima la première ligne de la phrase secrète pour ce nouveau compte'
 */
-export class CreationCompte extends OperationUI {
+export class CreationCompteComptable extends OperationUI {
   constructor () {
-    super('Création d\'un compte de comptable', OUI, SELONMODE)
+    super('Création du compte du comptable', OUI, SELONMODE)
     this.opsync = true
   }
 
@@ -951,7 +953,6 @@ export class CreationCompte extends OperationUI {
     deconnexion()
     setTimeout(async () => {
       await remplacePage('login')
-      this.ouvrircreationcompte()
     }, 100)
   }
 
@@ -959,7 +960,7 @@ export class CreationCompte extends OperationUI {
 
   excActions () { return { d: deconnexion, c: this.ouvrircreation, default: null } }
 
-  async run (ps, nom, forfaits, ressources) {
+  async run (ps) {
     try {
       data.ps = ps
 
@@ -968,7 +969,7 @@ export class CreationCompte extends OperationUI {
       data.resetPhase012()
       this.BRK()
       const kpav = await crypt.genKeyPair()
-      const nomAvatar = new NomAvatar(nom) // nouveau
+      const nomAvatar = new NomAvatar('Comptable') // nouveau
 
       const compte = new Compte().nouveau(nomAvatar, kpav.privateKey)
       // nouveau() enregistre la clé K dans data.clek !!!
@@ -977,17 +978,16 @@ export class CreationCompte extends OperationUI {
       const prefs = new Prefs().nouveau(compte.id)
       const rowPrefs = await prefs.toRow()
 
-      const compta = new Compta().nouveau(nomAvatar.id, 1) // 1: avatar primaire parrain
-      compta.compteurs.setRes([ressources[0], ressources[1]])
-      compta.compteurs.setF1(forfaits[0])
-      compta.compteurs.setF2(forfaits[1])
+      const compta = new Compta().nouveau(nomAvatar.id, 1) // 1: avatar primaire
+      compta.compteurs.setF1(255)
+      compta.compteurs.setF2(255)
       const rowCompta = await compta.toRow()
 
       const avatar = new Avatar().nouveau(nomAvatar.id)
       const rowAvatar = await avatar.toRow()
 
       const args = { sessionId: data.sessionId, clePubAv: kpav.publicKey, rowCompte, rowCompta, rowAvatar, rowPrefs }
-      const ret = this.tr(await post(this, 'm1', 'creationCompte', args))
+      const ret = this.tr(await post(this, 'm1', 'creationCompteComptable', args))
 
       // Le compte vient d'être créé  et clek enregistrée
       await this.postCreation(ret)

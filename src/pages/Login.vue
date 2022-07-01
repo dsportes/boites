@@ -1,6 +1,6 @@
 <template>
   <q-page class="column align-start items-center">
-    <q-card flat class="q-ma-xs petitelargeur fs-md">
+    <q-card v-if="!q666" flat class="q-ma-xs petitelargeur fs-md">
       <q-card-section>
         <div class="column items-center q-ma-sm">
         <div class="titre-lg">Choix du mode
@@ -40,19 +40,30 @@
             <q-spinner color="primary" size="2rem" :thickness="3" />
           </div>
       </q-card>
-      <q-btn flat color="secondary" icon="add_moderator" size="sm" @click="dialoguecreationcompte = true"/>
     </div>
 
     <q-dialog v-model="dialcp">
       <AcceptParrain :couple="coupleloc" :phch="phch" :close="fermerap" />
     </q-dialog>
+
+    <q-card v-if="q666" class="q-ma-xs moyennelargeur fs-md">
+      <q-card-section class="column items-center">
+        <div class="titre-lg text-center">Création du compte du Comptable</div>
+      </q-card-section>
+
+      <q-card-section>
+        <div class="fs-sm q-py-sm">Saisir et confirmer la phrase secrète du compte</div>
+        <phrase-secrete class="q-ma-xs" :init-val="ps" v-on:ok-ps="creercc" verif
+          icon-valider="check" label-valider="Créer"></phrase-secrete>
+      </q-card-section>
+    </q-card>
   </q-page>
 </template>
 
 <script>
 import { computed, ref, watch } from 'vue'
 import { useStore } from 'vuex'
-import { ConnexionCompte } from '../app/operations'
+import { ConnexionCompte, CreationCompteComptable } from '../app/operations'
 import PhraseSecrete from '../components/PhraseSecrete.vue'
 import AcceptParrain from '../components/AcceptParrain.vue'
 import { onBoot } from '../app/page.mjs'
@@ -65,6 +76,7 @@ export default ({
   components: { PhraseSecrete, AcceptParrain },
   data () {
     return {
+      q666: window.location.search === 'q666',
       ps: null,
       phrasepar: false,
       isPwd: false,
@@ -80,6 +92,12 @@ export default ({
   },
 
   methods: {
+    async creercc (ps) {
+      if (!ps) return
+      this.mode = 2 // incognito
+      await new CreationCompteComptable().run(ps)
+      this.ps = null
+    },
     fermerap () {
       this.dialcp = false
       this.phrasepar = false
