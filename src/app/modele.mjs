@@ -3,12 +3,13 @@ import { crypt } from './crypto.mjs'
 import { openIDB, closeIDB, debutSessionSync, saveSessionSync, getFichier } from './db.mjs'
 import { openWS, closeWS } from './ws.mjs'
 import {
-  store, appexc, dlvDepassee, NomAvatar, NomContact, NomGroupe, gzip, ungzip, dhstring,
+  store, appexc, dlvDepassee, NomAvatar, NomContact, NomGroupe, NomTribu, gzip, ungzip, dhstring,
   getJourJ, cfg, ungzipT, normpath, titreSecret, titreCompte, titreGroupe, titreMembre, nomCv, PhraseContact
 } from './util.mjs'
 import { remplacePage } from './page.mjs'
 import { EXPS, UNITEV1, UNITEV2, IDCOMPTABLE, Compteurs, t0n } from './api.mjs'
 import { DownloadFichier } from './operations.mjs'
+import { crypter } from './webcrypto.mjs'
 
 export const MODES = ['inconnu', 'synchronisé', 'incognito', 'avion', 'visio']
 
@@ -378,21 +379,146 @@ class Session {
 
 export const data = new Session()
 
+/** Chat *********************************
+- `id` : de l'avatar primaire.
+- v
+- `dh` : date-heure d'écriture. Par convention si elle est paire c'est un texte écrit par l'avatar, sinon il est écrit par le comptable.
+- `txtt` : serial de [k, t]
+  - k : cle cryptée par la clé publique du comptable ou de l'avatar
+  - t : texte crypté pat k
+*/
+export class Chat {
+  get table () { return 'compte' }
+  get sid () { return crypt.idToSid(this.id) }
+  get pk () { return this.sid }
+  get deCompta () { return this.dh % 2 === 1 }
+
+  async fromRow (row) {
+    this.vsh = row.vsh || 0
+    this.id = row.id
+    this.dh = row.dh
+    const x = deserial(row.txtt)
+    let k
+    if (this.deCompta) {
+      k = await crypt.decrypterRSA(data.getCompte().cpriv(this.id), x[0])
+    } else {
+      k = await crypt.decrypterRSA(data.clepubC, x[0])
+    }
+    this.txt = await crypt.decrypter(k, x[1])
+  }
+
+  async toRowA (txt) {
+    const d = new Date().getTime()
+    const dh = d % 2 === 0 ? d : d + 1
+    const r = crypt.random(32)
+    const k = await crypt.crypterRSA(data.clepubC, r)
+    const t = await crypt.crypter(r, txt)
+    return schemas.serialize('rowchat', { id: this.id, dh, txtt: serial([k, t]) })
+  }
+
+  async toRowC (txt) {
+    const d = new Date().getTime()
+    const dh = d % 2 === 0 ? d : d + 1
+    const r = crypt.random(32)
+    const k = await crypt.crypterRSA(data.getCompte().cpriv(this.id), r)
+    const t = await crypt.crypter(r, txt)
+    return schemas.serialize('rowchat', { id: this.id, dh, txtt: serial([k, t]) })
+  }
+}
+
+/** Tribu *********************************
+- `id` : id de la tribu.
+- 'v'
+- `nbc` : nombre de comptes actifs dans la tribu.
+- `f1 f2` : sommes des volumes V1 et V2 déjà attribués comme forfaits aux comptes de la tribu.
+- `r1 r2` : volumes V1 et V2 en réserve pour attribution aux comptes actuels et futurs de la tribu.
+- `datak` : cryptée par la clé K du comptable :
+  - `[nom, rnd]`: nom immuable et clé de la tribu.
+  - `info` : commentaire privé du comptable.
+  - `lp` : liste des ids des parrains (certains _pourraient_ être disparu)
+- `datat` : cryptée par la clé de la tribu :
+  - `st` : statut de blocage `nc` :
+    - `n` : niveau de blocage (0 à 4).
+    - `c` : classe du blocage : 0 à 9 repris dans la configuration de l'organisation.
+  - `txt` : libellé explicatif du blocage.
+  - `dh` : date-heure de dernier changement du statut de blocage.
+- `vsh`
+*/
+export class Tribu {
+  get table () { return 'compte' }
+  get sid () { return crypt.idToSid(this.id) }
+  get pk () { return this.sid }
+
+  async fromRow (row) {
+    this.vsh = row.vsh || 0
+    this.id = row.id
+    this.v = row.v
+    const [x, info, lp] = deserial(await crypt.decrypter(data.clek, row.datak))
+    this.na = new NomTribu(x[0], x[1])
+    this.info = info || ''
+    this.lp = new Set(lp || [])
+    const [st, txt, dh] = !row.datat ? [0, '', 0] : deserial(await crypt.decrypter(this.na.rnd, row.datat))
+    this.st = st
+    this.txt = txt
+    this.dh = dh
+    this.nbc = row.nbc
+    this.f1 = row.f1
+    this.f2 = row.f2
+    this.r1 = row.r1
+    this.r2 = row.r2
+  }
+
+  async toRow () {
+    const r = { ...this }
+    const x = [[this.na, this.rnd], this.info || '', [...this.lp]]
+    r.datak = await crypt.crypter(data.clek, serial(x))
+    const y = [this.st, this.txt || '', this.dh || 0]
+    r.datat = y[0] || y[1] || y[2] ? await crypt.crypter(this.na.rnd, serial(y)) : null
+    return schemas.serialize('rowtribu', r)
+  }
+
+  nouveau (nom, info, r1, r2) {
+    this.na = new NomTribu(nom)
+    this.id = this.na.id
+    this.v = 0
+    this.vsh = 0
+    this.nbc = 0
+    this.f1 = 0
+    this.f2 = 0
+    this.r1 = r1
+    this.r2 = r2
+    this.st = 0
+    this.txt = ''
+    this.dh = 0
+    this.info = info
+    this.lp = []
+    return this
+  }
+}
+
 /** Compte **********************************/
 
 schemas.forSchema({
   name: 'idbCompte',
-  cols: ['id', 'v', 'dpbh', 'pcbh', 'k', 'mac', 'vsh']
+  cols: ['id', 'v', 'dpbh', 'pcbh', 'k', 'stp', 'nctk', 'idtpc', 'chkt', 'mac', 'vsh']
 })
 /*
-- `id` : id du compte.
+- `id` : id de l'avatar primaire du compte.
 - `v` :
 - `dpbh` : hashBin (53 bits) du PBKFD du début de la phrase secrète (32 bytes). Pour la connexion, l'id du compte n'étant pas connu de l'utilisateur.
 - `pcbh` : hashBin (53 bits) du PBKFD de la phrase complète pour quasi-authentifier une connexion avant un éventuel échec de décryptage de `kx`.
 - `kx` : clé K du compte, cryptée par la X (phrase secrète courante).
-- `mack` {} : map des avatars du compte cryptée par la clé K. Clé: sid, valeur: `{ na:, cpriv: }`
-  - `na` : nom et clé de l'avatar.
-  - `cpriv` : clé privée asymétrique.
+- `stp` : statut parrain (0: non, 1:oui).
+- `nctk` : nom complet `[nom, rnd]` de la tribu crypté,
+  - soit par la clé K du compte,
+  - soit par la clé publique de son avatar primaire après changement de tribu par le comptable.
+- `idtpc` : [na, rnd] de la tribu cryptée par la clé publique du comptable.
+- `chkt` : hash (integer) de (id avatar base64 + @ + id tribu base64)
+- `mack` {} : map des avatars du compte cryptée par la clé K.
+  - _Clé_: id,
+  - _valeur_: `[nom, rnd, cpriv]`
+    - `nom rnd` : nom et clé de l'avatar.
+    - `cpriv` : clé privée asymétrique.
 - `vsh`
 */
 
@@ -400,7 +526,7 @@ export class Compte {
   get table () { return 'compte' }
   get sid () { return crypt.idToSid(this.id) }
   get pk () { return '1' }
-  get estParrain () { return data.getCompta(this.id).estParrain }
+  get estParrain () { return this.stp === 1 }
   get estComptable () { return this.id === IDCOMPTABLE }
 
   estAc (id) {
@@ -447,6 +573,9 @@ export class Compte {
     this.pcbh = data.ps.pcbh
     this.k = crypt.random(32)
     data.clek = this.k
+    this.nat = null
+    this.idtpc = null
+    this.chkt = 0
     this.mac = { }
     this.mac[nomAvatar.sid] = { na: nomAvatar, cpriv: cprivav }
     data.repertoire.setNa(nomAvatar)
@@ -469,6 +598,19 @@ export class Compte {
       const [nom, rnd, cpriv] = m[sid]
       this.mac[sid] = { na: new NomAvatar(nom, rnd), cpriv: cpriv }
     }
+    if (row.nctk) {
+      if (row.nctk.length === 256) {
+        this.nat = await crypter.decrypterRSA(this.cpriv(this.id), row.nctk)
+        this.nctk = await crypter.crypter(this.k, this.nat)
+        this.chkt = row.chkt
+      } else {
+        this.nat = await crypter.decrypter(this.k, row.nctk)
+      }
+    } else {
+      this.nat = null
+      this.idtpc = null
+      this.chkt = 0
+    }
     return this
   }
 
@@ -481,6 +623,7 @@ export class Compte {
     }
     r.mack = await crypt.crypter(data.clek, serial(m))
     r.kx = await crypt.crypter(data.ps.pcb, this.k)
+    r.nctk = !this.nat ? null : (this.nctk ? this.nctk : await crypt.crypter(this.k, this.nat))
     return schemas.serialize('rowcompte', r)
   }
 
@@ -497,6 +640,7 @@ export class Compte {
 
   get toIdb () {
     const r = { ...this }
+    delete r.nctk
     r.mac = {}
     for (const sid in this.mac) {
       const x = this.mac[sid]
@@ -517,6 +661,12 @@ export class Compte {
     // TODO utilité à vérifier
     for (const sid in this.mac) data.repertoire.setNa(this.mac[sid].na)
     return this
+  }
+
+  async setTribu (nat) {
+    this.nat = nat
+    this.idtpc = nat ? await crypt.crypterRSA(data.clepubC, serial(nat)) : null
+    this.chkt = nat ? crypt.hash(crypt.idToSid(this.id + '@' + nat.id)) : 0
   }
 
   get clone () {

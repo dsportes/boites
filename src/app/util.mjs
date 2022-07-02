@@ -837,6 +837,17 @@ export class NomGroupe extends NomAvatar {
   }
 }
 
+export class NomTribu extends NomAvatar {
+  constructor (nom, rnd) {
+    super(nom, rnd)
+    this.id += 3
+  }
+
+  clone () {
+    return new NomTribu(this.nom, this.rnd)
+  }
+}
+
 /** Filtre des couples *************************************/
 export class FiltreCp {
   constructor () {

@@ -48,20 +48,21 @@ export const MC = {
 }
 
 export const t0n = new Set(['compte', 'prefs', 'chat']) // singletons
-export const t1n = new Set(['avatar', 'compta', 'couple', 'groupe', 'fetat', 'avsecret']) // clé à 1 niveau
+export const t1n = new Set(['tribu', 'avatar', 'compta', 'couple', 'groupe', 'fetat', 'avsecret']) // clé à 1 niveau
 export const t2n = new Set(['membre', 'secret']) // clé à 2 niveaux
 
 /*
 - `versions` (id) : table des prochains numéros de versions (actuel et dernière sauvegarde) et autres singletons (id value)
 - `avrsa` (id) : clé publique d'un avatar
 - `trec` (id) : transfert de fichier en cours (uploadé mais pas encore enregistré comme fichier d'un secret)
+- `gcvol` (id) : GC des volumes des comptes disparus.
 
 _**Tables transmises au client**_
 
 - `compte` (id) : authentification et liste des avatars d'un compte
 - `prefs` (id) : données et préférences d'un compte
 - `compta` (id) : ligne comptable du compte
-- `cv` (id) : statut d'existence, signature et carte de visite des avatars, contacts et groupes.
+- `cv` (id) : statut d'existence, signature et carte de visite des avatars, contacts et groupes
 - `avatar` (id) : données d'un avatar et liste de ses contacts et groupes
 - `couple` (id) : données d'un contact entre deux avatars
 - `groupe` (id) : données du groupe
@@ -71,21 +72,37 @@ _**Tables transmises au client**_
 - `invitgr` (id, ni) : **NON persistante en IDB**. invitation reçue par un avatar à devenir membre d'un groupe
 - `invitcp` (id, ni) : **NON persistante en IDB**. invitation reçue par un avatar à devenir membre d'un couple
 - `chat` (id, dh) : chat d'un avatar primaire (compte) avec les comptables.
+- `tribu` (id) : données et compteurs d'une tribu.
 */
 
 schemas.forSchema({
-  name: 'rowavatar',
-  cols: ['id', 'v', 'lgrk', 'lcck', 'vsh']
+  name: 'rowversions',
+  cols: ['id', 'v']
 })
 
 schemas.forSchema({
-  name: 'rowavrsa',
-  cols: ['id', 'clepub', 'vsh']
+  name: 'rowtribu',
+  cols: ['id', 'v', 'nbc', 'f1', 'f2', 'r1', 'r2', 'datak', 'datat', 'vsh']
+})
+
+schemas.forSchema({
+  name: 'rowchat',
+  cols: ['id', 'dh', 'v', 'txtt', 'vsh']
+})
+
+schemas.forSchema({
+  name: 'rowgcvol',
+  cols: ['id', 'idt', 'f1', 'f2', 'vsh']
+})
+
+schemas.forSchema({
+  name: 'rowtrec',
+  cols: ['id', 'idf', 'dlv']
 })
 
 schemas.forSchema({
   name: 'rowcompte',
-  cols: ['id', 'v', 'dpbh', 'pcbh', 'kx', 'mack', 'vsh']
+  cols: ['id', 'v', 'dpbh', 'pcbh', 'kx', 'stp', 'nctk', 'idtpc', 'mack', 'vsh']
 })
 
 schemas.forSchema({
@@ -94,18 +111,43 @@ schemas.forSchema({
 })
 
 schemas.forSchema({
+  name: 'rowavrsa',
+  cols: ['id', 'clepub', 'vsh']
+})
+
+schemas.forSchema({
+  name: 'rowcv',
+  cols: ['id', 'v', 'x', 'dds', 'cv', 'vsh']
+})
+
+schemas.forSchema({
+  name: 'rowavatar',
+  cols: ['id', 'v', 'lgrk', 'lcck', 'vsh']
+})
+
+schemas.forSchema({
   name: 'rowcompta',
-  cols: ['id', 't', 'v', 'st', 'rb', 'dst', 'dstc', 'data', 'vsh']
+  cols: ['id', 't', 'v', 'st', 'txtt', 'dh', 'data', 'vsh']
 })
 
 schemas.forSchema({
   name: 'rowcouple',
-  cols: ['id', 'v', 'st', 'tp', 'autp', 'v1', 'v2', 'mx10', 'mx20', 'mx11', 'mx21', 'dlv', 'datac', 'infok0', 'infok1', 'mc0', 'mc1', 'ardc', 'vsh']
+  cols: ['id', 'v', 'st', 'v1', 'v2', 'mx10', 'mx20', 'mx11', 'mx21', 'dlv', 'datac', 'phk0', 'infok0', 'infok1', 'mc0', 'mc1', 'ardc', 'vsh']
+})
+
+schemas.forSchema({
+  name: 'rowcontact',
+  cols: ['phch', 'dlv', 'datax', 'vsh']
 })
 
 schemas.forSchema({
   name: 'rowgroupe',
   cols: ['id', 'v', 'dfh', 'st', 'mxim', 'imh', 'v1', 'v2', 'f1', 'f2', 'mcg', 'vsh']
+})
+
+schemas.forSchema({
+  name: 'rowmembre',
+  cols: ['id', 'im', 'v', 'st', 'vote', 'mc', 'infok', 'datag', 'ardg', 'vsh']
 })
 
 schemas.forSchema({
@@ -119,28 +161,8 @@ schemas.forSchema({
 })
 
 schemas.forSchema({
-  name: 'rowmembre',
-  cols: ['id', 'im', 'v', 'st', 'vote', 'mc', 'infok', 'datag', 'ardg', 'vsh']
-})
-
-schemas.forSchema({
-  name: 'rowcontact',
-  cols: ['phch', 'dlv', 'ccx', 'vsh']
-})
-
-schemas.forSchema({
   name: 'rowsecret',
-  cols: ['id', 'ns', 'x', 'v', 'st', 'xp', 'v1', 'v2', 'mc', 'txts', 'mfas', 'refs', 'vsh']
-})
-
-schemas.forSchema({
-  name: 'rowversions',
-  cols: ['id', 'v']
-})
-
-schemas.forSchema({
-  name: 'rowcv',
-  cols: ['id', 'v', 'x', 'dds', 'cv', 'vsh']
+  cols: ['id', 'ns', 'v', 'x', 'st', 'xp', 'v1', 'v2', 'mc', 'txts', 'mfas', 'refs', 'vsh']
 })
 
 schemas.forSchema({
@@ -156,16 +178,6 @@ schemas.forSchema({
 schemas.forSchema({
   name: 'idbAvSecret',
   cols: ['id', 'ns', 'v', 'lidf', 'mnom']
-})
-
-schemas.forSchema({
-  name: 'rowtrec',
-  cols: ['id', 'idf', 'dlv']
-})
-
-schemas.forSchema({
-  name: 'rowchat',
-  cols: ['id', 'dh', 'txt', 'vsh']
 })
 
 schemas.forSchema({
