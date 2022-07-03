@@ -299,6 +299,7 @@ class Session {
     this.opUI = null // opération UI en cours
     this.clek = null // clé K du compte authentifié
     this.estComptable = false
+    this.clepubc = null
     this.pjPerdues = [] // PJ accessibles en mode avion qui n'ont pas pu être récupérées et NE SONT PLUS ACCESSIBLES en avion
     this.syncqueue = [] // notifications reçues sur WS et en attente de traitement
     this.repertoire = new Repertoire()
@@ -309,6 +310,8 @@ class Session {
   setSyncItem (k, st, label) { store().commit('ui/setsyncitem', { k, st, label }) }
 
   /* Getters / Setters ****************************************/
+  getTribu (id) { return store().getters['db/tribu'](id) }
+  setTribus (lobj) { store().commit('db/setObjets', lobj) }
 
   getCompte () { return store().state.db.compte }
   setCompte (compte) { store().commit('db/setCompte', compte) }
@@ -381,14 +384,16 @@ export const data = new Session()
 
 /** Chat *********************************
 - `id` : de l'avatar primaire.
-- v
 - `dh` : date-heure d'écriture. Par convention si elle est paire c'est un texte écrit par l'avatar, sinon il est écrit par le comptable.
-- `txtt` : serial de [k, t]
-  - k : cle cryptée par la clé publique du comptable ou de l'avatar
-  - t : texte crypté pat k
+- `txtt` : serial de [x, t, l]
+  - x : [nom, rnd] de l'avatar crypté par la clé publique du comptable
+  - t : texte crypté pat rnd
+  - l : liste de noms d'avatar : [[nom, rnd] ...]
+La liste l permet au comptable de retourner des contacts, par exemple des parrains
+d'une tribu sur demande d'un avatar cherchant un autre parrain ou changeant de tribu.
 */
 export class Chat {
-  get table () { return 'compte' }
+  get table () { return 'chat' }
   get sid () { return crypt.idToSid(this.id) }
   get pk () { return this.sid }
   get deCompta () { return this.dh % 2 === 1 }
@@ -398,31 +403,49 @@ export class Chat {
     this.id = row.id
     this.dh = row.dh
     const x = deserial(row.txtt)
-    let k
-    if (this.deCompta) {
-      k = await crypt.decrypterRSA(data.getCompte().cpriv(this.id), x[0])
+    if (data.estComptable) {
+      const [n, r] = deserial(await crypt.decrypterRSA(data.getCompte().cpriv(), x[0]))
+      this.na = new NomAvatar(n, r)
     } else {
-      k = await crypt.decrypterRSA(data.clepubC, x[0])
+      // un avatar ne peut lire les chats que le concernant
+      this.na = data.getCompte().primaire().na
     }
-    this.txt = await crypt.decrypter(k, x[1])
+    this.txt = await crypt.decrypter(this.na.rnd, x[1])
+    this.lna = []
+    if (x[2]) {
+      x[2].forEach(i => { this.lna.push(new NomAvatar(i[0], i[1])) })
+    }
   }
 
-  async toRowA (txt) {
+  // Nouvel item - si na : écriture par le comptable, sinon par l'avatar
+  async toRow (txt, lna, na) {
     const d = new Date().getTime()
-    const dh = d % 2 === 0 ? d : d + 1
-    const r = crypt.random(32)
-    const k = await crypt.crypterRSA(data.clepubC, r)
-    const t = await crypt.crypter(r, txt)
-    return schemas.serialize('rowchat', { id: this.id, dh, txtt: serial([k, t]) })
+    const dh = d % 2 === 0 ? (na ? d + 1 : d) : (na ? d : d + 1)
+    const nax = na || data.getCompte().primaire().na
+    const k = await crypt.crypterRSA(data.clepubC, serial([nax.nom, nax.rnd]))
+    const t = await crypt.crypter(nax.rnd, txt)
+    // TODO lna
+    const l = []
+    if (lna && lna.length) lna.forEach(na => { l.push([na.nom, na.rnd]) })
+    return schemas.serialize('rowchat', { id: nax.id, dh, txtt: serial([k, t, l]) })
   }
+}
 
-  async toRowC (txt) {
-    const d = new Date().getTime()
-    const dh = d % 2 === 0 ? d : d + 1
-    const r = crypt.random(32)
-    const k = await crypt.crypterRSA(data.getCompte().cpriv(this.id), r)
-    const t = await crypt.crypter(r, txt)
-    return schemas.serialize('rowchat', { id: this.id, dh, txtt: serial([k, t]) })
+/** Gcvol *********************************
+- `id` : date-heure comme clé primaire
+- `idt` : [nom, rnd]] de la tribu cryptée par la clé publique du comptable.
+- `f1 f2` : volumes de forfaits à restituer à la tribu.
+*/
+export class Gcvol {
+  get table () { return 'gcvol' }
+  get sid () { return crypt.idToSid(this.id) }
+  get pk () { return this.sid }
+
+  async fromRow (row) {
+    this.id = row.id
+    this.f1 = row.f1
+    this.f2 = row.f2
+    this.nat = await data.getCompte().naTribu(row.idt)
   }
 }
 
@@ -468,7 +491,7 @@ export class Tribu {
     this.r2 = row.r2
   }
 
-  async toRow () {
+  async toRow () { // par le comptable seulement (sauf compteurs maj par le serveur)
     const r = { ...this }
     const x = [[this.na, this.rnd], this.info || '', [...this.lp]]
     r.datak = await crypt.crypter(data.clek, serial(x))
@@ -529,6 +552,8 @@ export class Compte {
   get estParrain () { return this.stp === 1 }
   get estComptable () { return this.id === IDCOMPTABLE }
 
+  get primaire () { return data.getAvatar(this.id) }
+
   estAc (id) {
     const sid = crypt.idToSid(id)
     // eslint-disable-next-line no-unneeded-ternary
@@ -561,8 +586,14 @@ export class Compte {
   }
 
   cpriv (avid) {
-    const e = this.mac[crypt.idToSid(avid)]
+    const e = this.mac[crypt.idToSid(avid || this.id)]
     return e ? e.cpriv : null
+  }
+
+  // idt : [nom, rnd] d'une tribu crypté par la clé publique du Comptable
+  async naTribu (idt) {
+    const x = await crypt.decrypterRSA(this.cpriv(), idt)
+    return new NomTribu(x[0], x[1])
   }
 
   nouveau (nomAvatar, cprivav) {

@@ -808,7 +808,8 @@ export class OperationUI extends Operation {
   1) Après création du compte comptable
   2) Après acceptation d'un parrainage (compte est celui créé)
   */
-  async postCreation (ret) {
+  async postCreation (ret, clepubc) {
+    data.clepubc = clepubc || ret.clepubc
     const mapRows = deserialRowItems(ret.rowItems)
 
     const compte = await new Compte().fromRow(mapRows.compte)
@@ -896,6 +897,34 @@ export class OperationUI extends Operation {
     console.log('Création compte : ' + data.getCompte().id)
     this.finOK()
     remplacePage('Compte')
+  }
+
+  /*
+  Récupère tous les volumes à restituer collectés par le GC sur les comptes disparus
+  Les fait réintégrer à leur tribu
+  */
+  async majGCVolumes () {
+    let maxdh = 0
+    const map = {}
+    const args = { sessionId: data.sessionId }
+    const ret = this.tr(await post(this, 'm1', 'collecteVolumes', args))
+    const r = await compileToObject(deserialRowItems(ret.rowItems))
+    if (!r.gcvol || !r.gcvol.length) return
+    for (const pk of r.gcvol) {
+      const row = r.gcvol[pk]
+      if (row.id > maxdh) maxdh = row.id
+      const idt = row.nat.id
+      const m = map[idt]
+      if (m) {
+        m.v1 += row.f1
+        m.v2 += row.f2
+      } else {
+        map[idt] = { v1: row.f1, v2: row.f2 }
+      }
+    }
+
+    const args2 = { sessionId: data.sessionId, maxdh, map }
+    await post(this, 'm1', 'majVolumes', args2)
   }
 }
 
@@ -989,8 +1018,8 @@ export class CreationCompteComptable extends OperationUI {
       const args = { sessionId: data.sessionId, clePubAv: kpav.publicKey, rowCompte, rowCompta, rowAvatar, rowPrefs }
       const ret = this.tr(await post(this, 'm1', 'creationCompteComptable', args))
 
-      // Le compte vient d'être créé  et clek enregistrée
-      await this.postCreation(ret)
+      // Le compte vient d'être créé et clek enregistrée
+      await this.postCreation(ret, kpav.publicKey)
     } catch (e) {
       this.finKO(e)
     }
@@ -1016,11 +1045,12 @@ export class ConnexionCompte extends OperationUI {
   async chargerCP (vcompte, vprefs) {
     const args = { sessionId: data.sessionId, pcbh: data.ps.pcbh, dpbh: data.ps.dpbh, vcompte, vprefs }
     const ret = this.tr(await post(this, 'm1', 'connexionCompte', args))
+    data.clepubc = ret.clepubc
     const compte = ret.rowCompte ? new Compte() : null
     const prefs = ret.rowPrefs ? new Prefs() : null
     if (compte) await compte.fromRow(schemas.deserialize('rowcompte', ret.rowCompte.serial))
     if (prefs) await prefs.fromRow(schemas.deserialize('rowprefs', ret.rowPrefs.serial))
-    return [compte, prefs, ret.estComptable]
+    return [compte, prefs]
   }
 
   /* Recharge depuis le serveur les avatars du compte, abonnement aux avatars */
@@ -1364,6 +1394,18 @@ export class ConnexionCompte extends OperationUI {
     data.setSyncItem('20', 1, msg)
   }
 
+  async chargerTribus () {
+    const ret = this.tr(await post(this, 'm1', 'chargerTribus', { sessionId: data.sessionId }))
+    if (ret.rowItems.length) {
+      const r = await compileToObject(deserialRowItems(ret.rowItems))
+      if (r.tribu) {
+        const l = []
+        for (const pk in r.tribu) l.push(r.tribu[pk])
+        data.setTribus(l)
+      }
+    }
+  }
+
   async phase0 (razdb) { // compte / prefs : abonnement à compte
     let prefs
     // En mode avion, vérifie que la phrase secrète a bien une propriété en localstorage donnant le nom de la base
@@ -1381,12 +1423,13 @@ export class ConnexionCompte extends OperationUI {
     }
 
     if (data.mode === 1 || data.mode === 2) {
-      const [compteSrv, prefsSrv, estComptable] = await this.chargerCP(0, 0)
+      const [compteSrv, prefsSrv] = await this.chargerCP(0, 0)
       // est sorti en exception si non authentifié
       if (data.ps.pcbh !== compteSrv.pcbh) throw EXPS // Changement de phrase secrète
       this.compte = compteSrv
+      data.estComptable = this.compte.estComptable
+      if (data.estComptable) data.mode = 2
       prefs = prefsSrv
-      data.estComptable = estComptable
       if (data.mode === 1) {
         enregLScompte(compteSrv.sid)
         if (razdb) {
@@ -1403,6 +1446,7 @@ export class ConnexionCompte extends OperationUI {
     data.setCompte(this.compte)
     data.setPrefs(prefs)
     this.compte.repAvatars()
+    if (data.estComptable) await this.chargerTribus()
     this.sessionSync = await data.debutConnexion()
     data.setSyncItem('01', 1, 'Compte et comptabilité')
   }

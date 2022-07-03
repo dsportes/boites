@@ -15,7 +15,7 @@
       </q-card-section>
     </q-card>
 
-    <q-card flat v-if="mode > 0 && mode < 4" class="q-mt-lg petitelargeur">
+    <q-card flat v-if="!q666 && mode > 0 && mode < 4" class="q-mt-lg petitelargeur">
       <phrase-secrete label-valider="Se connecter" icon-valider="send" v-on:ok-ps="connecter"></phrase-secrete>
       <div v-if="mode === 1">
         <q-checkbox v-if="$q.dark.isActive" v-model="razdb" dense size="xs" color="grey-8"
@@ -25,7 +25,7 @@
       </div>
     </q-card>
 
-    <div v-if="mode === 1 || mode === 2" class="q-mt-lg petitelargeur column items-start">
+    <div v-if="!q666 && (mode === 1 || mode === 2)" class="q-mt-lg petitelargeur column items-start">
       <q-btn flat color="warning" icon="add_circle" label="Nouveau compte parrainé" @click="phrasepar=!phrasepar"/>
       <q-card v-if="phrasepar" class="petitelargeur">
           <q-input class="full-width" dense v-model="phrase" label="Phrase communiquée par le parrain"
@@ -52,8 +52,7 @@
       </q-card-section>
 
       <q-card-section>
-        <div class="fs-sm q-py-sm">Saisir et confirmer la phrase secrète du compte</div>
-        <phrase-secrete class="q-ma-xs" :init-val="ps" v-on:ok-ps="creercc" verif
+        <phrase-secrete class="q-ma-xs" :init-val="ps" v-on:ok-ps="creercc"
           icon-valider="check" label-valider="Créer"></phrase-secrete>
       </q-card-section>
     </q-card>
@@ -76,7 +75,6 @@ export default ({
   components: { PhraseSecrete, AcceptParrain },
   data () {
     return {
-      q666: window.location.search === 'q666',
       ps: null,
       phrasepar: false,
       isPwd: false,
@@ -94,7 +92,6 @@ export default ({
   methods: {
     async creercc (ps) {
       if (!ps) return
-      this.mode = 2 // incognito
       await new CreationCompteComptable().run(ps)
       this.ps = null
     },
@@ -159,11 +156,17 @@ export default ({
   setup () {
     const $store = useStore()
     onBoot()
+    const hr = window.location.href
+    const q666 = ref(false)
     const razdb = ref(false)
     const mode = computed({
       get: () => $store.state.ui.mode,
       set: (val) => $store.commit('ui/majmode', val)
     })
+    if (hr.endsWith('?666')) {
+      q666.value = true
+      mode.value = 2
+    }
     const infomode = computed({
       get: () => $store.state.ui.infomode,
       set: (val) => $store.commit('ui/majinfomode', val)
@@ -183,6 +186,7 @@ export default ({
       }
     })
     return {
+      q666,
       razdb,
       diagnostic,
       mode,

@@ -11,6 +11,7 @@ export default function () {
     LRUgr: [], // derniers groupes utilisés
     LRUcp: [], // derniers couples utilisés
 
+    tribus: {}, // Toutes les tribus connues
     avatars: {}, // Tous les avatars listés sur le compte
     comptas: {}, // Toutes les lignes comptables des avatars listés sur le compte
     groupes: {}, // Tous les groupes listés sur les avatars

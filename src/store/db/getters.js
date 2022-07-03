@@ -2,6 +2,10 @@ export const fetat = (state) => (id) => {
   return id ? state.fetats[id] : state.fetats
 }
 
+export const tribu = (state) => (id) => {
+  return id ? state.tribus[id] : state.tribus
+}
+
 export const avatar = (state) => (id) => {
   return id ? state.avatars[id] : state.avatars
 }

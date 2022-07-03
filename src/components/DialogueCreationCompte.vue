@@ -63,7 +63,7 @@ import { computed } from 'vue'
 import PhraseSecrete from './PhraseSecrete.vue'
 import ChoixForfaits from './ChoixForfaits.vue'
 import NomAvatar from './NomAvatar.vue'
-import { CreationCompte } from '../app/operations.mjs'
+import { CreationCompteComptable } from '../app/operations.mjs'
 import { UNITEV1, UNITEV2 } from '../app/api.mjs'
 import { edvol } from '../app/util.mjs'
 
@@ -104,7 +104,7 @@ export default ({
       }
     },
     async confirmer () {
-      await new CreationCompte().run(this.ps, this.nom, this.forfaits, this.ressources)
+      await new CreationCompteComptable().run(this.ps, this.nom, this.forfaits, this.ressources)
       this.ps = null
       this.forfaits = [4, 4]
       this.ressources = [4, 4]

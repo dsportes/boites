@@ -30,7 +30,7 @@ Normalement quand une entrée existe il n'y a pas que le secret de référence d
 const l1 = new Set(['compte', 'prefs', 'avatar', 'groupe', 'couple', 'secret'])
 
 // objets multiples à un seul niveau représenté par une map
-const l2 = new Set(['avatars', 'comptas', 'groupes', 'couples', 'cvs', 'fetats', 'avsecrets'])
+const l2 = new Set(['tribus', 'avatars', 'comptas', 'groupes', 'couples', 'cvs', 'fetats', 'avsecrets'])
 
 // LRU
 const l3 = new Set(['LRUgr', 'LRUcp'])
