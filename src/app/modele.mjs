@@ -461,7 +461,7 @@ export class Gcvol {
   - `lp` : liste des ids des parrains (certains _pourraient_ être disparu)
 - `datat` : cryptée par la clé de la tribu :
   - `st` : statut de blocage `nc` :
-    - `n` : niveau de blocage (0 à 4).
+    - `n` : niveau de blocage (0 à 3).
     - `c` : classe du blocage : 0 à 9 repris dans la configuration de l'organisation.
   - `txt` : libellé explicatif du blocage.
   - `dh` : date-heure de dernier changement du statut de blocage.
@@ -471,6 +471,10 @@ export class Tribu {
   get table () { return 'compte' }
   get sid () { return crypt.idToSid(this.id) }
   get pk () { return this.sid }
+  get nom () { return this.na.nom }
+  get stn () { return Math.floor(this.st / 10) }
+  get stc () { return this.st % 10 }
+  get ist () { return !this.nbc ? 4 : this.this.stn }
 
   async fromRow (row) {
     this.vsh = row.vsh || 0

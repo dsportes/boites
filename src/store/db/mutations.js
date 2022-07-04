@@ -86,6 +86,9 @@ export function majgroupe (state, val) {
   }
 }
 
+/* Déclaration de la tribu courante */
+export function majtribu (state, val) { state.tribu = val }
+
 /* Déclaration du membre courant */
 export function majmembre (state, val) { state.membre = val }
 

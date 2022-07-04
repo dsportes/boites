@@ -3,6 +3,7 @@
   <tab-secrets v-if="sessionok && tabavatar === 'secrets'"></tab-secrets>
   <tab-couples v-if="sessionok && tabavatar === 'couples'"></tab-couples>
   <tab-groupes v-if="sessionok && tabavatar === 'groupes'"></tab-groupes>
+  <tab-tribus v-if="sessionok && tabavatar === 'tribus'"></tab-tribus>
 </q-page>
 </template>
 
@@ -13,11 +14,12 @@ import { onBoot } from '../app/page.mjs'
 import TabSecrets from '../components/TabSecrets.vue'
 import TabCouples from '../components/TabCouples.vue'
 import TabGroupes from '../components/TabGroupes.vue'
+import TabTribus from '../components/TabTribus.vue'
 
 export default ({
   name: 'Avatar',
 
-  components: { TabSecrets, TabCouples, TabGroupes },
+  components: { TabSecrets, TabCouples, TabGroupes, TabTribus },
 
   computed: { },
 

@@ -4,7 +4,7 @@
     <div class="text-warning">Ce nom NE POURRA PLUS être changé.
       Caractères <span class="q-px-sm text-negative bg-yellow text-bold">{{interdits}}</span> et non imprimables (CR TAB ...) interdits.</div>
     <q-input dense counter v-model="nom"
-      :label="groupe ? 'Nom du groupe' : 'Nom de l\'avatar'"
+      :label="groupe ? 'Nom du groupe' : (tribu ? 'Nom / code de la tribu' : 'Nom de l\'avatar')"
       :rules="[r1,r2]" maxlength="32"
       @keydown.enter.prevent="ok" type="text" hint="Presser 'Entrée' à la fin de la saisie">
       <template v-slot:append>
@@ -12,7 +12,7 @@
       </template>
     </q-input>
     <div class="row justify-between items-center no-wrap">
-      <q-btn color="primary" flat label="Renoncer" size="md" @click="ko" />
+      <q-btn color="primary" flat label="Annuler" size="md" @click="ko" />
       <q-btn v-if="phase < 3" color="warning" glossy :label="labelVal()" size="md" :icon-right="iconValider"
       :disable="r1(nom) !== true || r2(nom) !== true" @click="ok" />
     </div>
@@ -26,6 +26,7 @@ export default ({
     iconValider: String,
     verif: Boolean,
     groupe: Boolean,
+    tribu: Boolean,
     labelValider: String
   },
   data () {

@@ -9,7 +9,7 @@
               <q-tooltip>Changer d'organisation</q-tooltip>
             </span>
           </span>
-          <info-ico v-if="sessionok && compte.estComptable" size="sm" color="secondary" icon="savings" info="Ce compte a le pouvoir comptable"/>
+          <info-ico v-if="sessionok && compte.estComptable" size="sm" color="secondary" icon="savings" info="Compte Comptable"/>
           <span v-if="sessionok">
             <q-btn :class="page!=='Avatar' ? 'disabled' : ''" flat dense size="md"
               icon="home" no-caps label="Compte" @click="tocompte"/>
@@ -92,6 +92,8 @@
             <q-btn class="btx" v-if="tabavatar==='groupes' && $q.screen.lt.md" size="md" dense icon="search" color="secondary" @click="avatargrrech = !avatargrrech"/>
             <q-btn class="btx" v-if="tabavatar==='groupes'" size="md" dense :icon="avatargrform ? 'view_list' : 'wysiwyg'" color="secondary" @click="togglegrform"/>
             <q-tab name="groupes" label="Groupes" />
+            <q-btn class="btx" v-if="compte.estComptable && tabavatar==='tribus'" size="md" dense :icon="avatargrform ? 'view_list' : 'wysiwyg'" color="secondary" @click="togglegrform"/>
+            <q-tab v-if="compte.estComptable" name="tribus" label="Tribus" />
           </q-tabs>
         </div>
       </q-toolbar>
@@ -210,6 +212,7 @@ import DialogueHelp from 'components/DialogueHelp.vue'
 import PanelContacts from 'components/PanelContacts.vue'
 import FichiersAvion from 'components/FichiersAvion.vue'
 import TitreBanner from '../components/TitreBanner.vue'
+import InfoIco from '../components/InfoIco.vue'
 import { data, MODES } from '../app/modele.mjs'
 import { cfg } from '../app/util.mjs'
 import { remplacePage, onBoot, retourInvitation } from '../app/page.mjs'
@@ -219,7 +222,7 @@ export default {
   name: 'MainLayout',
 
   components: {
-    FichiersAvion, TitreBanner, RapportSynchro, PanelMenu, PanelContacts, DialogueErreur, DialogueCrypto, DialogueCreationCompte, DialogueTestPing, DialogueInfoMode, DialogueInfoReseau, DialogueInfoIdb, DialogueHelp
+    FichiersAvion, TitreBanner, InfoIco, RapportSynchro, PanelMenu, PanelContacts, DialogueErreur, DialogueCrypto, DialogueCreationCompte, DialogueTestPing, DialogueInfoMode, DialogueInfoReseau, DialogueInfoIdb, DialogueHelp
   },
 
   computed: {

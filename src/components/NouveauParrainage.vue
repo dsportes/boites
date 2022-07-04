@@ -12,10 +12,10 @@
           <q-input dense v-model="phrase" label="Phrase libre" counter :rules="[r1]" maxlength="32"
             @keydown.enter.prevent="crypterphrase" :type="isPwd ? 'password' : 'text'"
             hint="Presser 'Entrée' à la fin de la saisie">
-          <template v-slot:append>
-            <q-icon :name="isPwd ? 'visibility_off' : 'visibility'" class="cursor-pointer" @click="isPwd = !isPwd"/>
-            <span :class="phrase.length === 0 ? 'disabled' : ''"><q-icon name="cancel" class="cursor-pointer"  @click="razphrase"/></span>
-          </template>
+            <template v-slot:append>
+              <q-icon :name="isPwd ? 'visibility_off' : 'visibility'" class="cursor-pointer" @click="isPwd = !isPwd"/>
+              <span :class="phrase.length === 0 ? 'disabled' : ''"><q-icon name="cancel" class="cursor-pointer"  @click="razphrase"/></span>
+            </template>
           </q-input>
           <div v-if="encours" class="fs-md text-italic text-primary">Cryptage en cours ...
             <q-spinner color="primary" size="2rem" :thickness="3" />

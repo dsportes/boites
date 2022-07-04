@@ -8,6 +8,7 @@ export default function () {
     membre: null, // membre courant
     couple: null, // couple courant
     secret: null, // secret courant
+    tribu: null, // tribu courant
     LRUgr: [], // derniers groupes utilisés
     LRUcp: [], // derniers couples utilisés
 
