@@ -227,7 +227,7 @@ export default ({
 
     function afficher (idx) {
       state.idx = idx
-      tribu.value = state.lst[state.idx]
+      tribu.value = state.lst[state.idx].t
       avatartrform.value = true
     }
 

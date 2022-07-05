@@ -63,7 +63,7 @@
   </q-dialog>
 
   <q-dialog v-if="sessionok" v-model="nvpar" persistent class="moyennelargeur">
-    <NouveauParrainage :close="fermerParrain" />
+    <nouveau-parrainage :close="fermerParrain" />
   </q-dialog>
 
   <q-dialog v-if="sessionok" v-model="phraserenc">
