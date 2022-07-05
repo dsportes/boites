@@ -92,8 +92,8 @@
             <q-btn class="btx" v-if="tabavatar==='groupes' && $q.screen.lt.md" size="md" dense icon="search" color="secondary" @click="avatargrrech = !avatargrrech"/>
             <q-btn class="btx" v-if="tabavatar==='groupes'" size="md" dense :icon="avatargrform ? 'view_list' : 'wysiwyg'" color="secondary" @click="togglegrform"/>
             <q-tab name="groupes" label="Groupes" />
-            <q-btn class="btx" v-if="compte.estComptable && tabavatar==='tribus'" size="md" dense :icon="avatargrform ? 'view_list' : 'wysiwyg'" color="secondary" @click="togglegrform"/>
-            <q-tab v-if="compte.estComptable" name="tribus" label="Tribus" />
+            <q-btn class="btx" v-if="compte && compte.estComptable && tabavatar==='tribus'" size="md" dense :icon="avatargrform ? 'view_list' : 'wysiwyg'" color="secondary" @click="togglegrform"/>
+            <q-tab v-if="compte && compte.estComptable" name="tribus" label="Tribus" />
           </q-tabs>
         </div>
       </q-toolbar>

@@ -5,7 +5,7 @@ import {
   getAvatars, getGroupes, getCouples, getMembres, getSecrets,
   openIDB, enregLScompte, getVIdCvs, saveListeCvIds, gestionFichierSync, gestionFichierCnx
 } from './db.mjs'
-import { Compte, Avatar, deserialRowItems, compileToObject, data, Prefs, Contact, Invitgr, Invitcp, Compta, Groupe, Membre, Cv, Couple } from './modele.mjs'
+import { Compte, Avatar, deserialRowItems, compileToObject, data, Prefs, Contact, Invitgr, Invitcp, Compta, Groupe, Membre, Cv, Couple, Tribu } from './modele.mjs'
 import { AppExc, EXBRK, EXPS, F_BRO, E_BRO, X_SRV, E_WS } from './api.mjs'
 
 import { crypt } from './crypto.mjs'
@@ -602,6 +602,17 @@ export class Operation {
       }
     }
 
+    // Tribu
+    if (mapObj.tribu) {
+      for (const pk in mapObj.tribu) {
+        const obj = mapObj.tribu[pk]
+        const a = data.getTribu(obj.id)
+        if (!a || obj.v > a.v) {
+          this.buf.setObj(obj)
+        }
+      }
+    }
+
     // Groupes : mise à jour des données
     if (mapObj.groupe) {
       for (const pk in mapObj.groupe) {
@@ -1048,7 +1059,13 @@ export class ConnexionCompte extends OperationUI {
     data.clepubc = ret.clepubc
     const compte = ret.rowCompte ? new Compte() : null
     const prefs = ret.rowPrefs ? new Prefs() : null
-    if (compte) await compte.fromRow(schemas.deserialize('rowcompte', ret.rowCompte.serial))
+    if (compte) {
+      await compte.fromRow(schemas.deserialize('rowcompte', ret.rowCompte.serial))
+      if (compte.nctk) {
+        const args = { sessionId: data.sessionId, id: compte.id, nctk: compte.nctk }
+        this.tr(await post(this, 'm1', 'nctkCompte', args))
+      }
+    }
     if (prefs) await prefs.fromRow(schemas.deserialize('rowprefs', ret.rowPrefs.serial))
     return [compte, prefs]
   }
@@ -1491,6 +1508,27 @@ export class ConnexionCompte extends OperationUI {
       console.log('Connexion compte : ' + data.getCompte().id)
       this.finOK()
       remplacePage('Compte')
+    } catch (e) {
+      await this.finKO(e)
+    }
+  }
+}
+
+/******************************************************
+Nouvelle tribu
+*/
+export class NouvelleTribu extends OperationUI {
+  constructor () {
+    super('Mise à jour d\'une préférence du compte', OUI, SELONMODE)
+  }
+
+  async run (nom, info, reserves) {
+    try {
+      const tribu = new Tribu().nouvelle(nom, info, reserves[0], reserves[1])
+      const rowTribu = await tribu.toRow()
+      const args = { sessionId: data.sessionId, rowTribu }
+      await post(this, 'm1', 'nouvelleTribu', args)
+      this.finOK()
     } catch (e) {
       await this.finKO(e)
     }

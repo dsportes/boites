@@ -1,6 +1,6 @@
 <template>
   <q-btn dense>
-    <q-icon left :size="size || 'sm'" :color="color || 'warning'" :name="icon || warning" />
+    <q-icon left :size="size || 'sm'" :color="color || 'warning'" :name="icon || 'warning'" />
     <q-popup-proxy transition-show="flip-up" transition-hide="flip-down">
       <q-banner inline-actions dense rounded>
         <q-icon size="sm" name="lightbulb" color="warning" />

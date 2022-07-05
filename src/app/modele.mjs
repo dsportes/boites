@@ -94,6 +94,9 @@ function newObjet (table) {
     case 'membre' : return new Membre()
     case 'secret' : return new Secret()
     case 'cv' : return new Cv()
+    case 'tribu' : return new Tribu()
+    case 'chat' : return new Chat()
+    case 'gcvol' : return new Gcvol()
   }
 }
 
@@ -445,7 +448,7 @@ export class Gcvol {
     this.id = row.id
     this.f1 = row.f1
     this.f2 = row.f2
-    this.nat = await data.getCompte().naTribu(row.idt)
+    this.nat = await data.getCompte().naTribu(row.nctpc)
   }
 }
 
@@ -458,7 +461,10 @@ export class Gcvol {
 - `datak` : cryptée par la clé K du comptable :
   - `[nom, rnd]`: nom immuable et clé de la tribu.
   - `info` : commentaire privé du comptable.
-  - `lp` : liste des ids des parrains (certains _pourraient_ être disparu)
+- `mncpt` : map des noms complets des parrains:
+  - _valeur_ : `[nom, rnd]` crypté par la clé de la tribu
+  - _clé_ : (`chkt`), hash (integer) de (id du parrain base64 + id tribu base64)
+  - l'ajout d'un parrain ne se fait que par le comptable mais un retrait peut s'effectuer aussi par un traitement de GC
 - `datat` : cryptée par la clé de la tribu :
   - `st` : statut de blocage `nc` :
     - `n` : niveau de blocage (0 à 3).
@@ -468,22 +474,26 @@ export class Gcvol {
 - `vsh`
 */
 export class Tribu {
-  get table () { return 'compte' }
+  get table () { return 'tribu' }
   get sid () { return crypt.idToSid(this.id) }
   get pk () { return this.sid }
   get nom () { return this.na.nom }
   get stn () { return Math.floor(this.st / 10) }
   get stc () { return this.st % 10 }
   get ist () { return !this.nbc ? 4 : this.this.stn }
+  get clet () { return this.na.rnd }
 
   async fromRow (row) {
     this.vsh = row.vsh || 0
     this.id = row.id
     this.v = row.v
-    const [x, info, lp] = deserial(await crypt.decrypter(data.clek, row.datak))
+    const [x, info] = deserial(await crypt.decrypter(data.clek, row.datak))
     this.na = new NomTribu(x[0], x[1])
     this.info = info || ''
-    this.lp = new Set(lp || [])
+    this.mncp = (row.mncpt ? deserial(row.mncpt) : null) || {}
+    for (const chkt in this.mncp) {
+      this.mncp[chkt] = await crypt.decrypter(this.clet, this.mncp[chkt])
+    }
     const [st, txt, dh] = !row.datat ? [0, '', 0] : deserial(await crypt.decrypter(this.na.rnd, row.datat))
     this.st = st
     this.txt = txt
@@ -493,33 +503,43 @@ export class Tribu {
     this.f2 = row.f2
     this.r1 = row.r1
     this.r2 = row.r2
+    return this
   }
 
-  async toRow () { // par le comptable seulement (sauf compteurs maj par le serveur)
-    const r = { ...this }
-    const x = [[this.na, this.rnd], this.info || '', [...this.lp]]
-    r.datak = await crypt.crypter(data.clek, serial(x))
-    const y = [this.st, this.txt || '', this.dh || 0]
-    r.datat = y[0] || y[1] || y[2] ? await crypt.crypter(this.na.rnd, serial(y)) : null
-    return schemas.serialize('rowtribu', r)
-  }
-
-  nouveau (nom, info, r1, r2) {
+  nouvelle (nom, info, r1, r2) {
+    this.vsh = 0
     this.na = new NomTribu(nom)
     this.id = this.na.id
     this.v = 0
-    this.vsh = 0
+    this.info = info
     this.nbc = 0
     this.f1 = 0
     this.f2 = 0
     this.r1 = r1
     this.r2 = r2
+    this.mncp = {}
     this.st = 0
     this.txt = ''
     this.dh = 0
-    this.info = info
-    this.lp = []
     return this
+  }
+
+  async toRow () {
+    const r = { ...this }
+    const x = [[this.na.nom, this.na.rnd], this.info || '']
+    r.datak = await crypt.crypter(data.clek, serial(x))
+    const y = [this.st, this.txt || '', this.dh || 0]
+    r.mncpt = null
+    r.datat = y[0] || y[1] || y[2] ? await crypt.crypter(this.clet, serial(y)) : null
+    return schemas.serialize('rowtribu', r)
+  }
+
+  async getmncpt () {
+    const mncpt = {}
+    for (const chkt of this.mncp) {
+      mncpt[chkt] = await crypt.crypter(this.clet, this.mncp[chkt])
+    }
+    return mncpt
   }
 }
 
@@ -539,8 +559,8 @@ schemas.forSchema({
 - `nctk` : nom complet `[nom, rnd]` de la tribu crypté,
   - soit par la clé K du compte,
   - soit par la clé publique de son avatar primaire après changement de tribu par le comptable.
-- `idtpc` : [na, rnd] de la tribu cryptée par la clé publique du comptable.
-- `chkt` : hash (integer) de (id avatar base64 + @ + id tribu base64)
+- `nctpc` : nom complet `[nom, rnd]` de la tribu cryptée par la clé publique du comptable.
+- `chkt` : hash (integer) de (id avatar base64 + id tribu base64)
 - `mack` {} : map des avatars du compte cryptée par la clé K.
   - _Clé_: id,
   - _valeur_: `[nom, rnd, cpriv]`
@@ -594,9 +614,9 @@ export class Compte {
     return e ? e.cpriv : null
   }
 
-  // idt : [nom, rnd] d'une tribu crypté par la clé publique du Comptable
-  async naTribu (idt) {
-    const x = await crypt.decrypterRSA(this.cpriv(), idt)
+  // nctpc : [nom, rnd] d'une tribu crypté par la clé publique du Comptable
+  async naTribu (nctpc) {
+    const x = deserial(await crypt.decrypterRSA(this.cpriv(), nctpc))
     return new NomTribu(x[0], x[1])
   }
 
@@ -608,8 +628,9 @@ export class Compte {
     this.pcbh = data.ps.pcbh
     this.k = crypt.random(32)
     data.clek = this.k
+    this.stp = 0
     this.nat = null
-    this.idtpc = null
+    this.nctpc = null
     this.chkt = 0
     this.mac = { }
     this.mac[nomAvatar.sid] = { na: nomAvatar, cpriv: cprivav }
@@ -634,16 +655,20 @@ export class Compte {
       this.mac[sid] = { na: new NomAvatar(nom, rnd), cpriv: cpriv }
     }
     if (row.nctk) {
+      let nr
       if (row.nctk.length === 256) {
-        this.nat = await crypter.decrypterRSA(this.cpriv(this.id), row.nctk)
-        this.nctk = await crypter.crypter(this.k, this.nat)
-        this.chkt = row.chkt
+        nr = await crypter.decrypterRSA(this.cpriv(this.id), row.nctk)
+        this.nctk = await crypter.crypter(this.k, nr)
       } else {
-        this.nat = await crypter.decrypter(this.k, row.nctk)
+        nr = await crypter.decrypter(this.k, row.nctk)
       }
+      const [nom, rnd] = deserial(nr)
+      this.nat = new NomAvatar(nom, rnd)
+      this.chkt = row.chkt
+      this.nctpc = row.nctpc
     } else {
       this.nat = null
-      this.idtpc = null
+      this.nctpc = null
       this.chkt = 0
     }
     return this
@@ -700,7 +725,9 @@ export class Compte {
 
   async setTribu (nat) {
     this.nat = nat
-    this.idtpc = nat ? await crypt.crypterRSA(data.clepubC, serial(nat)) : null
+    const nc = serial([nat.nom, nat.rnd])
+    this.nctpc = nat ? await crypt.crypterRSA(data.clepubc, nc) : null
+    this.nctk = nat ? await crypt.crypter(data.clek, nc) : null
     this.chkt = nat ? crypt.hash(crypt.idToSid(this.id + '@' + nat.id)) : 0
   }
 

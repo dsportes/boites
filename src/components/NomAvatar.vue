@@ -12,7 +12,7 @@
       </template>
     </q-input>
     <div class="row justify-between items-center no-wrap">
-      <q-btn color="primary" flat label="Annuler" size="md" @click="ko" />
+      <q-btn color="primary" flat label="Corriger" size="md" @click="ko" />
       <q-btn v-if="phase < 3" color="warning" glossy :label="labelVal()" size="md" :icon-right="iconValider"
       :disable="r1(nom) !== true || r2(nom) !== true" @click="ok" />
     </div>

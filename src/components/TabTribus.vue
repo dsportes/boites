@@ -10,21 +10,19 @@
     :index="state.idx" :sur="state.lst.length"/>
 
   <div v-if="!avatartrform && state.lst && state.lst.length">
-    <div v-for="(t, idx) in state.lst" :key="t.id"
+    <div v-for="(i, idx) in state.lst" :key="i.t.id"
       :class="dkli(idx) + ' zone full-width row items-start q-py-xs' + (idx === state.idx ? ' courant' : '')">
-      <div class="row items-start full-width">
-        <div class="col row cursor-pointer" @click="afficher(idx)">
-          <info-ico size="sm" :color="colors[t.ist]" :icon="icons[t.ist]" :info="infos[t.ist]"/>
-          <div class="col q-px-sm">
-            <div class="row items-center">
-              <div class="col-5 font-mono fs-md text-bold">{{t.nom}}</div>
-              <show-html class="col-7" style="height:1.8rem;overflow:hidden" :texte="t.info" :idx="idx"/>
-            </div>
-            <div>
-              <span class=q-pr-sm>{{t.nbc}} compte(s) / {{t.lp.length}} parrain(s) / </span>
-              <span class=q-pr-sm>{{ed1(t.f1)}} {{ed2(t.f2)}} attribués / </span>
-              <span class=q-pr-sm>{{ed1(t.r1)}} {{ed2(t.r2)}} réservés</span>
-            </div>
+      <div class="row items-start full-width cursor-pointer" @click="afficher(idx)">
+        <info-ico class="col-auto" size="sm" :color="colors[i.t.ist]" :icon="icons[i.t.ist]" :info="infos[i.t.ist]"/>
+        <div class="col q-px-sm">
+          <div class="row items-center">
+            <div class="col-4 font-mono fs-md text-bold">{{i.t.nom}}</div>
+            <show-html class="col-8" style="height:1.8rem;overflow:hidden" :texte="i.t.info" :idx="idx"/>
+          </div>
+          <div>
+            <div class=q-pr-sm>{{i.t.nbc}} compte(s) - {{i.lp.length}} parrain(s)</div>
+            <span class=q-pr-sm>{{ed1(i.t.f1)}} {{ed2(i.t.f2)}} attribués - </span>
+            <span class=q-pr-sm>{{ed1(i.t.r1)}} {{ed2(i.t.r2)}} réservés</span>
           </div>
         </div>
       </div>
@@ -45,13 +43,14 @@
       </q-card-section>
       <q-card-actions>
         <q-btn dense flat color="primary" label="Renoncer" v-close-popup/>
-        <q-btn dense flat color="warnin" label="Créer" v-close-popup @click="creertribu"/>
+        <q-btn dense flat color="warnin" label="Créer" :disable="erreur" v-close-popup @click="creertribu"/>
       </q-card-actions>
     </q-card>
   </q-dialog>
 
   <q-page-sticky position="top-left" class="full-width bg-secondary text-white" expand :offset="[5,5]">
-    <q-expansion-item class="full-width" dense dense-toggle expand-separator icon="filter_alt" label="Filtre ...">
+    <q-expansion-item class="full-width titre-lg" v-model="filtre"
+      dense dense-toggle expand-separator icon="filter_alt" label="Filtre, actions ...">
     <div class="column justify-center full-width">
       <div class="row items-end">
         <q-radio v-model="opt" val="c" label="contient" />
@@ -61,7 +60,7 @@
       <div class="row items-end">
         <q-checkbox class="q-ml-sm" left-label v-model="bloquee" label="Tribus bloquées" />
         <q-btn v-if="!avatartrform" class="q-ma-sm" dense icon="add" label="Nouvelle tribu"
-          color="primary" @click="nouvtr = true"/>
+          color="primary" @click="filtre = false;nouvtr = true"/>
       </div>
     </div>
     </q-expansion-item>
@@ -71,7 +70,7 @@
 <script>
 import { computed, reactive, watch, ref } from 'vue'
 import { useStore } from 'vuex'
-import { cfg, getJourJ, edvol } from '../app/util.mjs'
+import { cfg, getJourJ, edvol, afficherdiagnostic } from '../app/util.mjs'
 import PanelTribu from './PanelTribu.vue'
 import ShowHtml from './ShowHtml.vue'
 import { UNITEV1, UNITEV2 } from '../app/api.mjs'
@@ -80,14 +79,16 @@ import NomAvatar from './NomAvatar.vue'
 import ChoixForfaits from './ChoixForfaits.vue'
 import EditeurMd from './EditeurMd.vue'
 // import { data } from '../app/modele.mjs'
-// import { CreationTribu } from '../app/operations.mjs'
+import { NouvelleTribu } from '../app/operations.mjs'
 
 export default ({
   name: 'TabTribus',
 
   components: { ChoixForfaits, NomAvatar, EditeurMd, InfoIco, PanelTribu, ShowHtml },
 
-  computed: { },
+  computed: {
+    erreur () { return !this.nom || this.nom.length < 4 || this.reserves[0] <= 0 || this.reserves[1] <= 0 }
+  },
 
   data () {
     return {
@@ -97,7 +98,8 @@ export default ({
       infos: ['OK', 'En alerte', 'En sursis', 'Bloqué', 'Aucun compte'],
       nom: '',
       info: '',
-      reserves: [0, 0]
+      reserves: [0, 0],
+      filtre: false
     }
   },
 
@@ -108,9 +110,16 @@ export default ({
     ed3 (f) { return edvol(f) },
     nbj (j) { return j - getJourJ() + cfg().limitesjour.groupenonheb },
 
-    oknom (nom) { this.nom = nom },
+    oknom (nom) {
+      if (this.state.setNoms.has(nom)) {
+        afficherdiagnostic('Ce nom a déjà été attribué à une tribu, les doublons de nom ne sont pas acceptés.')
+        this.nom = null
+      } else {
+        this.nom = nom
+      }
+    },
     async creertribu () {
-      // await new CreationTribu().run(this.nom, this.info, this.reserves)
+      await new NouvelleTribu().run(this.nom, this.info, this.reserves)
     },
 
     dkli (idx) { return this.$q.dark.isActive ? (idx ? 'sombre' + (idx % 2) : 'sombre0') : (idx ? 'clair' + (idx % 2) : 'clair0') }
@@ -139,17 +148,21 @@ export default ({
     const state = reactive({
       blst: [],
       lst: [],
+      setNoms: new Set(),
       idx: 0
     })
 
     function getTribus () {
       const lst = []
+      state.setNoms = new Set()
       for (const x in tribus.value) {
         const idt = parseInt(x)
         const t = tribus.value[idt]
-        lst.push({ ...t })
+        state.setNoms.add(t.nom)
+        const lp = Object.values(t.mncp)
+        lst.push({ t, lp })
       }
-      lst.sort((a, b) => { return a.nom < b.nom ? -1 : (a.nom > b.nom ? 1 : 0) })
+      lst.sort((a, b) => { return a.t.nom < b.t.nom ? -1 : (a.t.nom > b.t.nom ? 1 : 0) })
       state.blst = lst
     }
 
@@ -167,9 +180,9 @@ export default ({
           b(tr)
         } else {
           if (c) {
-            if (tr.info.indexOf(t) !== -1) b(tr)
+            if (tr.t.info.indexOf(t) !== -1) b(tr)
           } else {
-            if (tr.nom.startsWith(t)) b(tr)
+            if (tr.t.nom.startsWith(t)) b(tr)
           }
         }
       })
