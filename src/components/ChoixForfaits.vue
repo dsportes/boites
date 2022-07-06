@@ -4,14 +4,14 @@
       <div class="titre-md">V1 : Textes - {{ed1(f1n)}}</div>
       <div class="row justify-around">
         <q-select class="col-5" v-model="f1c" :options="options1" :disable="lecture" dense options-dense/>
-        <q-input class="col-5" v-model.number="f1n" type="number" :disable="lecture" dense :rules="[val => val >= 0 && val <= max || ('0 - ' + max)]"/>
+        <q-input class="col-5" v-model.number="f1n" type="number" :disable="lecture" dense :rules="[val => val >= 0 && val <= maxx || ('0 - ' + maxx)]"/>
       </div>
     </div>
     <div class="col-6">
       <div class="titre-md">V2 : Fichiers - {{ed2(f2n)}}</div>
       <div class="row justify-around">
         <q-select class="col-5" v-model="f2c" :options="options2" :disable="lecture" dense options-dense/>
-        <q-input class="col-5" v-model.number="f2n" type="number" :disable="lecture" dense :rules="[val => val >= 0 && val <= max || ('0 - ' + max)]"/>
+        <q-input class="col-5" v-model.number="f2n" type="number" :disable="lecture" dense :rules="[val => val >= 0 && val <= maxx || ('0 - ' + maxx)]"/>
       </div>
     </div>
   </q-card-section>
@@ -49,7 +49,7 @@ export default ({
     const lf = cfg().forfaits
     const lecture = toRef(props, 'lecture')
     const max = toRef(props, 'max')
-    if (!max.value || max.value < 0) max.value = 255
+    const maxx = ref(!max.value || max.value < 0 ? 255 : max.value)
     const options1 = []
     const options2 = []
     const f1 = toRef(props, 'f1') // valeurs sur l'élément
@@ -141,8 +141,8 @@ export default ({
     }
 
     function achange () {
-      err1.value = f1n.value < 0 || f1n.value > max.value
-      err2.value = f2n.value < 0 || f2n.value > max.value
+      err1.value = f1n.value < 0 || f1n.value > maxx.value
+      err2.value = f2n.value < 0 || f2n.value > maxx.value
       diag2.value = f1n.value < min1.value && !err1.value ? 'Le forfait 1 choisi ne couvre pas le volume actuel (' + min1.value + ')' : ''
       diag2.value = f2n.value < min2.value && !err2.value ? 'Le forfait 2 choisi ne couvre pas le volume actuel (' + min2.value + ')' : ''
       return f1n.value !== f1inp.value || f2n.value !== f2inp.value
@@ -157,6 +157,7 @@ export default ({
     initState()
 
     return {
+      maxx,
       undo,
       modif,
       valider,

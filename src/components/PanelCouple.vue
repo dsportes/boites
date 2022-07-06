@@ -115,17 +115,13 @@
           <q-btn class="chl" dense flat size="md" icon="chevron_right" @click="paredit=false"/>
         </q-toolbar>
         <div class="q-mt-md titre-lg">Phrase convenue :</div>
-        <div class="q-ml-md font-mono fs-md">{{s.c.data.phrase}}</div>
-        <div class="q-mt-lg titre-lg">Forfaits attribués au compte parrainé :</div>
-        <choix-forfaits v-model="pf" :f1="s.c.data.f1" :f2="s.c.data.f2" lecture/>
-        <div class="q-mt-lg titre-lg" v-if="s.c.data.r1 || s.c.data.r2" >Réserve attribuée pour parrainage d'autres comptes :</div>
-        <choix-forfaits v-if="s.c.data.r1 || s.c.data.r2" v-model="pr" :f1="s.c.data.r1" :f2="s.c.data.r2" lecture/>
+        <div class="q-ml-md font-mono fs-md">{{s.c.phrase}}</div>
       </q-card>
     </q-dialog>
 
     <div v-if="s.c && s.c.orig === 2" class="q-mt-md">
       <div class="titre-md text-white">Contact créé suite à rencontre avec le contact</div>
-      <div class="q-ml-md fs-sm">Phrase de rencontre : <span class="text-italic">{{s.c.data.phrase}}</span></div>
+      <div class="q-ml-md fs-sm">Phrase de rencontre : <span class="text-italic">{{s.c.phrase}}</span></div>
     </div>
 
   <q-page-sticky class="full-width" position="top-left" expand :offset="[50, 0]">

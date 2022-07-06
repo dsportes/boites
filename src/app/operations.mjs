@@ -1536,6 +1536,26 @@ export class NouvelleTribu extends OperationUI {
 }
 
 /******************************************************
+Nouvelle tribu
+*/
+export class InforesTribu extends OperationUI {
+  constructor () {
+    super('Mise à jour du commentaires / réserves d\'une tribu', OUI, SELONMODE)
+  }
+
+  async run (tribu, info, reserves) {
+    try {
+      const datak = info ? await tribu.getDatak(info) : null
+      const args = { sessionId: data.sessionId, idt: tribu.id, datak, reserves }
+      await post(this, 'm1', 'inforesTribu', args)
+      this.finOK()
+    } catch (e) {
+      await this.finKO(e)
+    }
+  }
+}
+
+/******************************************************
 Mise à jour d'une préférence d'un compte
 X_SRV, '06-Compte non trouvé. Ne devrait pas arriver (bug probable)'
 */
@@ -1908,14 +1928,28 @@ export class NouveauParrainage extends OperationUI {
 
   async run (arg) {
     /*
+      const arg = {
+        nat: this.tribu.na,
+        phch: this.pc.phch, // le hash de la clex (integer)
+        pp: this.pc.phrase, // phrase de parrainage (string)
+        clex: this.pc.clex, // PBKFD de pp (u8)
+        id: this.avatar.id,
+        max: this.max,
+        forfaits: this.forfaits,
+        parrain: this.estParrain,
+        nomf: this.nom, // nom du filleul (string)
+        mot: this.mot
+      }
+    */
+    /*
     args :
-      - sessionid
-      - row Contact :
-      - row Couple :
+      - sessionId: data.sessionId,
+      - rowCouple
+      - rowContact
       - id: id de l'avatar
       - ni: clé d'accès à lcck de l'avatar
       - datak : clé cc cryptée par la clé k
-    X_SRV, '14-Cette phrase de parrainage / rencontre est trop proche d\'une déjà enregistrée'
+      - sec : true si avatar accède aux secrets du contact    X_SRV, '14-Cette phrase de parrainage / rencontre est trop proche d\'une déjà enregistrée'
     A_SRV, '23-Avatar non trouvé.'
     */
     try {
@@ -1930,13 +1964,14 @@ export class NouveauParrainage extends OperationUI {
       const naf = new NomAvatar(arg.nomf) // na de l'avatar du filleul
       const dlv = getJourJ() + cfg().limitesjour.parrainage
 
-      const couple = new Couple().nouveauP(nap, naf, cc, arg.mot, arg.pp, arg.max, dlv, arg.forfaits, arg.ressources)
+      const couple = new Couple().nouveauP(nap, naf, cc, arg.mot, arg.pp, arg.max, dlv)
       const rowCouple = await couple.toRow()
 
-      const contact = await new Contact().nouveau(arg.phch, arg.clex, dlv, cc, arg.nomf)
+      const nct = [arg.nat.nom, arg.nat.rnd]
+      const contact = await new Contact().nouveau(arg.phch, arg.clex, dlv, cc, arg.nomf, 0, nct, arg.parrain, arg.forfaits)
       const rowContact = contact.toRow()
 
-      const args = { sessionId: data.sessionId, rowCouple, rowContact, ni, datak, id: nap.id }
+      const args = { sessionId: data.sessionId, rowCouple, rowContact, ni, datak, id: nap.id, sec: arg.max[0] > 0 }
       await post(this, 'm1', 'nouveauParrainage', args)
       return this.finOK()
     } catch (e) {

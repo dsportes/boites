@@ -92,7 +92,7 @@
             <q-btn class="btx" v-if="tabavatar==='groupes' && $q.screen.lt.md" size="md" dense icon="search" color="secondary" @click="avatargrrech = !avatargrrech"/>
             <q-btn class="btx" v-if="tabavatar==='groupes'" size="md" dense :icon="avatargrform ? 'view_list' : 'wysiwyg'" color="secondary" @click="togglegrform"/>
             <q-tab name="groupes" label="Groupes" />
-            <q-btn class="btx" v-if="compte && compte.estComptable && tabavatar==='tribus'" size="md" dense :icon="avatargrform ? 'view_list' : 'wysiwyg'" color="secondary" @click="togglegrform"/>
+            <q-btn class="btx" v-if="compte && compte.estComptable && tabavatar==='tribus'" size="md" dense :icon="avatartrform ? 'view_list' : 'wysiwyg'" color="secondary" @click="toggletrform"/>
             <q-tab v-if="compte && compte.estComptable" name="tribus" label="Tribus" />
           </q-tabs>
         </div>
@@ -251,6 +251,7 @@ export default {
     togglecpform () { this.avatarcpform = !this.avatarcpform },
     togglegrform () { this.avatargrform = !this.avatargrform },
     togglescform () { this.avatarscform = !this.avatarscform },
+    toggletrform () { this.avatartrform = !this.avatartrform },
     toInvit () { retourInvitation('KO') },
 
     stop () { data.stopOp() }
@@ -352,6 +353,10 @@ export default {
       get: () => $store.state.ui.avatarscform,
       set: (val) => $store.commit('ui/majavatarscform', val)
     })
+    const avatartrform = computed({
+      get: () => $store.state.ui.avatartrform,
+      set: (val) => $store.commit('ui/majavatartrform', val)
+    })
 
     const invitationattente = computed(() => $store.state.ui.invitationattente)
 
@@ -403,6 +408,7 @@ export default {
       avatargrform,
       avatarscrech,
       avatarscform,
+      avatartrform,
       invitationattente,
 
       compte,

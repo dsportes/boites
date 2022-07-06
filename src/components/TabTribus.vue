@@ -48,7 +48,7 @@
     </q-card>
   </q-dialog>
 
-  <q-page-sticky position="top-left" class="full-width bg-secondary text-white" expand :offset="[5,5]">
+  <q-page-sticky v-if="!avatartrform" position="top-left" class="full-width bg-secondary text-white" expand :offset="[5,5]">
     <q-expansion-item class="full-width titre-lg" v-model="filtre"
       dense dense-toggle expand-separator icon="filter_alt" label="Filtre, actions ...">
     <div class="column justify-center full-width">
@@ -191,10 +191,10 @@ export default ({
 
     function indexer () {
       state.idx = -1
-      if (tribu.value) state.lst.forEach((t, n) => { if (t.id === tribu.value.id) state.idx = n })
+      if (tribu.value) state.lst.forEach((x, n) => { if (x.t.id === tribu.value.id) state.idx = n })
       if (state.idx === -1) {
         if (state.lst.length) {
-          state.idx = 0; tribu.value = state.lst[0]
+          state.idx = 0; tribu.value = state.lst[0].t
         } else {
           tribu.value = null
         }
@@ -233,12 +233,12 @@ export default ({
 
     function suiv (n) {
       if (state.idx < state.lst.length - 1) state.idx = n ? state.idx + 1 : state.lst.length - 1
-      tribu.value = state.lst[state.idx]
+      tribu.value = state.lst[state.idx].t
     }
 
     function prec (n) {
       if (state.idx > 0) state.idx = n ? state.idx - 1 : 0
-      tribu.value = state.lst[state.idx]
+      tribu.value = state.lst[state.idx].t
     }
 
     return {

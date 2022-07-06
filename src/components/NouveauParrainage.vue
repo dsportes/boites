@@ -8,7 +8,7 @@
     <q-card-section v-if="sessionok">
       <q-stepper v-model="step" vertical color="primary" animated>
         <q-step :name="1" title="Phrase de parrainage" icon="settings" :done="step > 1">
-          <span class="fs-sm q-py-sm">Phrase à ne communiquer qu'au titulaire du compte à parrainer.</span>
+          <span class="fs-sm q-py-sm">Phrase à ne communiquer qu'au titulaire du compte parrainé</span>
           <q-input dense v-model="phrase" label="Phrase libre" counter :rules="[r1]" maxlength="32"
             @keydown.enter.prevent="crypterphrase" :type="isPwd ? 'password' : 'text'"
             hint="Presser 'Entrée' à la fin de la saisie">
@@ -22,14 +22,14 @@
           </div>
         </q-step>
 
-        <q-step :name="2" title="Nom du premier avatar du compte" icon="settings" :done="step > 3" >
+        <q-step :name="2" title="Nom de l'avatar primaire du compte" icon="settings" :done="step > 3" >
           <nom-avatar class="q-ma-xs" v-on:ok-nom="oknom" verif icon-valider="check" label-valider="Suivant"></nom-avatar>
           <q-stepper-navigation>
             <q-btn flat @click="step = 2" color="primary" label="Précédent" class="q-ml-sm" />
           </q-stepper-navigation>
         </q-step>
 
-        <q-step :name="3" title="Mot de bienvenue pour le futur nouveau compte" icon="settings" :done="step > 3" >
+        <q-step :name="3" title="Mot de bienvenue pour le futur compte" icon="settings" :done="step > 3" >
           <editeur-md :texte="mot1" v-model="mot" editable modetxt style="height:8rem"></editeur-md>
           <div v-if="diagmot" class="fs-sm text-warning">De 10 à 140 signes ({{mot.length}})</div>
           <q-stepper-navigation>
@@ -42,11 +42,7 @@
           <choix-forfaits v-model="forfaits" :f1="4" :f2="4"/>
           <div v-if="estComptable">
             <div style="margin-left:-0.8rem" class="text-primary">
-              <q-toggle v-model="estParrain" size="md" color="primary" :label="estParrain ? 'Compte parrain lui-même' : 'Compte filleul standard'"/>
-            </div>
-            <div v-if="estParrain">
-              <div>Ressources attribuables aux filleuls</div>
-              <choix-forfaits v-model="ressources" :f1="4" :f2="4"/>
+              <q-toggle v-model="estParrain" size="md" color="primary" :label="estParrain ? 'Compte parrain lui-même' : 'Compte standard'"/>
             </div>
           </div>
           <q-stepper-navigation>
@@ -72,10 +68,7 @@
             <span class="font-mono q-pl-md">v1: {{ed1(forfaits[0])}}</span>
             <span class="font-mono q-pl-lg">v2: {{ed2(forfaits[1])}}</span>
           </div>
-          <div v-if="estParrain">+ pour les filleuls:<br>
-            <span class="font-mono q-pl-md">v1: {{ed1(ressources[0])}}</span>
-            <span class="font-mono q-pl-lg">v2: {{ed2(ressources[1])}}</span>
-          </div>
+          <div v-if="estParrain">C'est un compte PARRAIN</div>
           <div>Volumes maximum attribués aux secrets du couple:<br>
             <span class="font-mono q-pl-md">v1: {{ed1(max[0])}}</span>
             <span class="font-mono q-pl-lg">v2: {{ed2(max[1])}}</span>
@@ -105,7 +98,7 @@ import { UNITEV1, UNITEV2 } from '../app/api.mjs'
 export default ({
   name: 'NouveauParrainage',
 
-  props: { close: Function },
+  props: { close: Function, tribu: Object },
 
   components: { ChoixForfaits, NomAvatar, EditeurMd },
 
@@ -118,9 +111,8 @@ export default ({
       isPwd: false,
       step: 1,
       forfaits: [],
-      ressources: [],
       max: [],
-      estParrain: false,
+      estParrain: this.estComptable,
       nom: '',
       phrase: '',
       pc: null,
@@ -170,13 +162,14 @@ export default ({
     },
     async confirmer () {
       const arg = {
+        nat: this.estComptable ? this.tribu.na : data.getCompte().nat,
         phch: this.pc.phch, // le hash de la clex (integer)
         pp: this.pc.phrase, // phrase de parrainage (string)
         clex: this.pc.clex, // PBKFD de pp (u8)
         id: this.avatar.id,
         max: this.max,
         forfaits: this.forfaits,
-        ressources: this.estParrain ? this.ressources : null,
+        parrain: this.estParrain,
         nomf: this.nom, // nom du filleul (string)
         mot: this.mot
       }
@@ -186,7 +179,7 @@ export default ({
         this.nom = ''
         this.max = [1, 1]
         this.forfaits = [1, 1]
-        this.ressources = [4, 4]
+        this.estParrain = this.estComptable
         this.pc = null
         this.tabavatar = 'couples'
         if (this.close) this.close()

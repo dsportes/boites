@@ -526,12 +526,16 @@ export class Tribu {
 
   async toRow () {
     const r = { ...this }
-    const x = [[this.na.nom, this.na.rnd], this.info || '']
-    r.datak = await crypt.crypter(data.clek, serial(x))
+    r.datak = await this.getDatak(this.info)
     const y = [this.st, this.txt || '', this.dh || 0]
     r.mncpt = null
     r.datat = y[0] || y[1] || y[2] ? await crypt.crypter(this.clet, serial(y)) : null
     return schemas.serialize('rowtribu', r)
+  }
+
+  async getDatak (info) {
+    const x = [[this.na.nom, this.na.rnd], info || '']
+    return await crypt.crypter(data.clek, serial(x))
   }
 
   async getmncpt () {
@@ -1123,17 +1127,14 @@ schemas.forSchema({
   - `o` : origine du contact: (0) direct, (1) parrainage, (2) rencontre.
   - `0` : pour A0 - (0) pas de partage de secrets, (1) partage de secrets, (2) disparu.
   - `1` : pour A1 -
-- `tp` : 0: na, 1: A0 est parrain de A1, 2: A1 est parrain de A0
-- `autp` : code d'autorisation donné par le futur parrain pour le devenir sur action du filleul.
 - `v1 v2` : volumes actuels des secrets.
 - `mx10 mx20` : maximum des volumes autorisés pour A0
 - `mx11 mx21` : maximum des volumes autorisés pour A1
-- `dlv` : date limite de validité éventuelle de (re)prise de contact.
+- `dlv` : date limite de validité éventuelle de prise de contact.
 - `datac` : données cryptées par la clé `cc` du couple :
   - `x` : `[nom, rnd], [nom, rnd]` : nom et clé d'accès à la carte de visite respectivement de A0 et A1.
-  - `phrase` : phrase de parrainage / rencontre.
-  - `f1 f2` : en phase 1/4 (parrainage), forfaits attribués par le parrain A0 à son filleul A1.
-  - `r1 r2` : en phase 1 (parrainage) et si le compte filleul est lui-même parrain, ressources attribuées. `infok0 infok1` : commentaires personnels cryptés par leur clé K, respectivement de A0 et A1.
+- `phk0` : phrase de parrainage / rencontre cryptée par la clé K du parrain (sera détruite après acceptation / refus hors délai).
+- `infok0 infok1` : commentaires personnels cryptés par leur clé K, respectivement de A0 et A1.
 - `mc0 mc1` : mots clé définis respectivement par A0 et A1.
 - `ardc` : ardoise commune cryptée par la clé cc. [dh, texte]
 - `vsh` :
@@ -1154,12 +1155,12 @@ export class Couple {
   get cle () { return data.repertoire.cle(this.id) }
   get na () { return data.repertoire.na(this.id) }
   get cv () { return data.getCv(this.id) }
-  get nomC () { return this.data.x[0][0] + '_' + this.data.x[1][0] }
+  get nomC () { return this.data[0][0] + '_' + this.data[1][0] }
   get nomf () { return normpath(this.nomC) }
-  get nomE () { return this.naE && this.stE !== 2 ? this.naE.noml : this.data.x[this.ava][0] }
-  get nomEs () { return this.data.x[this.ava][0] }
+  get nomE () { return this.naE && this.stE !== 2 ? this.naE.noml : this.data[this.ava][0] }
+  get nomEs () { return this.data[this.ava][0] }
   get nomI () { return this.naI.noml }
-  get nomIs () { return this.data.x[this.avc][0] }
+  get nomIs () { return this.data[this.avc][0] }
   get max1E () { return this.avc === 1 ? this.mx10 : this.mx11 }
   get max2E () { return this.avc === 1 ? this.mx20 : this.mx21 }
   get max1I () { return this.avc === 1 ? this.mx11 : this.mx10 }
@@ -1193,8 +1194,6 @@ export class Couple {
   nouveauR (naI, nomf, cc, mot, pp, max, dlv) {
     this.v = 0
     this.vsh = 0
-    this.tp = 0
-    this.autp = 0
     this.st = 1200 + (max[0] ? 10 : 0) // en attente, rencontre, partage secrets ou non
     this.naI = naI
     this.idI = naI.id
@@ -1216,15 +1215,14 @@ export class Couple {
     this.info = null
     this.ard = mot
     this.dh = new Date().getTime()
-    this.data = { x: [[naI.nom, naI.rnd], [nomf, null]], phrase: pp, f1: 0, f2: 0, r1: 0, r2: 0 }
+    this.data = [[naI.nom, naI.rnd], [nomf, null]]
+    this.phrase = pp
     return this
   }
 
-  nouveauP (naI, naE, cc, mot, pp, max, dlv, forfaits, ressources) {
+  nouveauP (naI, naE, cc, mot, pp, max, dlv) {
     this.v = 0
     this.vsh = 0
-    this.tp = 0
-    this.autp = 0
     this.st = 1100 + (max[0] ? 10 : 0) // en attente, parrainage, partage secrets ou non
     this.naI = naI
     this.idI = naI.id
@@ -1247,22 +1245,14 @@ export class Couple {
     this.info = null
     this.ard = mot
     this.dh = new Date().getTime()
-    this.data = {
-      x: [[naI.nom, naI.rnd], [naE.nom, naE.rnd]],
-      phrase: pp,
-      f1: forfaits[0],
-      f2: forfaits[1],
-      r1: ressources ? ressources[0] : 0,
-      r2: ressources ? ressources[1] : 0
-    }
+    this.data = [[naI.nom, naI.rnd], [naE.nom, naE.rnd]]
+    this.phrase = pp
     return this
   }
 
   nouveauC (naI, naE, cc, mot, max) {
     this.v = 0
     this.vsh = 0
-    this.tp = 0
-    this.autp = 0
     this.st = 1000 + (max[0] ? 10 : 0) // en attente, direct, partage secrets ou non
     this.naI = naI
     this.idI = naI.id
@@ -1284,7 +1274,8 @@ export class Couple {
     this.info = null
     this.ard = mot
     this.dh = new Date().getTime()
-    this.data = { x: [[naI.nom, naI.rnd], [naE.nom, naE.rnd]], phrase: null, f1: 0, f2: 0, r1: 0, r2: 0 }
+    this.data = [[naI.nom, naI.rnd], [naE.nom, naE.rnd]]
+    this.phrase = null
     return this
   }
 
@@ -1307,16 +1298,18 @@ export class Couple {
     this.mx21 = row.mx21
     this.dlv = row.dlv
     this.data = deserial(await crypt.decrypter(this.cc || this.cle, row.datac))
-    this.setIdIE(this.data.x, cle)
+    this.setIdIE(this.data, cle)
     const x = row.ardc ? deserial(await crypt.decrypter(this.cc || this.cle, row.ardc)) : [0, '']
     this.dh = x[0]
     this.ard = x[1]
     if (this.avc === 0) {
       this.mc = row.mc0 || new Uint8Array([])
       this.info = row.infok0 && data.clek ? await crypt.decrypterStr(data.clek, row.infok0) : ''
+      this.phrase = row.phk0 ? await crypt.decrypterStr(data.clek, row.phk0) : ''
     } else {
       this.mc = row.mc1 || new Uint8Array([])
       this.info = row.infok1 && data.clek ? await crypt.decrypterStr(data.clek, row.infok1) : ''
+      this.phrase = ''
     }
     this.dlvEtat()
     return this
@@ -1326,14 +1319,15 @@ export class Couple {
     const r = { ...this }
     r.datac = await crypt.crypter(this.cle, serial(r.data))
     r.ardc = await crypt.crypter(this.cle, serial([r.dh, r.ard]))
+    r.phk0 = this.phrase ? await crypt.crypter(data.clek, this.phrase) : null
     r.infok0 = null
     r.infok1 = null
     return schemas.serialize('rowcouple', r)
   }
 
   async datacRenc (avatar) {
-    const data = { x: this.data.x, phrase: this.data.phrase, f1: 0, f2: 0, r1: 0, r2: 0 }
-    data.x[1][1] = avatar.na.rnd
+    const data = this.data
+    data[1][1] = avatar.na.rnd
     return await crypt.crypter(this.cc || this.cle, serial(data))
   }
 
@@ -1363,9 +1357,15 @@ export class Couple {
 /*
 - `phch` : hash de la phrase de contact convenue entre le parrain A0 et son filleul A1 (s'il accepte)
 - `dlv`
-- `ccx` : [cle nom] cryptée par le PBKFD de la phrase de contact:
-  - `cle` : clé du couple (donne son id).
-  - `nom` : nom de A1 pour première vérification immédiate en session que la phrase est a priori bien destinée à cet avatar. Le nom de A1 figure dans le nom du couple après celui de A1.
+- `datax` : cryptée par le PBKFD de la phrase de contact:
+  - `cc` : clé du couple (donne son id).
+  - `nom` : nom de A1 pour première vérification immédiate en session que la phrase est a priori bien destinée à cet avatar. Le nom de A1 figure dans le nom du couple après celui de A0.
+  - Pour un parrainage seulement
+    - `nct` : `[nom, rnd]` nom complet de la tribu.
+    - `parrain` : true si parrain
+    - `forfaits` : `[f1, f2]` forfaits attribués par le parrain.
+  - Pour une rencontre seulement
+    - `idt` : id de la tribu de A0 SEULEMENT SI A0 en est parrain.
 - `vsh` :
 */
 
@@ -1381,27 +1381,33 @@ export class Contact {
 
   get horsLimite () { return dlvDepassee(this.dlv) }
 
-  async nouveau (phch, clex, dlv, cc, nom) { // clex : PBKFD de la phrase de contact
+  async nouveau (phch, clex, dlv, cc, nom, idt, nct, parrain, forfaits) { // clex : PBKFD de la phrase de contact
     this.vsh = 0
     this.phch = phch
     if (!cc) cc = crypt.random(32)
-    this.ccx = await crypt.crypter(clex, serial([cc, nom]))
     this.dlv = dlv
+    const data = { cc: cc, nom: nom }
+    if (idt) {
+      data.idt = idt
+    } else {
+      data.nct = nct
+      data.parrain = parrain
+      data.forfaits = forfaits
+    }
+    this.datax = await crypt.crypter(clex, serial(data))
     return this
   }
 
   async fromRow (row) {
     this.vsh = row.vsh || 0
     this.phch = row.phch
-    this.ccx = row.ccx
+    this.datax = row.datax
     this.dlv = row.dlv
     return this
   }
 
-  async getCcId (clex) {
-    const [cc, nom] = deserial(await crypt.decrypter(clex, this.ccx))
-    const id = crypt.hashBin(cc) + 1
-    return [cc, id, nom]
+  async getData (clex) {
+    return deserial(await crypt.decrypter(clex, this.datax))
   }
 
   toRow () {

@@ -1,19 +1,18 @@
 <template>
   <q-card v-if="sessionok && tribu" class="full-height full-width fs-md column">
-    <div style="min-height:35px"></div>
 
-    <div v-if="state.g" class="q-my-sm">
+    <div v-if="state.t">
       <div class="row justify-between">
         <div class="titre-md">{{state.t.nbc}} compte(s) - {{state.lp.length}} parrain(s)</div>
-        <q-btn flat dense size="sm" icon="chevron_right" :disable="state.lp.length>0" @click="lp=true"/>
+        <q-btn flat dense size="sm" icon="chevron_right" :disable="state.lp.length===0" @click="ouvlp=true"/>
       </div>
     </div>
 
-    <q-dialog v-model="lp" full-height position="right">
+    <q-dialog v-model="ouvlp" full-height position="right">
       <q-card class="petitelargeur q-pa-sm">
         <q-toolbar class="bg-secondary text-white">
           <q-toolbar-title class="titre-lg">Parrains de la tribu</q-toolbar-title>
-          <q-btn class="chl" dense flat size="md" icon="chevron_right" @click="lp=false"/>
+          <q-btn class="chl" dense flat size="md" icon="chevron_right" @click="ouvlp=false"/>
         </q-toolbar>
         <div v-for="(x, idx) in state.lp" :key="idx"
           :class="dkli(idx) + ' zone full-width row items-start q-py-xs' + (idx === state.idx ? ' courant' : '')">
@@ -23,29 +22,34 @@
     </q-dialog>
 
     <div class="titre-md q-mt-md">Commentaires / informations</div>
-    <editeur-md :texte="state.t.info" v-model="info" @ok="changerInfo" editable modetxt style="height:8rem"></editeur-md>
+    <editeur-md :texte="state.t.info" v-model="info" @ok="changerInfo"
+      label-ok="Valider" editable modetxt style="height:8rem"/>
 
     <div class="q-mt-md titre-lg">Volumes déjà attribuées aux comptes de la tribu</div>
-    <span class=q-mr-md>V1: {{ed1(state.t.f1)}}</span><span>V2: {{ed2(state.t.f2)}}</span>
+    <div>
+      <span class=q-mx-md>V1: {{ed1(state.t.f1)}}</span>
+      <span>V2: {{ed2(state.t.f2)}}</span>
+    </div>
     <div class="q-mt-md titre-lg">Réserves restantes de volumes à attribuer</div>
-    <choix-forfaits v-model="reserves" @valider="changerRes" :max="99999" :f1="state.t.r1" :f2="state.t.r2"/>
+    <choix-forfaits v-model="reserves" @valider="changerRes" label-valider="Changer"
+      :max="99999" :f1="state.t.r1" :f2="state.t.r2"/>
 
   <q-dialog v-if="sessionok" v-model="nvpar" persistent class="moyennelargeur">
-    <nouveau-parrainage :close="fermerParrain"/>
+    <nouveau-parrainage :close="fermerParrain" :tribu="tribu"/>
   </q-dialog>
 
   <q-page-sticky class="full-width" position="top-left" expand :offset="[50,0]">
-    <q-toolbar :class="tbc">
+    <q-toolbar class="bg-primary text-white">
       <q-btn :disable="!precedent" flat round dense icon="first_page" size="sm" @click="prec(0)" />
       <q-btn :disable="!precedent" flat round dense icon="arrow_back_ios" size="sm" @click="prec(1)" />
       <span class="fs-sm">{{index + 1}}/{{sur}}</span>
       <q-btn :disable="!suivant" flat round dense icon="arrow_forward_ios" size="sm" @click="suiv(1)" />
       <q-btn :disable="!suivant" flat round dense icon="last_page" size="sm" @click="suiv(0)" />
       <q-toolbar-title>
-        <titre-banner v-if="state.g" class-titre="titre-md" :titre="state.t.nom"
+        <titre-banner v-if="state.t" class-titre="titre-md" :titre="state.t.nom"
           :titre2="state.t.nom" :id-objet="state.t.id"/>
       </q-toolbar-title>
-      <q-btn dense flat icon="add" label="Parrainer un nouveau compte" size="md"
+      <q-btn dense color="secondary" label="Parrainer un nouveau compte" size="md"
         text-color="white" @click="nvpar = true"/>
     </q-toolbar>
 
@@ -57,8 +61,7 @@ import { computed, reactive, watch } from 'vue'
 import { useStore } from 'vuex'
 import { UNITEV1, UNITEV2 } from '../app/api.mjs'
 import { edvol } from '../app/util.mjs'
-// import { data } from '../app/modele.mjs'
-// import { } from '../app/operations.mjs'
+import { InforesTribu } from '../app/operations.mjs'
 import ChoixForfaits from './ChoixForfaits.vue'
 import EditeurMd from './EditeurMd.vue'
 import TitreBanner from './TitreBanner.vue'
@@ -72,14 +75,14 @@ export default ({
   props: { suivant: Function, precedent: Function, index: Number, sur: Number },
 
   computed: {
-    tbc () { return 'bg-primary text-white' + (this.$q.screen.gt.sm ? ' ml23' : '') },
-    anim () { return this.state.maxstp === 2 }
   },
 
   data () {
     return {
       nvpar: false,
-      info: ''
+      ouvlp: false,
+      info: '',
+      reserves: [0, 0]
     }
   },
 
@@ -91,11 +94,12 @@ export default ({
     ed2 (f) { return edvol(f * UNITEV2) },
     ed3 (f) { return edvol(f) },
     fermerParrain () { this.nvpar = false },
-    changerInfo (info) {
+    async changerInfo (info) {
+      await new InforesTribu().run(this.tribu, info, null)
     },
-    changerRes (res) {
-    },
-    ouvrirlp () {}
+    async changerRes (res) {
+      await new InforesTribu().run(this.tribu, null, this.reserves)
+    }
   },
 
   setup (props) {
@@ -118,7 +122,7 @@ export default ({
     function initState () {
       const t = tribu.value
       state.t = t
-      state.lp = t ? Object.values(t.mncp) : []
+      state.lp = t && t.mncp ? Object.values(t.mncp) : []
     }
 
     watch(() => tribu.value, (ap, av) => {
@@ -147,12 +151,6 @@ export default ({
 .chl
   position: relative
   left: -10px
-.photomax
-  position: relative
-  top: 5px
-.ml20
-  width: 100%
-  padding: 0.2rem 0.2rem 0.2rem 23rem
 .itemcourant:hover
   border: 1px solid $warning
 .itemcourant

@@ -43,7 +43,7 @@
     </div>
 
     <q-dialog v-model="dialcp">
-      <AcceptParrain :couple="coupleloc" :phch="phch" :close="fermerap" />
+      <AcceptParrain :couple="coupleloc" :datactc="datactc" :phch="phch" :close="fermerap" />
     </q-dialog>
 
     <q-card v-if="q666" class="q-ma-xs moyennelargeur fs-md">
@@ -66,7 +66,7 @@ import { ConnexionCompte, CreationCompteComptable } from '../app/operations'
 import PhraseSecrete from '../components/PhraseSecrete.vue'
 import AcceptParrain from '../components/AcceptParrain.vue'
 import { onBoot } from '../app/page.mjs'
-import { get, afficherdiagnostic, dlvDepassee, PhraseContact } from '../app/util.mjs'
+import { get, afficherdiagnostic, dlvDepassee, PhraseContact, NomAvatar } from '../app/util.mjs'
 import { deserial } from '../app/schemas.mjs'
 import { Contact, Couple } from '../app/modele.mjs'
 
@@ -75,6 +75,7 @@ export default ({
   components: { PhraseSecrete, AcceptParrain },
   data () {
     return {
+      datactc: null,
       ps: null,
       phrasepar: false,
       isPwd: false,
@@ -130,15 +131,17 @@ export default ({
               return
             }
             // eslint-disable-next-line no-unused-vars
-            const [cc, id, nom] = await contact.getCcId(pc.clex)
-            const resp2 = await get('m1', 'getCouple', { id })
+            this.datactc = await contact.getData(pc.clex)
+            // { cc, nom, nct, parrain, forfaits, idt }
+            const naf = new NomAvatar('fake', this.datactc.cc)
+            const resp2 = await get('m1', 'getCouple', { id: naf.id })
             if (!resp2) {
               this.diagnostic = 'Pas de parrainage en attente avec cette phrase'
               this.raz()
               return
             }
             const row2 = deserial(new Uint8Array(resp2))
-            this.coupleloc = await new Couple().fromRow(row2, cc)
+            this.coupleloc = await new Couple().fromRow(row2, this.datactc.cc)
             this.raz()
             this.dialcp = true
           } catch (e) {

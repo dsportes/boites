@@ -13,10 +13,7 @@
             <span class="font-mono q-pl-md">v1: {{ed1(couple.data.f1)}}</span>
             <span class="font-mono q-pl-lg">v2: {{ed2(couple.data.f2)}}</span>
           </div>
-          <div v-if="estpar">Le nouveau compte est lui-même parrain. Ressources pour les filleuls:<br>
-            <span class="font-mono q-pl-md">v1: {{ed1(couple.data.r1)}}</span>
-            <span class="font-mono q-pl-lg">v2: {{ed2(couple.data.r2)}}</span>
-          </div>
+          <div v-if="estpar">Le nouveau compte est PARRAIN de la tribu {{nomTribu}}</div>
           <div class="t1">Validité: <span class="sp1">{{couple.dlv - jourJ}}</span> jour(s)</div>
           <show-html class="full-width height-6 border1" :texte="couple.ard" />
           <q-stepper-navigation>
@@ -88,12 +85,24 @@ import { UNITEV1, UNITEV2 } from '../app/api.mjs'
 export default ({
   name: 'AcceptParrain',
 
-  props: { couple: Object, phch: Number, close: Function },
+  props: { couple: Object, phch: Number, close: Function, datactc: Object },
+  /*
+  `datactc` :
+  - `cc` : clé du couple (donne son id).
+  - `nom` : nom de A1 pour première vérification immédiate en session que la phrase est a priori bien destinée à cet avatar. Le nom de A1 figure dans le nom du couple après celui de A0.
+  - Pour un parrainage seulement
+    - `nct` : `[nom, rnd]` nom complet de la tribu.
+    - `parrain` : true si parrain
+    - `forfaits` : `[f1, f2]` forfaits attribués par le parrain.
+  - Pour une rencontre seulement
+    - `idt` : id de la tribu de A0 SEULEMENT SI A0 en est parrain.
+  */
 
   components: { PhraseSecrete, EditeurMd, ShowHtml, ChoixForfaits },
 
   computed: {
-    estpar () { return this.couple && this.couple.data.r1 },
+    estpar () { return this.datactc && this.datactc.parrain },
+    nomTribu () { return this.datactc ? this.datactc.nct.nom : '' },
     textedef () { return 'Merci ' + this.couple.nomEs + ',\n\n' + this.couple.ard }
   },
 
@@ -136,12 +145,12 @@ export default ({
     async confirmer () {
       const arg = { ps: this.ps, ard: this.texte, phch: this.phch, max: this.max, estpar: this.estpar }
       this.razps()
-      await new AcceptationParrainage().run(this.couple, arg)
+      await new AcceptationParrainage().run(this.couple, this.datactc, arg)
       this.fermer()
     },
     async refuser () {
       this.razps()
-      await new RefusParrainage().run(this.couple, this.phch, this.texte)
+      await new RefusParrainage().run(this.couple, this.datactc, this.phch, this.texte)
       this.fermer()
     }
   },
