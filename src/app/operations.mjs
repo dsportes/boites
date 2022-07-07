@@ -1,4 +1,4 @@
-import { NomAvatar, NomGroupe, store, post, get, affichermessage, cfg, sleep, affichererreur, appexc, difference, getJourJ, afficherdiagnostic, gzipT, putData, getData } from './util.mjs'
+import { NomAvatar, NomGroupe, store, post, get, affichermessage, cfg, sleep, affichererreur, appexc, difference, getJourJ, afficherdiagnostic, gzipT, putData, getData, NomTribu } from './util.mjs'
 import { remplacePage } from './page.mjs'
 import {
   deleteIDB, idbSidCompte, commitRows, getCompte, getComptas, getPrefs, getCvs,
@@ -1895,8 +1895,8 @@ export class SupprimerCouple extends OperationUI {
       const ni = crypt.hash(crypt.u8ToHex(couple.cle) + couple.avc)
       const ni1 = crypt.hash(crypt.u8ToHex(couple.cle) + '1')
       const avid1 = couple.stp <= 2 && couple.orig === 0 ? couple.idE : 0 // accès au couple dans avatar 1 à supprimer chez 1
-      const pc = couple.stp === 1 && couple.orig > 0 ? await couple.phraseContact() : null // contact (parrainage / recontre) à supprimer
-      const args = { sessionId: data.sessionId, idc: couple.id, ni, ni1, avid, avid1, phch: pc ? pc.phch : 0, avc: couple.avc }
+      const phch = couple.stp === 1 && couple.orig > 0 ? await couple.phch() : null // contact (parrainage / recontre) à supprimer
+      const args = { sessionId: data.sessionId, idc: couple.id, ni, ni1, avid, avid1, phch, avc: couple.avc }
       await post(this, 'm1', 'supprimerCouple', args)
       return this.finOK()
     } catch (e) {
@@ -1965,6 +1965,8 @@ export class NouveauParrainage extends OperationUI {
       const dlv = getJourJ() + cfg().limitesjour.parrainage
 
       const couple = new Couple().nouveauP(nap, naf, cc, arg.mot, arg.pp, arg.max, dlv)
+      couple.mc0 = new Uint8Array([252])
+      couple.mc1 = new Uint8Array([253])
       const rowCouple = await couple.toRow()
 
       const nct = [arg.nat.nom, arg.nat.rnd]
@@ -2057,7 +2059,7 @@ export class ProlongerParrainage extends OperationUI {
   async run (couple) {
     try {
       const dlv = getJourJ() + cfg().limitesjour.parrainage
-      const args = { sessionId: data.sessionId, idc: couple.id, phch: couple.phch, dlv }
+      const args = { sessionId: data.sessionId, idc: couple.id, phch: await couple.phch(), dlv }
       await post(this, 'm1', 'prolongerParrainage', args)
       this.finOK()
     } catch (e) {
@@ -2238,31 +2240,6 @@ export class RefusRencontre extends OperationUI {
 }
 
 /******************************************************************
-Suppression / prolongation d'un parrainage : args de m1/supprParrainage
-args : sessionId, pph, dlv: 0 (suppr) 999 (prolongation)
-Retour : dh
-X_SRV, '15-Phrase de parrainage inconnue'
-X_SRV, '16-Ce parrainage a déjà fait l\'objet ' + (p.st !== 1 ? 'd\'une acceptation.' : 'd\'un refus'
-*/
-
-export class SupprParrainage extends OperationUI {
-  constructor () {
-    super('Suppression / prolongation d\'un parrainage', OUI, SELONMODE)
-  }
-
-  async run (arg) {
-    try {
-      const args = { sessionId: data.sessionId, pph: arg.pph, dlv: arg.dlv }
-      const ret = await post(this, 'm1', 'supprParrainage', args)
-      if (data.dh < ret.dh) data.dh = ret.dh
-      this.finOK()
-    } catch (e) {
-      await this.finKO(e)
-    }
-  }
-}
-
-/******************************************************************
 Acceptation d'un parrainage
 X_SRV, '03-Phrase secrète probablement déjà utilisée. Vérifier que le compte n\'existe pas déjà en essayant de s\'y connecter avec la phrase secrète'
 X_SRV, '04-Une phrase secrète semblable est déjà utilisée. Changer a minima la première ligne de la phrase secrète pour ce nouveau compte'
@@ -2288,19 +2265,29 @@ export class AcceptationParrainage extends OperationUI {
   - estpar : si le compte à créer est parrain aussi
   - phch : hash phrase de contact
   */
-  async run (couple, arg) {
+  async run (couple, datactc, arg) {
     try {
       // LE COMPTE EST CELUI DU FILLEUL
       data.ps = arg.ps
+
+      const [nom, rnd] = datactc.nct
+      const nat = new NomTribu(nom, rnd)
+      let chkt = null
+      let nctc = null
 
       await data.connexion(true) // On force A NE PAS OUVRIR IDB (compte pas encore connu)
 
       data.resetPhase012()
       this.BRK()
       const kpav = await crypt.genKeyPair()
-      const d = couple.data
       const compte = new Compte().nouveau(couple.naI, kpav.privateKey)
       // nouveau() enregistre la clé K dans data.clek !!!
+      if (arg.estpar) {
+        await compte.setTribu(nat, arg.clepubc)
+        chkt = compte.chkt
+        nctc = await crypt.crypter(rnd, serial(datactc.nct))
+        compte.stp = 1
+      }
       const rowCompte = await compte.toRow()
 
       const prefs = new Prefs().nouveau(compte.id)
@@ -2311,16 +2298,9 @@ export class AcceptationParrainage extends OperationUI {
       const rowAvatar = await avatar.toRow()
 
       const compta = new Compta()
-      if (arg.estpar) {
-        // parrain lui-même
-        compta.nouveau(avatar.id, 1)
-        compta.compteurs.setRes([d.r1, d.r2])
-      } else {
-        // filleul
-        compta.nouveau(avatar.id, 2)
-      }
-      compta.compteurs.setF1(d.f1)
-      compta.compteurs.setF2(d.f2)
+      compta.nouveau(avatar.id, arg.estpar ? 1 : 2)
+      compta.compteurs.setF1(datactc.f1)
+      compta.compteurs.setF2(datactc.f2)
       const rowCompta = await compta.toRow()
 
       const ardc = await couple.toArdc(arg.ard, couple.cc)
@@ -2335,10 +2315,11 @@ export class AcceptationParrainage extends OperationUI {
         idCouple: couple.id, // id du couple
         phch: arg.phch, // hash de la phrase de contact
         idavp: couple.idE, // id de l'avatar parrain
-        r1: arg.estpar ? d.r1 : 0, // montant à réduire de sa réserve
-        r2: arg.estpar ? d.r2 : 0,
-        f1: d.f1,
-        f2: d.f2,
+        idt: nat.id, // id de la tribu de A1
+        f1: datactc.forfaits[0],
+        f2: datactc.forfaits[1],
+        chkt,
+        nctc,
         ardc,
         estPar: arg.estpar,
         sec: arg.max[0] !== 0 // le filleul accède aux secrets du couple

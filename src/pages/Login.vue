@@ -43,7 +43,7 @@
     </div>
 
     <q-dialog v-model="dialcp">
-      <AcceptParrain :couple="coupleloc" :datactc="datactc" :phch="phch" :close="fermerap" />
+      <AcceptParrain :couple="coupleloc" :datactc="datactc" :clepubc="clepubc" :phch="phch" :close="fermerap" />
     </q-dialog>
 
     <q-card v-if="q666" class="q-ma-xs moyennelargeur fs-md">
@@ -66,7 +66,7 @@ import { ConnexionCompte, CreationCompteComptable } from '../app/operations'
 import PhraseSecrete from '../components/PhraseSecrete.vue'
 import AcceptParrain from '../components/AcceptParrain.vue'
 import { onBoot } from '../app/page.mjs'
-import { get, afficherdiagnostic, dlvDepassee, PhraseContact, NomAvatar } from '../app/util.mjs'
+import { get, afficherdiagnostic, dlvDepassee, PhraseContact, NomContact } from '../app/util.mjs'
 import { deserial } from '../app/schemas.mjs'
 import { Contact, Couple } from '../app/modele.mjs'
 
@@ -123,7 +123,8 @@ export default ({
           this.raz()
         } else {
           try {
-            const row = deserial(new Uint8Array(resp))
+            const [row, clepubc] = deserial(new Uint8Array(resp))
+            this.clepubc = clepubc
             const contact = await new Contact().fromRow(row)
             if (dlvDepassee(contact.dlv)) {
               this.diagnostic = 'Cette phrase de parrainage n\'est plus valide'
@@ -133,7 +134,7 @@ export default ({
             // eslint-disable-next-line no-unused-vars
             this.datactc = await contact.getData(pc.clex)
             // { cc, nom, nct, parrain, forfaits, idt }
-            const naf = new NomAvatar('fake', this.datactc.cc)
+            const naf = new NomContact('fake', this.datactc.cc)
             const resp2 = await get('m1', 'getCouple', { id: naf.id })
             if (!resp2) {
               this.diagnostic = 'Pas de parrainage en attente avec cette phrase'
@@ -145,6 +146,7 @@ export default ({
             this.raz()
             this.dialcp = true
           } catch (e) {
+            console.log(e)
             this.raz()
           }
         }

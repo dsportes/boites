@@ -10,8 +10,8 @@
           <div>Avatar primaire du nouveau compte: <span class="font-mono q-pl-md">{{couple.nomIs}}</span></div>
           <div>Nom du parrain: <span class="font-mono q-pl-md">{{couple.nomEs}}</span></div>
           <div>Forfaits du compte:
-            <span class="font-mono q-pl-md">v1: {{ed1(couple.data.f1)}}</span>
-            <span class="font-mono q-pl-lg">v2: {{ed2(couple.data.f2)}}</span>
+            <span class="font-mono q-pl-md">v1: {{ed1(datactc.forfaits[0])}}</span>
+            <span class="font-mono q-pl-lg">v2: {{ed2(datactc.forfaits[1])}}</span>
           </div>
           <div v-if="estpar">Le nouveau compte est PARRAIN de la tribu {{nomTribu}}</div>
           <div class="t1">Validité: <span class="sp1">{{couple.dlv - jourJ}}</span> jour(s)</div>
@@ -35,11 +35,11 @@
         <q-step :name="3" title="Maximum d'espace attribués pour les secrets partagés par ce contact" icon="settings" :done="step > 3" >
           <div v-if="couple.stE===1">Le parrain a choisi de partager des secrets :<br>
             <span class="font-mono q-pl-md">Maximum v1: {{ed1(couple.mx10)}}</span><br>
-            <span class="font-mono q-pl-lg">Maximum v2: {{ed2(couple.mx11)}}</span>
+            <span class="font-mono q-pl-md">Maximum v2: {{ed2(couple.mx20)}}</span>
           </div>
           <div v-else>Le parrain a choisi de NE PAS PARTAGER de secrets</div>
           <div class="titre-md text-warning">Mettre 0 pour NE PAS PARTAGER de secrets</div>
-          <choix-forfaits v-model="max" :f1="couple.mx10 || 1" :f2="couple.mx11 || 1"/>
+          <choix-forfaits v-model="max" :f1="couple.mx10 || 1" :f2="couple.mx20 || 1"/>
           <q-stepper-navigation>
             <q-btn flat @click="step = 2" color="primary" label="Précédent" class="q-ml-sm" />
             <q-btn flat @click="step = 4" color="primary" label="Suivant" class="q-ml-sm" />
@@ -85,7 +85,7 @@ import { UNITEV1, UNITEV2 } from '../app/api.mjs'
 export default ({
   name: 'AcceptParrain',
 
-  props: { couple: Object, phch: Number, close: Function, datactc: Object },
+  props: { couple: Object, phch: Number, close: Function, clepubc: Object, datactc: Object },
   /*
   `datactc` :
   - `cc` : clé du couple (donne son id).
@@ -143,7 +143,7 @@ export default ({
       }
     },
     async confirmer () {
-      const arg = { ps: this.ps, ard: this.texte, phch: this.phch, max: this.max, estpar: this.estpar }
+      const arg = { ps: this.ps, ard: this.texte, phch: this.phch, max: this.max, estpar: this.estpar, clepubc: this.clepubc }
       this.razps()
       await new AcceptationParrainage().run(this.couple, this.datactc, arg)
       this.fermer()

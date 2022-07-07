@@ -4,7 +4,7 @@
     <div :class="'col row justify-start items-center full-width' + (clickable ? ' ligne cursor-pointer' : '')" @click="click">
       <img class="col-auto photomax" :src="a.photo"/>
       <div class="col q-px-sm">
-        <span class='titre-md text-bold'>{{a.na.noml}}</span><span class='titre-sm q-pl-sm'>[id: {{a.na.sid}}]</span>
+        <span class='titre-md text-bold'>{{a.na.noml}}</span><span v-if="!estComptable(a.na.id)" class='titre-sm q-pl-sm'>[id: {{a.na.sid}}]</span>
       </div>
     </div>
     <q-btn class="col-auto" v-if="editable" flat dense size="md" color="primary" icon="edit" @click="cvloc=true"/>
@@ -29,6 +29,8 @@ import ShowHtml from './ShowHtml.vue'
 import { Cv } from '../app/modele.mjs'
 import { retourInvitation } from '../app/page.mjs'
 import { cfg } from '../app/util.mjs'
+import { IDCOMPTABLE } from '../app/api.mjs'
+
 export default ({
   name: 'IdentiteCv',
 
@@ -50,6 +52,7 @@ export default ({
   data () { return { } },
 
   methods: {
+    estComptable (id) { return id === IDCOMPTABLE },
     dkli (idx) { return this.$q.dark.isActive ? (idx ? 'sombre' + (idx % 2) : 'sombre0') : (idx ? 'clair' + (idx % 2) : 'clair0') },
     click () { if (this.clickable && this.a && this.a.na) this.$emit('identite-click', this.a.na) },
     closedialog () { this.cvloc = false },

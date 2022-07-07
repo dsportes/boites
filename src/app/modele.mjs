@@ -480,7 +480,7 @@ export class Tribu {
   get nom () { return this.na.nom }
   get stn () { return Math.floor(this.st / 10) }
   get stc () { return this.st % 10 }
-  get ist () { return !this.nbc ? 4 : this.this.stn }
+  get ist () { return !this.nbc ? 4 : this.stn }
   get clet () { return this.na.rnd }
 
   async fromRow (row) {
@@ -490,9 +490,11 @@ export class Tribu {
     const [x, info] = deserial(await crypt.decrypter(data.clek, row.datak))
     this.na = new NomTribu(x[0], x[1])
     this.info = info || ''
-    this.mncp = (row.mncpt ? deserial(row.mncpt) : null) || {}
-    for (const chkt in this.mncp) {
-      this.mncp[chkt] = await crypt.decrypter(this.clet, this.mncp[chkt])
+    const mx = (row.mncpt ? deserial(row.mncpt) : null) || {}
+    this.mncp = {}
+    for (const chkt in mx) {
+      const nr = await crypt.decrypter(this.clet, mx[chkt])
+      this.mncp[chkt] = deserial(nr)
     }
     const [st, txt, dh] = !row.datat ? [0, '', 0] : deserial(await crypt.decrypter(this.na.rnd, row.datat))
     this.st = st
@@ -661,10 +663,10 @@ export class Compte {
     if (row.nctk) {
       let nr
       if (row.nctk.length === 256) {
-        nr = await crypter.decrypterRSA(this.cpriv(this.id), row.nctk)
+        nr = await crypt.decrypterRSA(this.cpriv(this.id), row.nctk)
         this.nctk = await crypter.crypter(this.k, nr)
       } else {
-        nr = await crypter.decrypter(this.k, row.nctk)
+        nr = await crypt.decrypter(this.k, row.nctk)
       }
       const [nom, rnd] = deserial(nr)
       this.nat = new NomAvatar(nom, rnd)
@@ -727,12 +729,16 @@ export class Compte {
     return this
   }
 
-  async setTribu (nat) {
+  getChkt (nat) {
+    return crypt.hash(this.sid + '@' + nat.sid)
+  }
+
+  async setTribu (nat, clepubc) {
     this.nat = nat
     const nc = serial([nat.nom, nat.rnd])
-    this.nctpc = nat ? await crypt.crypterRSA(data.clepubc, nc) : null
+    this.nctpc = nat ? await crypt.crypterRSA(data.clepubc || clepubc, nc) : null
     this.nctk = nat ? await crypt.crypter(data.clek, nc) : null
-    this.chkt = nat ? crypt.hash(crypt.idToSid(this.id + '@' + nat.id)) : 0
+    this.chkt = nat ? this.getChkt(nat) : 0
   }
 
   get clone () {
@@ -1179,14 +1185,16 @@ export class Couple {
   setRepE () { if (this.naE) data.repertoire.setNa(this.naE) }
 
   setIdIE (x, cle) { // cle : non null pour réception d'un couple HORS session (accepatation / refus parrainage)
-    const id0 = x[0][1] ? crypt.hashBin(x[0][1]) : 0
-    const id1 = x[1][1] ? crypt.hashBin(x[1][1]) : 0
+    const na0 = x[0][1] ? new NomAvatar(x[0][0], x[0][1]) : null
+    const na1 = x[1][1] ? new NomAvatar(x[1][0], x[1][1]) : null
+    const id0 = na0 ? na0.id : 0
+    const id1 = na1 ? na1.id : 0
     this.avc = !cle && data.getCompte().estAc(id0) ? 0 : 1 // position 0 / 1 de l'avatar du compte
     this.ava = this.avc ? 0 : 1 // position 0 / 1 de l'autre avatar
     this.idI = this.avc ? id1 : id0
+    this.naI = this.avc ? na1 : na0
     this.idE = this.ava ? id1 : id0
-    this.naE = this.idE ? new NomAvatar(x[this.ava][0], x[this.ava][1]) : null
-    this.naI = new NomAvatar(x[this.avc][0], x[this.avc][1])
+    this.naE = this.ava ? na1 : na0
     const na = new NomContact(this.nomC, cle || this.cle)
     if (!cle) data.repertoire.setNa(na); else this.naTemp = na
   }
@@ -1342,13 +1350,13 @@ export class Couple {
   fromIdb (idb) {
     schemas.deserialize('idbCouple', idb, this)
     this.dlvEtat()
-    this.setIdIE(this.data.x)
+    this.setIdIE(this.data)
     return this
   }
 
   async phch () {
     const pc = new PhraseContact()
-    await pc.init(this.data.phrase)
+    await pc.init(this.phrase)
     return pc.phch
   }
 }

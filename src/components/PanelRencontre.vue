@@ -88,7 +88,9 @@ export default ({
           this.nvrenc = true
         } else {
           try {
-            const row = deserial(new Uint8Array(resp))
+            // eslint-disable-next-line no-unused-vars
+            const [row, clepubc] = deserial(new Uint8Array(resp))
+            // data.clepubc = clepubc
             const contact = await new Contact().fromRow(row)
             if (dlvDepassee(contact.dlv)) {
               this.diagnostic = 'Cette phrase de rencontre n\'est plus valide'

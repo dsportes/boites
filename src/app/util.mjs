@@ -804,6 +804,7 @@ export class NomAvatar {
   }
 
   get noml () {
+    if (this.id === IDCOMPTABLE) return this.nom
     const cv = data.getCv(this.id)
     if (!cv) return this.nomc
     const info = cv[1]

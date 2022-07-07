@@ -101,7 +101,7 @@
       </q-card>
     </q-dialog>
 
-    <div v-if="s.c && s.c.orig === 1" class="q-mt-md">
+    <div v-if="s.c && s.c.orig === 1 && s.c.stp === 1" class="q-mt-md">
       <div class="row justify-between">
         <div class="titre-md text-white">Contact créé lors du parrainage du compte du contact</div>
         <q-btn flat dense size="sm" icon="chevron_right" @click="paredit=!paredit"/>
@@ -119,7 +119,7 @@
       </q-card>
     </q-dialog>
 
-    <div v-if="s.c && s.c.orig === 2" class="q-mt-md">
+    <div v-if="s.c && s.c.orig === 2 && s.c.stp === 1" class="q-mt-md">
       <div class="titre-md text-white">Contact créé suite à rencontre avec le contact</div>
       <div class="q-ml-md fs-sm">Phrase de rencontre : <span class="text-italic">{{s.c.phrase}}</span></div>
     </div>
@@ -348,7 +348,7 @@ export default ({
   position: relative
   left: -10px
 .l1
-  max-height: 1.1rem
+  max-height: 1.8rem
   overflow: hidden
 .ml23
   margin-left: 23rem
