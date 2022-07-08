@@ -487,25 +487,37 @@ export class Tribu {
     this.vsh = row.vsh || 0
     this.id = row.id
     this.v = row.v
-    const [x, info] = deserial(await crypt.decrypter(data.clek, row.datak))
-    this.na = new NomTribu(x[0], x[1])
-    this.info = info || ''
+    if (data.estComptable) {
+      const [x, info] = deserial(await crypt.decrypter(data.clek, row.datak))
+      this.na = new NomTribu(x[0], x[1])
+      this.info = info || ''
+    } else {
+      this.na = null
+      this.info = ''
+    }
     const mx = (row.mncpt ? deserial(row.mncpt) : null) || {}
     this.mncp = {}
-    for (const chkt in mx) {
-      const nr = await crypt.decrypter(this.clet, mx[chkt])
-      this.mncp[chkt] = deserial(nr)
+    this.datat = row.datat
+    if (data.estComptable) {
+      for (const chkt in mx) {
+        const nr = await crypt.decrypter(this.clet, mx[chkt])
+        this.mncp[chkt] = deserial(nr)
+      }
+      await this.fromDatat()
     }
-    const [st, txt, dh] = !row.datat ? [0, '', 0] : deserial(await crypt.decrypter(this.na.rnd, row.datat))
-    this.st = st
-    this.txt = txt
-    this.dh = dh
     this.nbc = row.nbc
     this.f1 = row.f1
     this.f2 = row.f2
     this.r1 = row.r1
     this.r2 = row.r2
     return this
+  }
+
+  async fromDatat () {
+    const [st, txt, dh] = !this.datat ? [0, '', 0] : deserial(await crypt.decrypter(this.na.rnd, this.datat))
+    this.st = st
+    this.txt = txt
+    this.dh = dh
   }
 
   nouvelle (nom, info, r1, r2) {
@@ -629,7 +641,6 @@ export class Compte {
   nouveau (nomAvatar, cprivav) {
     this.id = nomAvatar.id
     this.v = 0
-    this.dds = 0
     this.dpbh = data.ps.dpbh
     this.pcbh = data.ps.pcbh
     this.k = crypt.random(32)
@@ -649,7 +660,7 @@ export class Compte {
     this.vsh = row.vsh || 0
     this.id = row.id
     this.v = row.v
-    this.dds = row.dds
+    this.stp = row.stp
     this.dpbh = row.dpbh
     this.k = await crypt.decrypter(data.ps.pcb, row.kx)
     this.pcbh = row.pcbh
@@ -669,8 +680,8 @@ export class Compte {
         nr = await crypt.decrypter(this.k, row.nctk)
       }
       const [nom, rnd] = deserial(nr)
-      this.nat = new NomAvatar(nom, rnd)
-      this.chkt = row.chkt
+      this.nat = new NomTribu(nom, rnd)
+      this.chkt = this.getChkt(this.nat)
       this.nctpc = row.nctpc
     } else {
       this.nat = null
@@ -689,7 +700,8 @@ export class Compte {
     }
     r.mack = await crypt.crypter(data.clek, serial(m))
     r.kx = await crypt.crypter(data.ps.pcb, this.k)
-    r.nctk = !this.nat ? null : (this.nctk ? this.nctk : await crypt.crypter(this.k, this.nat))
+    const nr = !this.nat ? null : serial([this.nat.nom, this.nat.rnd])
+    r.nctk = !this.nat ? null : (this.nctk ? this.nctk : await crypt.crypter(this.k, nr))
     return schemas.serialize('rowcompte', r)
   }
 
@@ -822,19 +834,13 @@ export class Prefs {
 - `id` : de l'avatar.
 - `t` :
   - (0) : avatar secondaire.
-  - (1) : avatar primaire parrain,
-  - (2) : avatar primaire filleul,
-  - (3) : avatar filleul orphelin, en attente d'un nouveau parrain.
-  - (4) : avatar parrain disparu.
+  - (1) : avatar primaire.
 - `v` :
-- `st` :
-  - 0 : normal.
-  - 1 : en alerte.
-  - 2 : en sursis.
-  - 3 : bloqué.
-- `rb` : code de la raison du statut de blocage en cours.
-- `dst` : date du dernier changement de st != 0 (sinon 0).
-- `dstc` : date de la première connexion après `dst` (prise de connaissance du statut != 0).
+- `st` : statut de blocage `nc` :
+  - `n` : niveau de blocage (0 à 4).
+  - `c` : classe du blocage : 0 à 9 repris dans la configuration de l'organisation.
+- `txtt` : libellé explicatif du blocage crypté par la clé de la tribu actuelle de l'avatar.
+- `dh` : date-heure de dernier changement du statut de blocage.
 - `data`: compteurs sérialisés (non cryptés)
 - `vsh` :
 */
@@ -848,7 +854,7 @@ export class Compta {
   get table () { return 'compta' }
   get sid () { return crypt.idToSid(this.id) }
   get pk () { return this.sid }
-  get estParrain () { return this.t === 1 || this.t === 4 }
+  get estPrimaire () { return this.t === 1 }
 
   nouveau (id, t) {
     this.id = id
@@ -859,8 +865,7 @@ export class Compta {
     this.dst = 0
     this.compteurs = new Compteurs()
     this.dh = 0
-    this.flag = 0
-    this.ard = null
+    this.txtt = null
     return this
   }
 
@@ -869,11 +874,10 @@ export class Compta {
     this.id = row.id
     this.t = row.t
     this.v = row.v
-    this.rb = row.rb
     this.st = row.st
     this.compteurs = new Compteurs(row.data).calculauj()
-    this.dst = row.dst
-    this.dstc = row.dstc
+    this.dh = row.dh
+    this.txtt = row.txtt
     return this
   }
 

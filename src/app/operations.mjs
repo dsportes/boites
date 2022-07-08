@@ -1536,7 +1536,7 @@ export class NouvelleTribu extends OperationUI {
 }
 
 /******************************************************
-Nouvelle tribu
+Maj des informations et réserves tribu
 */
 export class InforesTribu extends OperationUI {
   constructor () {
@@ -1549,6 +1549,35 @@ export class InforesTribu extends OperationUI {
       const args = { sessionId: data.sessionId, idt: tribu.id, datak, reserves }
       await post(this, 'm1', 'inforesTribu', args)
       this.finOK()
+    } catch (e) {
+      await this.finKO(e)
+    }
+  }
+}
+
+/******************************************************
+Maj des informations et réserves tribu
+*/
+export class ChargerTribu extends OperationUI {
+  constructor () {
+    super('Mise à jour du commentaires / réserves d\'une tribu', OUI, SELONMODE)
+  }
+
+  async run (nat) {
+    try {
+      const args = { sessionId: data.sessionId, id: nat.id }
+      const ret = await post(this, 'm1', 'chargerTribus', args)
+      let tribu = null
+      if (ret.rowItems.length) {
+        const r = await compileToObject(deserialRowItems(ret.rowItems))
+        tribu = r.tribu[nat.id]
+        if (tribu) {
+          tribu.na = nat
+          await tribu.fromDatat()
+        }
+      }
+      this.finOK()
+      return tribu
     } catch (e) {
       await this.finKO(e)
     }

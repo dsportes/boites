@@ -1,8 +1,16 @@
 <template>
 <q-page class="fs-md q-pa-sm">
   <q-card v-if="sessionok" class="moyennelargeur maauto">
+    <div v-if="!compte.estComptable && compte.estParrain" class="q-my-md">
+      <div class="row justify-between">
+        <div class="titre-md text-warning text-bold">Compte parrain de la tribu {{compte.nat.nom}}</div>
+        <q-btn flat dense size="sm" icon="chevron_right" @click="ouvrirtribu"/>
+      </div>
+    </div>
 
-    <div class="q-my-md">
+    <div v-if="!compte.estComptable && !compte.estParrain" class="titre-md">Les ressources du compte sont imputées à la tribu {{compte.nat.nom}}</div>
+
+    <div class="q-my-sm">
       <div class="row justify-between">
         <div class="titre-md">Mémo du compte
           <span v-if="state.memo" class="q-pl-sm font-mno fs-sm">({{state.memo.length + 'c'}})</span>
@@ -45,7 +53,7 @@
   <q-dialog v-model="memoedit" full-height position="right">
     <q-card class="petitelargeur q-pa-sm">
       <q-toolbar class="bg-secondary text-white">
-        <q-toolbar-title class="titre-lg full-width text-right">Mémo du compte</q-toolbar-title>
+        <q-toolbar-title class="titre-lg full-width">Mémo du compte</q-toolbar-title>
         <q-btn class="chl" dense flat size="md" icon="chevron_right" @click="memoedit=false"/>
       </q-toolbar>
       <editeur-md ref="memoed" class="q-mt-md height-10" :texte="state.memo" editable modetxt label-ok="OK" v-on:ok="memook"></editeur-md>
@@ -55,10 +63,28 @@
   <q-dialog v-model="mcledit" full-height position="right">
     <q-card class="petitelargeur q-pa-sm">
       <q-toolbar class="bg-secondary text-white">
-        <q-btn class="chl" dense flat size="md" icon="chevron_left" @click="mcledit=false"/>
-        <div class="titre-lg full-width text-right">Mots clés du compte</div>
+        <q-toolbar-title class="titre-lg full-width">Mots clés du compte</q-toolbar-title>
+        <q-btn class="chl" dense flat size="md" icon="chevron_right" @click="mcledit=false"/>
       </q-toolbar>
       <mots-cles class="q-mt-md full-width" :motscles="motscles" @ok="okmc"></mots-cles>
+    </q-card>
+  </q-dialog>
+
+  <q-dialog v-model="tribdial" full-height position="right">
+    <q-card class="petitelargeur q-pa-sm">
+      <q-toolbar class="bg-secondary text-white">
+        <q-toolbar-title class="titre-lg full-width">Forfaits de la tribu {{tribu.nom}}</q-toolbar-title>
+        <q-btn class="chl" dense flat size="md" icon="chevron_right" @click="tribdial=false"/>
+      </q-toolbar>
+      <q-card-section class="fs-md">
+        <div class="q-my-sm">{{tribu.nbc}} compte(s)</div>
+        <div class="q-my-sm">Forfaits déjà attribués aux comptes</div>
+        <div class="q-ml-md font-mono">V1 : {{tribu.f1}}<span class="q-ml-lg">{{ed1(tribu.f1)}}</span></div>
+        <div class="q-ml-md font-mono">V2 : {{tribu.f2}}<span class="q-ml-lg">{{ed2(tribu.f2)}}</span></div>
+        <div class="q-my-sm">Réserves disponibles pour attribution aux comptes</div>
+        <div class="q-ml-md font-mono">V1 : {{tribu.r1}}<span class="q-ml-lg">{{ed1(tribu.r1)}}</span></div>
+        <div class="q-ml-md font-mono">V2 : {{tribu.r2}}<span class="q-ml-lg">{{ed2(tribu.r2)}}</span></div>
+      </q-card-section>
     </q-card>
   </q-dialog>
 
@@ -73,7 +99,7 @@
   <q-dialog v-if="sessionok" v-model="comptadial" full-height position="right">
     <q-card class="moyennelargeur q-pa-sm">
       <q-toolbar class="bg-secondary text-white">
-        <q-toolbar-title class="titre-lg full-width text-right">Comptabilité de {{cpt.av}}</q-toolbar-title>
+        <q-toolbar-title class="titre-lg full-width text-right">Comptabilité de {{cpt.av.na.nom}}</q-toolbar-title>
         <q-btn class="chl" dense flat size="md" icon="chevron_right" @click="fermercompta"/>
       </q-toolbar>
       <div class="fullwidth">
@@ -87,23 +113,11 @@
           <div class="col-1 font-mono fs-md text-center">/</div>
           <div class="col-3 font-mono fs-md text-center">[{{cpt.x.f2}}]  {{ed2(cpt.x.f2)}}</div>
         </div>
-        <div class="row items-start">
-          <div class="col-5 text-right text-italic">Réserve de forfaits V1 / V2 (parrain)</div>
-          <div class="col-3 font-mono fs-md text-center">[{{cpt.x.res1}}]  {{ed1(cpt.x.res1)}}</div>
+        <div v-if="cpt.av.estPrimaire" class="row items-start">
+          <div class="col-5 text-right text-italic">Forfaits distribués aux avatars secondaires</div>
+          <div class="col-3 font-mono fs-md text-center">[{{cpt.x.s1}}]  {{ed1(cpt.x.s1)}}</div>
           <div class="col-1 font-mono fs-md text-center">/</div>
-          <div class="col-3 font-mono fs-md text-center">[{{cpt.x.res2}}]  {{ed2(cpt.x.res2)}}</div>
-        </div>
-        <div class="row items-start">
-          <div class="col-5 text-right text-italic">Forfaits V1 / V2 attribués aux filleuls (parrain)</div>
-          <div class="col-3 font-mono fs-md text-center">[{{cpt.x.t1}}]  {{ed1(cpt.x.t1)}}</div>
-          <div class="col-1 font-mono fs-md text-center">/</div>
-          <div class="col-3 font-mono fs-md text-center">[{{cpt.x.t2}}]  {{ed2(cpt.x.t2)}}</div>
-        </div>
-        <div class="row items-start">
-          <div class="col-5 text-right text-italic">Forfaits V1 / v2</div>
-          <div class="col-3 font-mono fs-md text-center">[{{cpt.x.f1}}]  {{ed1(cpt.x.f1)}}</div>
-          <div class="col-1 font-mono fs-md text-center">/</div>
-          <div class="col-3 font-mono fs-md text-center">[{{cpt.x.f2}}]  {{ed2(cpt.x.f2)}}</div>
+          <div class="col-3 font-mono fs-md text-center">[{{cpt.x.s2}}]  {{ed2(cpt.x.s2)}}</div>
         </div>
         <div class="row items-start">
           <div class="col-5 text-right text-italic">V1 actuel / moyenne du mois</div>
@@ -173,7 +187,7 @@
 </template>
 
 <script>
-import { PrefCompte, CreationAvatar, MajCv } from '../app/operations.mjs'
+import { PrefCompte, CreationAvatar, MajCv, ChargerTribu } from '../app/operations.mjs'
 import { computed, ref, reactive, watch } from 'vue'
 import { useStore } from 'vuex'
 import { onBoot, remplacePage } from '../app/page.mjs'
@@ -206,6 +220,7 @@ import { UNITEV1, UNITEV2, Compteurs } from '../app/api.mjs'
   - `r3` : ratio des transferts cumulés du mois / volume du forfait v2
 - `res1 res2` : pour un parrain, réserve de forfaits v1 et v2.
 - `t1 t2` : pour un parrain, total des forfaits 1 et 2 attribués aux filleuls.
+- `s1 s2` : pour un avatar primaire, total des forfaits attribués aux secondaires.
 */
 
 export default ({
@@ -236,6 +251,20 @@ export default ({
     fermerParrain () { this.nvpar = false },
     ouvrirpr (av) { this.avatar = av; this.phraserenc = true },
     fermerpr () { this.phraserenc = false },
+
+    async ouvrirtribu () {
+      if (this.mode > 2) {
+        afficherdiagnostic('Informations sur la tribu disponibles seulement en mode synchronisé ou incognito')
+        return
+      }
+      const t = await new ChargerTribu().run(this.compte.nat)
+      if (t) {
+        this.tribu = t
+        this.tribdial = true
+      } else {
+        afficherdiagnostic('Informations sur la tribu non disponibles')
+      }
+    },
 
     ouvrirnv () {
       this.nvav = true
@@ -276,6 +305,7 @@ export default ({
     const nvpar = ref(false)
     const phraserenc = ref(false)
     const comptadial = ref(false)
+    const tribdial = ref(false)
     const mcledit = ref(false)
     const memoedit = ref(false)
     onBoot()
@@ -297,21 +327,25 @@ export default ({
       get: () => $store.state.db.avatar,
       set: (val) => $store.commit('db/majavatar', val)
     })
-    const state = reactive({ lst: [], memo: '', estParrain: false, cprim: null })
+    const tribu = computed({
+      get: () => $store.state.db.tribu,
+      set: (val) => $store.commit('db/majtribu', val)
+    })
+    const state = reactive({ lst: [], memo: '', cprim: null })
 
     function init1 () {
       if (sessionok.value) {
         const lst = []
         state.cvs = {}
+        state.estParrain = compte.value.estParrain
         compte.value.avatarIds().forEach(id => {
           const av = avatars.value[id]
           const cv = cvs.value[id]
           const cp = comptas.value[id]
-          if (cp.estParrain) state.estParrain = true
+          if (cp.id === compte.value.id) state.cprim = cp
           lst.push({ av, cv, cp })
         })
         lst.sort((a, b) => { return a.av.estPrimaire || (a.av.na.nom < b.av.na.nom) ? -1 : (a.av.na.nom > b.av.na.nom ? 1 : 0) })
-        state.cprim = lst[0].cp
         state.lst = lst
         if (!avatar.value) avatar.value = state.lst[0].av
       }
@@ -345,12 +379,12 @@ export default ({
     - `res1 res2` : pour un parrain, réserve de forfaits v1 et v2.
     - `t1 t2` : pour un parrain, total des forfaits 1 et 2 attribués aux filleuls.
     */
-    const cpt = reactive({ av: '', x: new Compteurs() })
+    const cpt = reactive({ av: null, x: new Compteurs() })
 
     function ouvrircompta (x) {
       avatar.value = x.av
       comptadial.value = true
-      cpt.av = x.av.na.nom
+      cpt.av = x.av
       cpt.x = x.cp.compteurs
     }
 
@@ -374,6 +408,7 @@ export default ({
         nvpar.value = false
         phraserenc.value = false
         comptadial.value = false
+        tribdial.value = false
         mcledit.value = false
         memoedit.value = false
       }
@@ -388,6 +423,7 @@ export default ({
       nvpar,
       phraserenc,
       comptadial,
+      tribdial,
       mcledit,
       memoedit,
       ed,
@@ -396,6 +432,7 @@ export default ({
       cpt,
       nvav,
       avatar,
+      tribu,
       state,
       tabavatar,
       sessionok,
@@ -417,6 +454,6 @@ export default ({
   padding: 2px !important
   min-height: 0 !important
 .l1
-  max-height: 1.3rem
+  max-height: 1.8rem
   overflow: hidden
 </style>
