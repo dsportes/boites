@@ -284,6 +284,21 @@ export class Operation {
     }
   }
 
+  async chargerTribu (nat) {
+    // obtient la (nouvelle) tribu du compte, s'y abonne et la stocke en tribu courant
+    const args = { sessionId: data.sessionId, id: nat.id }
+    const ret = await post(this, 'm1', 'chargerTribus', args)
+    if (ret.rowItems.length) {
+      const r = await compileToObject(deserialRowItems(ret.rowItems))
+      const tribu = r.tribu[nat.id]
+      if (tribu) {
+        tribu.na = nat
+        await tribu.fromDatat()
+        store().commit('db/majtribu', tribu)
+      }
+    }
+  }
+
   /* Retrait des groupes détectés zombis
   des listes des groupes accédés par les avatars du compte
   */
@@ -534,6 +549,10 @@ export class Operation {
         obj.repAvatars()
         this.buf.setCompte(obj)
         this.buf.putIDB(obj)
+        if (obj.nat && a.nat.nom !== obj.nat.nom) {
+          // changement de tribu (sauf pour Comptable)
+          this.chargerTribu(obj.nat)
+        }
       }
     }
 
@@ -1050,7 +1069,7 @@ export class ConnexionCompte extends OperationUI {
 
   excActions () { return { d: deconnexion, x: deconnexion, r: reconnexion, default: null } }
 
-  /* Obtention de compte / prefs depuis le serveur (si plus récents que ceux connus localement)
+  /* Obtention de compte / prefs / tribu depuis le serveur (si plus récents que ceux connus localement)
   RAZ des abonnements et abonnement au compte
   */
   async chargerCP (vcompte, vprefs) {
@@ -1067,6 +1086,7 @@ export class ConnexionCompte extends OperationUI {
       }
     }
     if (prefs) await prefs.fromRow(schemas.deserialize('rowprefs', ret.rowPrefs.serial))
+    if (compte.nat) await this.chargerTribu(compte.nat)
     return [compte, prefs]
   }
 
@@ -1557,7 +1577,7 @@ export class InforesTribu extends OperationUI {
 
 /******************************************************
 Maj des informations et réserves tribu
-*/
+
 export class ChargerTribu extends OperationUI {
   constructor () {
     super('Mise à jour du commentaires / réserves d\'une tribu', OUI, SELONMODE)
@@ -1583,6 +1603,7 @@ export class ChargerTribu extends OperationUI {
     }
   }
 }
+*/
 
 /******************************************************
 Mise à jour d'une préférence d'un compte

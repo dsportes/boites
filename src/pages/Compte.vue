@@ -10,6 +10,22 @@
 
     <div v-if="!compte.estComptable && !compte.estParrain" class="titre-md">Les ressources du compte sont imputées à la tribu {{compte.nat.nom}}</div>
 
+    <div class="q-my-md">
+      <div class="row justify-between">
+        <div class="titre-md">Chat avec le "Comptable"</div>
+        <q-btn flat dense size="sm" icon="chevron_right" @click="ouvrirchat"/>
+      </div>
+    </div>
+
+    <q-dialog v-model="chatdial" full-height position="right">
+      <q-card class="moyennelargeur q-pa-sm">
+        <q-toolbar class="bg-secondary text-white">
+          <q-toolbar-title class="titre-lg full-width">Chat avec le Comptable</q-toolbar-title>
+          <q-btn class="chl" dense flat size="md" icon="chevron_right" @click="memoedit=false"/>
+        </q-toolbar>
+      </q-card>
+    </q-dialog>
+
     <div class="q-my-sm">
       <div class="row justify-between">
         <div class="titre-md">Mémo du compte
@@ -187,7 +203,7 @@
 </template>
 
 <script>
-import { PrefCompte, CreationAvatar, MajCv, ChargerTribu } from '../app/operations.mjs'
+import { PrefCompte, CreationAvatar, MajCv } from '../app/operations.mjs'
 import { computed, ref, reactive, watch } from 'vue'
 import { useStore } from 'vuex'
 import { onBoot, remplacePage } from '../app/page.mjs'
@@ -257,15 +273,11 @@ export default ({
         afficherdiagnostic('Informations sur la tribu disponibles seulement en mode synchronisé ou incognito')
         return
       }
-      const t = await new ChargerTribu().run(this.compte.nat)
-      if (t) {
-        this.tribu = t
-        this.tribdial = true
-      } else {
-        afficherdiagnostic('Informations sur la tribu non disponibles')
-      }
+      this.tribdial = true
     },
-
+    ouvrirchat () {
+      this.chatdial = true
+    },
     ouvrirnv () {
       this.nvav = true
       const c = this.state.cprim.compteurs
@@ -308,12 +320,14 @@ export default ({
     const tribdial = ref(false)
     const mcledit = ref(false)
     const memoedit = ref(false)
+    const chatdial = ref(false)
     onBoot()
     const $store = useStore()
     const sessionok = computed(() => { return $store.state.ui.sessionok })
     // En déconnexion, compte passe à null et provoque un problème dans la page. Un getter ne marche pas ?!
     const compte = computed(() => $store.state.db.compte)
     const prefs = computed(() => $store.state.db.prefs)
+    const tribu = computed(() => $store.state.db.tribu)
     // const cvs = computed(() => $store.state.db.cvs)
     const mode = computed(() => $store.state.ui.mode)
 
@@ -326,10 +340,6 @@ export default ({
     const avatar = computed({
       get: () => $store.state.db.avatar,
       set: (val) => $store.commit('db/majavatar', val)
-    })
-    const tribu = computed({
-      get: () => $store.state.db.tribu,
-      set: (val) => $store.commit('db/majtribu', val)
     })
     const state = reactive({ lst: [], memo: '', cprim: null })
 
@@ -426,6 +436,7 @@ export default ({
       tribdial,
       mcledit,
       memoedit,
+      chatdial,
       ed,
       ed1,
       ed2,
