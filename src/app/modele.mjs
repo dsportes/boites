@@ -322,6 +322,9 @@ class Session {
   getPrefs () { return store().state.db.prefs }
   setPrefs (prefs) { store().commit('db/setPrefs', prefs) }
 
+  getChat () { return store().state.db.chat }
+  setChat (chat) { store().commit('db/setPrefs', chat) }
+
   getAvatar (id) { return store().getters['db/avatar'](id) }
   setAvatars (lobj) { store().commit('db/setObjets', lobj) }
 
@@ -387,50 +390,69 @@ export const data = new Session()
 
 /** Chat *********************************
 - `id` : de l'avatar primaire.
-- `dh` : date-heure d'écriture. Par convention si elle est paire c'est un texte écrit par l'avatar, sinon il est écrit par le comptable.
-- `txtt` : serial de [x, t, l]
-  - x : [nom, rnd] de l'avatar crypté par la clé publique du comptable
-  - t : texte crypté pat rnd
-  - l : liste de noms d'avatar : [[nom, rnd] ...]
-La liste l permet au comptable de retourner des contacts, par exemple des parrains
-d'une tribu sur demande d'un avatar cherchant un autre parrain ou changeant de tribu.
+- `v`
+- `dhde` : date-heure de dernière écriture par le compte (pas le comptable).
+- `lua` : date-heure de dernière lecture par l'avatar
+- `luc` : date-heure de dernière lecture par le comptable
+- `st` : 0: OK (résolu), 1: à traiter, 2: bloquant
+- `nrc` : `[nom, rnd, cle]` crypté par la clé publique du comptable. cle est la clé C de cryptage du chat (immuable, générée à la création).
+- `ck` : cle C cryptée par la clé K du compte.
+- `items` : sérialisation de la liste d'items. Item `[dh, it]`:
+  - `dh` : date-heure d'écriture
+  - `it` : crypté par la clé C du chat:
+    - `c` : true si écrit par le comptable
+    - `t` : texte
+    - `r` : références d'avatars données par le Comptable. [[nom, rnd] ...]
+- `vsh`
 */
+
+schemas.forSchema({
+  name: 'idbChat',
+  cols: ['id', 'v', 'dhde', 'lua', 'luc', 'st', 'na', 'clec', 'items', 'vsh']
+})
+
 export class Chat {
   get table () { return 'chat' }
   get sid () { return crypt.idToSid(this.id) }
   get pk () { return this.sid }
-  get deCompta () { return this.dh % 2 === 1 }
 
   async fromRow (row) {
     this.vsh = row.vsh || 0
     this.id = row.id
-    this.dh = row.dh
-    const x = deserial(row.txtt)
+    this.dhde = row.dhde
+    this.lua = row.lua
+    this.luc = row.luc
+    this.st = row.st
     if (data.estComptable) {
-      const [n, r] = deserial(await crypt.decrypterRSA(data.getCompte().cpriv(), x[0]))
+      const [n, r, c] = deserial(await crypt.decrypterRSA(data.getCompte().cpriv(), row.nrc))
       this.na = new NomAvatar(n, r)
+      this.clec = c
     } else {
-      // un avatar ne peut lire les chats que le concernant
-      this.na = data.getCompte().primaire().na
+      this.clec = await crypt.decrypter(data.clek, row.ck)
+      this.na = data.getCompte().naprim
     }
-    this.txt = await crypt.decrypter(this.na.rnd, x[1])
-    this.lna = []
-    if (x[2]) {
-      x[2].forEach(i => { this.lna.push(new NomAvatar(i[0], i[1])) })
+    const items = row.iems ? deserial(row.items) : []
+    this.items = []
+    for (const x in items) {
+      const [dh, y] = x
+      const it = deserial(crypt.decrypter(this.clec, y))
+      items.push([dh, it])
     }
   }
 
-  // Nouvel item - si na : écriture par le comptable, sinon par l'avatar
-  async toRow (txt, lna, na) {
-    const d = new Date().getTime()
-    const dh = d % 2 === 0 ? (na ? d + 1 : d) : (na ? d : d + 1)
-    const nax = na || data.getCompte().primaire().na
-    const k = await crypt.crypterRSA(data.clepubC, serial([nax.nom, nax.rnd]))
-    const t = await crypt.crypter(nax.rnd, txt)
-    // TODO lna
-    const l = []
-    if (lna && lna.length) lna.forEach(na => { l.push([na.nom, na.rnd]) })
-    return schemas.serialize('rowchat', { id: nax.id, dh, txtt: serial([k, t, l]) })
+  async toRoWitem (texte, lna) {
+    const item = { c: data.estComptable, t: texte, r: lna || [] }
+    return await crypt.crypter(this.clec, item)
+  }
+
+  get toIdb () {
+    const r = { ...this }
+    return schemas.serialize('idbChat', r)
+  }
+
+  fromIdb (idb) {
+    schemas.deserialize('idbChat', idb, this)
+    return this
   }
 }
 
@@ -595,6 +617,8 @@ export class Compte {
   get estComptable () { return this.id === IDCOMPTABLE }
 
   get primaire () { return data.getAvatar(this.id) }
+
+  get naprim () { return this.mac[this.sid].na }
 
   estAc (id) {
     const sid = crypt.idToSid(id)

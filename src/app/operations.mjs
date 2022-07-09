@@ -2,10 +2,10 @@ import { NomAvatar, NomGroupe, store, post, get, affichermessage, cfg, sleep, af
 import { remplacePage } from './page.mjs'
 import {
   deleteIDB, idbSidCompte, commitRows, getCompte, getComptas, getPrefs, getCvs,
-  getAvatars, getGroupes, getCouples, getMembres, getSecrets,
+  getAvatars, getGroupes, getCouples, getMembres, getSecrets, getChat,
   openIDB, enregLScompte, getVIdCvs, saveListeCvIds, gestionFichierSync, gestionFichierCnx
 } from './db.mjs'
-import { Compte, Avatar, deserialRowItems, compileToObject, data, Prefs, Contact, Invitgr, Invitcp, Compta, Groupe, Membre, Cv, Couple, Tribu } from './modele.mjs'
+import { Compte, Avatar, deserialRowItems, compileToObject, data, Prefs, Chat, Contact, Invitgr, Invitcp, Compta, Groupe, Membre, Cv, Couple, Tribu } from './modele.mjs'
 import { AppExc, EXBRK, EXPS, F_BRO, E_BRO, X_SRV, E_WS } from './api.mjs'
 
 import { crypt } from './crypto.mjs'
@@ -51,6 +51,7 @@ class OpBuf {
   setCompte (obj) { this.compte = obj }
   setCompta (obj) { this.compta = obj }
   setPrefs (obj) { this.prefs = obj }
+  setChat (obj) { this.chat = obj }
   setCv (obj) { this.lcvs.push(obj) }
   setObj (obj) {
     if (obj.table === 'secret' && data.mode === 1) this.mapSec[obj.pk] = obj
@@ -61,6 +62,7 @@ class OpBuf {
     if (this.compte) data.setCompte(this.compte)
     if (this.compta) data.setCompta(this.compta)
     if (this.prefs) data.setPrefs(this.prefs)
+    if (this.chat) data.setPrefs(this.chat)
     if (this.lobj.length) data.setObjets(this.lobj)
     if (this.lcvs.length) data.setCvs(this.lcvs)
   }
@@ -609,6 +611,16 @@ export class Operation {
       }
     }
 
+    // Chat : singleton
+    if (mapObj.chat) {
+      const obj = mapObj.chat
+      const a = data.getChat()
+      if (!a || obj.v > a.v) {
+        this.buf.setChat(obj)
+        this.buf.putIDB(obj)
+      }
+    }
+
     // Compta
     if (mapObj.compta) {
       for (const pk in mapObj.compta) {
@@ -854,6 +866,12 @@ export class OperationUI extends Operation {
     const prefs = await new Prefs().fromRow(mapRows.prefs)
     data.setPrefs(prefs)
 
+    let chat = null
+    if (mapRows.chat) {
+      chat = await new Chat().fromRow(mapRows.chat)
+      data.setChat(chat)
+    }
+
     const xa = Object.values(mapRows.avatar)
     const avatar = await new Avatar().fromRow(xa[0])
     avatar.repGroupes()
@@ -861,6 +879,7 @@ export class OperationUI extends Operation {
     data.setAvatars([avatar])
 
     const lmaj = [compte, compta, prefs, avatar]
+    if (chat) lmaj.push(chat)
     const lsuppr = []
 
     if (mapRows.couple) {
@@ -1069,25 +1088,26 @@ export class ConnexionCompte extends OperationUI {
 
   excActions () { return { d: deconnexion, x: deconnexion, r: reconnexion, default: null } }
 
-  /* Obtention de compte / prefs / tribu depuis le serveur (si plus récents que ceux connus localement)
+  /* Obtention de compte / prefs / chat / tribu depuis le serveur (si plus récents que ceux connus localement)
   RAZ des abonnements et abonnement au compte
   */
-  async chargerCP (vcompte, vprefs) {
-    const args = { sessionId: data.sessionId, pcbh: data.ps.pcbh, dpbh: data.ps.dpbh, vcompte, vprefs }
+  async chargerCP () {
+    const args = { sessionId: data.sessionId, pcbh: data.ps.pcbh, dpbh: data.ps.dpbh }
     const ret = this.tr(await post(this, 'm1', 'connexionCompte', args))
     data.clepubc = ret.clepubc
-    const compte = ret.rowCompte ? new Compte() : null
-    const prefs = ret.rowPrefs ? new Prefs() : null
-    if (compte) {
-      await compte.fromRow(schemas.deserialize('rowcompte', ret.rowCompte.serial))
-      if (compte.nctk) {
-        const args = { sessionId: data.sessionId, id: compte.id, nctk: compte.nctk }
-        this.tr(await post(this, 'm1', 'nctkCompte', args))
-      }
+    const compte = new Compte()
+    const prefs = new Prefs()
+    const chat = ret.rowChat ? new Chat() : null
+    await compte.fromRow(schemas.deserialize('rowcompte', ret.rowCompte.serial))
+    if (compte.nctk) {
+      const args = { sessionId: data.sessionId, id: compte.id, nctk: compte.nctk }
+      this.tr(await post(this, 'm1', 'nctkCompte', args))
     }
-    if (prefs) await prefs.fromRow(schemas.deserialize('rowprefs', ret.rowPrefs.serial))
+    data.setCompte(compte)
+    await prefs.fromRow(schemas.deserialize('rowprefs', ret.rowPrefs.serial))
+    if (chat) await chat.fromRow(schemas.deserialize('rowchat', ret.rowChat.serial))
     if (compte.nat) await this.chargerTribu(compte.nat)
-    return [compte, prefs]
+    return [compte, prefs, chat]
   }
 
   /* Recharge depuis le serveur les avatars du compte, abonnement aux avatars */
@@ -1444,7 +1464,8 @@ export class ConnexionCompte extends OperationUI {
   }
 
   async phase0 (razdb) { // compte / prefs : abonnement à compte
-    let prefs
+    let prefs = null
+    let chat = null
     // En mode avion, vérifie que la phrase secrète a bien une propriété en localstorage donnant le nom de la base
     if (data.mode === 3) {
       if (!idbSidCompte()) {
@@ -1455,18 +1476,21 @@ export class ConnexionCompte extends OperationUI {
       if (!this.compte || (this.compte.pcbh !== data.ps.pcbh)) {
         throw new AppExc(F_BRO, 'Compte non enregistré localement : aucune session synchronisée ne s\'est préalablement exécutée sur ce poste avec cette phrase secrète. Erreur dans la saisie de la ligne 2 de la phrase ?')
       }
+      data.setCompte(this.compte)
       prefs = await getPrefs()
+      chat = await getChat()
       data.estComptable = false
     }
 
     if (data.mode === 1 || data.mode === 2) {
-      const [compteSrv, prefsSrv] = await this.chargerCP(0, 0)
+      const [compteSrv, prefsSrv, chatSrv] = await this.chargerCP()
       // est sorti en exception si non authentifié
       if (data.ps.pcbh !== compteSrv.pcbh) throw EXPS // Changement de phrase secrète
       this.compte = compteSrv
       data.estComptable = this.compte.estComptable
       if (data.estComptable) data.mode = 2
       prefs = prefsSrv
+      chat = chatSrv
       if (data.mode === 1) {
         enregLScompte(compteSrv.sid)
         if (razdb) {
@@ -1477,11 +1501,13 @@ export class ConnexionCompte extends OperationUI {
         await openIDB()
         this.buf.putIDB(this.compte)
         this.buf.putIDB(prefs)
+        if (chat) this.buf.putIDB(chat)
       }
     }
 
     data.setCompte(this.compte)
     data.setPrefs(prefs)
+    if (chat) data.setChat(chat)
     this.compte.repAvatars()
     if (data.estComptable) await this.chargerTribus()
     this.sessionSync = await data.debutConnexion()
@@ -2314,6 +2340,7 @@ export class AcceptationParrainage extends OperationUI {
   - max : [v1, v2] volumes max pour les secrets du couple
   - estpar : si le compte à créer est parrain aussi
   - phch : hash phrase de contact
+  - clepubc
   */
   async run (couple, datactc, arg) {
     try {
@@ -2332,12 +2359,14 @@ export class AcceptationParrainage extends OperationUI {
       const kpav = await crypt.genKeyPair()
       const compte = new Compte().nouveau(couple.naI, kpav.privateKey)
       // nouveau() enregistre la clé K dans data.clek !!!
+      await compte.setTribu(nat, arg.clepubc)
+
       if (arg.estpar) {
-        await compte.setTribu(nat, arg.clepubc)
-        chkt = compte.chkt
-        nctc = await crypt.crypter(rnd, serial(datactc.nct))
         compte.stp = 1
+        chkt = compte.chkt
+        nctc = await crypt.crypter(rnd, serial([couple.naI.nom, couple.naI.rnd]))
       }
+
       const rowCompte = await compte.toRow()
 
       const prefs = new Prefs().nouveau(compte.id)
@@ -2354,6 +2383,10 @@ export class AcceptationParrainage extends OperationUI {
       const rowCompta = await compta.toRow()
 
       const ardc = await couple.toArdc(arg.ard, couple.cc)
+
+      const clec = crypt.random(32)
+      const nrc = await crypt.crypterRSA(arg.clepubc, serial([avatar.na.nom, avatar.na.rnd, clec]))
+      const ck = await crypt.crypter(data.clek, clec)
 
       const args = {
         sessionId: data.sessionId,
@@ -2372,7 +2405,9 @@ export class AcceptationParrainage extends OperationUI {
         nctc,
         ardc,
         estPar: arg.estpar,
-        sec: arg.max[0] !== 0 // le filleul accède aux secrets du couple
+        sec: arg.max[0] !== 0, // le filleul accède aux secrets du couple
+        nrc,
+        ck
       }
       const ret = this.tr(await post(this, 'm1', 'acceptParrainage', args))
 

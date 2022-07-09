@@ -2,6 +2,7 @@ export default function () {
   return {
     compte: null,
     prefs: null,
+    chat: null,
 
     avatar: null, // avatar courant
     groupe: null, // groupe courant

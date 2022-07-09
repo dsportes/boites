@@ -12,6 +12,7 @@ const STORES = {
   compte: 'id',
   compta: 'id',
   prefs: 'id',
+  chat: 'id',
   avatar: 'id',
   couple: 'id',
   groupe: 'id',
@@ -143,6 +144,16 @@ export async function getPrefs () {
   go()
   try {
     const idb = await data.db.prefs.get('1')
+    return idb ? new Prefs().fromIdb(await crypt.decrypter(data.clek, idb.data)) : null
+  } catch (e) {
+    throw data.setErDB(EX2(e))
+  }
+}
+
+export async function getChat () {
+  go()
+  try {
+    const idb = await data.db.chat.get('1')
     return idb ? new Prefs().fromIdb(await crypt.decrypter(data.clek, idb.data)) : null
   } catch (e) {
     throw data.setErDB(EX2(e))

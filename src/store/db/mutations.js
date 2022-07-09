@@ -27,7 +27,7 @@ Normalement quand une entrée existe il n'y a pas que le secret de référence d
 */
 
 // objets courants représentés par un singleton
-const l1 = new Set(['compte', 'prefs', 'avatar', 'groupe', 'couple', 'secret'])
+const l1 = new Set(['compte', 'prefs', 'chat', 'tribu', 'avatar', 'groupe', 'couple', 'secret'])
 
 // objets multiples à un seul niveau représenté par une map
 const l2 = new Set(['tribus', 'avatars', 'comptas', 'groupes', 'couples', 'cvs', 'fetats', 'avsecrets'])
@@ -189,6 +189,7 @@ export function setCvs (state, lst) { // lst : array [{id, cv}]
 
 export function setCompte (state, obj) { state.compte = obj }
 export function setPrefs (state, obj) { state.prefs = obj }
+export function setChat (state, obj) { state.chat = obj }
 
 /* Enregistrement de toutes les cv d'un coup */
 export function commitRepertoire (state, repertoire) { state.repertoire = { ...repertoire } }
