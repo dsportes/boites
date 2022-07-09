@@ -323,7 +323,7 @@ class Session {
   setPrefs (prefs) { store().commit('db/setPrefs', prefs) }
 
   getChat () { return store().state.db.chat }
-  setChat (chat) { store().commit('db/setPrefs', chat) }
+  setChat (chat) { store().commit('db/setChat', chat) }
 
   getAvatar (id) { return store().getters['db/avatar'](id) }
   setAvatars (lobj) { store().commit('db/setObjets', lobj) }
