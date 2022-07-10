@@ -56,10 +56,12 @@
       </q-toolbar>
 
       <q-toolbar inset :class="tbclass">
-        <q-btn v-if="sessionok && (page==='Compte' || page==='Avatar')" class="q-pr-sm" dense color="primary" round size="md" icon="people"
+        <q-btn v-if="sessionok && (page==='Compte' || page==='Avatar')" class="q-ml-sm" dense color="primary" round size="md" icon="people"
           aria-label="Mes contacts" @click="panelcontacts = !panelcontacts"/>
-        <q-btn v-if="sessionok && (page==='Compte' || page==='Avatar')" class="q-pr-sm" dense color="primary" round size="md" icon="save"
+        <q-btn v-if="sessionok && (page==='Compte' || page==='Avatar')" class="q-my-xs" dense color="primary" round size="md" icon="save"
           aria-label="Fichiers hors ligne" @click="fichiersavion = !fichiersavion"/>
+        <q-btn v-if="sessionok && !estcomptable && (page==='Compte' || page==='Avatar')" class="q-my-xs" dense color="primary" size="md" icon="chat"
+          aria-label="Chat avec le Comptable" @click="ouvrirchat"/>
         <q-toolbar-title class="text-center fs-md">
           <div v-if="page==='Org'" class="tbpage">Choix de l'organisation</div>
           <div v-if="page==='Login'" class="tbpage">Connexion à un compte</div>
@@ -182,6 +184,33 @@
       <rapport-synchro jailu></rapport-synchro>
     </q-dialog>
 
+    <q-dialog v-model="nvchat">
+      <nouveau-chat :close="fermernvchat"/>
+    </q-dialog>
+
+    <q-dialog v-model="dialoguechat" full-height position="right">
+      <q-card class="moyennelargeur q-pa-sm">
+        <q-card-section>
+          <q-toolbar class="bg-secondary text-white">
+            <q-toolbar-title class="titre-lg full-width">Chat avec le Comptable</q-toolbar-title>
+            <q-btn class="chl" dense flat size="md" icon="chevron_right" @click="fermerchat"/>
+          </q-toolbar>
+            <div class="row justify-between items-center">
+              <div :class="'font-mono fs-lg ' + ['', 'text-warning', 'text-negative text-bold bg-yellow'][chat.st]">
+                {{['OK / résolu', 'A résoudre', 'Bloquant / urgent'][chat.st]}}
+              </div>
+              <q-btn class="q-ma-xs" dense color="primary" size="md" label="Nouveau" icon="add"
+                @click="nvchat=true"/>
+            </div>
+          <div>Dernière émission par le compte:<span class="q-ml-md font-mono">{{dh(chat.dhde)}}</span></div>
+        </q-card-section>
+        <q-separator/>
+        <q-card-section style="max-height: 70vh" class="scroll">
+          <chat-item v-for="item in chat.items" :key="item.dh" :item="item"/>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
+
     <dialogue-help></dialogue-help>
     <dialogue-crypto></dialogue-crypto>
     <dialogue-erreur></dialogue-erreur>
@@ -212,9 +241,11 @@ import DialogueHelp from 'components/DialogueHelp.vue'
 import PanelContacts from 'components/PanelContacts.vue'
 import FichiersAvion from 'components/FichiersAvion.vue'
 import TitreBanner from '../components/TitreBanner.vue'
+import NouveauChat from '../components/NouveauChat.vue'
+import ChatItem from '../components/ChatItem.vue'
 import InfoIco from '../components/InfoIco.vue'
 import { data, MODES } from '../app/modele.mjs'
-import { cfg } from '../app/util.mjs'
+import { cfg, dhcool } from '../app/util.mjs'
 import { remplacePage, onBoot, retourInvitation } from '../app/page.mjs'
 import { reconnexion } from '../app/operations.mjs'
 
@@ -222,7 +253,7 @@ export default {
   name: 'MainLayout',
 
   components: {
-    FichiersAvion, TitreBanner, InfoIco, RapportSynchro, PanelMenu, PanelContacts, DialogueErreur, DialogueCrypto, DialogueCreationCompte, DialogueTestPing, DialogueInfoMode, DialogueInfoReseau, DialogueInfoIdb, DialogueHelp
+    NouveauChat, ChatItem, FichiersAvion, TitreBanner, InfoIco, RapportSynchro, PanelMenu, PanelContacts, DialogueErreur, DialogueCrypto, DialogueCreationCompte, DialogueTestPing, DialogueInfoMode, DialogueInfoReseau, DialogueInfoIdb, DialogueHelp
   },
 
   computed: {
@@ -235,11 +266,13 @@ export default {
       idbs: ['~assets/database_gris.svg', '~assets/database_vert.svg', '~assets/database_rouge.svg'],
       console: console,
       menugauche1: false,
-      menugauche4: false
+      menugauche4: false,
+      nvchat: false
     }
   },
 
   methods: {
+    fermernvchat () { this.nvchat = false },
     login () { remplacePage('Login') },
     toorg () { remplacePage('Org') },
     tocompte () { remplacePage('Compte') },
@@ -253,6 +286,10 @@ export default {
     togglescform () { this.avatarscform = !this.avatarscform },
     toggletrform () { this.avatartrform = !this.avatartrform },
     toInvit () { retourInvitation('KO') },
+
+    ouvrirchat () { this.dialoguechat = true },
+    fermerchat () { this.dialoguechat = false },
+    dh (t) { return !t ? '(na)' : dhcool(new Date(t)) },
 
     stop () { data.stopOp() }
   },
@@ -281,6 +318,7 @@ export default {
     const prefs = computed(() => $store.state.db.prefs)
     const avatar = computed(() => $store.state.db.avatar)
     const cvs = computed(() => { return $store.state.db.cvs })
+    const chat = computed(() => $store.state.db.chat)
 
     function avphoto () {
       const cv = avatar.value ? cvs.value[avatar.value.id] : null
@@ -320,6 +358,10 @@ export default {
     const panelcontacts = computed({
       get: () => $store.state.ui.panelcontacts,
       set: (val) => $store.commit('ui/majpanelcontacts', val)
+    })
+    const dialoguechat = computed({
+      get: () => $store.state.ui.dialoguechat,
+      set: (val) => $store.commit('ui/majdialoguechat', val)
     })
     const fichiersavion = computed({
       get: () => $store.state.ui.fichiersavion,
@@ -388,6 +430,8 @@ export default {
       MODES[data.modeInitial] + '" à "' + MODES[data.mode] + '".'
     }
 
+    // watch(() => chat.value, (ap, av) => { console.log('Chgt de chat: ' + (ap ? ap.v : '?')) })
+
     return {
       org,
       orgicon,
@@ -414,6 +458,7 @@ export default {
       compte,
       prefs,
       avatar,
+      chat,
 
       avphoto,
       msgdegrade,
@@ -425,6 +470,7 @@ export default {
       infomode,
       inforeseau,
       infoidb,
+      dialoguechat,
 
       aunmessage,
       message,

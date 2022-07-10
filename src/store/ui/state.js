@@ -23,6 +23,7 @@ export default function () {
     dialoguesynchro: false,
     dialoguedlselection: false,
     diagnostic: null,
+    dialoguechat: false,
 
     helpstack: [],
 

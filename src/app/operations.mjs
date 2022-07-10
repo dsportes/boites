@@ -62,7 +62,7 @@ class OpBuf {
     if (this.compte) data.setCompte(this.compte)
     if (this.compta) data.setCompta(this.compta)
     if (this.prefs) data.setPrefs(this.prefs)
-    if (this.chat) data.setPrefs(this.chat)
+    if (this.chat) data.setChat(this.chat)
     if (this.lobj.length) data.setObjets(this.lobj)
     if (this.lcvs.length) data.setCvs(this.lcvs)
   }
@@ -1554,6 +1554,32 @@ export class ConnexionCompte extends OperationUI {
       console.log('Connexion compte : ' + data.getCompte().id)
       this.finOK()
       remplacePage('Compte')
+    } catch (e) {
+      await this.finKO(e)
+    }
+  }
+}
+
+/******************************************************
+Nouveau chat
+args:
+- sessionId
+- id: du compte
+- c : true si émis par le comptable
+- st : statut du chat (0, 1, 2) après le message
+- it : {c, t, r} crypté par la clé C du chat
+*/
+export class NouveauChat extends OperationUI {
+  constructor () {
+    super('Ajout d\'un chat', OUI, SELONMODE)
+  }
+
+  async run (chat, st, c, texte, lna) {
+    try {
+      const it = await chat.toRowItem(texte, lna)
+      const args = { sessionId: data.sessionId, id: chat.id, st, c, it }
+      await post(this, 'm1', 'nouveauChat', args)
+      this.finOK()
     } catch (e) {
       await this.finKO(e)
     }

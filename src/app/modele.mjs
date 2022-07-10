@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import { schemas, serial, deserial } from './schemas.mjs'
 import { crypt } from './crypto.mjs'
 import { openIDB, closeIDB, debutSessionSync, saveSessionSync, getFichier } from './db.mjs'
@@ -418,6 +419,7 @@ export class Chat {
 
   async fromRow (row) {
     this.vsh = row.vsh || 0
+    this.v = row.v
     this.id = row.id
     this.dhde = row.dhde
     this.lua = row.lua
@@ -431,18 +433,19 @@ export class Chat {
       this.clec = await crypt.decrypter(data.clek, row.ck)
       this.na = data.getCompte().naprim
     }
-    const items = row.iems ? deserial(row.items) : []
+    const items = row.items ? deserial(row.items) : []
     this.items = []
-    for (const x in items) {
-      const [dh, y] = x
-      const it = deserial(crypt.decrypter(this.clec, y))
-      items.push([dh, it])
+    for (let i = 0; i < items.length; i++) {
+      const x = items[i]
+      const it = deserial(await crypt.decrypter(this.clec, x[1]))
+      this.items.push([x[0], it])
     }
+    return this
   }
 
-  async toRoWitem (texte, lna) {
+  async toRowItem (texte, lna) {
     const item = { c: data.estComptable, t: texte, r: lna || [] }
-    return await crypt.crypter(this.clec, item)
+    return await crypt.crypter(this.clec, serial(item))
   }
 
   get toIdb () {

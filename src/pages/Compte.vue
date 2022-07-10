@@ -10,31 +10,14 @@
 
     <div v-if="!compte.estComptable && !compte.estParrain" class="titre-md">Les ressources du compte sont imputées à la tribu {{compte.nat.nom}}</div>
 
+    <!--
     <div v-if="!compte.estComptable" class="q-my-md">
       <div class="row justify-between">
         <div class="titre-md">Chat avec le "Comptable"</div>
         <q-btn flat dense size="sm" icon="chevron_right" @click="ouvrirchat"/>
       </div>
     </div>
-
-    <q-dialog v-model="chatdial" full-height position="right">
-      <q-card class="moyennelargeur q-pa-sm">
-        <q-toolbar class="bg-secondary text-white">
-          <q-toolbar-title class="titre-lg full-width">Chat avec le Comptable</q-toolbar-title>
-          <q-btn class="chl" dense flat size="md" icon="chevron_right" @click="chatdial=false"/>
-        </q-toolbar>
-        <q-card-section class="fs-md">
-          <div :class="['', 'text-warning', 'text-negative text-bold'][chat.st]">
-            {{['OK / résolu', 'A résoudre', 'Bloquant / urgent'][chat.st]}}
-          </div>
-          <div>Dernière émission par le compte:<span class="q-ml-md font-mono">{{dh(chat.dhde)}}</span></div>
-          <q-separator/>
-          <!--chat-item v-for="item in chat.items" :key="item.dh" :item="item"/-->
-          <chat-item/>
-          <chat-item/>
-        </q-card-section>
-      </q-card>
-    </q-dialog>
+    -->
 
     <div class="q-my-sm">
       <div class="row justify-between">
@@ -225,7 +208,6 @@ import NomAvatar from '../components/NomAvatar.vue'
 import NouveauParrainage from '../components/NouveauParrainage.vue'
 import PanelRencontre from '../components/PanelRencontre.vue'
 import ShowHtml from '../components/ShowHtml.vue'
-import ChatItem from '../components/ChatItem.vue'
 import { Motscles, afficherdiagnostic, edvol, dhstring } from '../app/util.mjs'
 import { crypt } from '../app/crypto.mjs'
 import { data } from '../app/modele.mjs'
@@ -252,7 +234,7 @@ import { UNITEV1, UNITEV2, Compteurs } from '../app/api.mjs'
 
 export default ({
   name: 'Compte',
-  components: { ChatItem, ShowHtml, EditeurMd, MotsCles, IdentiteCv, NomAvatar, ChoixForfaits, NouveauParrainage, PanelRencontre },
+  components: { ShowHtml, EditeurMd, MotsCles, IdentiteCv, NomAvatar, ChoixForfaits, NouveauParrainage, PanelRencontre },
   data () {
     return {
       nomav: '',
@@ -332,14 +314,19 @@ export default ({
     const tribdial = ref(false)
     const mcledit = ref(false)
     const memoedit = ref(false)
-    const chatdial = ref(false)
     onBoot()
+
     const $store = useStore()
     const sessionok = computed(() => { return $store.state.ui.sessionok })
     // En déconnexion, compte passe à null et provoque un problème dans la page. Un getter ne marche pas ?!
+    /*
+    const dialoguechat = computed({
+      get: () => $store.state.ui.dialoguechat,
+      set: (val) => $store.commit('ui/majdialoguechat', val)
+    })
+    */
     const compte = computed(() => $store.state.db.compte)
     const prefs = computed(() => $store.state.db.prefs)
-    const chat = computed(() => $store.state.db.chat)
     const tribu = computed(() => $store.state.db.tribu)
     // const cvs = computed(() => $store.state.db.cvs)
     const mode = computed(() => $store.state.ui.mode)
@@ -449,7 +436,6 @@ export default ({
       tribdial,
       mcledit,
       memoedit,
-      chatdial,
       ed,
       ed1,
       ed2,
@@ -464,9 +450,7 @@ export default ({
       memoed,
       compte,
       prefs,
-      chat,
       mode
-      // cvs
     }
   }
 

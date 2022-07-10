@@ -20,10 +20,14 @@ let cancelSourcePOST
 let $store
 let $router
 let dtf
+let dtf1
+let dtf2
 let idbalerte
 let pako
 let lgnom
 let lgtitre
+let auj
+let hier
 
 export function setup (gp, appconfig, router, store, pako1) {
   pako = pako1
@@ -35,7 +39,33 @@ export function setup (gp, appconfig, router, store, pako1) {
   $store = store
   $router = router
   dtf = new Intl.DateTimeFormat($cfg.locale, $cfg.datetimeformat)
+  dtf1 = new Intl.DateTimeFormat($cfg.locale, $cfg.datetimeformat1)
+  dtf2 = new Intl.DateTimeFormat($cfg.locale, $cfg.datetimeformat2)
   // testgz()
+}
+
+export function dhstring (date) { return dtf.format(date) }
+
+export function aujhier () {
+  const now = new Date()
+  if (auj && now.getFullYear() === auj.getFullYear() && now.getMonth() === auj.getMonth() && now.getDate() === auj.getDate()) return [auj, hier]
+  auj = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  hier = new Date(auj.getTime() - 86400000)
+  return [auj, hier]
+}
+
+export function dhcool (timems) {
+  aujhier()
+  const d = new Date(timems)
+  const mm = auj.getFullYear() === d.getFullYear() && auj.getMonth() === d.getMonth()
+  if (mm && auj.getDate() === d.getDate()) {
+    return 'aujourd\'hui à ' + dtf2.format(d)
+  }
+  if (hier.getFullYear() === d.getFullYear() && hier.getMonth() === d.getMonth() && hier.getDate() === d.getDate()) {
+    return 'hier à ' + dtf2.format(d)
+  }
+  if (mm) { return 'le ' + d.getDay() + ' à ' + dtf2.format(d) }
+  return dtf1.format(d)
 }
 
 /*
@@ -136,10 +166,6 @@ export function cfg () { return $cfg }
 export function gp () { return globalProperties }
 
 export function router () { return $router }
-
-export function dhstring (date) {
-  return dtf.format(date)
-}
 
 export function sleep (delai) {
   if (delai <= 0) return

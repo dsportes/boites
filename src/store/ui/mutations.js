@@ -14,6 +14,7 @@ export function razdialogues (state) {
   majinvitationattente(state, null)
   majdialoguesynchro(state, false)
   majdialoguehelp(state, false)
+  majdialoguechat(state, false)
   majdialoguecrypto(state, false)
   majdialoguetestping(state, false)
   majdialoguecreationcompte(state, false)
@@ -40,6 +41,7 @@ export function majconfirmerdrc (state, val) { state.confirmerdrc = val }
 export function majinfomode (state, val) { state.infomode = val }
 export function majinforeseau (state, val) { state.inforeseau = val }
 export function majinfoidb (state, val) { state.infoidb = val }
+export function majdialoguechat (state, val) { state.dialoguechat = val }
 
 export function majorg (state, val) { state.org = val }
 export function majpage (state, val) { state.page = val }
