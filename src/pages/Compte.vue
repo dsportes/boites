@@ -286,7 +286,7 @@ export default ({
     },
 
     async nvAvatar () {
-      await new CreationAvatar().run(this.nomav, this.forfaits, this.state.cprim.id)
+      await new CreationAvatar().run(this.nomav, this.forfaits)
       this.nvav = false
     },
 
@@ -341,7 +341,7 @@ export default ({
       get: () => $store.state.db.avatar,
       set: (val) => $store.commit('db/majavatar', val)
     })
-    const state = reactive({ lst: [], memo: '', cprim: null })
+    const state = reactive({ lst: [], memo: '', cprim: null, cvs: {}, estParrain: false })
 
     function init1 () {
       if (sessionok.value) {

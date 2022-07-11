@@ -874,7 +874,7 @@ export class Prefs {
 
 schemas.forSchema({
   name: 'idbCompta',
-  cols: ['id', 'v', 't', 'st', 'rb', 'dst', 'dstc', 'data', 'vsh']
+  cols: ['id', 't', 'v', 'st', 'txtt', 'dh', 'data', 'vsh']
 })
 
 export class Compta {
@@ -889,7 +889,6 @@ export class Compta {
     this.v = 0
     this.vsh = 0
     this.st = 0
-    this.dst = 0
     this.compteurs = new Compteurs()
     this.dh = 0
     this.txtt = null

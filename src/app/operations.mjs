@@ -2543,7 +2543,7 @@ export class CreationAvatar extends OperationUI {
     super('Création d\'un nouvel avatar', OUI, SELONMODE)
   }
 
-  async run (nom, forfaits, idPrimaire) { // argument : nom du nouvel avatar, forfaits attribués, id avatar primaire
+  async run (nom, forfaits) { // argument : nom du nouvel avatar, forfaits attribués
     let n = 1
     try {
       while (true) {
@@ -2556,7 +2556,7 @@ export class CreationAvatar extends OperationUI {
         const avatar = new Avatar().nouveau(nomAvatar.id)
         const rowAvatar = await avatar.toRow()
 
-        const compta = new Compta().nouveau(nomAvatar.id, 2)
+        const compta = new Compta().nouveau(nomAvatar.id, 0)
         const rowCompta = await compta.toRow()
 
         const args = { sessionId: data.sessionId, idc: compte.id, vcav: compte.v, clePub: kpav.publicKey, mack, rowAvatar, rowCompta, forfaits }

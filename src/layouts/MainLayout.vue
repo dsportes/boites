@@ -58,9 +58,9 @@
       <q-toolbar inset :class="tbclass">
         <q-btn v-if="sessionok && (page==='Compte' || page==='Avatar')" class="q-ml-sm" dense color="primary" round size="md" icon="people"
           aria-label="Mes contacts" @click="panelcontacts = !panelcontacts"/>
-        <q-btn v-if="sessionok && (page==='Compte' || page==='Avatar')" class="q-my-xs" dense color="primary" round size="md" icon="save"
+        <q-btn v-if="sessionok && (page==='Compte' || page==='Avatar')" class="q-mx-xs" dense color="primary" round size="md" icon="save"
           aria-label="Fichiers hors ligne" @click="fichiersavion = !fichiersavion"/>
-        <q-btn v-if="sessionok && !estcomptable && (page==='Compte' || page==='Avatar')" class="q-my-xs" dense color="primary" size="md" icon="chat"
+        <q-btn v-if="sessionok && !estcomptable && (page==='Compte' || page==='Avatar')" class="q-mx-xs" dense color="primary" size="md" icon="chat"
           aria-label="Chat avec le Comptable" @click="ouvrirchat"/>
         <q-toolbar-title class="text-center fs-md">
           <div v-if="page==='Org'" class="tbpage">Choix de l'organisation</div>

@@ -118,6 +118,7 @@ export default ({
     closenvcouple () { this.nvcouple = false; this.detaildial = false },
     copier (na) {
       affichermessage(na.nom + ' copié')
+      this.$store.commit('ui/majclipboard', na)
     }
   },
 
