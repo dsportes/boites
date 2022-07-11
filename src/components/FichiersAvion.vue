@@ -1,11 +1,11 @@
 <template>
-<div class="fs-md">
-  <div class="top bg-secondary text-white">
-    <q-toolbar>
+<q-card class="fs-md moyennelargeur">
+  <div class="top bg-secondary text-white full-width">
+    <q-toolbar class="q-px-xs">
       <q-btn dense size="md" icon="chevron_left" @click="fichiersavion=false"/>
       <q-toolbar-title class="titre-md full-width text-right q-pr-sm">Fichiers accessibles en mode avion</q-toolbar-title>
     </q-toolbar>
-    <div class="column justify-center">
+    <div class="q-px-xs row column justify-center">
       <div class="row items-end">
         <q-radio v-model="opt" val="c" label="contient" />
         <q-radio v-model="opt" val="d" label="débute par" />
@@ -14,18 +14,20 @@
     </div>
   </div>
 
-  <div class="filler"></div>
+  <div class="q-pa-sm scroll" style="max-height:100vh;">
+    <div class="filler"></div>
 
-  <div v-for="(fc, idx) in s.lst" :key="fc" :class="dkli(idx) + ' zone cursor-pointer full-width q-mb-sm'" @click="detail(fc)">
-    <q-card class="q-mx-xs">
-      <div class="row justify-between items-center fs-md font-mono">
-        <div>{{fc.data.nom}}</div>
-        <div>{{edvol(fc.data.lg)}}</div>
-      </div>
-      <div>{{fc.t}}</div>
-      <div>{{fc.p}}</div>
-    </q-card>
-    <q-separator class="q-my-xs"/>
+    <div v-for="(fc, idx) in s.lst" :key="fc" :class="dkli(idx) + ' zone cursor-pointer full-width q-mb-sm'" @click="detail(fc)">
+      <q-card class="q-mx-xs">
+        <div class="row justify-between items-center fs-md font-mono">
+          <div>{{fc.data.nom}}</div>
+          <div>{{edvol(fc.data.lg)}}</div>
+        </div>
+        <div>{{fc.t}}</div>
+        <div>{{fc.p}}</div>
+      </q-card>
+      <q-separator class="q-my-xs"/>
+    </div>
   </div>
 
   <q-dialog v-model="detaildial">
@@ -48,7 +50,7 @@
     </q-card>
   </q-dialog>
 
-</div>
+</q-card>
 </template>
 
 <script>
@@ -219,23 +221,18 @@ export default ({
 @import '../css/app.sass'
 @import '../css/input.sass'
 $haut: 5.5rem
-$larg: 330px
 .top
   position: absolute
   top: 0
   left: 0
   height: $haut
-  width: $larg
   overflow: hidden
-  background-color: $secondary
 .filler
   height: $haut
   width: 100%
 .q-toolbar
   padding: 2px !important
   min-height: 0 !important
-.photomax
-  margin-top: 4px
 .q-card > div
   box-shadow: inherit !important
 </style>

@@ -103,13 +103,21 @@
 
     <q-drawer v-model="menuouvert" :breakpoint="200" overlay elevated side="right" style="padding:0.5rem"><panel-menu></panel-menu></q-drawer>
 
-    <q-drawer v-model="panelcontacts" :width="330" elevated side="left">
+    <q-dialog v-model="panelcontacts" full-height position="left">
       <panel-contacts/>
-    </q-drawer>
+    </q-dialog>
 
-    <q-drawer v-model="fichiersavion" :width="330" elevated side="left">
+    <q-dialog v-model="fichiersavion" full-height position="left">
       <fichiers-avion/>
-    </q-drawer>
+    </q-dialog>
+
+    <q-dialog v-model="dialoguesynchro">
+      <rapport-synchro jailu></rapport-synchro>
+    </q-dialog>
+
+    <q-dialog v-model="dialoguechat" full-height position="right">
+      <panel-chat/>
+    </q-dialog>
 
     <q-page-container>
       <router-view v-slot="{ Component }">
@@ -180,37 +188,6 @@
       </q-card>
     </q-dialog>
 
-    <q-dialog v-model="dialoguesynchro">
-      <rapport-synchro jailu></rapport-synchro>
-    </q-dialog>
-
-    <q-dialog v-model="nvchat">
-      <nouveau-chat :close="fermernvchat"/>
-    </q-dialog>
-
-    <q-dialog v-model="dialoguechat" full-height position="right">
-      <q-card class="moyennelargeur q-pa-sm">
-        <q-card-section>
-          <q-toolbar class="bg-secondary text-white">
-            <q-toolbar-title class="titre-lg full-width">Chat avec le Comptable</q-toolbar-title>
-            <q-btn class="chl" dense flat size="md" icon="chevron_right" @click="fermerchat"/>
-          </q-toolbar>
-            <div class="row justify-between items-center">
-              <div :class="'font-mono fs-lg ' + ['', 'text-warning', 'text-negative text-bold bg-yellow'][chat.st]">
-                {{['OK / résolu', 'A résoudre', 'Bloquant / urgent'][chat.st]}}
-              </div>
-              <q-btn class="q-ma-xs" dense color="primary" size="md" label="Nouveau" icon="add"
-                @click="nvchat=true"/>
-            </div>
-          <div>Dernière émission par le compte:<span class="q-ml-md font-mono">{{dh(chat.dhde)}}</span></div>
-        </q-card-section>
-        <q-separator/>
-        <q-card-section style="max-height: 70vh" class="scroll">
-          <chat-item v-for="item in chat.items" :key="item.dh" :item="item"/>
-        </q-card-section>
-      </q-card>
-    </q-dialog>
-
     <dialogue-help></dialogue-help>
     <dialogue-crypto></dialogue-crypto>
     <dialogue-erreur></dialogue-erreur>
@@ -241,9 +218,8 @@ import DialogueHelp from 'components/DialogueHelp.vue'
 import PanelContacts from 'components/PanelContacts.vue'
 import FichiersAvion from 'components/FichiersAvion.vue'
 import TitreBanner from '../components/TitreBanner.vue'
-import NouveauChat from '../components/NouveauChat.vue'
-import ChatItem from '../components/ChatItem.vue'
 import InfoIco from '../components/InfoIco.vue'
+import PanelChat from '../components/PanelChat.vue'
 import { data, MODES } from '../app/modele.mjs'
 import { cfg, dhcool } from '../app/util.mjs'
 import { remplacePage, onBoot, retourInvitation } from '../app/page.mjs'
@@ -253,7 +229,7 @@ export default {
   name: 'MainLayout',
 
   components: {
-    NouveauChat, ChatItem, FichiersAvion, TitreBanner, InfoIco, RapportSynchro, PanelMenu, PanelContacts, DialogueErreur, DialogueCrypto, DialogueCreationCompte, DialogueTestPing, DialogueInfoMode, DialogueInfoReseau, DialogueInfoIdb, DialogueHelp
+    PanelChat, FichiersAvion, TitreBanner, InfoIco, RapportSynchro, PanelMenu, PanelContacts, DialogueErreur, DialogueCrypto, DialogueCreationCompte, DialogueTestPing, DialogueInfoMode, DialogueInfoReseau, DialogueInfoIdb, DialogueHelp
   },
 
   computed: {
@@ -266,13 +242,11 @@ export default {
       idbs: ['~assets/database_gris.svg', '~assets/database_vert.svg', '~assets/database_rouge.svg'],
       console: console,
       menugauche1: false,
-      menugauche4: false,
-      nvchat: false
+      menugauche4: false
     }
   },
 
   methods: {
-    fermernvchat () { this.nvchat = false },
     login () { remplacePage('Login') },
     toorg () { remplacePage('Org') },
     tocompte () { remplacePage('Compte') },
@@ -288,7 +262,7 @@ export default {
     toInvit () { retourInvitation('KO') },
 
     ouvrirchat () { this.dialoguechat = true },
-    fermerchat () { this.dialoguechat = false },
+
     dh (t) { return !t ? '(na)' : dhcool(new Date(t)) },
 
     stop () { data.stopOp() }
@@ -318,7 +292,6 @@ export default {
     const prefs = computed(() => $store.state.db.prefs)
     const avatar = computed(() => $store.state.db.avatar)
     const cvs = computed(() => { return $store.state.db.cvs })
-    const chat = computed(() => $store.state.db.chat)
 
     function avphoto () {
       const cv = avatar.value ? cvs.value[avatar.value.id] : null
@@ -458,7 +431,6 @@ export default {
       compte,
       prefs,
       avatar,
-      chat,
 
       avphoto,
       msgdegrade,
@@ -533,4 +505,10 @@ export default {
   margin-left: 2px
   left: 1.2rem
   z-index: 10
+</style>
+
+<style>
+.q-dialog__inner {
+  padding:  0 !important
+}
 </style>

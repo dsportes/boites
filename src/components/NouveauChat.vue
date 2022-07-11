@@ -11,6 +11,9 @@
       <editeur-md class="q-ma-sm" texte="" v-model="texte" editable modetxt style="height:8rem"></editeur-md>
     </q-card-section>
     <q-card-actions>
+      <q-btn class="q-ma-xs" dense color="primary" size="sm" label="Contacts" icon="visibility"
+        @click="panelcontacts=true"/>
+
       <q-btn flat dense color="primary" icon="close" label="Annuler" @click="fermer"/>
       <q-btn flat dense color="warning" icon="check" label="Valider" @click="valider"/>
     </q-card-actions>
@@ -44,10 +47,16 @@ export default ({
   setup (props) {
     const $store = useStore()
     const chat = computed(() => $store.state.db.chat)
+    const panelcontacts = computed({
+      get: () => $store.state.ui.panelcontacts,
+      set: (val) => $store.commit('ui/majpanelcontacts', val)
+    })
+
     const st = ref(0)
     if (chat.value) st.value = chat.value.st
 
     return {
+      panelcontacts,
       st,
       chat
     }

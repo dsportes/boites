@@ -1,11 +1,11 @@
 <template>
-<div class="fs-md">
-  <div class="top bg-secondary text-white">
-    <q-toolbar>
+<q-card class="fs-md moyennelargeur">
+  <div class="top bg-secondary text-white full-width">
+    <q-toolbar class="q-px-xs">
       <q-btn dense size="md" icon="chevron_left" @click="panelcontacts=false"/>
       <q-toolbar-title class="titre-lg full-width text-right q-pr-sm">Tous les contacts</q-toolbar-title>
     </q-toolbar>
-    <div class="column justify-center">
+    <div class="q-px-xs column justify-center">
       <div class="row items-end">
         <q-radio v-model="opt" val="c" label="contient" />
         <q-radio v-model="opt" val="d" label="débute par" />
@@ -14,20 +14,31 @@
     </div>
   </div>
 
-  <div class="filler"></div>
-
-  <div v-for="(ax, idx) in s.lst" :key="ax.na.id" :class="dkli(idx) + ' zone cursor-pointer full-width q-mb-sm'" @click="detail(ax)">
-    <q-card class="row justify-start items-center">
-      <img class="col-auto photomax q-mr-md" :src="ax.na.photoDef"/>
-      <div class="col column">
-        <div class="titre-md">{{ax.noml}}</div>
-        <div class="fs-sm">
-          <span v-if="ax.c.size" class="q-mr-sm">{{ax.c.size + (ax.c.size>1?' contacts':' contact')}}</span>
-          <span v-if="ax.m.size">{{ax.m.size + (ax.m.size>1?' groupes':' groupe')}}</span>
+  <div class="q-pa-sm scroll" style="max-height:100vh;">
+    <div class="filler"></div>
+    <div>
+      <span class="titre-md text-italic q-pr-sm">Avatars du compte :</span>
+      <span v-for="(na, idx) in s.lavc" :key="idx" class="q-mr-md">
+        <span :class="(idx === 0 ? 'text-bold' : '') + ' font-mono q-mr-xs'">{{na.nom}}</span>
+        <q-btn dense size="sm" icon="content_copy" color="primary" @click="copier(na)"/>
+      </span>
+    </div>
+    <q-separator/>
+    <div v-for="(ax, idx) in s.lst" :key="ax.na.id" :class="dkli(idx) + ' zone cursor-pointer full-width q-mb-sm'" @click="detail(ax)">
+      <q-card class="row justify-start items-center">
+        <img class="col-auto photomax q-mr-md" :src="ax.na.photoDef"/>
+        <div class="col column">
+          <div class="titre-md">{{ax.noml}}
+            <q-btn class="q-ml-sm" dense size="sm" icon="content_copy" color="primary" @click.stop="copier(ax.na)"/>
+          </div>
+          <div class="fs-sm">
+            <span v-if="ax.c.size" class="q-mr-sm">{{ax.c.size + (ax.c.size>1?' contacts':' contact')}}</span>
+            <span v-if="ax.m.size">{{ax.m.size + (ax.m.size>1?' groupes':' groupe')}}</span>
+          </div>
         </div>
-      </div>
-    </q-card>
-    <q-separator class="q-my-xs"/>
+      </q-card>
+      <q-separator class="q-my-xs"/>
+    </div>
   </div>
 
   <q-dialog v-model="detaildial">
@@ -59,7 +70,7 @@
   <q-dialog v-model="nvcouple">
     <nouveau-couple :id1="ax.na.id" :close="closenvcouple" />
   </q-dialog>
-</div>
+</q-card>
 </template>
 
 <script>
@@ -68,6 +79,7 @@ import { computed, reactive, watch, ref } from 'vue'
 import IdentiteCv from '../components/IdentiteCv.vue'
 import NouveauCouple from './NouveauCouple.vue'
 import { data } from '../app/modele.mjs'
+import { affichermessage } from '../app/util.mjs'
 
 export default ({
   name: 'PanelContacts',
@@ -103,7 +115,10 @@ export default ({
       this.detaildial = true
     },
     na (id) { return data.repertoire.na(id) },
-    closenvcouple () { this.nvcouple = false; this.detaildial = false }
+    closenvcouple () { this.nvcouple = false; this.detaildial = false },
+    copier (na) {
+      affichermessage(na.nom + ' copié')
+    }
   },
 
   setup () {
@@ -119,6 +134,7 @@ export default ({
     const invit = computed(() => { return $store.state.ui.invitationattente })
     const tousAx = computed(() => { return $store.state.db.tousAx })
     const cvs = computed(() => { return $store.state.db.cvs })
+    const compte = computed(() => $store.state.db.compte)
     const avatar = computed({
       get: () => $store.state.db.avatar,
       set: (val) => $store.commit('db/majavatar', val)
@@ -126,10 +142,15 @@ export default ({
 
     const s = reactive({
       blst: [],
-      lst: []
+      lst: [],
+      lavc: []
     })
 
     function init1 () {
+      const lavc = Array.from(compte.value.avatarNas())
+      const nomp = compte.value.naprim.nom
+      lavc.sort((a, b) => { return a.nom === nomp ? -1 : (a.nom < b.nom ? -1 : 1) })
+      s.lavc = lavc
       const lst = []
       for (const id in tousAx.value) {
         const ax = tousAx.value[id]
@@ -188,13 +209,11 @@ export default ({
 @import '../css/app.sass'
 @import '../css/input.sass'
 $haut: 5.5rem
-$larg: 330px
 .top
   position: absolute
   top: 0
   left: 0
   height: $haut
-  width: $larg
   overflow: hidden
   background-color: $secondary
 .filler
