@@ -1120,6 +1120,23 @@ export class ConnexionCompte extends OperationUI {
     return [r.avatar || {}, r.compta || {}]
   }
 
+  /* Maj de v1c et v2c dans la compta du compte s'il a plusieurs avatars
+  */
+  async majComptaP (comptas) {
+    const compte = data.getCompte()
+    const ids = compte.avatarIds()
+    if (ids.size === 1) return
+    let v1c = 0, v2c = 0
+    ids.forEach(id => {
+      const compta = data.getCompta(id)
+      const c = compta.compteurs
+      v1c += c.v1
+      v2c += c.v2
+    })
+    const args = { sessionId: data.sessionId, idc: compte.id, v1c, v2c }
+    this.tr(await post(this, 'm1', 'majComptaP', args))
+  }
+
   /* Récupération des avatars cités dans le compte
   Depuis IDB : il peut y en avoir trop et certains peuvent manquer et d'autres avoir une version dépassée
   Abonnement aux avatars
@@ -1148,6 +1165,7 @@ export class ConnexionCompte extends OperationUI {
     for (const pk in avnouveaux) { const av = avnouveaux[pk]; this.buf.putIDB(av); this.avatars[av.id] = av }
     for (const pk in cptnouveaux) { const cpt = cptnouveaux[pk]; this.buf.putIDB(cpt); this.comptas[cpt.id] = cpt }
     data.setComptas(Object.values(this.comptas))
+    if (data.netok) await this.majComptaP(this.comptas)
     // avatars contient la version au top des objets avatars du compte requis et seulement eux
     const lav = Object.values(this.avatars)
     data.setAvatars(lav) // mis en store/db
@@ -2404,8 +2422,8 @@ export class AcceptationParrainage extends OperationUI {
 
       const compta = new Compta()
       compta.nouveau(avatar.id, arg.estpar ? 1 : 2)
-      compta.compteurs.setF1(datactc.f1)
-      compta.compteurs.setF2(datactc.f2)
+      compta.compteurs.setF1(datactc.forfaits[0])
+      compta.compteurs.setF2(datactc.forfaits[1])
       const rowCompta = await compta.toRow()
 
       const ardc = await couple.toArdc(arg.ard, couple.cc)

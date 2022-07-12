@@ -355,7 +355,9 @@ export default ({
           if (cp.id === compte.value.id) state.cprim = cp
           lst.push({ av, cv, cp })
         })
-        lst.sort((a, b) => { return a.av.estPrimaire || (a.av.na.nom < b.av.na.nom) ? -1 : (a.av.na.nom > b.av.na.nom ? 1 : 0) })
+        lst.sort((a, b) => {
+          return a.av.estPrimaire ? -1 : (b.av.estPrimaire ? 1 : (a.av.na.nom < b.av.na.nom ? -1 : (a.av.na.nom > b.av.na.nom ? 1 : 0)))
+        })
         state.lst = lst
         if (!avatar.value) avatar.value = state.lst[0].av
       }
