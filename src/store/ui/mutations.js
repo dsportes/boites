@@ -42,6 +42,7 @@ export function majinfomode (state, val) { state.infomode = val }
 export function majinforeseau (state, val) { state.inforeseau = val }
 export function majinfoidb (state, val) { state.infoidb = val }
 export function majdialoguechat (state, val) { state.dialoguechat = val }
+export function majdialogueselchat (state, val) { state.dialogueselchat = val }
 
 export function majorg (state, val) { state.org = val }
 export function majpage (state, val) { state.page = val }

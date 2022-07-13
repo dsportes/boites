@@ -98,6 +98,7 @@ function newObjet (table) {
     case 'tribu' : return new Tribu()
     case 'chat' : return new Chat()
     case 'gcvol' : return new Gcvol()
+    case 'selchat' : return new Selchat()
   }
 }
 
@@ -459,6 +460,46 @@ export class Chat {
   }
 }
 
+/*
+cols: ['id', 'dhde', 'st', 'nrc', 'cv', 'stp', 'nctpc']
+
+- 'id', 'dhde', 'st', de chat
+- `nrc` : `[nom, rnd, cle]` crypté par la clé publique du comptable.
+  cle est la clé C de cryptage du chat (immuable, générée à la création).
+- stp : stp de son row compta
+- `nctpc` : nom complet `[nom, rnd]` de la tribu cryptée par la clé publique du comptable.
+*/
+export class Selchat {
+  get table () { return 'chat' }
+  get sid () { return crypt.idToSid(this.id) }
+  get pk () { return this.sid }
+
+  // id dhde st na clec photo info stp nat
+  async fromRow (row) {
+    const cpriv = data.getCompte().cpriv()
+    this.id = row.id
+    this.dhde = row.dhde
+    this.st = row.st
+    try {
+      const [n, r, c] = deserial(await crypt.decrypterRSA(cpriv, row.nrc))
+      this.na = new NomAvatar(n, r)
+      this.clec = c
+    } catch (e) {
+      return this
+    }
+    const [photo, info] = row.cv ? deserial(await crypt.decrypter(this.na.rnd, row.cv)) : ['', '']
+    this.photo = photo
+    this.info = info
+    this.stp = row.stp
+    try {
+      const [nom, rnd] = deserial(await crypt.decrypterRSA(cpriv, row.nctpc))
+      this.nat = new NomTribu(nom, rnd)
+    } catch (e) {
+      return this
+    }
+    return this
+  }
+}
 /** Gcvol *********************************
 - `id` : date-heure comme clé primaire
 - `idt` : [nom, rnd]] de la tribu cryptée par la clé publique du comptable.
@@ -1424,15 +1465,20 @@ export class Contact {
     this.phch = phch
     if (!cc) cc = crypt.random(32)
     this.dlv = dlv
-    const data = { cc: cc, nom: nom }
+    const d = { cc: cc, nom: nom }
     if (idt) {
-      data.idt = idt
+      d.idt = idt
     } else {
-      data.nct = nct
-      data.parrain = parrain
-      data.forfaits = forfaits
+      d.nct = nct
+      d.parrain = parrain
+      d.forfaits = forfaits
+      d.clec = crypt.random(32)
+      d.nrc = await crypt.crypterRSA(data.clepubc, serial([d.nct[0], d.nct[1], d.clec]))
+      if (data.estComptable) {
+        const nrc = deserial(await crypt.decrypterRSA(data.getCompte().cpriv(), d.nrc))
+      }
     }
-    this.datax = await crypt.crypter(clex, serial(data))
+    this.datax = await crypt.crypter(clex, serial(d))
     return this
   }
 

@@ -62,6 +62,8 @@
           aria-label="Fichiers hors ligne" @click="fichiersavion = !fichiersavion"/>
         <q-btn v-if="sessionok && !estcomptable && (page==='Compte' || page==='Avatar')" class="q-mx-xs" dense color="primary" size="md" icon="chat"
           aria-label="Chat avec le Comptable" @click="ouvrirchat"/>
+        <q-btn v-if="sessionok && estcomptable && (page==='Compte' || page==='Avatar')" class="q-mx-xs" dense color="primary" size="md" icon="chat"
+          aria-label="Sélection de chats" @click="ouvrirselchat"/>
         <q-toolbar-title class="text-center fs-md">
           <div v-if="page==='Org'" class="tbpage">Choix de l'organisation</div>
           <div v-if="page==='Login'" class="tbpage">Connexion à un compte</div>
@@ -117,6 +119,10 @@
 
     <q-dialog v-model="dialoguechat" full-height position="right">
       <panel-chat/>
+    </q-dialog>
+
+    <q-dialog v-model="dialogueselchat" full-height position="right">
+      <panel-selchat/>
     </q-dialog>
 
     <q-page-container>
@@ -220,6 +226,7 @@ import FichiersAvion from 'components/FichiersAvion.vue'
 import TitreBanner from '../components/TitreBanner.vue'
 import InfoIco from '../components/InfoIco.vue'
 import PanelChat from '../components/PanelChat.vue'
+import PanelSelchat from '../components/PanelSelchat.vue'
 import { data, MODES } from '../app/modele.mjs'
 import { cfg, dhcool } from '../app/util.mjs'
 import { remplacePage, onBoot, retourInvitation } from '../app/page.mjs'
@@ -229,7 +236,7 @@ export default {
   name: 'MainLayout',
 
   components: {
-    PanelChat, FichiersAvion, TitreBanner, InfoIco, RapportSynchro, PanelMenu, PanelContacts, DialogueErreur, DialogueCrypto, DialogueCreationCompte, DialogueTestPing, DialogueInfoMode, DialogueInfoReseau, DialogueInfoIdb, DialogueHelp
+    PanelSelchat, PanelChat, FichiersAvion, TitreBanner, InfoIco, RapportSynchro, PanelMenu, PanelContacts, DialogueErreur, DialogueCrypto, DialogueCreationCompte, DialogueTestPing, DialogueInfoMode, DialogueInfoReseau, DialogueInfoIdb, DialogueHelp
   },
 
   computed: {
@@ -262,6 +269,8 @@ export default {
     toInvit () { retourInvitation('KO') },
 
     ouvrirchat () { this.dialoguechat = true },
+
+    ouvrirselchat () { this.dialogueselchat = true },
 
     dh (t) { return !t ? '(na)' : dhcool(new Date(t)) },
 
@@ -335,6 +344,10 @@ export default {
     const dialoguechat = computed({
       get: () => $store.state.ui.dialoguechat,
       set: (val) => $store.commit('ui/majdialoguechat', val)
+    })
+    const dialogueselchat = computed({
+      get: () => $store.state.ui.dialogueselchat,
+      set: (val) => $store.commit('ui/majdialogueselchat', val)
     })
     const fichiersavion = computed({
       get: () => $store.state.ui.fichiersavion,
@@ -443,6 +456,7 @@ export default {
       inforeseau,
       infoidb,
       dialoguechat,
+      dialogueselchat,
 
       aunmessage,
       message,

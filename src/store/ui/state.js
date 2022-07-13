@@ -24,6 +24,7 @@ export default function () {
     dialoguedlselection: false,
     diagnostic: null,
     dialoguechat: false,
+    dialogueselchat: false,
 
     helpstack: [],
 

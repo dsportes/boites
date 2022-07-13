@@ -1613,6 +1613,37 @@ export class NouveauChat extends OperationUI {
 }
 
 /******************************************************
+Nouveau chat
+args:
+- sessionId
+- id
+- dhde
+- st
+*/
+export class SelectChat extends OperationUI {
+  constructor () {
+    super('Sélection de chats', OUI, SELONMODE)
+  }
+
+  async run (dhde, st) {
+    try {
+      const args = { sessionId: data.sessionId, dhde, st }
+      const ret = await post(this, 'm1', 'selectChat', args)
+      let liste
+      if (ret.rowItems.length) {
+        const r = await compileToObject(deserialRowItems(ret.rowItems))
+        liste = Object.values(r.selchat)
+      } else liste = []
+      liste.sort((a, b) => a.dhde < b.dhde ? 1 : (a.dhde < b.dhde ? -1 : 0))
+      this.finOK()
+      return liste
+    } catch (e) {
+      await this.finKO(e)
+    }
+  }
+}
+
+/******************************************************
 Nouvelle tribu
 */
 export class NouvelleTribu extends OperationUI {
@@ -2436,9 +2467,7 @@ export class AcceptationParrainage extends OperationUI {
 
       const ardc = await couple.toArdc(arg.ard, couple.cc)
 
-      const clec = crypt.random(32)
-      const nrc = await crypt.crypterRSA(arg.clepubc, serial([avatar.na.nom, avatar.na.rnd, clec]))
-      const ck = await crypt.crypter(data.clek, clec)
+      const ck = await crypt.crypter(data.clek, datactc.clec)
 
       const args = {
         sessionId: data.sessionId,
@@ -2458,7 +2487,7 @@ export class AcceptationParrainage extends OperationUI {
         ardc,
         estPar: arg.estpar,
         sec: arg.max[0] !== 0, // le filleul accède aux secrets du couple
-        nrc,
+        nrc: datactc.nrc,
         ck
       }
       const ret = this.tr(await post(this, 'm1', 'acceptParrainage', args))
