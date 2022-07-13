@@ -1126,15 +1126,23 @@ export class ConnexionCompte extends OperationUI {
     const compte = data.getCompte()
     const ids = compte.avatarIds()
     if (ids.size === 1) return
-    let v1c = 0, v2c = 0
+    let v1c = 0, v2c = 0, v1ca = 0, v2ca = 0
     ids.forEach(id => {
-      const compta = data.getCompta(id)
+      const compta = comptas[id]
       const c = compta.compteurs
+      if (id === compte.id) { v1ca = c.v1c; v2ca = c.v2c }
       v1c += c.v1
       v2c += c.v2
     })
-    const args = { sessionId: data.sessionId, idc: compte.id, v1c, v2c }
-    this.tr(await post(this, 'm1', 'majComptaP', args))
+    if (v1c !== v1ca || v2c !== v2ca) {
+      const args = { sessionId: data.sessionId, idc: compte.id, v1c, v2c }
+      const ret = this.tr(await post(this, 'm1', 'majComptaP', args))
+      if (ret.rowItems.length) {
+        const r = await compileToObject(deserialRowItems(ret.rowItems))
+        const cn = r.compta[compte.id]
+        if (cn) comptas[compte.id] = cn
+      }
+    }
   }
 
   /* Récupération des avatars cités dans le compte
@@ -1164,8 +1172,8 @@ export class ConnexionCompte extends OperationUI {
     // avnouveaux contient tous les avatars ayant une version plus récente que celle (éventuellement) obtenue de IDB
     for (const pk in avnouveaux) { const av = avnouveaux[pk]; this.buf.putIDB(av); this.avatars[av.id] = av }
     for (const pk in cptnouveaux) { const cpt = cptnouveaux[pk]; this.buf.putIDB(cpt); this.comptas[cpt.id] = cpt }
-    data.setComptas(Object.values(this.comptas))
     if (data.netok) await this.majComptaP(this.comptas)
+    data.setComptas(Object.values(this.comptas))
     // avatars contient la version au top des objets avatars du compte requis et seulement eux
     const lav = Object.values(this.avatars)
     data.setAvatars(lav) // mis en store/db

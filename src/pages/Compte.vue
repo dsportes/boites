@@ -119,25 +119,23 @@
         <div class="row items-start">
           <div class="col-5 text-right text-italic">Forfaits V1 / V2</div>
           <div class="col-3 font-mono fs-md text-center">[{{cpt.x.f1}}]  {{ed1(cpt.x.f1)}}</div>
-          <div class="col-1 font-mono fs-md text-center">/</div>
+          <div class="col-1 font-mono fs-md text-center"></div>
           <div class="col-3 font-mono fs-md text-center">[{{cpt.x.f2}}]  {{ed2(cpt.x.f2)}}</div>
         </div>
         <div v-if="cpt.av.estPrimaire" class="row items-start">
           <div class="col-5 text-right text-italic">Forfaits distribués aux avatars secondaires</div>
           <div class="col-3 font-mono fs-md text-center">[{{cpt.x.s1}}]  {{ed1(cpt.x.s1)}}</div>
-          <div class="col-1 font-mono fs-md text-center">/</div>
+          <div class="col-1 font-mono fs-md text-center"></div>
           <div class="col-3 font-mono fs-md text-center">[{{cpt.x.s2}}]  {{ed2(cpt.x.s2)}}</div>
         </div>
         <div class="row items-start">
-          <div class="col-5 text-right text-italic">V1 actuel / moyenne du mois</div>
-          <div class="col-3 font-mono fs-md text-center">{{ed(cpt.x.v1)}}</div>
-          <div class="col-1 font-mono fs-md text-center">/</div>
+          <div class="col-5 text-right text-italic">V1 avatar {{m ? ' compte' : ''}} / moy. mois</div>
+          <div class="col-4 font-mono fs-md text-center">{{ed(cpt.x.v1) + (m ? ' ' + ed(cpt.x.v1c) : '')}}</div>
           <div class="col-3 font-mono fs-md text-center">{{ed(cpt.x.v1m)}}</div>
         </div>
         <div class="row items-start">
-          <div class="col-5 text-right text-italic">V2 actuel / moyenne du mois</div>
-          <div class="col-3 font-mono fs-md text-center">{{ed(cpt.x.v2)}}</div>
-          <div class="col-1 font-mono fs-md text-center">/</div>
+          <div class="col-5 text-right text-italic">V2 avatar {{m ? ' compte' : ''}} / moy. mois</div>
+          <div class="col-4 font-mono fs-md text-center">{{ed(cpt.x.v2) + (m ? ' ' + ed(cpt.x.v2c) : '')}}</div>
           <div class="col-3 font-mono fs-md text-center">{{ed(cpt.x.v2m)}}</div>
         </div>
         <div class="row items-start">
@@ -227,9 +225,8 @@ import { UNITEV1, UNITEV2, Compteurs } from '../app/api.mjs'
   - `r1` : ratio du v1 du mois par rapport à son forfait.
   - `r2` : ratio du v2 du mois par rapport à son forfait.
   - `r3` : ratio des transferts cumulés du mois / volume du forfait v2
-- `res1 res2` : pour un parrain, réserve de forfaits v1 et v2.
-- `t1 t2` : pour un parrain, total des forfaits 1 et 2 attribués aux filleuls.
 - `s1 s2` : pour un avatar primaire, total des forfaits attribués aux secondaires.
+- v1c v2c : total des v1 et v2 pour tous les avatars du compte constaté lors de la dernière connexion.
 */
 
 export default ({
@@ -244,6 +241,10 @@ export default ({
       mx2: false,
       err: false
     }
+  },
+
+  computed: {
+    m () { return this.cpt.av.estPrimaire && this.cpt.x.s1 !== 0 }
   },
 
   watch: {
