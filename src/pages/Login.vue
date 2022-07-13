@@ -26,7 +26,8 @@
     </q-card>
 
     <div v-if="!q666 && (mode === 1 || mode === 2)" class="q-mt-lg petitelargeur column items-start">
-      <q-btn flat color="warning" icon="add_circle" label="Nouveau compte parrainé" @click="phrasepar=!phrasepar"/>
+      <div class="titre-md">Un parrain vous a communiqué une phrase secrète pour créer vous-même votre compte ?</div>
+      <q-btn flat color="warning" icon="add_circle" label="Je créé mon compte ..." @click="phrasepar=!phrasepar"/>
       <q-card v-if="phrasepar" class="petitelargeur">
           <q-input class="full-width" dense v-model="phrase" label="Phrase communiquée par le parrain"
             @keydown.enter.prevent="crypterphrase" :type="isPwd ? 'password' : 'text'"

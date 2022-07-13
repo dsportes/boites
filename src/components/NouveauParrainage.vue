@@ -42,7 +42,8 @@
           <choix-forfaits v-model="forfaits" :f1="4" :f2="4"/>
           <div v-if="estComptable">
             <div style="margin-left:-0.8rem" class="text-primary">
-              <q-toggle v-model="estParrain" size="md" color="primary" :label="estParrain ? 'Compte parrain lui-même' : 'Compte standard'"/>
+              <q-toggle v-model="estParrain" size="md" :color="estParrain ? 'warning' : 'primary'"
+                :label="estParrain ? 'Compte parrain lui-même' : 'Compte standard'"/>
             </div>
           </div>
           <q-stepper-navigation>
@@ -68,7 +69,7 @@
             <span class="font-mono q-pl-md">v1: {{ed1(forfaits[0])}}</span>
             <span class="font-mono q-pl-lg">v2: {{ed2(forfaits[1])}}</span>
           </div>
-          <div v-if="estParrain">C'est un compte PARRAIN</div>
+          <div v-if="estParrain" class="text-warning">C'est un compte PARRAIN</div>
           <div>Volumes maximum attribués aux secrets du couple:<br>
             <span class="font-mono q-pl-md">v1: {{ed1(max[0])}}</span>
             <span class="font-mono q-pl-lg">v2: {{ed2(max[1])}}</span>
