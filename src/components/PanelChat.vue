@@ -33,6 +33,7 @@ import { computed } from 'vue'
 import NouveauChat from './NouveauChat.vue'
 import ChatItem from './ChatItem.vue'
 import { dhcool } from '../app/util.mjs'
+import { LectureChat } from '../app/operations.mjs'
 
 export default ({
   name: 'PanelChat',
@@ -47,8 +48,13 @@ export default ({
 
   methods: {
     dh (t) { return !t ? '(na)' : dhcool(new Date(t)) },
-    fermernvchat () { this.nvchat = false },
-    fermerchat () { this.dialoguechat = false }
+    fermernvchat () {
+      this.nvchat = false
+    },
+    async fermerchat () {
+      await new LectureChat().run(this.chat.id)
+      this.dialoguechat = false
+    }
   },
 
   setup () {

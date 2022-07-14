@@ -1514,7 +1514,10 @@ export class ConnexionCompte extends OperationUI {
       if (data.ps.pcbh !== compteSrv.pcbh) throw EXPS // Changement de phrase secrète
       this.compte = compteSrv
       data.estComptable = this.compte.estComptable
-      if (data.estComptable) data.mode = 2
+      if (data.estComptable) {
+        data.mode = 2
+        data.modeInitial = 2
+      }
       prefs = prefsSrv
       chat = chatSrv
       if (data.mode === 1) {
@@ -1655,6 +1658,22 @@ export class GetChat extends OperationUI {
       const r = await compileToObject(deserialRowItems(ret.rowItems))
       this.finOK()
       return r.chat
+    } catch (e) {
+      await this.finKO(e)
+    }
+  }
+}
+
+export class LectureChat extends OperationUI {
+  constructor () {
+    super('Statut de lecture d\'un chat', OUI, SELONMODE)
+  }
+
+  async run (id) {
+    try {
+      const args = { sessionId: data.sessionId, id, c: data.estComptable }
+      await post(this, 'm1', 'lectureChat', args)
+      this.finOK()
     } catch (e) {
       await this.finKO(e)
     }
