@@ -397,7 +397,9 @@ export const data = new Session()
 - `lua` : date-heure de dernière lecture par l'avatar
 - `luc` : date-heure de dernière lecture par le comptable
 - `st` : 0: OK (résolu), 1: à traiter, 2: bloquant
-- `nrc` : `[nom, rnd, cle]` crypté par la clé publique du comptable. cle est la clé C de cryptage du chat (immuable, générée à la création).
+- `nrc` : `[nom, rnd, cle]` nom complet du _compte_,
+  crypté par la clé publique du comptable.
+  cle est la clé C de cryptage du chat (immuable, générée à la création).
 - `ck` : cle C cryptée par la clé K du compte.
 - `items` : sérialisation de la liste d'items. Item `[dh, it]`:
   - `dh` : date-heure d'écriture
@@ -1438,12 +1440,13 @@ export class Couple {
 - `dlv`
 - `datax` : cryptée par le PBKFD de la phrase de contact:
   - `cc` : clé du couple (donne son id).
-  - `nom` : nom de A1 pour première vérification immédiate en session que la phrase est a priori bien destinée à cet avatar. Le nom de A1 figure dans le nom du couple après celui de A0.
+  - `naf` : [nom, rnd] nom complet de A1 pour première vérification immédiate en session que la phrase est a priori bien destinée à cet avatar. Le nom de A1 figure dans le nom du couple après celui de A0.
   - Pour un parrainage seulement
     - `nct` : `[nom, rnd]` nom complet de la tribu.
     - `parrain` : true si parrain
     - `forfaits` : `[f1, f2]` forfaits attribués par le parrain.
-  - Pour une rencontre seulement
+    - `clec` : clé du chat à créer
+    - `nrc` : `[n, r, c]` nom complet de l'avatar primaire / compte à créer et clé C de son chat crypté par la clé publique du Comptable.  - Pour une rencontre seulement
     - `idt` : id de la tribu de A0 SEULEMENT SI A0 en est parrain.
 - `vsh` :
 */
@@ -1460,12 +1463,12 @@ export class Contact {
 
   get horsLimite () { return dlvDepassee(this.dlv) }
 
-  async nouveau (phch, clex, dlv, cc, nom, idt, nct, parrain, forfaits) { // clex : PBKFD de la phrase de contact
+  async nouveau (phch, clex, dlv, cc, naf, idt, nct, parrain, forfaits) { // clex : PBKFD de la phrase de contact
     this.vsh = 0
     this.phch = phch
     if (!cc) cc = crypt.random(32)
     this.dlv = dlv
-    const d = { cc: cc, nom: nom }
+    const d = { cc: cc, naf: naf } // naf : [nom, rnd] du compte
     if (idt) {
       d.idt = idt
     } else {
@@ -1473,7 +1476,7 @@ export class Contact {
       d.parrain = parrain
       d.forfaits = forfaits
       d.clec = crypt.random(32)
-      d.nrc = await crypt.crypterRSA(data.clepubc, serial([d.nct[0], d.nct[1], d.clec]))
+      d.nrc = await crypt.crypterRSA(data.clepubc, serial([naf[0], naf[1], d.clec]))
       if (data.estComptable) {
         const nrc = deserial(await crypt.decrypterRSA(data.getCompte().cpriv(), d.nrc))
       }

@@ -190,6 +190,7 @@ export function setCvs (state, lst) { // lst : array [{id, cv}]
 export function setCompte (state, obj) { state.compte = obj }
 export function setPrefs (state, obj) { state.prefs = obj }
 export function setChat (state, obj) { state.chat = obj }
+export function setTribu (state, obj) { state.tribu = obj }
 
 /* Enregistrement de toutes les cv d'un coup */
 export function commitRepertoire (state, repertoire) { state.repertoire = { ...repertoire } }

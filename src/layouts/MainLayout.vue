@@ -9,7 +9,7 @@
               <q-tooltip>Changer d'organisation</q-tooltip>
             </span>
           </span>
-          <info-ico v-if="sessionok && compte.estComptable" size="sm" color="secondary" icon="savings" info="Compte Comptable"/>
+          <info-ico v-if="sessionok && compte && compte.estComptable" size="sm" color="secondary" icon="savings" info="Compte Comptable"/>
           <span v-if="sessionok">
             <q-btn :class="page!=='Avatar' ? 'disabled' : ''" flat dense size="md"
               icon="home" no-caps label="Compte" @click="tocompte"/>
@@ -60,10 +60,8 @@
           aria-label="Mes contacts" @click="panelcontacts = !panelcontacts"/>
         <q-btn v-if="sessionok && (page==='Compte' || page==='Avatar')" class="q-mx-xs" dense color="primary" round size="md" icon="save"
           aria-label="Fichiers hors ligne" @click="fichiersavion = !fichiersavion"/>
-        <q-btn v-if="sessionok && !estcomptable && (page==='Compte' || page==='Avatar')" class="q-mx-xs" dense color="primary" size="md" icon="chat"
+        <q-btn v-if="sessionok && (page==='Compte' || page==='Avatar')" class="q-mx-xs" dense color="primary" size="md" icon="chat"
           aria-label="Chat avec le Comptable" @click="ouvrirchat"/>
-        <q-btn v-if="sessionok && estcomptable && (page==='Compte' || page==='Avatar')" class="q-mx-xs" dense color="primary" size="md" icon="chat"
-          aria-label="Sélection de chats" @click="ouvrirselchat"/>
         <q-toolbar-title class="text-center fs-md">
           <div v-if="page==='Org'" class="tbpage">Choix de l'organisation</div>
           <div v-if="page==='Login'" class="tbpage">Connexion à un compte</div>
@@ -240,8 +238,7 @@ export default {
   },
 
   computed: {
-    tbclass () { return this.$q.dark.isActive ? ' sombre1' : ' clair1' },
-    estcomptable () { return data.estComptable }
+    tbclass () { return this.$q.dark.isActive ? ' sombre1' : ' clair1' }
   },
 
   data () {
@@ -268,9 +265,13 @@ export default {
     toggletrform () { this.avatartrform = !this.avatartrform },
     toInvit () { retourInvitation('KO') },
 
-    ouvrirchat () { this.dialoguechat = true },
-
-    ouvrirselchat () { this.dialogueselchat = true },
+    ouvrirchat () {
+      if (this.compte.estComptable) {
+        this.dialogueselchat = true
+      } else {
+        this.dialoguechat = true
+      }
+    },
 
     dh (t) { return !t ? '(na)' : dhcool(new Date(t)) },
 

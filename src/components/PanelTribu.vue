@@ -1,5 +1,6 @@
 <template>
-  <q-card v-if="sessionok && tribu" class="full-height full-width fs-md column">
+  <q-card v-if="sessionok && tribu" class="q-pa-xs full-height full-width fs-md column">
+    <div v-if="close" class="filler"/>
 
     <div v-if="state.t">
       <div class="row justify-between">
@@ -12,7 +13,7 @@
       <q-card class="petitelargeur q-pa-sm">
         <q-toolbar class="bg-secondary text-white">
           <q-toolbar-title class="titre-lg">Parrains de la tribu</q-toolbar-title>
-          <q-btn class="chl" dense flat size="md" icon="chevron_right" @click="ouvlp=false"/>
+          <q-btn dense flat size="md" icon="chevron_right" @click="ouvlp=false"/>
         </q-toolbar>
         <div v-for="(x, idx) in state.lp" :key="idx"
           :class="dkli(idx) + ' zone full-width row items-start q-py-xs' + (idx === state.idx ? ' courant' : '')">
@@ -38,7 +39,18 @@
     <nouveau-parrainage :close="fermerParrain" :tribu="tribu"/>
   </q-dialog>
 
-  <q-page-sticky class="full-width" position="top-left" expand :offset="[50,0]">
+  <div v-if="close" class="top full-width">
+    <q-toolbar v-if="close" class="bg-primary text-white">
+      <q-toolbar-title>
+        <span class="titre-md q-mr-sm">Tribu</span>
+        <titre-banner v-if="state.t" class-titre="titre-md" :titre="state.t.nom"
+          :titre2="state.t.nom" :id-objet="state.t.id"/>
+      </q-toolbar-title>
+      <q-btn class="chl" dense flat size="md" icon="chevron_right" @click="fermertribu"/>
+    </q-toolbar>
+  </div>
+
+  <q-page-sticky v-if="!close" class="full-width" position="top-left" expand :offset="[50,0]">
     <q-toolbar class="bg-primary text-white">
       <q-btn :disable="!precedent" flat round dense icon="first_page" size="sm" @click="prec(0)" />
       <q-btn :disable="!precedent" flat round dense icon="arrow_back_ios" size="sm" @click="prec(1)" />
@@ -72,7 +84,7 @@ export default ({
 
   components: { TitreBanner, ChoixForfaits, NouveauParrainage, EditeurMd },
 
-  props: { suivant: Function, precedent: Function, index: Number, sur: Number },
+  props: { suivant: Function, precedent: Function, index: Number, sur: Number, close: Function },
 
   computed: {
   },
@@ -94,6 +106,7 @@ export default ({
     ed2 (f) { return edvol(f * UNITEV2) },
     ed3 (f) { return edvol(f) },
     fermerParrain () { this.nvpar = false },
+    fermertribu () { if (this.close) this.close() },
     async changerInfo (info) {
       await new InforesTribu().run(this.tribu, info, null)
     },
@@ -151,10 +164,15 @@ export default ({
 .chl
   position: relative
   left: -10px
-.itemcourant:hover
-  border: 1px solid $warning
-.itemcourant
-  border: 1px solid transparent
-.ml23
-  margin-left: 23rem
+$haut: 3.5rem
+.top
+  position: absolute
+  top: 0
+  left: 0
+  height: $haut
+  overflow: hidden
+  z-index: 2
+.filler
+  height: $haut
+  width: 100%
 </style>

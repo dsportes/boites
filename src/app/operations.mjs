@@ -1643,6 +1643,42 @@ export class SelectChat extends OperationUI {
   }
 }
 
+export class GetChat extends OperationUI {
+  constructor () {
+    super('Obtention d\'un chat', OUI, SELONMODE)
+  }
+
+  async run (id) {
+    try {
+      const args = { sessionId: data.sessionId, id }
+      const ret = await post(this, 'm1', 'getChat', args)
+      const r = await compileToObject(deserialRowItems(ret.rowItems))
+      this.finOK()
+      return r.chat
+    } catch (e) {
+      await this.finKO(e)
+    }
+  }
+}
+
+export class GetCompta extends OperationUI {
+  constructor () {
+    super('Obtention d\'une comptabilité', OUI, SELONMODE)
+  }
+
+  async run (id) {
+    try {
+      const args = { sessionId: data.sessionId, id }
+      const ret = await post(this, 'm1', 'getCompta', args)
+      const r = await compileToObject(deserialRowItems(ret.rowItems))
+      this.finOK()
+      return r.compta[id]
+    } catch (e) {
+      await this.finKO(e)
+    }
+  }
+}
+
 /******************************************************
 Nouvelle tribu
 */
@@ -2129,7 +2165,7 @@ export class NouveauParrainage extends OperationUI {
       const rowCouple = await couple.toRow()
 
       const nct = [arg.nat.nom, arg.nat.rnd]
-      const contact = await new Contact().nouveau(arg.phch, arg.clex, dlv, cc, arg.nomf, 0, nct, arg.parrain, arg.forfaits)
+      const contact = await new Contact().nouveau(arg.phch, arg.clex, dlv, cc, [naf.nom, naf.rnd], 0, nct, arg.parrain, arg.forfaits)
       const rowContact = contact.toRow()
 
       const args = { sessionId: data.sessionId, rowCouple, rowContact, ni, datak, id: nap.id, sec: arg.max[0] > 0 }
@@ -2424,6 +2460,18 @@ export class AcceptationParrainage extends OperationUI {
   - estpar : si le compte à créer est parrain aussi
   - phch : hash phrase de contact
   - clepubc
+
+  datactc :
+  - `cc` : clé du couple (donne son id).
+  - `naf` : [nom, rnd] nom complet de A1 pour première vérification immédiate en session que la phrase est a priori bien destinée à cet avatar. Le nom de A1 figure dans le nom du couple après celui de A0.
+  - Pour un parrainage seulement
+    - `nct` : `[nom, rnd]` nom complet de la tribu.
+    - `parrain` : true si parrain
+    - `forfaits` : `[f1, f2]` forfaits attribués par le parrain.
+    - `clec` : clé du chat à créer
+    - `nrc` : `[n, r, c]` nom complet de l'avatar primaire / compte à créer et clé C de son chat crypté par la clé publique du Comptable.  - Pour une rencontre seulement
+    - `idt` : id de la tribu de A0 SEULEMENT SI A0 en est parrain.
+
   */
   async run (couple, datactc, arg) {
     try {
