@@ -633,7 +633,7 @@ export class Tribu {
 
 schemas.forSchema({
   name: 'idbCompte',
-  cols: ['id', 'v', 'dpbh', 'pcbh', 'k', 'stp', 'nctk', 'idtpc', 'chkt', 'mac', 'vsh']
+  cols: ['id', 'v', 'dpbh', 'pcbh', 'k', 'stp', 'nctk', 'nctpc', 'chkt', 'nat', 'mac', 'vsh']
 })
 /*
 - `id` : id de l'avatar primaire du compte.
@@ -748,6 +748,7 @@ export class Compte {
         this.nctk = await crypter.crypter(this.k, nr)
       } else {
         nr = await crypt.decrypter(this.k, row.nctk)
+        this.nctk = row.nctk
       }
       const [nom, rnd] = deserial(nr)
       this.nat = new NomTribu(nom, rnd)
@@ -757,6 +758,7 @@ export class Compte {
       this.nat = null
       this.nctpc = null
       this.chkt = 0
+      this.nctk = null
     }
     return this
   }
@@ -775,6 +777,10 @@ export class Compte {
     return schemas.serialize('rowcompte', r)
   }
 
+  async nouvKx (ps) {
+    return await crypt.crypter(ps.pcb, this.k)
+  }
+
   async ajoutAvatar (na, kpav) {
     const m = {}
     for (const sid in this.mac) {
@@ -788,7 +794,6 @@ export class Compte {
 
   get toIdb () {
     const r = { ...this }
-    delete r.nctk
     r.mac = {}
     for (const sid in this.mac) {
       const x = this.mac[sid]

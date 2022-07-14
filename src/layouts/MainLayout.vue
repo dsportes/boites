@@ -192,6 +192,18 @@
       </q-card>
     </q-dialog>
 
+    <q-dialog v-model="dialogueexps" persistent>
+      <q-card>
+        <q-card-section>
+          <div class="titre-lg">La phrase secrète de connexion au compte a été changée dans une autre session parrallèle à celle-ci.</div>
+          <div class="titre-lg q-mt-sm">Vous allez être déconnecté. Vous devrez vous reconnecter en utilisant la nouvelle phrase secrète.</div>
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat label="J'ai lu" size="lg" color="warning" v-close-popup @click="deconnexion"/>
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
     <dialogue-help></dialogue-help>
     <dialogue-crypto></dialogue-crypto>
     <dialogue-erreur></dialogue-erreur>
@@ -342,6 +354,10 @@ export default {
       get: () => $store.state.ui.panelcontacts,
       set: (val) => $store.commit('ui/majpanelcontacts', val)
     })
+    const dialogueexps = computed({
+      get: () => $store.state.ui.dialogueEXPS,
+      set: (val) => $store.commit('ui/majdialogueEXPS', val)
+    })
     const dialoguechat = computed({
       get: () => $store.state.ui.dialoguechat,
       set: (val) => $store.commit('ui/majdialoguechat', val)
@@ -458,6 +474,7 @@ export default {
       infoidb,
       dialoguechat,
       dialogueselchat,
+      dialogueexps,
 
       aunmessage,
       message,

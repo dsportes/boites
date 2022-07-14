@@ -1,7 +1,7 @@
 import { NomAvatar, NomGroupe, store, post, get, affichermessage, cfg, sleep, affichererreur, appexc, difference, getJourJ, afficherdiagnostic, gzipT, putData, getData, NomTribu } from './util.mjs'
 import { remplacePage } from './page.mjs'
 import {
-  deleteIDB, idbSidCompte, commitRows, getCompte, getComptas, getPrefs, getCvs,
+  deleteIDB, idbSidCompte, supprLSCompte, commitRows, getCompte, getComptas, getPrefs, getCvs,
   getAvatars, getGroupes, getCouples, getMembres, getSecrets, getChat,
   openIDB, enregLScompte, getVIdCvs, saveListeCvIds, gestionFichierSync, gestionFichierCnx
 } from './db.mjs'
@@ -189,6 +189,10 @@ export class Operation {
   }
 
   async finKO (exc) {
+    if (exc === EXPS) {
+      store().commit('ui/majdialogueEXPS', true)
+      return
+    }
     this.appexc = appexc(exc)
     if (this.appexc.code === E_WS) {
       this.appexc = data.setErWS(this.appexc)
@@ -1274,7 +1278,7 @@ export class ConnexionCompte extends OperationUI {
 
     const idCpSecs = [] // id des couples accédant aux secret
     lcp.forEach(cp => { if (cp.stI === 1) idCpSecs.push(cp.id) })
-    await this.aboCpSec(idCpSecs)
+    if (data.netok) await this.aboCpSec(idCpSecs)
 
     lgr.forEach(gr => { data.setSyncItem('10' + gr.sid, 0, 'Groupe ' + gr.na.nom) })
     lcp.forEach(cp => { data.setSyncItem('15' + cp.sid, 0, 'Couple ' + cp.nom) })
@@ -1583,6 +1587,41 @@ export class ConnexionCompte extends OperationUI {
       console.log('Connexion compte : ' + data.getCompte().id)
       this.finOK()
       remplacePage('Compte')
+    } catch (e) {
+      await this.finKO(e)
+    }
+  }
+}
+
+/******************************************************
+Changement de phrase secrete
+args:
+- sessionId
+- id: du compte
+- dpbh
+- pcbh
+- kx
+*/
+export class ChangementPS extends OperationUI {
+  constructor () {
+    super('Ajout d\'un chat', OUI, SELONMODE)
+  }
+
+  async run (ps) {
+    try {
+      const c = data.getCompte()
+      const dpbh = c.dpbh
+      const kx = await c.nouvKx(ps)
+      const args = { sessionId: data.sessionId, id: c.id, dpbh: ps.dpbh, pcbh: ps.pcbh, kx }
+      const ret = await post(this, 'm1', 'changementPS', args)
+      data.ps = ps
+      const r = await compileToObject(deserialRowItems(ret.rowItems))
+      data.setCompte(r.compte)
+      if (data.mode === 1) {
+        supprLSCompte(dpbh)
+        enregLScompte(c.sid)
+      }
+      this.finOK()
     } catch (e) {
       await this.finKO(e)
     }

@@ -15,6 +15,8 @@ export default function () {
     inforeseau: false,
     infoidb: false,
 
+    dialogueEXPS: false,
+
     dialoguecrypto: false,
     dialoguehelp: false,
     dialoguecreationcompte: false,

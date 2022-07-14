@@ -49,6 +49,11 @@ export function enregLScompte (sid) {
   localStorage.setItem(k, sid)
 }
 
+export function supprLSCompte (dpbh) {
+  const k = store().state.ui.org + '-' + dpbh
+  return localStorage.removeItem(k)
+}
+
 export function nombase () {
   const idc = idbSidCompte()
   return idc ? store().state.ui.org + '-' + idc : null

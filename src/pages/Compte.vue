@@ -29,9 +29,10 @@
     </div>
 
     <q-separator/>
-
-    <q-btn class="q-my-sm" size="sm" icon="add" label="Nouvel avatar" color="primary" dense @click="ouvrirnv"/>
-
+    <div class="row justify-between items-center">
+      <q-btn class="q-my-sm" size="sm" icon="add" label="Nouvel avatar" color="primary" dense @click="ouvrirnv"/>
+      <q-btn class="q-my-sm" size="sm" icon="manage_accounts" label="Changer la phrase secrète" color="warning" dense @click="ouvrirchgps"/>
+    </div>
     <div v-for="x in state.lst" :key="x.av.id"
       :class="'q-my-md zone row' + (avatar && x.av.id === avatar.id ? ' courant' : '')">
       <identite-cv class="col" :nom-avatar="x.av.na" type="avatar" editable invitable @cv-changee="cvchangee"/>
@@ -100,6 +101,19 @@
     <panel-compta :cpt="cpt" :close="fermercompta"/>
   </q-dialog>
 
+  <q-dialog v-if="sessionok" v-model="chgps">
+    <q-card class="q-mt-lg petitelargeur">
+      <q-card-section>
+        <div class="titre-lg text-center q-ma-md">Changement de la phrase secrète de connexion au compte</div>
+        <phrase-secrete class="q-ma-xs" v-on:ok-ps="okps" verif icon-valider="check" label-valider="Continuer"></phrase-secrete>
+      </q-card-section>
+      <q-card-actions>
+        <q-btn dense label="Je renonce" color="primary" icon="close" v-close-popup/>
+        <q-btn dense :disable="ps===null" label="Je change la phrase" color="warning" icon="check" v-close-popup @click="changerps"/>
+      </q-card-actions>
+    </q-card>
+  </q-dialog>
+
   <q-dialog v-if="sessionok" v-model="nvav" persistent>
     <q-card class="moyennelargeur shadow-8">
       <q-card-section>
@@ -124,7 +138,7 @@
 </template>
 
 <script>
-import { PrefCompte, CreationAvatar, MajCv } from '../app/operations.mjs'
+import { PrefCompte, CreationAvatar, MajCv, ChangementPS } from '../app/operations.mjs'
 import { computed, ref, reactive, watch } from 'vue'
 import { useStore } from 'vuex'
 import { onBoot, remplacePage } from '../app/page.mjs'
@@ -137,6 +151,7 @@ import NouveauParrainage from '../components/NouveauParrainage.vue'
 import PanelRencontre from '../components/PanelRencontre.vue'
 import ShowHtml from '../components/ShowHtml.vue'
 import PanelCompta from '../components/PanelCompta.vue'
+import PhraseSecrete from '../components/PhraseSecrete.vue'
 import { Motscles, afficherdiagnostic, edvol, dhstring } from '../app/util.mjs'
 import { crypt } from '../app/crypto.mjs'
 import { data } from '../app/modele.mjs'
@@ -145,10 +160,12 @@ import { UNITEV1, UNITEV2, Compteurs } from '../app/api.mjs'
 
 export default ({
   name: 'Compte',
-  components: { PanelCompta, ShowHtml, EditeurMd, MotsCles, IdentiteCv, NomAvatar, ChoixForfaits, NouveauParrainage, PanelRencontre },
+  components: { PhraseSecrete, PanelCompta, ShowHtml, EditeurMd, MotsCles, IdentiteCv, NomAvatar, ChoixForfaits, NouveauParrainage, PanelRencontre },
   data () {
     return {
       nomav: '',
+      chgps: false,
+      ps: null,
       forfaits: [1, 1],
       mxff: [0, 0],
       mx1: false,
@@ -217,6 +234,21 @@ export default ({
 
     async cvchangee (cv) {
       await new MajCv().run(cv)
+    },
+
+    ouvrirchgps () {
+      this.chgps = true
+      this.ps = null
+    },
+
+    okps (ps) {
+      this.ps = ps
+    },
+
+    async changerps () {
+      await new ChangementPS().run(this.ps)
+      this.ps = null
+      this.chgps = false
     }
   },
 

@@ -9,7 +9,7 @@
     </div>
     <q-btn class="col-auto" v-if="editable" flat dense size="md" color="primary" icon="edit" @click="cvloc=true"/>
   </div>
-  <div v-if="a.info" class="full-width overflow-y-auto height-2 shadow-8">
+  <div v-if="a.info" class="full-width overflow-y-auto height-4 shadow-8">
     <show-html :texte="a.info" :idx="idx"/>
   </div>
   <q-btn v-if="invitable && nomAvatar && typeN === 'avatar' && invitationattente" class="titre-lg text-bold text-grey-8 bg-yellow-4 q-mx-sm"
