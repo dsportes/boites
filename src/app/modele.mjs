@@ -1,4 +1,3 @@
-/* eslint-disable no-unused-vars */
 import { schemas, serial, deserial } from './schemas.mjs'
 import { crypt } from './crypto.mjs'
 import { openIDB, closeIDB, debutSessionSync, saveSessionSync, getFichier } from './db.mjs'
@@ -8,46 +7,11 @@ import {
   getJourJ, cfg, ungzipT, normpath, titreSecret, titreCompte, titreGroupe, titreMembre, nomCv, PhraseContact
 } from './util.mjs'
 import { remplacePage } from './page.mjs'
-import { EXPS, UNITEV1, UNITEV2, IDCOMPTABLE, Compteurs, t0n } from './api.mjs'
+import { UNITEV1, UNITEV2, IDCOMPTABLE, Compteurs } from './api.mjs'
 import { DownloadFichier } from './operations.mjs'
 import { crypter } from './webcrypto.mjs'
 
 export const MODES = ['inconnu', 'synchronisé', 'incognito', 'avion', 'visio']
-
-export function nid (t) {
-  return (crypt.rnd6() * 3) + t
-}
-
-/* Compile en objet tous les rows de la structure de rows désérialisée mr
-La structure de sortie mapObj est identique. Elle peut être fourni en entrée
-ce qui provoque une mise à jour par les versions postérieures de chaque objet
-*/
-export async function compileToObject (mr, mapObj) {
-  if (!mapObj) mapObj = {}
-  for (const table in mr) {
-    if (t0n.has(table)) {
-      const row = mr[table]
-      const av = mapObj[table]
-      if (!av || av.v < row.v) {
-        const obj = newObjet(table)
-        mapObj[table] = await obj.fromRow(row)
-      }
-    } else {
-      const m1 = mr[table]
-      for (const pk in m1) {
-        const row = m1[pk]
-        if (!mapObj[table]) mapObj[table] = {}
-        const e = mapObj[table]
-        const av = e[pk]
-        if (!av || av.v < row.v) {
-          const obj = newObjet(table)
-          e[pk] = await obj.fromRow(row)
-        }
-      }
-    }
-  }
-  return mapObj
-}
 
 export function pk (table, row) {
   const id = '' + row.id
@@ -56,32 +20,8 @@ export function pk (table, row) {
   return id
 }
 
-/* Désérialise un array de rowItems dans une map ayant une entrée par table :
-- pour les singletons (compte / compta / prefs), la valeur est directement le row
-- pour les collections la valeur est une map dont la clé est la "primary key" du row (id ou id/im ou id/ns)
-et la valeur est le row désérialisé.
-Seule la version la plus récente pour chaque row est conservée (d'où le stockage par pk)
-*/
-export function deserialRowItems (rowItems) {
-  const res = {}
-  for (let i = 0; i < rowItems.length; i++) {
-    const item = rowItems[i]
-    const row = schemas.deserialize('row' + item.table, item.serial)
-    if (item.table === 'compte' && row.pcbh !== data.ps.pcbh) throw EXPS // phrase secrète changée => déconnexion
-    if (t0n.has(item.table)) {
-      res[item.table] = row
-    } else {
-      let e = res[item.table]; if (!e) { e = {}; res[item.table] = e }
-      const k = pk(item.table, row)
-      const ex = e[k]
-      if (!ex) e[k] = row; else { if (ex.v < row.v) e[k] = row }
-    }
-  }
-  return res
-}
-
 /* Création des objets selon leur table *******/
-function newObjet (table) {
+export function newObjet (table) {
   switch (table) {
     case 'compte' : return new Compte()
     case 'compta' : return new Compta()
@@ -563,29 +503,31 @@ export class Tribu {
       this.na = null
       this.info = ''
     }
-    const mx = (row.mncpt ? deserial(row.mncpt) : null) || {}
-    this.mncp = {}
-    this.datat = row.datat
-    if (data.estComptable) {
-      for (const chkt in mx) {
-        const nr = await crypt.decrypter(this.clet, mx[chkt])
-        this.mncp[chkt] = deserial(nr)
-      }
-      await this.fromDatat()
-    }
     this.nbc = row.nbc
     this.f1 = row.f1
     this.f2 = row.f2
     this.r1 = row.r1
     this.r2 = row.r2
+
+    this.mx = (row.mncpt ? deserial(row.mncpt) : null) || {}
+    this.datat = row.datat
+    if (data.estComptable) await this.fromRow2()
     return this
   }
 
-  async fromDatat () {
+  async fromRow2 () {
+    if (!this.mx) return
+    this.mncp = {}
+    for (const chkt in this.mx) {
+      const nr = await crypt.decrypter(this.clet, this.mx[chkt])
+      this.mncp[chkt] = deserial(nr)
+    }
     const [st, txt, dh] = !this.datat ? [0, '', 0] : deserial(await crypt.decrypter(this.na.rnd, this.datat))
     this.st = st
     this.txt = txt
     this.dh = dh
+    delete this.mx
+    delete this.datat
   }
 
   nouvelle (nom, info, r1, r2) {
@@ -1482,9 +1424,11 @@ export class Contact {
       d.forfaits = forfaits
       d.clec = crypt.random(32)
       d.nrc = await crypt.crypterRSA(data.clepubc, serial([naf[0], naf[1], d.clec]))
+      /*
       if (data.estComptable) {
         const nrc = deserial(await crypt.decrypterRSA(data.getCompte().cpriv(), d.nrc))
       }
+      */
     }
     this.datax = await crypt.crypter(clex, serial(d))
     return this

@@ -1,6 +1,6 @@
 <template>
   <q-btn dense no-caps>
-    <q-icon left size="sm" color="warning" name="warning" />
+    <q-icon v-if="!noicon" left size="sm" color="warning" name="warning" />
     <div class="font-mono fs-md">{{label}}</div>
     <q-popup-proxy transition-show="flip-up" transition-hide="flip-down">
       <q-banner inline-actions dense rounded>
@@ -17,7 +17,7 @@
 <script>
 export default ({
   name: 'InfoTxt',
-  props: { label: String, info: String }
+  props: { label: String, info: String, noicon: Boolean }
 })
 </script>
 

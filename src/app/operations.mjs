@@ -5,8 +5,8 @@ import {
   getAvatars, getGroupes, getCouples, getMembres, getSecrets, getChat,
   openIDB, enregLScompte, getVIdCvs, saveListeCvIds, gestionFichierSync, gestionFichierCnx
 } from './db.mjs'
-import { Compte, Avatar, deserialRowItems, compileToObject, data, Prefs, Chat, Contact, Invitgr, Invitcp, Compta, Groupe, Membre, Cv, Couple, Tribu } from './modele.mjs'
-import { AppExc, EXBRK, EXPS, F_BRO, E_BRO, X_SRV, E_WS } from './api.mjs'
+import { Compte, Avatar, newObjet, pk, data, Prefs, Chat, Contact, Invitgr, Invitcp, Compta, Groupe, Membre, Cv, Couple, Tribu } from './modele.mjs'
+import { AppExc, EXBRK, EXPS, F_BRO, E_BRO, X_SRV, E_WS, t0n } from './api.mjs'
 
 import { crypt } from './crypto.mjs'
 import { schemas, serial } from './schemas.mjs'
@@ -56,6 +56,10 @@ class OpBuf {
   setObj (obj) {
     if (obj.table === 'secret' && data.mode === 1) this.mapSec[obj.pk] = obj
     this.lobj.push(obj)
+  }
+
+  getCompte () {
+    return this.compte || data.getCompte()
   }
 
   commitStore () {
@@ -118,6 +122,69 @@ export class Operation {
     this.cancelToken = null
     this.break = false
     this.sessionId = data.sessionId
+  }
+
+  /* Compile en objet tous les rows de la structure de rows désérialisée mr
+  La structure de sortie mapObj est identique. Elle peut être fourni en entrée
+  ce qui provoque une mise à jour par les versions postérieures de chaque objet
+  */
+  async compileToObject (mr, mapObj) {
+    if (!mapObj) mapObj = {}
+    for (const table in mr) {
+      if (t0n.has(table)) {
+        const row = mr[table]
+        const av = mapObj[table]
+        if (!av || av.v < row.v) {
+          const obj = newObjet(table)
+          mapObj[table] = await obj.fromRow(row)
+        }
+      } else {
+        const m1 = mr[table]
+        for (const pk in m1) {
+          const row = m1[pk]
+          if (!mapObj[table]) mapObj[table] = {}
+          const e = mapObj[table]
+          const av = e[pk]
+          if (!av || av.v < row.v) {
+            const obj = newObjet(table)
+            await obj.fromRow(row)
+            if (table === 'tribu' && this.buf) {
+              const c = this.buf.getCompte()
+              if (c.nat) { // PAS Comptable (pour lui fromRow2 a déjà été fait)
+                obj.na = c.nat
+                await obj.fromRow2()
+              }
+            }
+            e[pk] = obj
+          }
+        }
+      }
+    }
+    return mapObj
+  }
+
+  /* Désérialise un array de rowItems dans une map ayant une entrée par table :
+  - pour les singletons (compte / compta / prefs), la valeur est directement le row
+  - pour les collections la valeur est une map dont la clé est la "primary key" du row (id ou id/im ou id/ns)
+  et la valeur est le row désérialisé.
+  Seule la version la plus récente pour chaque row est conservée (d'où le stockage par pk)
+  */
+  deserialRowItems (rowItems) {
+    const res = {}
+    for (let i = 0; i < rowItems.length; i++) {
+      const item = rowItems[i]
+      const row = schemas.deserialize('row' + item.table, item.serial)
+      if (item.table === 'compte' && row.pcbh !== data.ps.pcbh) throw EXPS // phrase secrète changée => déconnexion
+      if (t0n.has(item.table)) {
+        res[item.table] = row
+      } else {
+        let e = res[item.table]; if (!e) { e = {}; res[item.table] = e }
+        const k = pk(item.table, row)
+        const ex = e[k]
+        if (!ex) e[k] = row; else { if (ex.v < row.v) e[k] = row }
+      }
+    }
+    return res
   }
 
   majopencours (op) { store().commit('ui/majopencours', op) }
@@ -295,11 +362,11 @@ export class Operation {
     const args = { sessionId: data.sessionId, id: nat.id }
     const ret = await post(this, 'm1', 'chargerTribus', args)
     if (ret.rowItems.length) {
-      const r = await compileToObject(deserialRowItems(ret.rowItems))
+      const r = await this.compileToObject(this.deserialRowItems(ret.rowItems))
       const tribu = r.tribu[nat.id]
       if (tribu) {
         tribu.na = nat
-        await tribu.fromDatat()
+        await tribu.fromRow2()
         store().commit('db/majtribu', tribu)
       }
     }
@@ -328,7 +395,7 @@ export class Operation {
     for (let i = 0; i < disp.length; i++) {
       const args = { sessionId: data.sessionId, id: disp[i][0], im: disp[i][1] }
       const ret = this.tr(await post(this, 'm1', 'membreDisparu', args))
-      const r = await compileToObject(deserialRowItems(ret.rowItems))
+      const r = await this.compileToObject(this.deserialRowItems(ret.rowItems))
       if (r.membre) for (const pk of r.membre) lst.push(r.membre[pk])
     }
     return lst
@@ -342,7 +409,7 @@ export class Operation {
       const c = data.getCouple(id)
       const args = { sessionId: data.sessionId, id, idx: c.avc ? 1 : 0 }
       const ret = this.tr(await post(this, 'm1', 'coupleDisparu', args))
-      const r = await compileToObject(deserialRowItems(ret.rowItems))
+      const r = await this.compileToObject(this.deserialRowItems(ret.rowItems))
       if (r.couple) for (const pk of r.couple) lst.push(r.couple[pk])
     }
     return lst
@@ -372,7 +439,7 @@ export class Operation {
   async chargerAS (id, mapObj) {
     const ret = this.tr(await post(this, 'm1', 'chargerAS', { sessionId: data.sessionId, id }))
     if (ret.rowItems.length) {
-      const r = await compileToObject(deserialRowItems(ret.rowItems), mapObj)
+      const r = await this.compileToObject(this.deserialRowItems(ret.rowItems), mapObj)
       if (r.secret) {
         for (const pk of r.secret) {
           const obj = r.secret[pk]
@@ -390,7 +457,7 @@ export class Operation {
     let sec = false
     const ret = this.tr(await post(this, 'm1', 'chargerC', { sessionId: data.sessionId, id }))
     if (ret.rowItems.length) {
-      const r = await compileToObject(deserialRowItems(ret.rowItems), mapObj)
+      const r = await this.compileToObject(this.deserialRowItems(ret.rowItems), mapObj)
       if (r.couple) {
         for (const pk in r.couple) {
           const obj = r.couple[pk]
@@ -406,7 +473,7 @@ export class Operation {
   async chargerS (id, mapObj) {
     const ret = this.tr(await post(this, 'm1', 'chargerS', { sessionId: data.sessionId, id }))
     if (ret.rowItems.length) {
-      const r = await compileToObject(deserialRowItems(ret.rowItems), mapObj)
+      const r = await this.compileToObject(this.deserialRowItems(ret.rowItems), mapObj)
       if (r.secret) {
         for (const pk in r.secret) {
           const obj = r.secret[pk]
@@ -423,7 +490,7 @@ export class Operation {
   async chargerGMS (id, mapObj) {
     const ret = this.tr(await post(this, 'm1', 'chargerGMS', { sessionId: data.sessionId, id }))
     if (ret.rowItems.length) {
-      const r = await compileToObject(deserialRowItems(ret.rowItems), mapObj)
+      const r = await this.compileToObject(this.deserialRowItems(ret.rowItems), mapObj)
       if (r.groupe) {
         for (const pk in r.groupe) {
           const obj = r.groupe[pk]
@@ -533,7 +600,7 @@ export class Operation {
       if (syncList.rowItems) syncList.rowItems.forEach((rowItem) => { items.push(rowItem) })
     })
 
-    const mrows = deserialRowItems(items) // map des rows désérialisés (mais pas compilés en objet)
+    const mrows = this.deserialRowItems(items) // map des rows désérialisés (mais pas compilés en objet)
 
     this.groupeIdsP = new Set()
     this.groupeIdsM = new Set()
@@ -603,7 +670,7 @@ export class Operation {
     this.secretIdsM = new Set()
 
     /* Tous les autres items peuvent se compiler, les clés sont dans le répertoire */
-    await compileToObject(mrows, mapObj)
+    await this.compileToObject(mrows, mapObj)
 
     // Prefs : singleton
     if (mapObj.prefs) {
@@ -856,7 +923,7 @@ export class OperationUI extends Operation {
   */
   async postCreation (ret, clepubc) {
     data.clepubc = clepubc || ret.clepubc
-    const mapRows = deserialRowItems(ret.rowItems)
+    const mapRows = this.deserialRowItems(ret.rowItems)
 
     const compte = await new Compte().fromRow(mapRows.compte)
     data.estComptable = compte.estComptable
@@ -961,7 +1028,7 @@ export class OperationUI extends Operation {
     const map = {}
     const args = { sessionId: data.sessionId }
     const ret = this.tr(await post(this, 'm1', 'collecteVolumes', args))
-    const r = await compileToObject(deserialRowItems(ret.rowItems))
+    const r = await this.compileToObject(this.deserialRowItems(ret.rowItems))
     if (!r.gcvol || !r.gcvol.length) return
     for (const pk of r.gcvol) {
       const row = r.gcvol[pk]
@@ -1120,7 +1187,7 @@ export class ConnexionCompte extends OperationUI {
     const ret = this.tr(await post(this, 'm1', 'chargerAvatars', args))
     if (!ret.ok) return [false, false]
     if (!ret.rowItems.length) return [{}, {}]
-    const r = await compileToObject(deserialRowItems(ret.rowItems))
+    const r = await this.compileToObject(this.deserialRowItems(ret.rowItems))
     return [r.avatar || {}, r.compta || {}]
   }
 
@@ -1142,7 +1209,7 @@ export class ConnexionCompte extends OperationUI {
       const args = { sessionId: data.sessionId, idc: compte.id, v1c, v2c }
       const ret = this.tr(await post(this, 'm1', 'majComptaP', args))
       if (ret.rowItems.length) {
-        const r = await compileToObject(deserialRowItems(ret.rowItems))
+        const r = await this.compileToObject(this.deserialRowItems(ret.rowItems))
         const cn = r.compta[compte.id]
         if (cn) comptas[compte.id] = cn
       }
@@ -1191,7 +1258,7 @@ export class ConnexionCompte extends OperationUI {
     const args = { sessionId: data.sessionId, gridsVers, cpidsVers, avidsVers, idc, vc }
     const ret = this.tr(await post(this, 'm1', 'chargerGrCp', args))
     if (!ret.ok) return false
-    const r = await compileToObject(deserialRowItems(ret.rowItems))
+    const r = await this.compileToObject(this.deserialRowItems(ret.rowItems))
     return [r.groupe || {}, r.couple || {}]
   }
 
@@ -1292,7 +1359,7 @@ export class ConnexionCompte extends OperationUI {
   async chargerSc (id, v, src, cpl) {
     const ret = this.tr(await post(this, 'm1', 'chargerSc', { sessionId: data.sessionId, id, v, cpl }))
     if (ret.rowItems.length) {
-      const r = await compileToObject(deserialRowItems(ret.rowItems))
+      const r = await this.compileToObject(this.deserialRowItems(ret.rowItems))
       if (r.secret) {
         for (const pk in r.secret) {
           const s = r.secret[pk]
@@ -1315,7 +1382,7 @@ export class ConnexionCompte extends OperationUI {
   async chargerMb (id, v, src) {
     const ret = this.tr(await post(this, 'm1', 'chargerMb', { sessionId: data.sessionId, id, v }))
     if (ret.rowItems.length) {
-      const r = await compileToObject(deserialRowItems(ret.rowItems))
+      const r = await this.compileToObject(this.deserialRowItems(ret.rowItems))
       if (r.membre) {
         for (const pk in r.membre) {
           const m = r.membre[pk]
@@ -1484,7 +1551,7 @@ export class ConnexionCompte extends OperationUI {
   async chargerTribus () {
     const ret = this.tr(await post(this, 'm1', 'chargerTribus', { sessionId: data.sessionId }))
     if (ret.rowItems.length) {
-      const r = await compileToObject(deserialRowItems(ret.rowItems))
+      const r = await this.compileToObject(this.deserialRowItems(ret.rowItems))
       if (r.tribu) {
         const l = []
         for (const pk in r.tribu) l.push(r.tribu[pk])
@@ -1615,7 +1682,7 @@ export class ChangementPS extends OperationUI {
       const args = { sessionId: data.sessionId, id: c.id, dpbh: ps.dpbh, pcbh: ps.pcbh, kx }
       const ret = await post(this, 'm1', 'changementPS', args)
       data.ps = ps
-      const r = await compileToObject(deserialRowItems(ret.rowItems))
+      const r = await this.compileToObject(this.deserialRowItems(ret.rowItems))
       data.setCompte(r.compte)
       if (data.mode === 1) {
         supprLSCompte(dpbh)
@@ -1673,7 +1740,7 @@ export class SelectChat extends OperationUI {
       const ret = await post(this, 'm1', 'selectChat', args)
       let liste
       if (ret.rowItems.length) {
-        const r = await compileToObject(deserialRowItems(ret.rowItems))
+        const r = await this.compileToObject(this.deserialRowItems(ret.rowItems))
         liste = Object.values(r.selchat)
       } else liste = []
       liste.sort((a, b) => a.dhde < b.dhde ? 1 : (a.dhde < b.dhde ? -1 : 0))
@@ -1694,7 +1761,7 @@ export class GetChat extends OperationUI {
     try {
       const args = { sessionId: data.sessionId, id }
       const ret = await post(this, 'm1', 'getChat', args)
-      const r = await compileToObject(deserialRowItems(ret.rowItems))
+      const r = await this.compileToObject(this.deserialRowItems(ret.rowItems))
       this.finOK()
       return r.chat
     } catch (e) {
@@ -1728,7 +1795,7 @@ export class GetCompta extends OperationUI {
     try {
       const args = { sessionId: data.sessionId, id }
       const ret = await post(this, 'm1', 'getCompta', args)
-      const r = await compileToObject(deserialRowItems(ret.rowItems))
+      const r = await this.compileToObject(this.deserialRowItems(ret.rowItems))
       this.finOK()
       return r.compta[id]
     } catch (e) {
@@ -1779,34 +1846,48 @@ export class InforesTribu extends OperationUI {
 }
 
 /******************************************************
-Maj des informations et réserves tribu
-
-export class ChargerTribu extends OperationUI {
+Retourne une map des CV demandées:
+- soit obtenues localement (déjà abonné)
+- soit après demande au serveur (avec abonnement)
+*/
+export class getCVs extends OperationUI {
   constructor () {
-    super('Mise à jour du commentaires / réserves d\'une tribu', OUI, SELONMODE)
+    super('Obtention des cartes de visite absentes de la session', OUI, SELONMODE)
   }
 
-  async run (nat) {
+  async run (lids) { // set des ids des CV cherchées
     try {
-      const args = { sessionId: data.sessionId, id: nat.id }
-      const ret = await post(this, 'm1', 'chargerTribus', args)
-      let tribu = null
-      if (ret.rowItems.length) {
-        const r = await compileToObject(deserialRowItems(ret.rowItems))
-        tribu = r.tribu[nat.id]
-        if (tribu) {
-          tribu.na = nat
-          await tribu.fromDatat()
+      const l2 = new Set()
+      const res = {}
+      lids.forEach(id => {
+        const cv = data.getCv(id)
+        if (cv) res[id] = cv; else l2.add(id)
+      })
+      if (l2.size) {
+        const args = { sessionId: data.sessionId, v: 0, l1: [], l2: Array.from(l2) }
+        const ret = this.tr(await post(this, 'm1', 'chargerCVs', args))
+        for (const item of ret.rowItems) {
+          const row = schemas.deserialize('cv', item.serial)
+          const c = new Cv()
+          await c.fromRow(row)
+          res[c.id] = c
+          l2.delete(c.id)
+        }
+        if (l2.size) {
+          l2.forEach(id => {
+            const cv = new Cv()
+            cv.cv = ['', '']
+            res[id] = cv
+          })
         }
       }
       this.finOK()
-      return tribu
+      return res
     } catch (e) {
       await this.finKO(e)
     }
   }
 }
-*/
 
 /******************************************************
 Mise à jour d'une préférence d'un compte

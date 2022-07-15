@@ -1,9 +1,11 @@
 <template>
 <q-page class="fs-md q-pa-sm">
   <q-card v-if="sessionok" class="moyennelargeur maauto">
-    <div v-if="!compte.estComptable && compte.estParrain" class="q-my-md">
+    <div v-if="!compte.estComptable" class="q-my-md">
       <div class="row justify-between">
-        <div class="titre-md text-warning text-bold">Compte parrain de la tribu {{compte.nat.nom}}</div>
+        <div class="titre-md">A propos de ma tribu {{compte.nat.nom}}
+          <span v-if="compte.estParrain" class="q-ml-sm titre-md text-warning text-bold">(PARRAIN)</span>
+        </div>
         <q-btn flat dense size="sm" icon="chevron_right" @click="ouvrirtribu"/>
       </div>
     </div>
@@ -74,10 +76,10 @@
   <q-dialog v-model="tribdial" full-height position="right">
     <q-card class="petitelargeur q-pa-sm">
       <q-toolbar class="bg-secondary text-white">
-        <q-toolbar-title class="titre-lg full-width">Forfaits de la tribu {{tribu.nom}}</q-toolbar-title>
+        <q-toolbar-title class="titre-lg full-width">A propos de la tribu {{tribu.nom}}</q-toolbar-title>
         <q-btn class="chl" dense flat size="md" icon="chevron_right" @click="tribdial=false"/>
       </q-toolbar>
-      <q-card-section class="fs-md">
+      <q-card-section v-if="compte.estParrain" class="fs-md">
         <div class="q-my-sm">{{tribu.nbc}} compte(s)</div>
         <div class="q-my-sm">Forfaits déjà attribués aux comptes</div>
         <div class="q-ml-md font-mono">V1 : {{tribu.f1}}<span class="q-ml-lg">{{ed1(tribu.f1)}}</span></div>
@@ -85,6 +87,9 @@
         <div class="q-my-sm">Réserves disponibles pour attribution aux comptes</div>
         <div class="q-ml-md font-mono">V1 : {{tribu.r1}}<span class="q-ml-lg">{{ed1(tribu.r1)}}</span></div>
         <div class="q-ml-md font-mono">V2 : {{tribu.r2}}<span class="q-ml-lg">{{ed2(tribu.r2)}}</span></div>
+      </q-card-section>
+      <q-card-section>
+        <div class="titre-md text-bold q-mb-sm">Parrains</div>
       </q-card-section>
     </q-card>
   </q-dialog>

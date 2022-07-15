@@ -15,48 +15,24 @@
       </div>
     </div>
 
-    <div class="q-pa-sm scroll" style="max-height:100vh;">
+    <div class="q-py-sm scroll" style="max-height:100vh;">
       <div class="filler"></div>
       <div v-if="!lst.length" class="titre-md">
         <span v-if="pf">Saisir un critère de recherche et lancer la recherche</span>
         <span v-else>Aucun chat trouvé pour ce critère</span>
       </div>
-      <div v-for="(c, idx) in lst" :key="c.id"
-        :class="dkli(idx) + ' zone cursor-pointer full-width q-mb-sm'" @click="detail(c)">
-        <q-card class="row justify-center">
-          <div class="col-auto column justify-start items-center">
-            <img class="q-my-xs photomax" :src="c.photo || photoDef"/>
-            <q-btn dense class="content-center" size="sm" icon="euro" color="primary" @click.stop="ouvrircompta(c)" />
-          </div>
-          <div class="col q-pl-sm">
-            <div class="row justify-between">
-              <div class="titre-md">
-                <span class="text-bold">{{c.na.nom}}</span>
-                <span v-if="c.stp" class="q-ml-md text-warning">Parrain</span>
-                <q-btn class="q-ml-sm" :label="c.nat.nom" dense no-caps color="primary" @click.stop="ouvrirtribu(c)"/>
-              </div>
-              <div class="fs-md">
-                <span v-if="c.st === 1" class="text-warning text-bold q-mr-sm">À traiter</span>
-                <span v-if="c.st === 2" class="text-negative bg-yellow text-bold q-mr-sm q-px-xs">Urgent</span>
-                <span class="font-mono">{{dh(c.dhde)}}</span>
-              </div>
-            </div>
-            <show-html class="height-4 bord q-my-xs" v-if="c.info" :texte="c.info" :idx="idx"/>
+      <div v-for="(c, idx) in lst" :key="c.id" class="zone full-width q-mb-sm'">
+        <q-card class="q-ma-sm">
+          <fiche-avatar :na-avatar="c.na" :idx="idx" :parrain="c.stp===1" compta :na-tribu="c.nat"/>
+          <div :class="dkli(idx) + ' fs-md text-right full-width q-pa-xs'">
+            <q-btn class="q-mr-sm" dense color="primary" size="sm" label="Voir le chat" icon="chat" @click="ouvrirchat(c)"/>
+            <span v-if="c.st === 1" class="text-warning text-bold q-mr-sm">À traiter</span>
+            <span v-if="c.st === 2" class="text-negative bg-yellow text-bold q-mr-sm q-px-xs">Urgent</span>
+            <span class="font-mono">{{dh(c.dhde)}}</span>
           </div>
         </q-card>
-        <q-separator class="q-my-xs"/>
       </div>
     </div>
-
-    <q-dialog v-model="tribudial" full-height position="right">
-      <div class="moyennelargeur">
-      <panel-tribu :close="fermertribu" />
-      </div>
-    </q-dialog>
-
-    <q-dialog v-model="comptadial" full-height position="right">
-      <panel-compta :cpt="cpt" :close="fermercompta"/>
-    </q-dialog>
 
   </q-card>
 </template>
@@ -65,11 +41,8 @@
 import { useStore } from 'vuex'
 import { computed, ref } from 'vue'
 import { dhcool, aujhier, cfg } from '../app/util.mjs'
-import { SelectChat, GetChat, GetCompta } from '../app/operations.mjs'
-import { data } from '../app/modele.mjs'
-import ShowHtml from './ShowHtml.vue'
-import PanelTribu from './PanelTribu.vue'
-import PanelCompta from './PanelCompta.vue'
+import { SelectChat, GetChat } from '../app/operations.mjs'
+import FicheAvatar from './FicheAvatar.vue'
 
 const dhoptions = [
   { label: 'Aujourd\'hui', value: 1 },
@@ -89,12 +62,10 @@ const stoptions = [
 export default ({
   name: 'PanelSelchat',
 
-  components: { ShowHtml, PanelTribu, PanelCompta },
+  components: { FicheAvatar },
 
   data () {
     return {
-      tribudial: false,
-      comptadial: false,
       cpt: null,
       dhoptions,
       stoptions,
@@ -108,13 +79,9 @@ export default ({
     dkli (idx) { return this.$q.dark.isActive ? (idx ? 'sombre' + (idx % 2) : 'sombre0') : (idx ? 'clair' + (idx % 2) : 'clair0') },
 
     dh (t) { return !t ? '(na)' : dhcool(new Date(t)) },
+
     fermerselchat () { this.dialogueselchat = false },
-    ouvrirtribu (c) {
-      const t = data.getTribu(c.nat.id)
-      this.tribu = t
-      this.tribudial = true
-    },
-    fermertribu () { this.tribudial = false },
+
     async select () {
       this.pf = false
       const [auj, hier] = aujhier()
@@ -128,18 +95,10 @@ export default ({
       }
       this.lst = await new SelectChat().run(dhde, this.st)
     },
-    async detail (c) {
+
+    async ouvrirchat (c) {
       this.chat = await new GetChat().run(c.na.id)
       this.dialoguechat = true
-    },
-    fermercompta () { this.comptadial = false },
-    async ouvrircompta (c) {
-      const compta = await new GetCompta().run(c.na.id)
-      this.cpt = {
-        x: compta.compteurs,
-        av: { na: c.na, estPrimaire: true }
-      }
-      this.comptadial = true
     }
   },
 
@@ -197,9 +156,6 @@ $haut: 5.5rem
   min-height: 0 !important
 .q-card > div
   box-shadow: inherit !important
-.bord
-  border-top: 1px solid $grey-5
-  border-bottom: 1px solid $grey-5
 .q-btn--dense
   padding: 0 3px
   min-height: auto
