@@ -1,16 +1,17 @@
 <template>
-  <q-card v-if="sessionok" class="full-height fs-md column">
-    <div style="min-height:30px"></div>
+  <q-card v-if="sessionok" class="q-pa-xs full-height fs-md column">
+    <div class="filler"/>
 
     <div v-if="s.c">
       <div class="titre-md">{{s.stlib}}</div>
       <div class="q-ml-md fs-sm">Volumes occupés par les secrets: {{s.v1}} / {{s.v2}}</div>
       <div v-if="s.c.stI===1" class="q-ml-md fs-sm">J'ai accès aux secrets du contact</div>
       <div v-if="s.c.stI===0" class="q-ml-md fs-sm">Je n'ai PAS accès aux secrets du contact</div>
-      <div v-if="s.c.stE===1" class="q-ml-md fs-sm">{{s.c.nomE}} a accès aux secrets du contact</div>
-      <div v-if="s.c.stE===0" class="q-ml-md fs-sm">{{s.c.nomE}} n'a PAS accès aux secrets du contact</div>
+      <div v-if="s.c.stE===1" class="q-ml-md fs-sm">{{s.c.nom}} a accès aux secrets du contact</div>
+      <div v-if="s.c.stE===0" class="q-ml-md fs-sm">{{s.c.nom}} n'a PAS accès aux secrets du contact</div>
       <div v-if="s.c.naE" class="q-mt-lg">
-        <identite-cv :nom-avatar="s.c.naE" type="avatar" invitable/>
+        <fiche-avatar2 :na-avatar="s.c.naE" nomenu/>
+        <!--identite-cv :nom-avatar="s.c.naE" type="avatar" invitable/-->
       </div>
       <div class="titre-md q-mt-lg">Carte de visite spécifique du contact</div>
       <identite-cv :nom-avatar="s.c.na" type="couple" editable @cv-changee="cvchangee"/>
@@ -124,22 +125,33 @@
       <div class="q-ml-md fs-sm">Phrase de rencontre : <span class="text-italic">{{s.c.phrase}}</span></div>
     </div>
 
-  <q-page-sticky class="full-width" position="top-left" expand :offset="[50, 0]">
-    <q-toolbar :class="tbc">
-      <q-btn :disable="!precedent" flat round dense icon="first_page" size="sm" @click="prec(0)" />
-      <q-btn :disable="!precedent" flat round dense icon="arrow_back_ios" size="sm" @click="prec(1)" />
-      <span>{{index + 1}}/{{sur}}</span>
-      <q-btn :disable="!suivant" flat round dense icon="arrow_forward_ios" size="sm" @click="suiv(1)" />
-      <q-btn :disable="!suivant" flat round dense icon="last_page" size="sm" @click="suiv(0)" />
-      <q-toolbar-title>
-        <titre-banner class-titre="titre-md" :titre="s.c.nomEd"
-          :titre2="s.c.nomEd + ' [' + s.c.nomEs + '#' + s.c.na.sfx + ']'" :id-objet="s.c.id"/>
-      </q-toolbar-title>
-      <q-btn size="md" color="white" icon="menu" flat dense>
-        <menu-couple :c="s.c" depuis-detail/>
-      </q-btn>
-    </q-toolbar>
-  </q-page-sticky>
+    <div v-if="close" class="top full-width">
+      <q-toolbar v-if="close" class="bg-primary text-white">
+        <q-toolbar-title>
+          <span class="titre-md q-mr-sm">Contact</span>
+          <titre-banner class-titre="titre-md" :titre="s.c.nomEd"
+            :titre2="s.c.nomEd + ' [' + s.c.nomEs + '#' + s.c.na.sfx + ']'" :id-objet="s.c.id"/>
+        </q-toolbar-title>
+        <q-btn class="chl" dense flat size="md" icon="chevron_right" @click="fermerctc"/>
+      </q-toolbar>
+    </div>
+
+    <q-page-sticky v-if="!close" class="full-width" position="top-left" expand :offset="[50, 0]">
+      <q-toolbar :class="tbc">
+        <q-btn :disable="!precedent" flat round dense icon="first_page" size="sm" @click="prec(0)" />
+        <q-btn :disable="!precedent" flat round dense icon="arrow_back_ios" size="sm" @click="prec(1)" />
+        <span>{{index + 1}}/{{sur}}</span>
+        <q-btn :disable="!suivant" flat round dense icon="arrow_forward_ios" size="sm" @click="suiv(1)" />
+        <q-btn :disable="!suivant" flat round dense icon="last_page" size="sm" @click="suiv(0)" />
+        <q-toolbar-title>
+          <titre-banner class-titre="titre-md" :titre="s.c.nomEd"
+            :titre2="s.c.nomEd + ' [' + s.c.nomEs + '#' + s.c.na.sfx + ']'" :id-objet="s.c.id"/>
+        </q-toolbar-title>
+        <q-btn size="md" color="white" icon="menu" flat dense>
+          <menu-couple :c="s.c" depuis-detail/>
+        </q-btn>
+      </q-toolbar>
+    </q-page-sticky>
 
   </q-card>
 </template>
@@ -156,16 +168,17 @@ import ChoixForfaits from './ChoixForfaits.vue'
 import IdentiteCv from './IdentiteCv.vue'
 import MenuCouple from './MenuCouple.vue'
 import ShowHtml from './ShowHtml.vue'
-import TitreBanner from '../components/TitreBanner.vue'
+import TitreBanner from './TitreBanner.vue'
+import FicheAvatar2 from './FicheAvatar2.vue'
 import { retourInvitation } from '../app/page.mjs'
 import { UNITEV1, UNITEV2 } from '../app/api.mjs'
 
 export default ({
   name: 'PanelCouple',
 
-  components: { TitreBanner, EditeurMd, MenuCouple, ApercuMotscles, SelectMotscles, IdentiteCv, ChoixForfaits, ShowHtml },
+  components: { FicheAvatar2, TitreBanner, EditeurMd, MenuCouple, ApercuMotscles, SelectMotscles, IdentiteCv, ChoixForfaits, ShowHtml },
 
-  props: { couple: Object, suivant: Function, precedent: Function, index: Number, sur: Number },
+  props: { couple: Object, suivant: Function, precedent: Function, index: Number, sur: Number, close: Function },
 
   computed: {
     tbc () { return 'bg-primary text-white' + (this.$q.screen.gt.sm ? ' ml23' : '') }
@@ -184,6 +197,8 @@ export default ({
 
   methods: {
     fermermcl () { this.mcledit = false },
+
+    fermerctc () { if (this.close) this.close() },
 
     async cvchangee (cv) {
       await new MajCv().run(cv)
@@ -352,4 +367,15 @@ export default ({
   overflow: hidden
 .ml23
   margin-left: 23rem
+$haut: 3.5rem
+.top
+  position: absolute
+  top: 0
+  left: 0
+  height: $haut
+  overflow: hidden
+  z-index: 2
+.filler
+  height: $haut
+  width: 100%
 </style>

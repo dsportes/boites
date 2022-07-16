@@ -2426,7 +2426,8 @@ export class NouveauCouple extends OperationUI {
 
   async run (na0, na1, max, mot) {
     try {
-      const clepub = await get('m1', 'getclepub', { sessionId: data.sessionId, sid: crypt.idToSid(na1.id) })
+      const sid = crypt.idToSid(na1.id)
+      const clepub = await get('m1', 'getclepub', { sessionId: data.sessionId, sid })
       if (!clepub) throw new AppExc(E_BRO, '23-Cle RSA publique d\'avatar non trouvé')
 
       const cc = crypt.random(32) // clé du couple

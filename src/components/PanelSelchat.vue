@@ -23,13 +23,17 @@
       </div>
       <div v-for="(c, idx) in lst" :key="c.id" class="zone full-width q-mb-sm'">
         <q-card class="q-ma-sm">
-          <fiche-avatar :na-avatar="c.na" :idx="idx" :parrain="c.stp===1" compta :na-tribu="c.nat"/>
-          <div :class="dkli(idx) + ' fs-md text-right full-width q-pa-xs'">
-            <q-btn class="q-mr-sm" dense color="primary" size="sm" label="Voir le chat" icon="chat" @click="ouvrirchat(c)"/>
-            <span v-if="c.st === 1" class="text-warning text-bold q-mr-sm">À traiter</span>
-            <span v-if="c.st === 2" class="text-negative bg-yellow text-bold q-mr-sm q-px-xs">Urgent</span>
-            <span class="font-mono">{{dh(c.dhde)}}</span>
-          </div>
+          <fiche-avatar :na-avatar="c.na" :idx="idx" :parrain="c.stp===1"
+            compta contacts groupes actions :na-tribu="c.nat" cv-editable @cv-changee="cvchangee">
+            <template v-slot:statut>
+              <span v-if="c.st === 1" class="text-warning text-bold q-mr-sm">À traiter</span>
+              <span v-if="c.st === 2" class="text-negative bg-yellow text-bold q-mr-sm q-px-xs">Urgent</span>
+              <span v-if="c.dhde" class="font-mono">{{dh(c.dhde)}}</span>
+            </template>
+            <template v-slot:actions>
+              <q-btn class="q-mr-sm" dense color="primary" size="sm" label="Voir le chat" icon="chat" @click="ouvrirchat(c)"/>
+            </template>
+          </fiche-avatar>
         </q-card>
       </div>
     </div>
@@ -81,6 +85,10 @@ export default ({
     dh (t) { return !t ? '(na)' : dhcool(new Date(t)) },
 
     fermerselchat () { this.dialogueselchat = false },
+
+    cvchangee (cv) {
+      console.log(cv.cv[1])
+    },
 
     async select () {
       this.pf = false

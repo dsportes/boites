@@ -145,6 +145,7 @@ export default ({
     sec () { const x = this.c || this.couple; return x.stp === 4 && x.stI === 1 },
     repc () { const x = this.c || this.couple; return x.stI === 0 && x.stp === 4 },
     quit () { const x = this.c || this.couple; return x.stI === 1 },
+    // supp () { return true },
     supp () { const x = this.c || this.couple; return (x.stp < 4 && x.avc === 0) || x.stp === 5 },
     ppc () { const x = this.c || this.couple; return x.stp === 1 && x.orig === 0 && x.avc === 1 },
     prlp () { const x = this.c || this.couple; return x.stp === 1 && x.orig === 1 },

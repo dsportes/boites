@@ -24,48 +24,13 @@
       </span>
     </div>
     <q-separator/>
-    <div v-for="(ax, idx) in s.lst" :key="ax.na.id" :class="dkli(idx) + ' zone cursor-pointer full-width q-mb-sm'" @click="detail(ax)">
-      <q-card class="row justify-start items-center">
-        <img class="col-auto photomax q-mr-md" :src="ax.na.photoDef"/>
-        <div class="col column">
-          <div class="titre-md">{{ax.noml}}
-            <q-btn class="q-ml-sm" dense size="sm" icon="content_copy" color="primary" @click.stop="copier(ax.na)"/>
-          </div>
-          <div class="fs-sm">
-            <span v-if="ax.c.size" class="q-mr-sm">{{ax.c.size + (ax.c.size>1?' contacts':' contact')}}</span>
-            <span v-if="ax.m.size">{{ax.m.size + (ax.m.size>1?' groupes':' groupe')}}</span>
-          </div>
-        </div>
+    <div v-for="(ax, idx) in s.lst" :key="ax.na.id">
+      <q-card class="q-ma-sm">
+        <fiche-avatar :na-avatar="ax.na" :idx="idx" contacts groupes>
+        </fiche-avatar>
       </q-card>
-      <q-separator class="q-my-xs"/>
     </div>
   </div>
-
-  <q-dialog v-model="detaildial">
-    <q-card class="shadow-8 petitelargeur">
-      <q-card-section>
-        <identite-cv :nom-avatar="ax.na" :invitable="invit != null" type="avatar"/>
-      </q-card-section>
-      <q-card-section>
-        <div v-if="lstc.length">
-          <span class="titre-sm text-italic">En contact avec:</span>
-          <span class="q-ml-md" v-for="c in lstc" :key="c.id">{{c.naI.nom}}</span>
-        </div>
-        <div v-else class="titre-md text-italic">En contact avec personne</div>
-      </q-card-section>
-      <q-card-section>
-        <div v-if="lstg.length">
-          <div class="titre-sm text-italic">Membre de:</div>
-          <div class="q-ml-lg" v-for="g in lstg" :key="g.id">{{g.nomEd}}</div>
-        </div>
-        <div v-else class="titre-md text-italic">Membre d'aucun groupe</div>
-      </q-card-section>
-      <q-card-actions>
-        <q-btn flat dense color="primary" icon="close" label="Fermer" v-close-popup/>
-        <q-btn flat dense color="primary" icon="add" label="Nouveau Contact" v-close-popup @click="nvcouple=true"/>
-      </q-card-actions>
-    </q-card>
-  </q-dialog>
 
   <q-dialog v-model="nvcouple">
     <nouveau-couple :id1="ax.na.id" :close="closenvcouple" />
@@ -76,27 +41,22 @@
 <script>
 import { useStore } from 'vuex'
 import { computed, reactive, watch, ref } from 'vue'
-import IdentiteCv from '../components/IdentiteCv.vue'
 import NouveauCouple from './NouveauCouple.vue'
+import FicheAvatar from './FicheAvatar.vue'
 import { data } from '../app/modele.mjs'
 import { affichermessage } from '../app/util.mjs'
 
 export default ({
   name: 'PanelContacts',
 
-  components: { IdentiteCv, NouveauCouple },
+  components: { FicheAvatar, NouveauCouple },
 
   data () {
     return {
-      nac: null,
-      naI: null,
-      naE: null,
       nvcouple: false,
       avatars: [],
       nomavatar: '',
-      ax: null,
-      lstc: [],
-      lstg: []
+      ax: null
     }
   },
 
@@ -105,17 +65,9 @@ export default ({
   },
 
   methods: {
-    dkli (idx) { return this.$q.dark.isActive ? (idx ? 'sombre' + (idx % 2) : 'sombre0') : (idx ? 'clair' + (idx % 2) : 'clair0') },
-    detail (ax) {
-      this.ax = ax
-      this.lstc = []
-      this.lstg = []
-      ax.c.forEach(id => { this.lstc.push(data.getCouple(id)) })
-      ax.m.forEach(k => { this.lstg.push(data.getGroupe(k[0])) })
-      this.detaildial = true
-    },
     na (id) { return data.repertoire.na(id) },
-    closenvcouple () { this.nvcouple = false; this.detaildial = false },
+    ouvrirnvcouple (ax) { this.ax = ax; this.nvcouple = true },
+    closenvcouple () { this.nvcouple = false },
     copier (na) {
       affichermessage(na.nom + ' copié')
       this.$store.commit('ui/majclipboard', na)

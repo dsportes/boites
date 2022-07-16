@@ -1,18 +1,14 @@
 <template>
   <q-card class="q-ma-xs moyennelargeur fs-md">
     <q-card-section class="column items-center">
-      <div class="titre-lg text-center">Nouveau contact avec {{s.na1.noml}}</div>
+      <div class="titre-lg text-center">Proposition de contact de {{naInt.nom}} à {{naExt.nom}}</div>
       <q-btn flat @click="close" color="primary" label="Renoncer" class="q-ml-sm" />
-      <q-select v-model="s.nomavatar" class="full-width" :options="s.avatars" dense options-dense label="Choisir mon avatar concerné"
-        popup-content-style="border:1px solid #777777;border-radius:3px"/>
-      <div v-if="s.deja === 0">{{s.na1.noml}} et {{s.nomavatar}} ne sont pas encore en contact</div>
-      <div v-else class="text-bold text-warning">{{s.na1.noml}} et avec {{s.nomavatar}} sont déjà en contact {{s.deja}} fois</div>
     </q-card-section>
 
     <q-card-section v-if="sessionok">
       <q-stepper v-model="step" vertical color="primary" animated>
         <q-step :name="1" title="Mot de bienvenue sur l'ardoise du couple" icon="settings" :done="step > 1" >
-          <editeur-md :texte="'Bonjour ' + s.na1.nom + ' !'" v-model="mot" editable modetxt style="height:8rem"></editeur-md>
+          <editeur-md :texte="'Bonjour ' + naExt.nom + ' !'" v-model="mot" editable modetxt style="height:8rem"></editeur-md>
           <div v-if="diagmot" class="fs-sm text-warning">De 10 à 140 signes ({{mot.length}})</div>
           <q-stepper-navigation>
             <q-btn flat @click="okmot" color="primary" label="Suivant" :disable="mot.length<10" class="q-ml-sm" />
@@ -29,7 +25,7 @@
         </q-step>
 
         <q-step :name="3" title="Confirmation" icon="check" :done="step > 3" >
-          <div>Nom de l'avatar sollicité: <span class="font-mono q-pl-md">{{s.na1.nom}}</span></div>
+          <div>Nom de l'avatar sollicité: <span class="font-mono q-pl-md">{{naExt.nom}}</span></div>
           <div>Mot de bienvenue: <span class="font-mono q-pl-md">{{mot}}</span></div>
           <div v-if="max[0]">Volumes maximum des secrets du contact :<br>
             <span class="font-mono q-pl-md">v1: {{ed1(max[0])}}</span>
@@ -49,24 +45,19 @@
 
 <script>
 import { useStore } from 'vuex'
-import { computed, toRef, watch, reactive } from 'vue'
+import { computed, toRef, watch } from 'vue'
 import ChoixForfaits from './ChoixForfaits.vue'
 import EditeurMd from './EditeurMd.vue'
 import { NouveauCouple } from '../app/operations.mjs'
 import { edvol } from '../app/util.mjs'
 import { UNITEV1, UNITEV2 } from '../app/api.mjs'
-import { data } from '../app/modele.mjs'
 
 export default ({
   name: 'NouveauCouple',
 
-  props: { id1: Number, close: Function },
+  props: { naInt: Object, naExt: Object, close: Function },
 
   components: { ChoixForfaits, EditeurMd },
-
-  computed: {
-    dlclass () { return this.$q.dark.isActive ? 'sombre' : 'clair' }
-  },
 
   data () {
     return {
@@ -94,7 +85,7 @@ export default ({
       }
     },
     async confirmer () {
-      await new NouveauCouple().run(this.avatar.na, this.s.na1, this.max, this.mot)
+      await new NouveauCouple().run(this.naInt, this.naExt, this.max, this.mot)
       this.mot = ''
       this.max = [1, 1]
       if (this.close) this.close()
@@ -106,65 +97,15 @@ export default ({
 
   setup (props) {
     const $store = useStore()
-    const avatar = computed({
-      get: () => $store.state.db.avatar,
-      set: (val) => $store.commit('db/majavatar', val)
-    })
-    const compte = computed(() => { return $store.state.db.compte })
     const sessionok = computed(() => { return $store.state.ui.sessionok })
-    const id1 = toRef(props, 'id1')
-    const tousAx = computed(() => { return $store.state.db.tousAx })
-
-    const s = reactive({
-      avatars: [],
-      singl: true,
-      deja: 0,
-      na1: null,
-      nomavatar: ''
-    })
 
     const close = toRef(props, 'close')
     watch(() => sessionok.value, (ap, av) => {
       if (close.value) close.value()
     })
 
-    function listeAvatars () {
-      const c = compte.value
-      s.avatars = c.avatars()
-      s.singl = s.avatars.length === 1
-      if (avatar.value) {
-        s.nomavatar = avatar.value.na.nom
-      } else {
-        s.nomavatar = s.avatars[0]
-        avatar.value = data.getAvatar(c.avatarDeNom(s.nomavatar))
-      }
-    }
-
-    function onId1 () {
-      s.na1 = data.repertoire.na(id1.value)
-      const avid = avatar.value.id
-      const ax = tousAx.value[id1.value]
-      const lcpl = ax ? ax.c : new Set()
-      s.deja = 0
-      lcpl.forEach(idc => {
-        const c = data.getCouple(idc)
-        if (c.idI === avid || c.idE === avid) s.deja++
-      })
-    }
-
-    watch(() => tousAx.value, (ap, av) => { onId1() })
-    watch(() => avatar.value, (ap, av) => { onId1() })
-    watch(() => s.nomavatar, (ap, av) => {
-      avatar.value = data.getAvatar(data.getCompte().avatarDeNom(ap))
-    })
-
-    listeAvatars()
-    onId1()
-
     return {
-      sessionok,
-      avatar,
-      s
+      sessionok
     }
   }
 })

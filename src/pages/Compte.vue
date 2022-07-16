@@ -35,20 +35,19 @@
       <q-btn class="q-my-sm" size="sm" icon="add" label="Nouvel avatar" color="primary" dense @click="ouvrirnv"/>
       <q-btn class="q-my-sm" size="sm" icon="manage_accounts" label="Changer la phrase secrète" color="warning" dense @click="ouvrirchgps"/>
     </div>
-    <div v-for="x in state.lst" :key="x.av.id"
-      :class="'q-my-md zone row' + (avatar && x.av.id === avatar.id ? ' courant' : '')">
-      <identite-cv class="col" :nom-avatar="x.av.na" type="avatar" editable invitable @cv-changee="cvchangee"/>
-      <div class="col-auto column justify-center">
-        <q-btn dense color="warning" size="sm"
-          icon="check" label="Page" @click="toAvatar(x.av)"/>
-        <q-btn v-if="x.av.estParrain" flat class="q-mx-xs" dense color="primary" size="sm"
-          icon="add" label="Parrainage" @click="ouvrirpar(x.av)"/>
-        <q-btn class="q-mx-xs" flat dense color="primary" size="sm"
-          icon="add" label="Rencontre" @click="ouvrirpr(x.av)"/>
-        <q-btn class="q-mx-xs" flat dense color="primary" size="sm"
-          label="Comptabilité" @click="ouvrircompta(x)"/>
-      </div>
-      <q-separator class="q-my-sm"/>
+    <div v-for="(x, idx) in state.lst" :key="x.av.id">
+      <q-card class="q-ma-sm moyennelargeur zone">
+        <fiche-avatar :na-avatar="x.av.na" :idx="idx" cv-editable compta actions @cv-changee="cvchangee">
+          <template v-slot:actions>
+            <q-btn dense color="warning" size="md"
+              icon="open_in_new" label="Vers page" @click="toAvatar(x.av)"/>
+            <q-btn v-if="x.av.estParrain" flat class="q-mx-xs" dense color="primary" size="sm"
+              icon="add" label="Parrainage" @click="ouvrirpar(x.av)"/>
+            <q-btn class="q-mx-xs" flat dense color="primary" size="sm"
+              icon="add" label="Rencontre" @click="ouvrirpr(x.av)"/>
+          </template>
+        </fiche-avatar>
+      </q-card>
     </div>
 
   </q-card>
@@ -150,13 +149,13 @@ import { onBoot, remplacePage } from '../app/page.mjs'
 import EditeurMd from '../components/EditeurMd.vue'
 import MotsCles from '../components/MotsCles.vue'
 import ChoixForfaits from '../components/ChoixForfaits.vue'
-import IdentiteCv from '../components/IdentiteCv.vue'
 import NomAvatar from '../components/NomAvatar.vue'
 import NouveauParrainage from '../components/NouveauParrainage.vue'
 import PanelRencontre from '../components/PanelRencontre.vue'
 import ShowHtml from '../components/ShowHtml.vue'
 import PanelCompta from '../components/PanelCompta.vue'
 import PhraseSecrete from '../components/PhraseSecrete.vue'
+import FicheAvatar from '../components/FicheAvatar.vue'
 import { Motscles, afficherdiagnostic, edvol, dhstring } from '../app/util.mjs'
 import { crypt } from '../app/crypto.mjs'
 import { data } from '../app/modele.mjs'
@@ -165,7 +164,7 @@ import { UNITEV1, UNITEV2, Compteurs } from '../app/api.mjs'
 
 export default ({
   name: 'Compte',
-  components: { PhraseSecrete, PanelCompta, ShowHtml, EditeurMd, MotsCles, IdentiteCv, NomAvatar, ChoixForfaits, NouveauParrainage, PanelRencontre },
+  components: { FicheAvatar, PhraseSecrete, PanelCompta, ShowHtml, EditeurMd, MotsCles, NomAvatar, ChoixForfaits, NouveauParrainage, PanelRencontre },
   data () {
     return {
       nomav: '',

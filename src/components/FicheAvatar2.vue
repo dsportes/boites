@@ -9,7 +9,6 @@
         <div class="col-auto">
           <info-txt class="bord2" :label="s.na.nom" noicon :info="s.na.nom + ' ID:' + s.na.id"/>
           <span v-if="parrain" class="q-ml-sm text-bold text-warning">PARRAIN</span>
-          <q-btn v-if="naTribu" class="q-ml-sm" :label="naTribu.nom" dense no-caps color="primary" @click.stop="ouvrirtribu"/>
         </div>
         <q-space/>
         <slot name="statut" class="col-auto text-right">
@@ -26,19 +25,6 @@
                 <q-icon class="col-auto q-ml-sm" size="md" name="mode_edit"/>
                 <span class="col">Éditer la carte de visite</span>
               </div>
-              <q-separator v-if="compta"/>
-              <div v-if="compta" class="item row items-center" v-close-popup @click="ouvrircompta">
-                <q-icon class="col-auto" size="md" name="euro"/>
-                <q-item-section>Afficher la comptabilité</q-item-section>
-              </div>
-              <div v-if="s.lfc.length">
-                <q-separator/>
-                <div class="titre-md text-italic">Nouveau contact de ...</div>
-                <div v-for="na in s.lfc" :key="na.id" class="item row items-center" v-close-popup @click="nvcontact(na)">
-                  <q-icon class="col-auto" size="md" name="add"/>
-                  <q-item-section>{{na.nom}}</q-item-section>
-                </div>
-              </div>
             </div>
           </q-menu>
         </q-btn>
@@ -48,13 +34,7 @@
       <div v-else class="q-my-xs titre-md full-width text-center bord cursor-pointer text-italic text-grey5">
         (pas d'autre information)
       </div>
-      <div v-if="s.c.length || s.m.length">
-        <span v-for="c in s.c" :key="c.id" class="q-mr-md bord2 cursor-pointer"
-          @click="ouvrirctc(c)">Contact de {{c.naI.nom}}</span>
-        <span v-for="m in s.m" :key="m.id" class="q-mr-md bord2 cursor-pointer"
-          @click="ouvrirmbr(m)">Membre de {{m.na.noml}}</span>
-      </div>
-      <div v-if="actions" :class="'row justify-center q-pa-xs ' + (s.c.length || s.m.length ? 'bord3' : '')">
+      <div v-if="actions" class="row justify-center q-pa-xs">
         <slot name="actions"></slot>
       </div>
     </div>
@@ -85,29 +65,6 @@
       </q-card-actions>
     </q-card>
   </q-dialog>
-
-  <q-dialog v-model="tribudial" full-height position="right">
-    <div class="moyennelargeur">
-      <panel-tribu :close="fermertribu" />
-    </div>
-  </q-dialog>
-
-  <q-dialog v-model="comptadial" full-height position="right">
-    <panel-compta :cpt="cpt" :close="fermercompta"/>
-  </q-dialog>
-
-  <q-dialog v-model="contactdial" full-height position="right">
-    <panel-couple :couple="couple" :close="fermerctc"/>
-  </q-dialog>
-
-  <q-dialog v-model="membredial" full-height position="right">
-    <panel-membre :groupe="groupe" :membre="membre" :close="fermermbr"/>
-  </q-dialog>
-
-  <q-dialog v-model="nvcouple">
-    <nouveau-couple :na-int="naint" :na-ext="s.na" :close="closenvcouple" />
-  </q-dialog>
-
 </div>
 </template>
 
@@ -117,43 +74,29 @@ import { watch, toRef, reactive, computed, ref } from 'vue'
 import CarteVisite from './CarteVisite.vue'
 import ShowHtml from './ShowHtml.vue'
 import EditeurMd from './EditeurMd.vue'
-import PanelTribu from './PanelTribu.vue'
-import PanelCompta from './PanelCompta.vue'
 import InfoTxt from './InfoTxt.vue'
-import PanelCouple from './PanelCouple.vue'
-import PanelMembre from './PanelMembre.vue'
-import NouveauCouple from './NouveauCouple.vue'
 import { Cv, data } from '../app/modele.mjs'
 import { cfg, affichermessage } from '../app/util.mjs'
 import { IDCOMPTABLE } from '../app/api.mjs'
-import { GetCompta } from '../app/operations.mjs'
 
 export default ({
-  name: 'FicheAvatar',
+  name: 'FicheAvatar2',
 
   props: {
     naAvatar: Object, // na de l'avatar
     cvEditable: Boolean, // Si true la cv est editable et est reçue sur @cv-changee
     parrain: Boolean, // affiche PARRAIN à côté du nom
-    compta: Boolean, // Si true, option de menu de la compta
     idx: Number,
     noMenu: Boolean, // Si true le bouton menu (et le menu) n'apparaissent pas
-    naTribu: Object, // Si présent, le nom de la tribu est affiché avec un lien pour ouvrir le panel
-    contacts: Boolean, // Si true affiche la liste de ses contacts
-    groupes: Boolean, // Si true affiche la liste de ses groupes (membres)
     actions: Boolean // A un slot "actions"
   },
 
-  components: { NouveauCouple, PanelMembre, PanelCouple, InfoTxt, ShowHtml, CarteVisite, EditeurMd, PanelTribu, PanelCompta },
+  components: { InfoTxt, ShowHtml, CarteVisite, EditeurMd },
 
   computed: { },
 
   data () {
     return {
-      couple: null,
-      groupe: null,
-      membre: null,
-      naint: null
     }
   },
 
@@ -162,13 +105,6 @@ export default ({
 
     ouvrircv () { if (this.cvEditable) this.cvloc = true; else this.cvdetail = true },
     closecv () { this.cvloc = false },
-
-    ouvrirtribu () {
-      const t = data.getTribu(this.naTribu.id)
-      this.tribu = t
-      this.tribudial = true
-    },
-    fermertribu () { this.tribudial = false },
 
     cvchangee (res) {
       if (res && this.naAvatar) {
@@ -180,40 +116,7 @@ export default ({
     copier () {
       affichermessage(this.s.na.nom + ' copié')
       this.$store.commit('ui/majclipboard', this.s.na)
-    },
-
-    fermerctc () { this.contactdial = false },
-
-    ouvrirctc (c) {
-      this.couple = c
-      this.contactdial = true
-    },
-
-    fermermbr () { this.membredial = false },
-
-    ouvrirmbr (m) {
-      this.membre = m
-      this.groupe = data.getGroupe(m.id)
-      this.membredial = true
-    },
-
-    async ouvrircompta () {
-      const compta = await new GetCompta().run(this.s.na.id)
-      this.cpt = {
-        x: compta.compteurs,
-        av: { na: this.s.na, estPrimaire: true }
-      }
-      this.comptadial = true
-    },
-
-    fermercompta () { this.comptadial = false },
-
-    nvcontact (na) {
-      this.naint = na
-      this.nvcouple = true
-    },
-
-    closenvcouple () { this.nvcouple = false }
+    }
   },
 
   setup (props) {
@@ -222,25 +125,13 @@ export default ({
     const phsuperman = cfg().superman
     const phdisparu = cfg().disparu
     const sessionok = computed(() => $store.state.ui.sessionok)
-    const tribu = computed({ // tribu courante
-      get: () => $store.state.db.tribu,
-      set: (val) => $store.commit('db/majtribu', val)
-    })
-    const tousAx = computed(() => { return $store.state.db.tousAx })
 
     const cvloc = ref(false)
     const cvdetail = ref(false)
-    const comptadial = ref(false)
-    const contactdial = ref(false)
-    const tribudial = ref(false)
     const zoomdial = ref(false)
-    const membredial = ref(false)
-    const nvcouple = ref(false)
     const naAvatar = toRef(props, 'naAvatar')
-    const contacts = toRef(props, 'contacts')
-    const groupes = toRef(props, 'groupes')
 
-    const s = reactive({ photo: phavatar, info: '', na: null, c: [], m: {}, lfc: [] })
+    const s = reactive({ photo: phavatar, info: '', na: null })
 
     const cvs = computed(() => { return $store.state.db.cvs })
 
@@ -262,70 +153,28 @@ export default ({
         s.photo = id === IDCOMPTABLE ? phsuperman : phavatar
         s.info = ''
       }
-      s.c = []
-      s.m = []
-      s.lfc = []
-      if (contacts.value || groupes.value) {
-        const tax = tousAx.value
-        if (tax) {
-          const ax = tax[id]
-          if (ax) {
-            if (contacts.value && ax.c) {
-              const nas = data.getCompte().avatarNas()
-              const s1 = new Set()
-              ax.c.forEach(idc => {
-                const x = data.getCouple(idc)
-                if (x) { s.c.push(x); s1.add(x.idI) }
-              })
-              nas.forEach(na => {
-                if (!s1.has(na.id)) s.lfc.push(na)
-              })
-            }
-            if (groupes.value && ax.m && ax.m.size) {
-              ax.m.forEach(y => {
-                const [idg, im] = y
-                const x = data.getMembre(idg, im)
-                if (x) s.m.push(x)
-              })
-            }
-          }
-        }
-      }
     }
-
-    watch(() => cvs.value, (ap, av) => {
-      init()
-    })
 
     watch(() => naAvatar.value, (ap, av) => {
       init()
     })
 
-    watch(() => tousAx.value, (ap, av) => {
+    watch(() => cvs.value, (ap, av) => {
       init()
     })
 
     watch(() => sessionok.value, (ap, av) => {
       cvloc.value = false
       cvdetail.value = false
-      tribudial.value = false
       zoomdial.value = false
-      contactdial.value = false
-      membredial.value = false
     })
 
     init()
 
     return {
-      tribu,
       cvloc,
       cvdetail,
-      comptadial,
-      tribudial,
       zoomdial,
-      contactdial,
-      membredial,
-      nvcouple,
       s,
       sessionok
     }
