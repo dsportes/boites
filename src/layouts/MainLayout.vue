@@ -147,9 +147,6 @@
           <component :is="Component" />
         </transition>
       </router-view>
-      <q-page-sticky v-if="invitationattente" position="bottom-right" :offset="[2, 2]">
-        <q-btn label="Cliquer pour annuler l\'invitation en cours" color="accent" icon-right="arrow_forward" @click="toInvit"/>
-      </q-page-sticky>
     </q-page-container>
 
     <q-dialog v-model="confirmerdrc">
@@ -261,7 +258,7 @@ import PanelCouple from '../components/PanelCouple.vue'
 import PanelMembre from '../components/PanelMembre.vue'
 import { data, MODES } from '../app/modele.mjs'
 import { cfg, dhcool } from '../app/util.mjs'
-import { remplacePage, onBoot, retourInvitation } from '../app/page.mjs'
+import { remplacePage, onBoot } from '../app/page.mjs'
 import { reconnexion } from '../app/operations.mjs'
 
 export default {
@@ -302,8 +299,6 @@ export default {
     fermercouple () { this.coupledialobj = null },
     fermermembre () { this.membredialobj = null },
     fermercompta () { this.comptadialobj = null },
-
-    toInvit () { retourInvitation('KO') },
 
     ouvrirchat () {
       if (this.compte.estComptable) {
@@ -450,8 +445,6 @@ export default {
       set: (val) => $store.commit('ui/majmembredialobj', val)
     })
 
-    const invitationattente = computed(() => $store.state.ui.invitationattente)
-
     const message = computed(() => $store.state.ui.message)
     const aunmessage = computed({
       get: () => $store.state.ui.message != null,
@@ -501,7 +494,6 @@ export default {
       avatarscrech,
       avatarscform,
       avatartrform,
-      invitationattente,
 
       tribudial,
       comptadial,

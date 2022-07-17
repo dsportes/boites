@@ -12,7 +12,6 @@ export function razdialogues (state) {
   razdiagnostic(state)
   majopencours(state, null)
   majconfirmstopop(state, false)
-  majinvitationattente(state, null)
   majdialoguesynchro(state, false)
   majdialoguehelp(state, false)
   majdialoguechat(state, false)
@@ -98,10 +97,8 @@ export function majavatarscrech (state, val) { state.avatarscrech = val }
 export function majavatarscform (state, val) { state.avatarscform = val }
 export function majavatartrform (state, val) { state.avatartrform = val }
 
-export function majinvitationattente (state, val) { state.invitationattente = val }
 export function majeditgr (state, val) { state.editgr = val }
 export function majclipboard (state, val) { state.clipboard = val }
-export function majpanelinvit (state, val) { state.panelinvit = val }
 
 export function majetapefichier (state, val) { state.etapefichier = val }
 

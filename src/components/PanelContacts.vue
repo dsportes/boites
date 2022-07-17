@@ -81,7 +81,6 @@ export default ({
       set: (val) => $store.commit('ui/majpanelcontacts', val)
     })
     const mode = computed(() => $store.state.ui.mode)
-    const invit = computed(() => { return $store.state.ui.invitationattente })
     const tousAx = computed(() => { return $store.state.db.tousAx })
     const cvs = computed(() => { return $store.state.db.cvs })
     const compte = computed(() => $store.state.db.compte)
@@ -142,7 +141,6 @@ export default ({
     filtre()
 
     return {
-      invit,
       panelcontacts,
       opt,
       txt,

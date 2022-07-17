@@ -3,7 +3,7 @@
     <div class="top bg-secondary text-white full-width">
       <q-toolbar class="q-px-xs">
         <q-toolbar-title class="titre-lg full-width">Chat avec le Comptable</q-toolbar-title>
-        <q-btn class="chl" dense flat size="md" icon="chevron_right" @click="fermerchat"/>
+        <q-btn dense flat size="md" icon="chevron_right" @click="fermerchat"/>
       </q-toolbar>
       <div class="q-px-xs row justify-between items-center">
         <div :class="'font-mono fs-lg ' + ['', 'text-warning', 'text-negative text-bold bg-yellow'][chat.st]">

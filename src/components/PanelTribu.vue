@@ -46,7 +46,7 @@
         <titre-banner v-if="state.t" class-titre="titre-md" :titre="state.t.nom"
           :titre2="state.t.nom" :id-objet="state.t.id"/>
       </q-toolbar-title>
-      <q-btn class="chl" dense flat size="md" icon="chevron_right" @click="fermertribu"/>
+      <q-btn dense flat size="md" icon="chevron_right" @click="fermertribu"/>
     </q-toolbar>
   </div>
 
@@ -161,9 +161,6 @@ export default ({
 .q-toolbar
   padding: 2px !important
   min-height: 0 !important
-.chl
-  position: relative
-  left: -10px
 $haut: 3.5rem
 .top
   position: absolute

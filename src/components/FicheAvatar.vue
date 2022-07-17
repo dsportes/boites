@@ -49,10 +49,10 @@
         (pas d'autre information)
       </div>
       <div v-if="s.c.length || s.m.length">
-        <span v-for="c in s.c" :key="c.id" class="q-mr-md bord2 cursor-pointer"
+        <span v-for="c in s.c" :key="c.id" class="q-mr-md bord2b cursor-pointer"
           @click="ouvrircouple(c)">Contact de {{c.naI.nom}}</span>
-        <span v-for="m in s.m" :key="m.id" class="q-mr-md bord2 cursor-pointer"
-          @click="ouvrirmembre(m)">Membre de {{m.na.noml}}</span>
+        <span v-for="m in s.m" :key="m.id" class="q-mr-md bord2b cursor-pointer"
+          @click="ouvrirmembre(m)">Groupe {{m.na.noml}}</span>
       </div>
       <div v-if="actions" :class="'row justify-center q-pa-xs ' + (s.c.length || s.m.length ? 'bord3' : '')">
         <slot name="actions"></slot>
@@ -299,10 +299,12 @@ export default ({
   border-bottom: 1px solid $grey-5
 .bord3
   border-top: 1px solid $grey-5
-.bord2
+.bord2, .bord2b
   border-radius: 3px
   border: 1px solid $grey-5
   padding: 1px 3px
+.bord2b
+  display: inline-block
 .menu
   min-width: 15rem
   padding: 2px

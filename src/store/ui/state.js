@@ -86,10 +86,8 @@ export default function () {
     evtfiltresecrets: null,
     evtfiltresecrets2: null,
 
-    invitationattente: null,
     editgr: false,
     clipboard: null,
-    panelinvit: false,
 
     etapefichier: 0,
 

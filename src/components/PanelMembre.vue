@@ -1,89 +1,103 @@
 <template>
-<q-card :class="dkli(idx) + ' shadow-8 zone q-px-xs full-width row items-start'">
-  <div class="col">
-    <fiche-avatar :na-avatar="m.namb" nomenu/>
-
-    <div>
-      <q-icon v-if="m.estAc" class="q-mr-xs" size="sm" color="warning" name="stars"/>
-      <span v-if="m.estAc" class="q-mr-sm text-bold text-warning">MOI</span>
-      <q-icon size="sm" :color="m.stx === 2 ?'primary':'warning'"
-        :name="m.stx < 2 ? 'hourglass_empty' : (m.stx === 2 ? 'thumb_up' : 'thumb_down')"/>
-      <span class="q-px-sm">{{statuts[m.stx]}}</span>
-      <span v-if="m.stx !== 0" class="q-px-sm" :color="m.stp < 2 ?'primary':'warning'">{{['Lecteur','Auteur','Animateur'][m.stp]}}</span>
-      <span v-if="g.imh === m.im" class="q-px-xs text-bold text-italic text-warning">Hébergeur du groupe</span>
-    </div>
-
-    <div v-if="m.ard" class="row justify-between cursor-pointer zone items-start" @click="ouvmajard">
-      <div class="col-auto q-pr-sm titre-md">Ardoise :</div>
-      <show-html class="col" style="height:1.8rem;overflow:hidden" :texte="m.ard" :idx="idx"/>
-      <div class="col-auto q-pl-sm fs-sm">{{m.dhed}}</div>
-    </div>
-    <div v-else class="fs-sm cursor-pointer zone" @click="ouvmajard">(rien sur l'ardoise partagée avec le groupe)</div>
-
-    <div v-if="m.estAc">
-      <div v-if="m.info" class="zone cursor-pointer" @click="ouvmajinfo">
-        <div class="titre-md">Titre et commentaires à propos du groupe</div>
-        <show-html class="height-2" :texte="m.info" :idx="idx"/>
-      </div>
-      <div v-else class="fs-sm cursor-pointer zone" @click="ouvmajinfo">(pas de commentaire à propos du groupe)</div>
-      <div class="zone cursor-pointer" @click="ouvrirmc">
-        <span class="titre-sm q-pr-sm">Mots clés :</span>
-        <apercu-motscles :motscles="state.motsclesGr" :src="m.mc" :groupe-id="g.id" :args-click="m" @click-mc="ouvrirmc"/>
-      </div>
-    </div>
+<div :class="dkli(idx)" :style="close ? 'height:100vh!important' : ''">
+  <div v-if="close" class="top full-width">
+    <q-toolbar v-if="close" class="bg-primary text-white">
+      <q-toolbar-title>
+        <span class="titre-md q-mr-sm">Membre</span>
+        <titre-banner class-titre="titre-md" :titre="m.namb.nomEd"
+          :titre2="m.namb.nom + '#' + m.namb.sfx + ']'" :id-objet="m.namb.id"/>
+      </q-toolbar-title>
+      <q-btn dense flat size="md" icon="chevron_right" @click="fermer"/>
+    </q-toolbar>
   </div>
 
-  <q-btn class="col-auto q-ml-sm" size="md" icon="menu" flat dense>
-    <q-menu transition-show="scale" transition-hide="scale">
-      <q-list dense class="bord1">
-        <q-item v-if="invitationattente" clickable v-ripple v-close-popup @click="copier">
-          <q-item-section class="titre-lg text-bold text-grey-8 bg-yellow-4 q-mx-sm text-center">[Contact !]</q-item-section>
-        </q-item>
-        <q-separator v-if="invitationattente && m.stx === 0 && g.maxStp() === 2"/>
-        <q-item v-if="(m.stx === 0 || m.stx === 3 || m.stx === 4) && g.maxStp() === 2" clickable v-ripple v-close-popup @click="ouvririnvitcontact">
-          <q-item-section avatar>
-            <q-icon dense name="open_in_new" color="primary" size="md"/>
-          </q-item-section>
-          <q-item-section>Inviter ce contact</q-item-section>
-        </q-item>
-        <q-separator v-if="m.stx === 1 && m.estAc"/>
-        <q-item v-if="m.stx === 1 && m.estAc" clickable v-ripple v-close-popup @click="accepterinvit">
-          <q-item-section avatar>
-            <q-icon dense name="check" color="primary" size="md"/>
-          </q-item-section>
-          <q-item-section>Accepter l'invitation</q-item-section>
-        </q-item>
-        <q-separator v-if="m.stx === 1 && m.estAc" />
-        <q-item v-if="m.stx === 1 && m.estAc" clickable v-ripple v-close-popup @click="refuserinvit">
-          <q-item-section avatar>
-            <q-icon dense name="not_interested" color="primary" size="md"/>
-          </q-item-section>
-          <q-item-section>Refuser l'invitation</q-item-section>
-        </q-item>
-        <q-separator v-if="g.maxStp() === 2 && m.stx >= 1 && m.stx <= 2 && m.stp < 2" />
-        <q-item v-if="g.maxStp() === 2 && m.stx >= 1 && m.stx <= 2 && m.stp < 2" clickable v-ripple v-close-popup @click="resilier">
-          <q-item-section avatar>
-            <q-icon dense name="close" color="warning" size="sm"/>
-          </q-item-section>
-          <q-item-section>Résilier du groupe</q-item-section>
-        </q-item>
-        <q-separator v-if="m.stp === 2 && m.estAc"/>
-        <q-item v-if="m.stx === 2 && m.estAc" clickable v-ripple v-close-popup @click="autoresilier">
-          <q-item-section avatar>
-            <q-icon dense name="close" color="warning" size="sm"/>
-          </q-item-section>
-          <q-item-section>S'auto-résilier du groupe</q-item-section>
-        </q-item>
-        <q-separator v-if="g.maxStp() === 2 && m.stx >= 1 && m.stx <= 2 && (m.stp < 2 || m.estAc)" />
-        <q-item v-if="g.maxStp() === 2 && m.stx >= 1 && m.stx <= 2 && (m.stp < 2 || m.estAc)" clickable v-ripple v-close-popup @click="changerlaa">
-          <q-item-section avatar>
-            <q-icon dense name="close" color="warning" size="sm"/>
-          </q-item-section>
-          <q-item-section>Changer le niveau d'habilitation</q-item-section>
-        </q-item>
-      </q-list>
-    </q-menu>
-  </q-btn>
+  <div v-if="close" class="filler"/>
+
+  <q-card :class="dkli(idx) + ' shadow-8 zone q-px-xs full-width'">
+    <fiche-avatar v-if="m.estAc" :na-avatar="m.namb" cv-editable/>
+    <fiche-avatar v-else :na-avatar="m.namb" contacts groupes/>
+
+    <div class="row items-start">
+      <div class="col">
+        <div>
+          <q-icon v-if="m.estAc" class="q-mr-xs" size="sm" color="warning" name="stars"/>
+          <span v-if="m.estAc" class="q-mr-sm text-bold text-warning">MOI</span>
+          <q-icon size="sm" :color="m.stx === 2 ?'primary':'warning'"
+            :name="m.stx < 2 ? 'hourglass_empty' : (m.stx === 2 ? 'thumb_up' : 'thumb_down')"/>
+          <span class="q-px-sm">{{statuts[m.stx]}}</span>
+          <span v-if="m.stx !== 0" class="q-px-sm" :color="m.stp < 2 ?'primary':'warning'">{{['Lecteur','Auteur','Animateur'][m.stp]}}</span>
+          <span v-if="g.imh === m.im" class="q-px-xs text-bold text-italic text-warning">Hébergeur du groupe</span>
+        </div>
+
+        <div v-if="m.ard" class="row justify-between cursor-pointer zone items-start" @click="ouvmajard">
+          <div class="col-auto q-pr-sm titre-md">Ardoise :</div>
+          <show-html class="col" style="height:1.8rem;overflow:hidden" :texte="m.ard" :idx="idx"/>
+          <div class="col-auto q-pl-sm fs-sm">{{m.dhed}}</div>
+        </div>
+        <div v-else class="fs-sm cursor-pointer zone" @click="ouvmajard">(rien sur l'ardoise partagée avec le groupe)</div>
+
+        <div v-if="m.estAc">
+          <div v-if="m.info" class="zone cursor-pointer" @click="ouvmajinfo">
+            <div class="titre-md">Titre et commentaires à propos du groupe</div>
+            <show-html class="height-2" :texte="m.info" :idx="idx"/>
+          </div>
+          <div v-else class="fs-sm cursor-pointer zone" @click="ouvmajinfo">(pas de commentaire à propos du groupe)</div>
+          <div class="zone cursor-pointer" @click="ouvrirmc">
+            <span class="titre-sm q-pr-sm">Mots clés :</span>
+            <apercu-motscles :motscles="state.motsclesGr" :src="m.mc" :groupe-id="g.id" :args-click="m" @click-mc="ouvrirmc"/>
+          </div>
+        </div>
+      </div>
+
+      <q-btn class="col-auto q-ml-sm" size="md" icon="menu" flat dense>
+        <q-menu transition-show="scale" transition-hide="scale">
+          <q-list dense class="bord1">
+            <q-item v-if="(m.stx === 0 || m.stx === 3 || m.stx === 4) && g.maxStp() === 2" clickable v-ripple v-close-popup @click="ouvririnvitcontact">
+              <q-item-section avatar>
+                <q-icon dense name="open_in_new" color="primary" size="md"/>
+              </q-item-section>
+              <q-item-section>Inviter ce contact</q-item-section>
+            </q-item>
+            <q-separator v-if="m.stx === 1 && m.estAc"/>
+            <q-item v-if="m.stx === 1 && m.estAc" clickable v-ripple v-close-popup @click="accepterinvit">
+              <q-item-section avatar>
+                <q-icon dense name="check" color="primary" size="md"/>
+              </q-item-section>
+              <q-item-section>Accepter l'invitation</q-item-section>
+            </q-item>
+            <q-separator v-if="m.stx === 1 && m.estAc" />
+            <q-item v-if="m.stx === 1 && m.estAc" clickable v-ripple v-close-popup @click="refuserinvit">
+              <q-item-section avatar>
+                <q-icon dense name="not_interested" color="primary" size="md"/>
+              </q-item-section>
+              <q-item-section>Refuser l'invitation</q-item-section>
+            </q-item>
+            <q-separator v-if="g.maxStp() === 2 && m.stx >= 1 && m.stx <= 2 && m.stp < 2" />
+            <q-item v-if="g.maxStp() === 2 && m.stx >= 1 && m.stx <= 2 && m.stp < 2" clickable v-ripple v-close-popup @click="resilier">
+              <q-item-section avatar>
+                <q-icon dense name="close" color="warning" size="sm"/>
+              </q-item-section>
+              <q-item-section>Résilier du groupe</q-item-section>
+            </q-item>
+            <q-separator v-if="m.stp === 2 && m.estAc"/>
+            <q-item v-if="m.stx === 2 && m.estAc" clickable v-ripple v-close-popup @click="autoresilier">
+              <q-item-section avatar>
+                <q-icon dense name="close" color="warning" size="sm"/>
+              </q-item-section>
+              <q-item-section>S'auto-résilier du groupe</q-item-section>
+            </q-item>
+            <q-separator v-if="g.maxStp() === 2 && m.stx >= 1 && m.stx <= 2 && (m.stp < 2 || m.estAc)" />
+            <q-item v-if="g.maxStp() === 2 && m.stx >= 1 && m.stx <= 2 && (m.stp < 2 || m.estAc)" clickable v-ripple v-close-popup @click="changerlaa">
+              <q-item-section avatar>
+                <q-icon dense name="close" color="warning" size="sm"/>
+              </q-item-section>
+              <q-item-section>Changer le niveau d'habilitation</q-item-section>
+            </q-item>
+          </q-list>
+        </q-menu>
+      </q-btn>
+    </div>
+  </q-card>
 
   <q-dialog v-if="sessionok" v-model="ardedit">
     <q-card class="petitelargeur shadow-8">
@@ -121,11 +135,8 @@
       </q-card-section>
       <q-separator/>
       <q-card-section>
-        <div class="titre-lg">Contact sélectionné : {{m.namb.nom}}</div>
-        <div class="q-my-sm row">
-          <img class="col-auto photomax" :src="m.namb.photo || phdefa"/>
-          <show-html class="col q-ml-md bord1 height-6" :texte="m.namb.info || ''"/>
-        </div>
+        <div class="titre-lg">Contact sélectionné :</div>
+        <fiche-avatar :na-avatar="m.namb" contacts groupes/>
       </q-card-section>
       <q-card-section>
         <div class="q-gutter-md q-ma-sm">
@@ -148,11 +159,8 @@
       </q-card-section>
       <q-separator/>
       <q-card-section>
-        <div class="titre-lg">Membre sélectionné : {{m.namb.nom}}</div>
-        <div class="q-my-sm row">
-          <img class="col-auto photomax" :src="m.namb.photo || phdefa"/>
-          <show-html class="col q-ml-md bord1 height-6" :texte="m.namb.info || ''"/>
-        </div>
+        <div class="titre-lg">Membre sélectionné :</div>
+        <fiche-avatar :na-avatar="m.namb" contacts groupes/>
       </q-card-section>
       <q-card-section>
         <div class="q-gutter-md q-ma-sm">
@@ -169,12 +177,11 @@
     </q-card>
   </q-dialog>
 
-</q-card>
+</div>
 </template>
 <script>
 import { computed, reactive, watch, ref, toRef } from 'vue'
 import { useStore } from 'vuex'
-// import { useQuasar } from 'quasar'
 import { Motscles, cfg, afficherdiagnostic } from '../app/util.mjs'
 import { data } from '../app/modele.mjs'
 import ShowHtml from './ShowHtml.vue'
@@ -182,15 +189,15 @@ import FicheAvatar from './FicheAvatar.vue'
 import SelectMotscles from './SelectMotscles.vue'
 import ApercuMotscles from './ApercuMotscles.vue'
 import EditeurMd from './EditeurMd.vue'
+import TitreBanner from './TitreBanner.vue'
 import { MajLAAMembre, AcceptInvitGroupe, RefusInvitGroupe, MajMcMembre, MajArdMembre, MajInfoMembre, InviterGroupe, ResilierMembreGroupe } from '../app/operations.mjs'
-import { retourInvitation } from '../app/page.mjs'
 
 export default ({
   name: 'PanelGroupe',
 
-  components: { ShowHtml, ApercuMotscles, FicheAvatar, SelectMotscles, EditeurMd },
+  components: { TitreBanner, ShowHtml, ApercuMotscles, FicheAvatar, SelectMotscles, EditeurMd },
 
-  props: { groupe: Object, membre: Object, idx: Number },
+  props: { groupe: Object, membre: Object, idx: Number, close: Function },
 
   computed: { },
 
@@ -204,6 +211,7 @@ export default ({
 
   methods: {
     dkli (idx) { return this.$q.dark.isActive ? (idx ? 'sombre' + (idx % 2) : 'sombre0') : (idx ? 'clair' + (idx % 2) : 'clair0') },
+    fermer () { if (this.close) this.close() },
 
     ouvrirmc () { this.mcledit = true },
     fermermcl () { this.mcledit = false },
@@ -225,10 +233,6 @@ export default ({
     async changerinfombc (texte) {
       await new MajInfoMembre().run(this.m, texte)
       this.infoedit = false
-    },
-
-    copier () {
-      retourInvitation(this.m.namb)
     },
 
     async inviter () {
@@ -288,10 +292,6 @@ export default ({
     const phdefa = cfg().avatar
     const avatar = computed(() => { return $store.state.db.avatar })
 
-    const invitationattente = computed({
-      get: () => $store.state.ui.invitationattente,
-      set: (val) => $store.commit('ui/majinvitationattente', val)
-    })
     const mode = computed(() => $store.state.ui.mode)
     const prefs = computed(() => { return data.getPrefs() })
     const cvs = computed(() => { return $store.state.db.cvs })
@@ -347,7 +347,6 @@ export default ({
       mode,
       options: ['Tous', 'Pressentis', 'Invités', 'Actifs', 'Inactivés', 'Refusés', 'Résiliés', 'Disparus'],
       statuts: ['simple contact', 'invité', 'actif', 'refusé', 'résilié', 'disparu'],
-      invitationattente,
       mcledit,
       ardedit,
       infoedit,
@@ -369,4 +368,18 @@ export default ({
   border: 1px solid $warning
 .itemcourant
   border: 1px solid transparent
+$haut: 3.5rem
+.top
+  position: absolute
+  top: 0
+  left: 0
+  height: $haut
+  overflow: hidden
+  z-index: 2
+.filler
+  height: $haut
+  width: 100%
+.q-toolbar
+  padding: 2px !important
+  min-height: 0 !important
 </style>

@@ -8,9 +8,6 @@
         <q-item-section>Liste des contacts</q-item-section>
       </q-item>
       <q-separator />
-      <q-item v-if="invitationattente" clickable v-close-popup @click="copier">
-        <q-item-section class="titre-lg text-bold text-grey-8 bg-yellow-4 q-mx-sm text-center">[Contact !]</q-item-section>
-      </q-item>
       <q-separator v-if="ppc"/>
       <q-item v-if="ppc" clickable v-close-popup @click="acceptctc=true">
         <q-item-section>Accepter la proposition de contact</q-item-section>
@@ -128,7 +125,6 @@
 <script>
 import { computed, toRef } from 'vue'
 import { useStore } from 'vuex'
-import { retourInvitation } from '../app/page.mjs'
 import { cfg, edvol } from '../app/util.mjs'
 import { AccepterCouple, DeclinerCouple, ProlongerParrainage, SupprimerCouple, SuspendreCouple, ReactiverCouple } from '../app/operations.mjs'
 import { useQuasar } from 'quasar'
@@ -191,10 +187,6 @@ export default ({
       }, 100)
     },
 
-    copier () {
-      retourInvitation(this.c || this.couple)
-    },
-
     async accepter () {
       const x = this.c || this.couple
       await new AccepterCouple().run(x, this.ard, this.max)
@@ -227,10 +219,6 @@ export default ({
     const avatarcpform = computed({
       get: () => $store.state.ui.avatarcpform,
       set: (val) => $store.commit('ui/majavatarcpform', val)
-    })
-    const invitationattente = computed({
-      get: () => $store.state.ui.invitationattente,
-      set: (val) => $store.commit('ui/majinvitationattente', val)
     })
     const evtfiltresecrets = computed({ // secret courant
       get: () => $store.state.ui.evtfiltresecrets,
@@ -332,8 +320,7 @@ export default ({
       avatar,
       avatarcpform,
       evtfiltresecrets,
-      tabavatar,
-      invitationattente
+      tabavatar
     }
   }
 })

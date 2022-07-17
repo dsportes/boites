@@ -1718,7 +1718,7 @@ export class Membre {
   get stp () { return this.st < 0 ? -1 : this.st % 10 }
 
   // De l'avatar membre
-  get estAc () { return data.data.getCompte().estAc(this.namb.id) }
+  get estAc () { return data.getCompte().estAc(this.namb.id) }
   get cvm () { return data.getCv(this.namb.id) }
   get photom () { const cv = this.cvm; return cv ? cv[0] : '' }
   get infom () { const cv = this.cvm; return cv ? cv[1] : '' }

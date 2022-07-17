@@ -2,7 +2,7 @@
   <q-card v-if="sessionok && groupe" class="full-height full-width fs-md column">
     <div style="min-height:35px"></div>
 
-    <identite-cv v-if="state.g" :nom-avatar="state.g.na" type="groupe" :editable="anim" @cv-changee="cvchangee"/>
+    <fiche-avatar v-if="state.g" :na-avatar="state.g.na" :cv-editable="anim"/>
 
     <div class="titre-md">
       <q-toggle v-model="state.arch" left-label :disable="!anim" size="sm" :color="state.arch ? 'warning' : 'green'"
@@ -85,7 +85,7 @@
     <div v-if="state.g" class="bg-secondary text-white q-my-sm row justify-between">
       <div class="titre-lg ">Membres du groupe</div>
       <q-btn v-if="state.g && state.g.maxStp() >= 1" size="sm" dense color="primary" icon="add"
-        label="Ajouter un contact" @click="panelinvit=true"/>
+        label="Ajouter un contact" @click="ouvrirPanelInvit"/>
     </div>
 
     <div v-if="state.g" class="q-mt-md">
@@ -99,31 +99,39 @@
       <q-card class="petitelargeur q-pa-sm">
         <q-toolbar class="bg-secondary text-white">
           <q-toolbar-title class="titre-lg">Enregistrement d'un membre pressenti (pas encore "invité") du groupe</q-toolbar-title>
-          <q-btn class="chl" dense flat size="md" icon="chevron_right" @click="panelinvit=false"/>
+          <q-btn class="chl" dense flat size="md" icon="chevron_right" @click="fermerPanelInvit"/>
         </q-toolbar>
-      <q-card-section>
-        <div v-if="clipboard === null">
-          <div class="text-italic titre-md">Sélectionner dans les listes de contacts ou des membres des groupes l'avatar à enregistrer comme simple contact du groupe.</div>
-          <div class="titre-md">L'option de menu <span class="titre-lg text-bold text-grey-8 bg-yellow-4 q-mx-sm">[Contact !]</span> ramènera à ce dialogue pour valider (ou non) l'inscription du contact.</div>
-        </div>
-      </q-card-section>
-      <q-card-section v-if="state.diagInvit !== null">
-        <div :class="state.diagInvit[0] >= 2 ? 'text-negative text-bold fs-lg':''">{{state.diagInvit[1]}}</div>
-      </q-card-section>
-      <q-card-section v-if="state.nacopie !== null">
-        <div class="titre-lg">Avatar sélectionné : {{state.nacopie.nom}}</div>
-        <div class="q-my-sm row">
-          <img class="col-auto photomax" :src="state.nacopie.photo || phdefa"/>
-          <show-html class="col q-ml-md bord1 height-6" :texte="state.nacopie.info || ''"/>
-        </div>
-      </q-card-section>
-      <q-card-actions align="center" vertical>
-        <q-btn flat dense color="primary" icon="close" label="Je renonce" @click="fermerPanelInvit"/>
-        <q-btn v-if="clipboard !== null" flat dense color="warning" icon="undo" label="Je veux rechercher un autre contact" @click="inviterAtt"/>
-        <q-btn v-if="clipboard !== null" :disable="state.diagInvit && state.diagInvit[0] >= 2" dense color="warning"
-          icon="check" label="Je valide ce nouveau contact" @click="validerContact"/>
-        <q-btn v-if="clipboard === null" dense color="warning" label="J'ai compris, je vais chercher mon contact" @click="inviterAtt"/>
-      </q-card-actions>
+
+        <q-card-section>
+          <div v-if="cref.na" class="titre-md">Dernière référence copiée :
+            <span class="font-mono fs-md q-pr-sm text-bold text-warning">{{cref.na.nom}}</span>
+            <div class="titre-md">Si la référence n'est pas celle souhaitée :</div>
+          </div>
+          <div v-else class="titre-md">Aucune référence copiée.</div>
+          <div class="titre-md q-ml-md">(1) Ouvrir le répertoire des contacts en appuyant sur ce bouton
+            <q-btn class="q-ma-xs" dense color="primary" size="sm" label="Contacts" icon="visibility"
+              @click="panelcontacts=true"/>
+          </div>
+          <div class="titre-md q-ml-md">(2) Rechercher l'avatar souhaité et cliquer sur le bouton
+            <q-icon class="qpx-sm" name="content_copy" color="primary" size="sm"/> situé à côté du nom
+          </div>
+          <div class="titre-md q-ml-md">(3) Fermer le panneau des contacts (chevron en haut à droite)
+          </div>
+        </q-card-section>
+
+        <q-card-section v-if="state.diagInvit !== null">
+          <div :class="state.diagInvit[0] >= 2 ? 'text-negative bg-yellow-4 text-bold fs-lg':''">{{state.diagInvit[1]}}</div>
+        </q-card-section>
+        <q-card-section v-if="state.nacopie !== null">
+          <div class="titre-lg">Avatar sélectionné :</div>
+          <fiche-avatar :na-avatar="state.nacopie" contacts groupes no-menu/>
+        </q-card-section>
+
+        <q-card-actions align="center" vertical>
+          <q-btn flat dense color="primary" icon="close" label="Je renonce" @click="fermerPanelInvit"/>
+          <q-btn v-if="state.nacopie !== null" :disable="state.diagInvit && state.diagInvit[0] >= 2" dense color="warning"
+            icon="check" label="Je valide ce nouveau contact" @click="validerContact"/>
+        </q-card-actions>
       </q-card>
     </q-dialog>
 
@@ -168,24 +176,23 @@
   </q-card>
 </template>
 <script>
-import { computed, reactive, watch, toRef, onMounted, ref } from 'vue'
+import { computed, reactive, watch, toRef, ref } from 'vue'
 import { useStore } from 'vuex'
 import { useQuasar } from 'quasar'
-import { Motscles, cfg, edvol, FiltreMbr, getJourJ, afficherdiagnostic } from '../app/util.mjs'
+import { Motscles, edvol, FiltreMbr, getJourJ, afficherdiagnostic, NomAvatar } from '../app/util.mjs'
 import { data } from '../app/modele.mjs'
 import { MajMcGroupe, MajArchGroupe, MajBIGroupe, MajDBIGroupe, FinHebGroupe, DebHebGroupe, MajvmaxGroupe, ContactGroupe, MajCv } from '../app/operations.mjs'
-import ShowHtml from './ShowHtml.vue'
-import IdentiteCv from './IdentiteCv.vue'
 import PanelMembre from './PanelMembre.vue'
 import MotsCles from './MotsCles.vue'
 import ChoixForfaits from './ChoixForfaits.vue'
 import NouveauGroupe from './NouveauGroupe.vue'
-import TitreBanner from '../components/TitreBanner.vue'
+import TitreBanner from './TitreBanner.vue'
+import FicheAvatar from './FicheAvatar.vue'
 
 export default ({
   name: 'PanelGroupe',
 
-  components: { TitreBanner, ShowHtml, MotsCles, ChoixForfaits, IdentiteCv, PanelMembre, NouveauGroupe },
+  components: { TitreBanner, MotsCles, ChoixForfaits, FicheAvatar, PanelMembre, NouveauGroupe },
 
   props: { groupe: Object, suivant: Function, precedent: Function, index: Number, sur: Number },
 
@@ -237,21 +244,6 @@ export default ({
     suiv (n) { if (this.suivant) this.suivant(n) },
     prec (n) { if (this.precedent) this.precedent(n) },
 
-    inviterAtt () {
-      this.clipboard = null
-      this.state.nacopie = null
-      this.panelinvit = false
-      const avid = this.avatar.id
-      const grid = this.state.g.id
-      this.invitationattente = { avid, grid }
-    },
-
-    fermerPanelInvit () {
-      this.clipboard = null
-      this.state.nacopie = null
-      this.panelinvit = false
-    },
-
     async debheb () {
       const m = this.state.g.membreParId(this.avatar.id)
       if (!m) return
@@ -271,10 +263,8 @@ export default ({
     },
     async validerContact () {
       const na = this.state.nacopie
-      this.state.nacopie = null
-      this.clipboard = null
-      this.invitationattente = null
       await new ContactGroupe().run(this.state.g.id, na, this.avatar.id)
+      this.state.nacopie = null
       this.panelinvit = false
     }
   },
@@ -284,6 +274,9 @@ export default ({
     const $store = useStore()
     const hebedit = ref(false)
     const mcgedit = ref(false)
+    const panelinvit = ref(false)
+    const groupe = toRef(props, 'groupe')
+
     const sessionok = computed(() => { return $store.state.ui.sessionok })
     const tabavatar = computed({
       get: () => $store.state.ui.tabavatar,
@@ -293,28 +286,24 @@ export default ({
       get: () => $store.state.ui.evtfiltresecrets,
       set: (val) => $store.commit('ui/majevtfiltresecrets', val)
     })
-    const groupe = toRef(props, 'groupe')
     const avatargrform = computed({
       get: () => $store.state.ui.avatargrform,
       set: (val) => $store.commit('ui/majavatargrform', val)
     })
+    const panelcontacts = computed({
+      get: () => $store.state.ui.panelcontacts,
+      set: (val) => $store.commit('ui/majpanelcontacts', val)
+    })
 
-    const phdefg = cfg().groupe
-    const phdefa = cfg().avatar
     const avatar = computed(() => { return $store.state.db.avatar })
 
-    const panelinvit = computed({
-      get: () => $store.state.ui.panelinvit,
-      set: (val) => $store.commit('ui/majpanelinvit', val)
-    })
     const clipboard = computed({
       get: () => $store.state.ui.clipboard,
       set: (val) => $store.commit('ui/majclipboard', val)
     })
-    const invitationattente = computed({
-      get: () => $store.state.ui.invitationattente,
-      set: (val) => $store.commit('ui/majinvitationattente', val)
-    })
+
+    const cref = reactive({ na: null })
+
     const mode = computed(() => $store.state.ui.mode)
     const prefs = computed(() => { return data.getPrefs() })
     const membres = computed(() => { return groupe.value ? data.getMembre(groupe.value.id) : {} })
@@ -398,8 +387,14 @@ export default ({
       state.lst = l
     }
 
+    function setCref () {
+      const x = clipboard.value
+      cref.na = x && x instanceof NomAvatar ? x : null
+      if (panelinvit.value) traiterClipboard()
+    }
+
     function traiterClipboard () {
-      const na = clipboard.value
+      const na = cref.na
       if (!na) return
       if (na === 'KO') {
         state.nacopie = null
@@ -488,8 +483,7 @@ export default ({
       })
 
       watch(() => clipboard.value, (ap, av) => {
-        if (!sessionok.value) return
-        traiterClipboard()
+        setCref()
       })
 
       watch(() => sessionok.value, (ap, av) => {
@@ -501,22 +495,27 @@ export default ({
       })
     }
 
-    onMounted(() => {
-      /* Lors de l'opération de "copier / coller" d'un avatar / contact externe pour inscription à un groupe
-      le panel disparaît, ses watchs sont interrompus.
-      Au retour il faut donc a) reconstituer l'état des données, recaler le groupe courant et
-      refaire les watchs perdus. Il faut également traiter le clipboard courant
-      qui contient ou non un NomAvatar copié : la watch sur le clipboard étant perdu durant
-      durant le temps de la phase de copie, il faut explicitement le traiter (sans watch).
-      */
+    function ouvrirPanelInvit () {
+      traiterClipboard()
+      panelinvit.value = true
+    }
+
+    function fermerPanelInvit () {
+      panelinvit.value = false
+    }
+
+    function init () {
       tousleswatch()
       initState()
       chargerMcGr()
       chargerMc()
       getMembres()
       trier()
-      traiterClipboard()
-    })
+      setCref()
+      if (panelinvit.value) traiterClipboard()
+    }
+
+    init()
 
     return {
       hebedit,
@@ -525,17 +524,17 @@ export default ({
       tabavatar,
       evtfiltresecrets,
       avatargrform,
-      phdefa,
-      phdefg,
       avatar,
       recherche,
       state,
       mode,
       options: ['Tous', 'Pressentis', 'Invités', 'Actifs', 'Inactivés', 'Refusés', 'Résiliés', 'Disparus'],
       statuts: ['simple contact', 'invité', 'actif', 'refusé', 'résilié', 'disparu'],
-      invitationattente,
       panelinvit,
-      clipboard
+      panelcontacts,
+      ouvrirPanelInvit,
+      fermerPanelInvit,
+      cref
     }
   }
 })

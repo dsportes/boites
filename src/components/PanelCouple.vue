@@ -166,7 +166,6 @@ import MenuCouple from './MenuCouple.vue'
 import ShowHtml from './ShowHtml.vue'
 import TitreBanner from './TitreBanner.vue'
 import FicheAvatar from './FicheAvatar.vue'
-import { retourInvitation } from '../app/page.mjs'
 import { UNITEV1, UNITEV2 } from '../app/api.mjs'
 
 export default ({
@@ -214,11 +213,7 @@ export default ({
     },
 
     suiv (n) { if (this.suivant) this.suivant(n) },
-    prec (n) { if (this.precedent) this.precedent(n) },
-
-    copier (c) {
-      retourInvitation(c)
-    }
+    prec (n) { if (this.precedent) this.precedent(n) }
   },
 
   setup (props) {

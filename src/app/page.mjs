@@ -1,6 +1,5 @@
 import { useRouter, useRoute } from 'vue-router'
-import { cfg, store, NomAvatar } from './util.mjs'
-import { data } from './modele.mjs'
+import { cfg, store } from './util.mjs'
 
 let bootfait = false
 let $router
@@ -46,7 +45,7 @@ export function onBoot () {
 
     // l'organisation était définie et elle est inchangée
     if (!compte) {
-      // on peut aller sur Login ou Synvhro
+      // on peut aller sur Login ou Synchro
       if (to.name === 'Login') {
         $store.commit('ui/majpage', 'Login')
         return true
@@ -101,20 +100,4 @@ export async function remplacePage (page) {
   const x = { name: page }
   if (page !== 'Org') x.params = { org: store().state.ui.org }
   await $router.replace(x)
-}
-
-export function retourInvitation (nacopie) {
-  if (!nacopie) return
-  const $store = store()
-  const ctx = $store.state.ui.invitationattente
-  $store.commit('db/majavatar', data.getAvatar(ctx.avid))
-  remplacePage('Avatar')
-  $store.commit('ui/majtabavatar', 'groupes')
-  const g = data.getGroupe(ctx.grid)
-  $store.commit('db/majgroupe', g)
-  $store.commit('ui/majeditgr', true)
-  $store.commit('ui/majpanelinvit', true)
-  $store.commit('ui/majinvitationattente', null)
-  $store.commit('ui/majclipboard', nacopie instanceof NomAvatar ? nacopie.clone() : 'KO')
-  $store.commit('ui/majpanelcontacts', false)
 }
