@@ -20,7 +20,7 @@
       <span class="titre-md text-italic q-pr-sm">Avatars du compte :</span>
       <span v-for="(na, idx) in s.lavc" :key="idx" class="q-mr-md">
         <span :class="(idx === 0 ? 'text-bold' : '') + ' font-mono q-mr-xs'">{{na.nom}}</span>
-        <q-btn dense size="sm" icon="content_copy" color="primary" @click="copier(na)"/>
+        <q-btn dense size="sm" icon="content_copy" color="primary" @click="copierna(na)"/>
       </span>
     </div>
     <q-separator/>
@@ -44,7 +44,7 @@ import { computed, reactive, watch, ref } from 'vue'
 import NouveauCouple from './NouveauCouple.vue'
 import FicheAvatar from './FicheAvatar.vue'
 import { data } from '../app/modele.mjs'
-import { affichermessage } from '../app/util.mjs'
+import { copier } from '../app/util.mjs'
 
 export default ({
   name: 'PanelContacts',
@@ -68,10 +68,7 @@ export default ({
     na (id) { return data.repertoire.na(id) },
     ouvrirnvcouple (ax) { this.ax = ax; this.nvcouple = true },
     closenvcouple () { this.nvcouple = false },
-    copier (na) {
-      affichermessage(na.nom + ' copié')
-      this.$store.commit('ui/majclipboard', na)
-    }
+    copierna (na) { copier(na) }
   },
 
   setup () {

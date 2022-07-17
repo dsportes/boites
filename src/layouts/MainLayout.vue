@@ -123,6 +123,24 @@
       <panel-selchat/>
     </q-dialog>
 
+    <q-dialog v-model="tribudial" full-height position="right">
+      <div class="moyennelargeur">
+        <panel-tribu :close="fermertribu" />
+      </div>
+    </q-dialog>
+
+    <q-dialog v-model="comptadial" full-height position="right">
+      <panel-compta :cpt="comptadialobj" :close="fermercompta"/>
+    </q-dialog>
+
+    <q-dialog v-model="coupledial" full-height position="right">
+      <panel-couple :couple="coupledialobj" :close="fermercouple"/>
+    </q-dialog>
+
+    <q-dialog v-model="membredial" full-height position="right">
+      <panel-membre :groupe="membredialobj[0]" :membre="membredialobj[1]" :close="fermermembre"/>
+    </q-dialog>
+
     <q-page-container>
       <router-view v-slot="{ Component }">
         <transition appear name="fade" mode="out-in">
@@ -221,22 +239,26 @@
 import { useQuasar } from 'quasar'
 import { computed } from 'vue'
 import { useStore } from 'vuex'
-import DialogueCreationCompte from 'components/DialogueCreationCompte.vue'
-import DialogueInfoMode from 'components/DialogueInfoMode.vue'
-import DialogueInfoReseau from 'components/DialogueInfoReseau.vue'
-import DialogueInfoIdb from 'components/DialogueInfoIdb.vue'
-import DialogueTestPing from 'components/DialogueTestPing.vue'
-import PanelMenu from 'components/PanelMenu.vue'
-import DialogueErreur from 'components/DialogueErreur.vue'
-import DialogueCrypto from 'components/DialogueCrypto.vue'
-import RapportSynchro from 'components/RapportSynchro.vue'
-import DialogueHelp from 'components/DialogueHelp.vue'
-import PanelContacts from 'components/PanelContacts.vue'
-import FichiersAvion from 'components/FichiersAvion.vue'
+import DialogueCreationCompte from '../components/DialogueCreationCompte.vue'
+import DialogueInfoMode from '../components/DialogueInfoMode.vue'
+import DialogueInfoReseau from '../components/DialogueInfoReseau.vue'
+import DialogueInfoIdb from '../components/DialogueInfoIdb.vue'
+import DialogueTestPing from '../components/DialogueTestPing.vue'
+import PanelMenu from '../components/PanelMenu.vue'
+import DialogueErreur from '../components/DialogueErreur.vue'
+import DialogueCrypto from '../components/DialogueCrypto.vue'
+import RapportSynchro from '../components/RapportSynchro.vue'
+import DialogueHelp from '../components/DialogueHelp.vue'
+import PanelContacts from '../components/PanelContacts.vue'
+import FichiersAvion from '../components/FichiersAvion.vue'
 import TitreBanner from '../components/TitreBanner.vue'
 import InfoIco from '../components/InfoIco.vue'
 import PanelChat from '../components/PanelChat.vue'
 import PanelSelchat from '../components/PanelSelchat.vue'
+import PanelTribu from '../components/PanelTribu.vue'
+import PanelCompta from '../components/PanelCompta.vue'
+import PanelCouple from '../components/PanelCouple.vue'
+import PanelMembre from '../components/PanelMembre.vue'
 import { data, MODES } from '../app/modele.mjs'
 import { cfg, dhcool } from '../app/util.mjs'
 import { remplacePage, onBoot, retourInvitation } from '../app/page.mjs'
@@ -246,7 +268,7 @@ export default {
   name: 'MainLayout',
 
   components: {
-    PanelSelchat, PanelChat, FichiersAvion, TitreBanner, InfoIco, RapportSynchro, PanelMenu, PanelContacts, DialogueErreur, DialogueCrypto, DialogueCreationCompte, DialogueTestPing, DialogueInfoMode, DialogueInfoReseau, DialogueInfoIdb, DialogueHelp
+    PanelTribu, PanelCompta, PanelCouple, PanelMembre, PanelSelchat, PanelChat, FichiersAvion, TitreBanner, InfoIco, RapportSynchro, PanelMenu, PanelContacts, DialogueErreur, DialogueCrypto, DialogueCreationCompte, DialogueTestPing, DialogueInfoMode, DialogueInfoReseau, DialogueInfoIdb, DialogueHelp
   },
 
   computed: {
@@ -275,6 +297,12 @@ export default {
     togglegrform () { this.avatargrform = !this.avatargrform },
     togglescform () { this.avatarscform = !this.avatarscform },
     toggletrform () { this.avatartrform = !this.avatartrform },
+
+    fermertribu () { this.tribudial = false },
+    fermercouple () { this.coupledialobj = null },
+    fermermembre () { this.membredialobj = null },
+    fermercompta () { this.comptadialobj = null },
+
     toInvit () { retourInvitation('KO') },
 
     ouvrirchat () {
@@ -402,6 +430,25 @@ export default {
       get: () => $store.state.ui.avatartrform,
       set: (val) => $store.commit('ui/majavatartrform', val)
     })
+    const comptadial = computed(() => $store.state.ui.comptadial)
+    const coupledial = computed(() => $store.state.ui.coupledial)
+    const membredial = computed(() => $store.state.ui.membredial)
+    const tribudial = computed({
+      get: () => $store.state.ui.tribudial,
+      set: (val) => $store.commit('ui/majtribudial', val)
+    })
+    const comptadialobj = computed({
+      get: () => $store.state.ui.comptadialobj,
+      set: (val) => $store.commit('ui/majcomptadialobj', val)
+    })
+    const coupledialobj = computed({
+      get: () => $store.state.ui.coupledialobj,
+      set: (val) => $store.commit('ui/majcoupledialobj', val)
+    })
+    const membredialobj = computed({
+      get: () => $store.state.ui.membredialobj,
+      set: (val) => $store.commit('ui/majmembredialobj', val)
+    })
 
     const invitationattente = computed(() => $store.state.ui.invitationattente)
 
@@ -433,8 +480,6 @@ export default {
       MODES[data.modeInitial] + '" à "' + MODES[data.mode] + '".'
     }
 
-    // watch(() => chat.value, (ap, av) => { console.log('Chgt de chat: ' + (ap ? ap.v : '?')) })
-
     return {
       org,
       orgicon,
@@ -457,6 +502,14 @@ export default {
       avatarscform,
       avatartrform,
       invitationattente,
+
+      tribudial,
+      comptadial,
+      comptadialobj,
+      coupledial,
+      coupledialobj,
+      membredial,
+      membredialobj,
 
       compte,
       prefs,

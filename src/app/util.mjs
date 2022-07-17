@@ -44,6 +44,11 @@ export function setup (gp, appconfig, router, store, pako1) {
   // testgz()
 }
 
+export function copier (na) {
+  affichermessage(na.nom + ' copié')
+  $store.commit('ui/majclipboard', na)
+}
+
 export function dhstring (date) { return dtf.format(date) }
 
 export function aujhier () {
@@ -818,6 +823,7 @@ export class NomAvatar {
   }
 
   get photoDef () {
+    if (this.id === IDCOMPTABLE) return $cfg.superman
     if (this.disparu) return $cfg.disparu
     const cv = data.getCv(this.id)
     return !cv || !cv[0] ? $cfg.avatar : cv[0]
@@ -848,6 +854,12 @@ export class NomContact extends NomAvatar {
     this.id += 1
   }
 
+  get photoDef () {
+    if (this.disparu) return $cfg.disparu
+    const cv = data.getCv(this.id)
+    return !cv || !cv[0] ? $cfg.couple : cv[0]
+  }
+
   clone () {
     return new NomContact(this.nom, this.rnd)
   }
@@ -857,6 +869,12 @@ export class NomGroupe extends NomAvatar {
   constructor (nom, rnd) {
     super(nom, rnd)
     this.id += 2
+  }
+
+  get photoDef () {
+    if (this.disparu) return $cfg.disparu
+    const cv = data.getCv(this.id)
+    return !cv || !cv[0] ? $cfg.groupe : cv[0]
   }
 
   clone () {

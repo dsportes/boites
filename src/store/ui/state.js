@@ -17,6 +17,14 @@ export default function () {
 
     dialogueEXPS: false,
 
+    tribudial: false,
+    comptadial: false,
+    comptadialobj: null,
+    coupledial: false,
+    coupledialobj: null,
+    membredial: false,
+    membredialobj: null, // [groupeid, membreid]
+
     dialoguecrypto: false,
     dialoguehelp: false,
     dialoguecreationcompte: false,

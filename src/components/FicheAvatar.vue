@@ -2,7 +2,7 @@
   <div :class="dkli(idx) + ' row full-width fs-md q-pa-xs'">
     <div class="col-auto column items-center">
       <img class="photomax" :src="s.photo"/>
-      <q-btn dense class="q-my-xs" rounded size="sm" icon="content_copy" color="primary" @click.stop="copier" />
+      <q-btn dense class="q-my-xs" size="sm" icon="content_copy" color="primary" @click.stop="copierna" />
     </div>
     <div class="col q-pl-sm">
       <div class="row items-center">
@@ -17,7 +17,7 @@
         <q-btn v-if="!noMenu" class="q-ml-sm col-auto" dense size="md" color="primary" icon="menu">
           <q-menu transition-show="scale" transition-hide="scale">
             <div :class="' menu column fs-md font-mono'">
-              <div class="item row items-center" v-close-popup @click="copier">
+              <div class="item row items-center" v-close-popup @click="copierna">
                 <q-icon class="col-auto q-ml-sm" size="md" name="content_copy"/>
                 <span class="col">Copier</span>
               </div>
@@ -50,9 +50,9 @@
       </div>
       <div v-if="s.c.length || s.m.length">
         <span v-for="c in s.c" :key="c.id" class="q-mr-md bord2 cursor-pointer"
-          @click="ouvrirctc(c)">Contact de {{c.naI.nom}}</span>
+          @click="ouvrircouple(c)">Contact de {{c.naI.nom}}</span>
         <span v-for="m in s.m" :key="m.id" class="q-mr-md bord2 cursor-pointer"
-          @click="ouvrirmbr(m)">Membre de {{m.na.noml}}</span>
+          @click="ouvrirmembre(m)">Membre de {{m.na.noml}}</span>
       </div>
       <div v-if="actions" :class="'row justify-center q-pa-xs ' + (s.c.length || s.m.length ? 'bord3' : '')">
         <slot name="actions"></slot>
@@ -86,24 +86,6 @@
     </q-card>
   </q-dialog>
 
-  <q-dialog v-model="tribudial" full-height position="right">
-    <div class="moyennelargeur">
-      <panel-tribu :close="fermertribu" />
-    </div>
-  </q-dialog>
-
-  <q-dialog v-model="comptadial" full-height position="right">
-    <panel-compta :cpt="cpt" :close="fermercompta"/>
-  </q-dialog>
-
-  <q-dialog v-model="contactdial" full-height position="right">
-    <panel-couple :couple="couple" :close="fermerctc"/>
-  </q-dialog>
-
-  <q-dialog v-model="membredial" full-height position="right">
-    <panel-membre :groupe="groupe" :membre="membre" :close="fermermbr"/>
-  </q-dialog>
-
   <q-dialog v-model="nvcouple">
     <nouveau-couple :na-int="naint" :na-ext="s.na" :close="closenvcouple" />
   </q-dialog>
@@ -117,15 +99,10 @@ import { watch, toRef, reactive, computed, ref } from 'vue'
 import CarteVisite from './CarteVisite.vue'
 import ShowHtml from './ShowHtml.vue'
 import EditeurMd from './EditeurMd.vue'
-import PanelTribu from './PanelTribu.vue'
-import PanelCompta from './PanelCompta.vue'
 import InfoTxt from './InfoTxt.vue'
-import PanelCouple from './PanelCouple.vue'
-import PanelMembre from './PanelMembre.vue'
 import NouveauCouple from './NouveauCouple.vue'
 import { Cv, data } from '../app/modele.mjs'
-import { cfg, affichermessage } from '../app/util.mjs'
-import { IDCOMPTABLE } from '../app/api.mjs'
+import { copier } from '../app/util.mjs'
 import { GetCompta } from '../app/operations.mjs'
 
 export default ({
@@ -144,7 +121,7 @@ export default ({
     actions: Boolean // A un slot "actions"
   },
 
-  components: { NouveauCouple, PanelMembre, PanelCouple, InfoTxt, ShowHtml, CarteVisite, EditeurMd, PanelTribu, PanelCompta },
+  components: { NouveauCouple, InfoTxt, ShowHtml, CarteVisite, EditeurMd },
 
   computed: { },
 
@@ -163,13 +140,6 @@ export default ({
     ouvrircv () { if (this.cvEditable) this.cvloc = true; else this.cvdetail = true },
     closecv () { this.cvloc = false },
 
-    ouvrirtribu () {
-      const t = data.getTribu(this.naTribu.id)
-      this.tribu = t
-      this.tribudial = true
-    },
-    fermertribu () { this.tribudial = false },
-
     cvchangee (res) {
       if (res && this.naAvatar) {
         const cv = new Cv().init(this.naAvatar.id, res.ph, res.info)
@@ -177,36 +147,28 @@ export default ({
       }
     },
 
-    copier () {
-      affichermessage(this.s.na.nom + ' copié')
-      this.$store.commit('ui/majclipboard', this.s.na)
+    copierna () { copier(this.s.na) },
+
+    ouvrirtribu () {
+      this.tribu = data.getTribu(this.naTribu.id)
+      this.tribudial = true
     },
 
-    fermerctc () { this.contactdial = false },
-
-    ouvrirctc (c) {
-      this.couple = c
-      this.contactdial = true
+    ouvrircouple (c) {
+      this.coupledialobj = c
     },
 
-    fermermbr () { this.membredial = false },
-
-    ouvrirmbr (m) {
-      this.membre = m
-      this.groupe = data.getGroupe(m.id)
-      this.membredial = true
+    ouvrirmembre (m) {
+      this.membredialobj = [data.getGroupe(m.id), m]
     },
 
     async ouvrircompta () {
       const compta = await new GetCompta().run(this.s.na.id)
-      this.cpt = {
+      this.comptadialobj = {
         x: compta.compteurs,
         av: { na: this.s.na, estPrimaire: true }
       }
-      this.comptadial = true
     },
-
-    fermercompta () { this.comptadial = false },
 
     nvcontact (na) {
       this.naint = na
@@ -218,29 +180,39 @@ export default ({
 
   setup (props) {
     const $store = useStore()
-    const phavatar = cfg().avatar
-    const phsuperman = cfg().superman
-    const phdisparu = cfg().disparu
     const sessionok = computed(() => $store.state.ui.sessionok)
     const tribu = computed({ // tribu courante
       get: () => $store.state.db.tribu,
       set: (val) => $store.commit('db/majtribu', val)
     })
+    const tribudial = computed({
+      get: () => $store.state.ui.tribudial,
+      set: (val) => $store.commit('ui/majtribudial', val)
+    })
+    const comptadialobj = computed({
+      get: () => $store.state.ui.comptadialobj,
+      set: (val) => $store.commit('ui/majcomptadialobj', val)
+    })
+    const coupledialobj = computed({
+      get: () => $store.state.ui.coupledialobj,
+      set: (val) => $store.commit('ui/majcoupledialobj', val)
+    })
+    const membredialobj = computed({
+      get: () => $store.state.ui.membredialobj,
+      set: (val) => $store.commit('ui/majmembredialobj', val)
+    })
+
     const tousAx = computed(() => { return $store.state.db.tousAx })
 
     const cvloc = ref(false)
     const cvdetail = ref(false)
-    const comptadial = ref(false)
-    const contactdial = ref(false)
-    const tribudial = ref(false)
     const zoomdial = ref(false)
-    const membredial = ref(false)
     const nvcouple = ref(false)
     const naAvatar = toRef(props, 'naAvatar')
     const contacts = toRef(props, 'contacts')
     const groupes = toRef(props, 'groupes')
 
-    const s = reactive({ photo: phavatar, info: '', na: null, c: [], m: {}, lfc: [] })
+    const s = reactive({ photo: '', info: '', na: null, c: [], m: {}, lfc: [] })
 
     const cvs = computed(() => { return $store.state.db.cvs })
 
@@ -248,20 +220,8 @@ export default ({
       s.na = naAvatar.value
       if (!sessionok.value || !s.na) return
       const id = s.na.id
-      const cv = data.getCv(id)
-      if (cv) {
-        if (id === IDCOMPTABLE) {
-          s.photo = phsuperman
-        } else if (cv.x) {
-          s.photo = phdisparu
-        } else {
-          s.photo = cv[0] || phavatar
-        }
-        s.info = cv[1]
-      } else {
-        s.photo = id === IDCOMPTABLE ? phsuperman : phavatar
-        s.info = ''
-      }
+      s.photo = s.na.photoDef
+      s.info = s.na.info
       s.c = []
       s.m = []
       s.lfc = []
@@ -308,23 +268,20 @@ export default ({
     watch(() => sessionok.value, (ap, av) => {
       cvloc.value = false
       cvdetail.value = false
-      tribudial.value = false
       zoomdial.value = false
-      contactdial.value = false
-      membredial.value = false
     })
 
     init()
 
     return {
       tribu,
+      tribudial,
+      comptadialobj,
+      coupledialobj,
+      membredialobj,
       cvloc,
       cvdetail,
-      comptadial,
-      tribudial,
       zoomdial,
-      contactdial,
-      membredial,
       nvcouple,
       s,
       sessionok

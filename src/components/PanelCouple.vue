@@ -10,11 +10,8 @@
       <div v-if="s.c.stE===1" class="q-ml-md fs-sm">{{s.c.nom}} a accès aux secrets du contact</div>
       <div v-if="s.c.stE===0" class="q-ml-md fs-sm">{{s.c.nom}} n'a PAS accès aux secrets du contact</div>
       <div v-if="s.c.naE" class="q-mt-lg">
-        <fiche-avatar2 :na-avatar="s.c.naE" nomenu/>
-        <!--identite-cv :nom-avatar="s.c.naE" type="avatar" invitable/-->
+        <fiche-avatar :na-avatar="s.c.naE" nomenu/>
       </div>
-      <div class="titre-md q-mt-lg">Carte de visite spécifique du contact</div>
-      <identite-cv :nom-avatar="s.c.na" type="couple" editable @cv-changee="cvchangee"/>
     </div>
 
     <div v-if="s.c && s.c.stI===1" class="q-my-md">
@@ -165,18 +162,17 @@ import EditeurMd from './EditeurMd.vue'
 import ApercuMotscles from './ApercuMotscles.vue'
 import SelectMotscles from './SelectMotscles.vue'
 import ChoixForfaits from './ChoixForfaits.vue'
-import IdentiteCv from './IdentiteCv.vue'
 import MenuCouple from './MenuCouple.vue'
 import ShowHtml from './ShowHtml.vue'
 import TitreBanner from './TitreBanner.vue'
-import FicheAvatar2 from './FicheAvatar2.vue'
+import FicheAvatar from './FicheAvatar.vue'
 import { retourInvitation } from '../app/page.mjs'
 import { UNITEV1, UNITEV2 } from '../app/api.mjs'
 
 export default ({
   name: 'PanelCouple',
 
-  components: { FicheAvatar2, TitreBanner, EditeurMd, MenuCouple, ApercuMotscles, SelectMotscles, IdentiteCv, ChoixForfaits, ShowHtml },
+  components: { FicheAvatar, TitreBanner, EditeurMd, MenuCouple, ApercuMotscles, SelectMotscles, ChoixForfaits, ShowHtml },
 
   props: { couple: Object, suivant: Function, precedent: Function, index: Number, sur: Number, close: Function },
 

@@ -1,3 +1,4 @@
+/* eslint-disable no-unneeded-ternary */
 let nummessage = 1
 
 export function razdialogues (state) {
@@ -19,6 +20,10 @@ export function razdialogues (state) {
   majdialoguetestping(state, false)
   majdialoguecreationcompte(state, false)
   majdialoguedlselection(state, false)
+  majtribudial(state, false)
+  majcomptadialobj(state, null)
+  majcoupledialobj(state, null)
+  majmembredialobj(state, null)
 }
 
 export function majstatutsession (state, val) {
@@ -99,6 +104,17 @@ export function majclipboard (state, val) { state.clipboard = val }
 export function majpanelinvit (state, val) { state.panelinvit = val }
 
 export function majetapefichier (state, val) { state.etapefichier = val }
+
+export function majtribudial (state, val) { state.tribudial = val }
+export function majcomptadialobj (state, val) {
+  state.comptadialobj = val; state.comptadial = val === null ? false : true
+}
+export function majcoupledialobj (state, val) {
+  state.coupledialobj = val; state.coupledial = val === null ? false : true
+}
+export function majmembredialobj (state, val) {
+  state.membredialobj = val; state.membredial = val === null ? false : true
+}
 
 export function pushhelp (state, page) {
   if (state.helpstack.length === 0) state.dialoguehelp = true

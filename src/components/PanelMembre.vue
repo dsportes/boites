@@ -1,7 +1,7 @@
 <template>
 <q-card :class="dkli(idx) + ' shadow-8 zone q-px-xs full-width row items-start'">
   <div class="col">
-    <identite-cv :nom-avatar="m.namb" type="avatar" :idx="idx"/>
+    <fiche-avatar :na-avatar="m.namb" nomenu/>
 
     <div>
       <q-icon v-if="m.estAc" class="q-mr-xs" size="sm" color="warning" name="stars"/>
@@ -178,7 +178,7 @@ import { useStore } from 'vuex'
 import { Motscles, cfg, afficherdiagnostic } from '../app/util.mjs'
 import { data } from '../app/modele.mjs'
 import ShowHtml from './ShowHtml.vue'
-import IdentiteCv from './IdentiteCv.vue'
+import FicheAvatar from './FicheAvatar.vue'
 import SelectMotscles from './SelectMotscles.vue'
 import ApercuMotscles from './ApercuMotscles.vue'
 import EditeurMd from './EditeurMd.vue'
@@ -188,7 +188,7 @@ import { retourInvitation } from '../app/page.mjs'
 export default ({
   name: 'PanelGroupe',
 
-  components: { ShowHtml, ApercuMotscles, IdentiteCv, SelectMotscles, EditeurMd },
+  components: { ShowHtml, ApercuMotscles, FicheAvatar, SelectMotscles, EditeurMd },
 
   props: { groupe: Object, membre: Object, idx: Number },
 

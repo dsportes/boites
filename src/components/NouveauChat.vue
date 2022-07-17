@@ -12,19 +12,22 @@
       <editeur-md class="q-ma-sm" texte="" v-model="texte" editable modetxt style="height:8rem"></editeur-md>
 
       <q-expansion-item header-class="bg-secondary text-white" label="Attacher des références d'avatars">
-        <div class="titre-md">1 - Copier une référence :</div>
-        <div class="titre-md q-ml-sm">- Ouvrir le répertoire des contacts en appuyant sur ce bouton
+        <div v-if="cref.na" class="titre-md">Dernière référence copiée :
+          <span class="font-mono fs-md q-pr-sm text-bold text-warning">{{cref.na.nom}}</span>
+          <div v-if="cref.na" class="titre-md q-my-sm">Si la référence est celle souhaitée :
+            <q-btn class="q-mr-sm" dense color="primary" size="md" no-caps label="cliquer ici" @click="collerref"/>
+          </div>
+          <div class="titre-md">Sinon :</div>
+        </div>
+        <div v-else class="titre-md">Aucune référence copiée.</div>
+        <div class="titre-md q-ml-md">(1) Ouvrir le répertoire des contacts en appuyant sur ce bouton
           <q-btn class="q-ma-xs" dense color="primary" size="sm" label="Contacts" icon="visibility"
             @click="panelcontacts=true"/>
         </div>
-        <div class="titre-md q-ml-sm">- Rechercher l'avatar souhaité et cliquer sur le bouton
+        <div class="titre-md q-ml-md">(2) Rechercher l'avatar souhaité et cliquer sur le bouton
           <q-icon class="qpx-sm" name="content_copy" color="primary" size="sm"/> situé à côté du nom
         </div>
-        <div class="titre-md">2 - Fermer le panneau des contacts (chevron en haut à droite)
-        </div>
-        <div class="titre-md">3 - Coller la référence en appuyant sue ce bouton
-          <q-btn class="q-ma-xs" dense color="primary" size="sm" label="Coller" icon="content_paste"
-            @click="collerref"/>
+        <div class="titre-md q-ml-md">(3) Fermer le panneau des contacts (chevron en haut à droite)
         </div>
         <div><span :class="'titre-md text-italic text-bold' + (lrefs.length ? ' text-warning' : ' text-primary')">Références attachées:</span>
           <span v-if="lrefs.length===0" class="q-ml-md font-mono">(aucune)</span>
@@ -44,10 +47,10 @@
 <script>
 
 import { useStore } from 'vuex'
-import { ref, computed } from 'vue'
+import { ref, computed, reactive, watch } from 'vue'
 import EditeurMd from './EditeurMd.vue'
 import { NouveauChat } from '../app/operations.mjs'
-import { affichermessage } from '../app/util.mjs'
+import { NomAvatar } from '../app/util.mjs'
 
 export default ({
   name: 'NouveauChat',
@@ -67,10 +70,7 @@ export default ({
       this.fermer()
     },
     collerref () {
-      const c = this.clipboard
-      if (!c) { affichermessage('Rien n\'avait été copié !'); return }
-      this.lrefs.push([c.nom, c.rnd])
-      this.clipboard = null
+      this.lrefs.push([this.cref.na.nom, this.cref.na.rnd])
     },
     supref (idx) {
       this.lrefs.splice(idx, 1)
@@ -91,9 +91,22 @@ export default ({
     const st = ref(0)
     if (chat.value) st.value = chat.value.st
 
+    function setCref () {
+      const x = clipboard.value
+      cref.na = x && x instanceof NomAvatar ? x : null
+    }
+
+    const cref = reactive({ na: null })
+    setCref()
+
+    watch(() => clipboard.value, (ap, av) => {
+      setCref()
+    })
+
     return {
       clipboard,
       panelcontacts,
+      cref,
       st,
       chat
     }
