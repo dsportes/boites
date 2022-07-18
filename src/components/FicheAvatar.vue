@@ -7,14 +7,15 @@
     <div class="col q-pl-sm">
       <div class="row items-center">
         <div class="col-auto">
-          <info-txt class="bord2" :label="s.na.nom" noicon :info="s.na.nom + ' ID:' + s.na.id"/>
-          <span v-if="parrain" class="q-ml-sm text-bold text-warning">PARRAIN</span>
-          <q-btn v-if="naTribu" class="q-ml-sm" :label="naTribu.nom" dense no-caps color="primary" @click.stop="ouvrirtribu"/>
+          <info-txt :class="s.primaire ? 'bord2p' :'bord2'" :label="s.na.nom" noicon :info="s.na.nom + ' ID:' + s.na.id"/>
+          <span v-if="s.primaire" class="q-ml-sm">Compte</span>
+          <span v-if="s.parrain" class="q-ml-sm text-bold text-warning">PARRAIN</span>
+          <q-btn v-if="s.naTribu" class="q-ml-sm" :label="s.naTribu.nom" dense no-caps color="primary" @click.stop="ouvrirtribu"/>
         </div>
         <q-space/>
         <slot name="statut" class="col-auto text-right">
         </slot>
-        <q-btn v-if="!noMenu" class="q-ml-sm col-auto" dense size="md" color="primary" icon="menu">
+        <q-btn v-if="!noMenu" class="q-ml-sm col-auto" dense size="md" color="primary" icon="more_horiz">
           <q-menu transition-show="scale" transition-hide="scale">
             <div :class="' menu column fs-md font-mono'">
               <div class="item row items-center" v-close-popup @click="copierna">
@@ -25,6 +26,10 @@
               <div v-if="cvEditable" class="item row items-center" v-close-popup @click="ouvrircv">
                 <q-icon class="col-auto q-ml-sm" size="md" name="mode_edit"/>
                 <span class="col">Éditer la carte de visite</span>
+              </div>
+              <div class="item row items-center" v-close-popup @click="parraintribu">
+                <q-icon class="col-auto" size="md" name="question_mark"/>
+                <q-item-section>En savoir plus ...</q-item-section>
               </div>
               <q-separator v-if="compta"/>
               <div v-if="compta" class="item row items-center" v-close-popup @click="ouvrircompta">
@@ -102,8 +107,8 @@ import EditeurMd from './EditeurMd.vue'
 import InfoTxt from './InfoTxt.vue'
 import NouveauCouple from './NouveauCouple.vue'
 import { Cv, data } from '../app/modele.mjs'
-import { copier } from '../app/util.mjs'
-import { GetCompta } from '../app/operations.mjs'
+import { copier, afficherdiagnostic } from '../app/util.mjs'
+import { GetCompta, GetTribuCompte, EstParrainTribu } from '../app/operations.mjs'
 
 export default ({
   name: 'FicheAvatar',
@@ -111,11 +116,9 @@ export default ({
   props: {
     naAvatar: Object, // na de l'avatar
     cvEditable: Boolean, // Si true la cv est editable et est reçue sur @cv-changee
-    parrain: Boolean, // affiche PARRAIN à côté du nom
     compta: Boolean, // Si true, option de menu de la compta
     idx: Number,
     noMenu: Boolean, // Si true le bouton menu (et le menu) n'apparaissent pas
-    naTribu: Object, // Si présent, le nom de la tribu est affiché avec un lien pour ouvrir le panel
     contacts: Boolean, // Si true affiche la liste de ses contacts
     groupes: Boolean, // Si true affiche la liste de ses groupes (membres)
     actions: Boolean // A un slot "actions"
@@ -150,8 +153,10 @@ export default ({
     copierna () { copier(this.s.na) },
 
     ouvrirtribu () {
-      this.tribu = data.getTribu(this.naTribu.id)
-      this.tribudial = true
+      if (this.s.naTribu) {
+        this.tribu = data.getTribu(this.s.naTribu.id)
+        this.tribudial = true
+      }
     },
 
     ouvrircouple (c) {
@@ -163,10 +168,33 @@ export default ({
     },
 
     async ouvrircompta () {
-      const compta = await new GetCompta().run(this.s.na.id)
+      const id = this.s.na.id
+      const c = this.compte
+      let compta = null
+      if (c.id === id) {
+        compta = data.getCompta(id)
+      } else {
+        compta = await new GetCompta().run(id)
+        if (!c.estComptable) {
+          if (!c.stp) {
+            afficherdiagnostic('Seul un compte parrain peut accéder à la comptabilité des autres comptes (de la même tribu)')
+            return
+          } else {
+            const st = await new EstParrainTribu().run(id)
+            if (st === 0) {
+              afficherdiagnostic('Cet avatar n`est pas de la même tribu.' +
+                'Impossible d\'accéder à sa comptabilité')
+              return
+            }
+          }
+        }
+      }
       this.comptadialobj = {
         x: compta.compteurs,
-        av: { na: this.s.na, estPrimaire: true }
+        av: {
+          na: this.s.na,
+          estPrimaire: compta.estPrimaire
+        }
       }
     },
 
@@ -175,12 +203,62 @@ export default ({
       this.nvcouple = true
     },
 
-    closenvcouple () { this.nvcouple = false }
+    closenvcouple () { this.nvcouple = false },
+
+    async parraintribu () {
+      const id = this.s.na.id
+      const c = this.compte
+      if (c.estComptable) {
+        const compta = await new GetCompta().run(id)
+        this.s.primaire = compta.t
+        if (!compta.t) {
+          afficherdiagnostic('Cet avatar n`est pas l`avatar primaire de son compte.' +
+            'Impossible de savoir si son compte est parrain ou non et de quelle tribu')
+          return
+        }
+        const [parrain, naTribu] = await new GetTribuCompte().run(id)
+        this.s.parrain = parrain
+        this.s.naTribu = naTribu
+        afficherdiagnostic(`${parrain ? 'Parrain' : 'N\'est pas parrain'}
+         - Tribu : ${naTribu.nom}`)
+        return
+      }
+      if (c.id === id) {
+        const compta = data.getCompta(id)
+        this.s.primaire = compta.t
+        this.s.parrain = c.stp
+        this.s.naTribu = c.nat
+        return
+      }
+      const st = await new EstParrainTribu().run(id)
+      /*
+      0 - id n'est pas primaire
+      1 - id est primaire pas de la même tribu
+      2 - id est primaire et de la même tribu
+      3 - id est parrain de la même tribu
+      */
+      if (st === 0) {
+        this.s.primaire = 0
+        afficherdiagnostic('Cet avatar n`est pas l`avatar primaire de son compte ou la création de son compte est en attente.' +
+          'Impossible de savoir si son compte est parrain ou non et de quelle tribu')
+        return
+      }
+      this.s.primaire = 1
+      if (st === 1) {
+        afficherdiagnostic('Cet avatar n`est pas de la même tribu que la votre.' +
+          'Impossible de savoir si son compte est parrain ou non et de quelle tribu')
+        return
+      }
+      this.s.parrain = st === 3 ? 1 : 0
+      this.s.naTribu = c.nat
+      afficherdiagnostic(`${st === 3 ? 'Parain' : 'N\'est pas parrain'} - Tribu : ${c.nat.nom}`)
+    }
   },
 
   setup (props) {
     const $store = useStore()
     const sessionok = computed(() => $store.state.ui.sessionok)
+    const compte = computed(() => $store.state.db.compte)
     const tribu = computed({ // tribu courante
       get: () => $store.state.db.tribu,
       set: (val) => $store.commit('db/majtribu', val)
@@ -212,7 +290,18 @@ export default ({
     const contacts = toRef(props, 'contacts')
     const groupes = toRef(props, 'groupes')
 
-    const s = reactive({ photo: '', info: '', na: null, c: [], m: {}, lfc: [] })
+    const s = reactive({
+      photo: '',
+      info: '',
+      na: null,
+      c: [],
+      m: {},
+      lfc: [],
+      compta: null,
+      primaire: false,
+      parrain: false,
+      naTribu: null
+    })
 
     const cvs = computed(() => { return $store.state.db.cvs })
 
@@ -251,6 +340,12 @@ export default ({
           }
         }
       }
+      if (compte.value.id === id) {
+        const compta = data.getCompta(id)
+        s.primaire = compta.t
+        s.parrain = compte.value.stp
+        s.naTribu = compte.value.nat
+      }
     }
 
     watch(() => cvs.value, (ap, av) => {
@@ -265,6 +360,10 @@ export default ({
       init()
     })
 
+    watch(() => compte.value, (ap, av) => {
+      init()
+    })
+
     watch(() => sessionok.value, (ap, av) => {
       cvloc.value = false
       cvdetail.value = false
@@ -274,6 +373,7 @@ export default ({
     init()
 
     return {
+      compte,
       tribu,
       tribudial,
       comptadialobj,
@@ -299,6 +399,11 @@ export default ({
   border-bottom: 1px solid $grey-5
 .bord3
   border-top: 1px solid $grey-5
+.bord2p
+  border-radius: 3px
+  border: 2px solid $warning
+  font-weight: bold
+  padding: 1px 3px
 .bord2, .bord2b
   border-radius: 3px
   border: 1px solid $grey-5

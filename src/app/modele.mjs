@@ -386,6 +386,13 @@ export class Chat {
     return this
   }
 
+  async reset (na) {
+    const cle = crypt.random(32)
+    const nrc = await crypt.crypterRSA(data.clepubc, serial([na.nom, na.rnd, cle]))
+    const ck = await crypt.crypter(data.clek, cle)
+    return [nrc, ck]
+  }
+
   async toRowItem (texte, lna) {
     const item = { c: data.estComptable, t: texte, r: lna || [] }
     return await crypt.crypter(this.clec, serial(item))
@@ -760,6 +767,10 @@ export class Compte {
 
   getChkt (nat) {
     return crypt.hash(this.sid + '@' + nat.sid)
+  }
+
+  getChktDeId (id) {
+    return crypt.hash(crypt.idToSid(id) + '@' + this.nat.sid)
   }
 
   async setTribu (nat, clepubc) {
@@ -1143,7 +1154,7 @@ export class Cv {
 
 schemas.forSchema({
   name: 'idbCouple',
-  cols: ['id', 'v', 'st', 'tp', 'autp', 'v1', 'v2', 'mx10', 'mx20', 'mx11', 'mx21', 'dlv', 'data', 'idI', 'idE', 'info', 'mc', 'dh', 'ard', 'vsh']
+  cols: ['id', 'v', 'st', 'tp', 'autp', 'v1', 'v2', 'mx10', 'mx20', 'mx11', 'mx21', 'dlv', 'data', 'phrase', 'idI', 'idE', 'info', 'mc', 'dh', 'ard', 'vsh']
 })
 /*
 - `id` : id du contact

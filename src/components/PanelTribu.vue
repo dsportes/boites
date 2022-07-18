@@ -15,10 +15,7 @@
           <q-toolbar-title class="titre-lg">Parrains de la tribu</q-toolbar-title>
           <q-btn dense flat size="md" icon="chevron_right" @click="ouvlp=false"/>
         </q-toolbar>
-        <div v-for="(x, idx) in state.lp" :key="idx"
-          :class="dkli(idx) + ' zone full-width row items-start q-py-xs' + (idx === state.idx ? ' courant' : '')">
-          <span class="q-ma-sm titre-md">{{x[0]}}</span>
-        </div>
+        <fiche-avatar v-for="nap in state.lp" :key="nap.id" :na-avatar="nap" contacts groupes />
       </q-card>
     </q-dialog>
 
@@ -72,17 +69,18 @@
 import { computed, reactive, watch } from 'vue'
 import { useStore } from 'vuex'
 import { UNITEV1, UNITEV2 } from '../app/api.mjs'
-import { edvol } from '../app/util.mjs'
+import { edvol, NomAvatar } from '../app/util.mjs'
 import { InforesTribu } from '../app/operations.mjs'
 import ChoixForfaits from './ChoixForfaits.vue'
 import EditeurMd from './EditeurMd.vue'
 import TitreBanner from './TitreBanner.vue'
+import FicheAvatar from './FicheAvatar.vue'
 import NouveauParrainage from './NouveauParrainage.vue'
 
 export default ({
   name: 'PanelTribu',
 
-  components: { TitreBanner, ChoixForfaits, NouveauParrainage, EditeurMd },
+  components: { FicheAvatar, TitreBanner, ChoixForfaits, NouveauParrainage, EditeurMd },
 
   props: { suivant: Function, precedent: Function, index: Number, sur: Number, close: Function },
 
@@ -135,7 +133,9 @@ export default ({
     function initState () {
       const t = tribu.value
       state.t = t
-      state.lp = t && t.mncp ? Object.values(t.mncp) : []
+      const x = t && t.mncp ? Object.values(t.mncp) : []
+      state.lp = []
+      x.forEach(y => state.lp.push(new NomAvatar(y[0], y[1])))
     }
 
     watch(() => tribu.value, (ap, av) => {

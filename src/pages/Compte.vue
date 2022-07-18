@@ -1,6 +1,8 @@
 <template>
 <q-page class="fs-md q-pa-sm">
-  <q-card v-if="sessionok" class="moyennelargeur maauto">
+  <tab-tribus v-if="sessionok && tabavatar === 'tribus'"></tab-tribus>
+
+  <q-card v-if="sessionok && tabavatar !== 'tribus'" class="moyennelargeur maauto">
     <div v-if="!compte.estComptable" class="q-my-md">
       <div class="row justify-between">
         <div class="titre-md">A propos de ma tribu {{compte.nat.nom}}
@@ -31,9 +33,9 @@
     </div>
 
     <q-separator/>
-    <div class="row justify-between items-center">
-      <q-btn class="q-my-sm" size="sm" icon="add" label="Nouvel avatar" color="primary" dense @click="ouvrirnv"/>
-      <q-btn class="q-my-sm" size="sm" icon="manage_accounts" label="Changer la phrase secrète" color="warning" dense @click="ouvrirchgps"/>
+    <div class="row justify-start items-center q-my-sm">
+      <q-btn size="md" icon="add" label="Nouvel avatar" color="primary" no-caps dense @click="ouvrirnv"/>
+      <q-btn class="q-ml-sm" size="md" icon="manage_accounts" no-caps label="Changer la phrase secrète" color="warning" dense @click="ouvrirchgps"/>
     </div>
     <div v-for="(x, idx) in state.lst" :key="x.av.id">
       <q-card class="q-ma-sm moyennelargeur zone">
@@ -87,8 +89,10 @@
         <div class="q-ml-md font-mono">V1 : {{tribu.r1}}<span class="q-ml-lg">{{ed1(tribu.r1)}}</span></div>
         <div class="q-ml-md font-mono">V2 : {{tribu.r2}}<span class="q-ml-lg">{{ed2(tribu.r2)}}</span></div>
       </q-card-section>
+      <q-separator/>
       <q-card-section>
-        <div class="titre-md text-bold q-mb-sm">Parrains</div>
+        <div class="titre-lg text-bold q-mb-sm">Parrains</div>
+        <fiche-avatar v-for="nap in naps" :key="nap.id" :na-avatar="nap" contacts groupes />
       </q-card-section>
     </q-card>
   </q-dialog>
@@ -103,6 +107,10 @@
 
   <q-dialog v-if="sessionok" v-model="comptadial" full-height position="right">
     <panel-compta :cpt="cpt" :close="fermercompta"/>
+  </q-dialog>
+
+  <q-dialog v-if="sessionok" v-model="tabtribus" full-height position="right">
+    <tab-tribus :close="fermertabtribus"></tab-tribus>
   </q-dialog>
 
   <q-dialog v-if="sessionok" v-model="chgps">
@@ -142,7 +150,7 @@
 </template>
 
 <script>
-import { PrefCompte, CreationAvatar, MajCv, ChangementPS } from '../app/operations.mjs'
+import { PrefCompte, CreationAvatar, MajCv, ChangementPS, GetCVs } from '../app/operations.mjs'
 import { computed, ref, reactive, watch } from 'vue'
 import { useStore } from 'vuex'
 import { onBoot, remplacePage } from '../app/page.mjs'
@@ -156,7 +164,8 @@ import ShowHtml from '../components/ShowHtml.vue'
 import PanelCompta from '../components/PanelCompta.vue'
 import PhraseSecrete from '../components/PhraseSecrete.vue'
 import FicheAvatar from '../components/FicheAvatar.vue'
-import { Motscles, afficherdiagnostic, edvol, dhstring } from '../app/util.mjs'
+import TabTribus from '../components/TabTribus.vue'
+import { Motscles, afficherdiagnostic, edvol, dhstring, NomAvatar as NomAvatarObj } from '../app/util.mjs'
 import { crypt } from '../app/crypto.mjs'
 import { data } from '../app/modele.mjs'
 import { serial } from '../app/schemas.mjs'
@@ -164,7 +173,7 @@ import { UNITEV1, UNITEV2, Compteurs } from '../app/api.mjs'
 
 export default ({
   name: 'Compte',
-  components: { FicheAvatar, PhraseSecrete, PanelCompta, ShowHtml, EditeurMd, MotsCles, NomAvatar, ChoixForfaits, NouveauParrainage, PanelRencontre },
+  components: { TabTribus, FicheAvatar, PhraseSecrete, PanelCompta, ShowHtml, EditeurMd, MotsCles, NomAvatar, ChoixForfaits, NouveauParrainage, PanelRencontre },
   data () {
     return {
       nomav: '',
@@ -197,12 +206,22 @@ export default ({
     fermerParrain () { this.nvpar = false },
     ouvrirpr (av) { this.avatar = av; this.phraserenc = true },
     fermerpr () { this.phraserenc = false },
-
+    ouvrirtabtribus () { this.tabtribus = true },
+    fermertabtribus () { this.tabtribus = false },
     async ouvrirtribu () {
       if (this.mode > 2) {
         afficherdiagnostic('Informations sur la tribu disponibles seulement en mode synchronisé ou incognito')
         return
       }
+      const x = Object.values(this.tribu.mncp)
+      this.naps = []
+      const l2 = new Set()
+      x.forEach(nr => {
+        const na = new NomAvatarObj(nr[0], nr[1])
+        this.naps.push(na)
+        if (!data.getCv(na.id)) l2.add(na.id)
+      })
+      if (l2.size) await new GetCVs().run(l2) // chargement des Cv éventuellement manquantes (parrains inconnus)
       this.tribdial = true
     },
     ouvrirchat () {
@@ -265,6 +284,7 @@ export default ({
     const tribdial = ref(false)
     const mcledit = ref(false)
     const memoedit = ref(false)
+    const tabtribus = ref(false)
     onBoot()
 
     const $store = useStore()
@@ -389,6 +409,7 @@ export default ({
       tribdial,
       mcledit,
       memoedit,
+      tabtribus,
       ed,
       ed1,
       ed2,

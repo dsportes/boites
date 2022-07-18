@@ -1722,7 +1722,7 @@ export class NouveauChat extends OperationUI {
 }
 
 /******************************************************
-Nouveau chat
+Sélection de chats
 args:
 - sessionId
 - id
@@ -1743,15 +1743,56 @@ export class SelectChat extends OperationUI {
         const r = await this.compileToObject(this.deserialRowItems(ret.rowItems))
         liste = Object.values(r.selchat)
       } else liste = []
-      liste.sort((a, b) => a.dhde < b.dhde ? 1 : (a.dhde < b.dhde ? -1 : 0))
+      const l2 = []
+      const liste2 = []
+      liste.forEach(c => {
+        if (c.na) {
+          data.repertoire.setNa(c.na)
+          const cv = data.getCv(c.id)
+          if (!cv) l2.push(c.id)
+          liste2.push(c)
+        }
+      })
+      if (l2.length) await new GetCVs().run(l2)
+      liste2.sort((a, b) => a.dhde < b.dhde ? 1 : (a.dhde < b.dhde ? -1 : 0))
       this.finOK()
-      return liste
+      return liste2
     } catch (e) {
       await this.finKO(e)
     }
   }
 }
 
+/******************************************************
+Reset chat
+args:
+- sessionId
+- id: du compte
+- `nrc` : `[nom, rnd, cle]` nom complet du _compte_,
+  crypté par la clé publique du comptable.
+  cle est la clé C de cryptage du chat (immuable, générée à la création).
+- `ck` : cle C cryptée par la clé K du compte.
+*/
+export class ResetChat extends OperationUI {
+  constructor () {
+    super('Reset de chat', OUI, SELONMODE)
+  }
+
+  async run (na) {
+    try {
+      const [nrc, ck] = await new Chat().reset(na)
+      const args = { sessionId: data.sessionId, id: na.id, nrc, ck }
+      const ret = await post(this, 'm1', 'resetChat', args)
+      if (ret.rowItems.length) {
+        const r = await this.compileToObject(this.deserialRowItems(ret.rowItems))
+        data.setChat(r.chat)
+      }
+      this.finOK()
+    } catch (e) {
+      await this.finKO(e)
+    }
+  }
+}
 export class GetChat extends OperationUI {
   constructor () {
     super('Obtention d\'un chat', OUI, SELONMODE)
@@ -1804,6 +1845,67 @@ export class GetCompta extends OperationUI {
   }
 }
 
+export class GetTribuCompte extends OperationUI {
+  /***********************************
+  Get parrain / tribu d'uncompte, pour le comptable seulement
+  args:
+  - sessionId
+  - id : id du compte
+  Retourne:
+  result.parrain : 1 si parrain
+  result.nctpc : nom complet `[nom, rnd]` de la tribu cryptée par la clé publique du comptable.
+  */
+
+  constructor () {
+    super('Obtention du nom de la tribu d\'un compte', OUI, SELONMODE)
+  }
+
+  async run (id) {
+    try {
+      const args = { sessionId: data.sessionId, id }
+      const ret = await post(this, 'm1', 'getTribuCompte', args)
+      const naTribu = await data.getCompte().naTribu(ret.nctpc)
+      this.finOK()
+      return [ret.parrain, naTribu]
+    } catch (e) {
+      await this.finKO(e)
+    }
+  }
+}
+
+export class EstParrainTribu extends OperationUI {
+  /***********************************
+  Est parrain de ma tribu ?
+  args:
+  - sessionId
+  - id : id du compte testé
+  - chkt: du compte testeur
+  Retourne:
+  result.statut :
+  0 - id n'est pas primaire
+  1 - id est primaire pas de la même tribu
+  2 - id est primaire et de la même tribu
+  3 - id est parrain de la même tribu
+  */
+
+  constructor () {
+    super('Test si un compte est de la même tribu', OUI, SELONMODE)
+  }
+
+  async run (id) {
+    try {
+      const c = data.getCompte()
+      const chkt = c.getChktDeId(id) // chkt de l'autre compte
+      const args = { sessionId: data.sessionId, id, chkt }
+      const ret = await post(this, 'm1', 'estParrainTribu', args)
+      this.finOK()
+      return ret.statut
+    } catch (e) {
+      await this.finKO(e)
+    }
+  }
+}
+
 /******************************************************
 Nouvelle tribu
 */
@@ -1850,19 +1952,15 @@ Retourne une map des CV demandées:
 - soit obtenues localement (déjà abonné)
 - soit après demande au serveur (avec abonnement)
 */
-export class getCVs extends OperationUI {
+export class GetCVs extends OperationUI {
   constructor () {
     super('Obtention des cartes de visite absentes de la session', OUI, SELONMODE)
   }
 
-  async run (lids) { // set des ids des CV cherchées
+  async run (l2) { // set des ids des CV manquantes
     try {
       const l2 = new Set()
-      const res = {}
-      lids.forEach(id => {
-        const cv = data.getCv(id)
-        if (cv) res[id] = cv; else l2.add(id)
-      })
+      const res = []
       if (l2.size) {
         const args = { sessionId: data.sessionId, v: 0, l1: [], l2: Array.from(l2) }
         const ret = this.tr(await post(this, 'm1', 'chargerCVs', args))
@@ -1870,19 +1968,20 @@ export class getCVs extends OperationUI {
           const row = schemas.deserialize('cv', item.serial)
           const c = new Cv()
           await c.fromRow(row)
-          res[c.id] = c
+          res.push(c)
           l2.delete(c.id)
         }
         if (l2.size) {
           l2.forEach(id => {
             const cv = new Cv()
+            cv.id = id
             cv.cv = ['', '']
-            res[id] = cv
+            res.push(cv)
           })
         }
       }
+      if (res.length) data.setCvs(res)
       this.finOK()
-      return res
     } catch (e) {
       await this.finKO(e)
     }
@@ -2620,8 +2719,6 @@ export class AcceptationParrainage extends OperationUI {
 
       const [nom, rnd] = datactc.nct
       const nat = new NomTribu(nom, rnd)
-      let chkt = null
-      let nctc = null
 
       await data.connexion(true) // On force A NE PAS OUVRIR IDB (compte pas encore connu)
 
@@ -2631,13 +2728,9 @@ export class AcceptationParrainage extends OperationUI {
       const compte = new Compte().nouveau(couple.naI, kpav.privateKey)
       // nouveau() enregistre la clé K dans data.clek !!!
       await compte.setTribu(nat, arg.clepubc)
-
-      if (arg.estpar) {
-        compte.stp = 1
-        chkt = compte.chkt
-        nctc = await crypt.crypter(rnd, serial([couple.naI.nom, couple.naI.rnd]))
-      }
-
+      const chkt = compte.chkt
+      const nctc = await crypt.crypter(rnd, serial(datactc.nct))
+      if (arg.estpar) compte.stp = 1
       const rowCompte = await compte.toRow()
 
       const prefs = new Prefs().nouveau(compte.id)

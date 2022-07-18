@@ -3,8 +3,8 @@
 
     <div class="top bg-secondary text-white full-width">
       <q-toolbar class="q-px-xs">
-        <q-toolbar-title class="titre-lg full-width">Sélection des chats</q-toolbar-title>
-        <q-btn dense flat size="md" icon="chevron_right" @click="fermerselchat"/>
+        <q-btn dense flat size="md" icon="chevron_left" @click="fermerselchat"/>
+        <q-toolbar-title class="titre-lg full-width text-right">Sélection des chats</q-toolbar-title>
       </q-toolbar>
       <div class="q-px-xs row justify-start items-center">
         <q-select class="wsel" filled dense v-model="fdh" :options="dhoptions"
@@ -24,7 +24,7 @@
       <div v-for="(c, idx) in lst" :key="c.id" class="zone full-width q-mb-sm'">
         <q-card class="q-ma-sm">
           <fiche-avatar :na-avatar="c.na" :idx="idx" :parrain="c.stp===1"
-            compta contacts groupes actions :na-tribu="c.nat" cv-editable @cv-changee="cvchangee">
+            compta contacts groupes actions>
             <template v-slot:statut>
               <span v-if="c.st === 1" class="text-warning text-bold q-mr-sm">À traiter</span>
               <span v-if="c.st === 2" class="text-negative bg-yellow text-bold q-mr-sm q-px-xs">Urgent</span>

@@ -1,5 +1,6 @@
 <template>
 <div v-if="sessionok" class="q-pa-xs full-width">
+
   <div class="filler"></div>
   <div v-if="!state.lst || !state.lst.length" class="titre-lg">
     Aucune tribu ne correspond au critère de recherche</div>
@@ -85,7 +86,7 @@ export default ({
   name: 'TabTribus',
 
   components: { ChoixForfaits, NomAvatar, EditeurMd, InfoIco, PanelTribu, ShowHtml },
-
+  props: { close: Function },
   computed: {
     erreur () { return !this.nom || this.nom.length < 4 || this.reserves[0] <= 0 || this.reserves[1] <= 0 }
   },
@@ -104,6 +105,7 @@ export default ({
   },
 
   methods: {
+    fermertribus () { if (this.close) this.close() },
     closetr () { this.nouvtr = false },
     ed1 (f) { return edvol(f * UNITEV1) },
     ed2 (f) { return edvol(f * UNITEV2) },

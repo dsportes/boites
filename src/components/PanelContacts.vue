@@ -26,7 +26,7 @@
     <q-separator/>
     <div v-for="(ax, idx) in s.lst" :key="ax.na.id">
       <q-card class="q-ma-sm">
-        <fiche-avatar :na-avatar="ax.na" :idx="idx" contacts groupes>
+        <fiche-avatar :na-avatar="ax.na" :idx="idx" contacts groupes compta>
         </fiche-avatar>
       </q-card>
     </div>

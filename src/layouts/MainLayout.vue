@@ -9,7 +9,6 @@
               <q-tooltip>Changer d'organisation</q-tooltip>
             </span>
           </span>
-          <info-ico v-if="sessionok && compte && compte.estComptable" size="sm" color="secondary" icon="savings" info="Compte Comptable"/>
           <span v-if="sessionok">
             <q-btn :class="page!=='Avatar' ? 'disabled' : ''" flat dense size="md"
               icon="home" no-caps label="Compte" @click="tocompte"/>
@@ -56,11 +55,11 @@
       </q-toolbar>
 
       <q-toolbar inset :class="tbclass">
-        <q-btn v-if="sessionok && (page==='Compte' || page==='Avatar')" class="q-ml-sm" dense color="primary" round size="md" icon="people"
+        <q-btn v-if="sessionok && (page==='Compte' || page==='Avatar')" class="q-ml-xs" dense color="primary" round size="md" icon="people"
           aria-label="Mes contacts" @click="panelcontacts = !panelcontacts"/>
-        <q-btn v-if="sessionok && (page==='Compte' || page==='Avatar')" class="q-mx-xs" dense color="primary" round size="md" icon="save"
+        <q-btn v-if="sessionok && (page==='Compte' || page==='Avatar')" class="q-ml-xs" dense color="primary" round size="md" icon="save"
           aria-label="Fichiers hors ligne" @click="fichiersavion = !fichiersavion"/>
-        <q-btn v-if="sessionok && (page==='Compte' || page==='Avatar')" class="q-mx-xs" dense color="primary" size="md" icon="chat"
+        <q-btn v-if="sessionok && (page==='Compte' || page==='Avatar')" class="q-ml-xs" dense color="primary" size="md" icon="chat"
           aria-label="Chat avec le Comptable" @click="ouvrirchat"/>
         <q-toolbar-title class="text-center fs-md">
           <div v-if="page==='Org'" class="tbpage">Choix de l'organisation</div>
@@ -94,11 +93,20 @@
             <q-btn class="btx" v-if="tabavatar==='groupes' && $q.screen.lt.md" size="md" dense icon="search" color="secondary" @click="avatargrrech = !avatargrrech"/>
             <q-btn class="btx" v-if="tabavatar==='groupes'" size="md" dense :icon="avatargrform ? 'view_list' : 'wysiwyg'" color="secondary" @click="togglegrform"/>
             <q-tab name="groupes" label="Groupes" />
-            <q-btn class="btx" v-if="compte && compte.estComptable && tabavatar==='tribus'" size="md" dense :icon="avatartrform ? 'view_list' : 'wysiwyg'" color="secondary" @click="toggletrform"/>
-            <q-tab v-if="compte && compte.estComptable" name="tribus" label="Tribus" />
           </q-tabs>
         </div>
       </q-toolbar>
+
+      <q-toolbar inset v-if="page === 'Compte' && compte && compte.estComptable">
+        <div class="window-width font-cf">
+          <q-tabs class="" v-model="tabavatar" inline-label no-caps dense>
+            <q-tab name="secrets" label="A propos du compte" />
+            <q-btn class="btx" v-if="tabavatar==='tribus'" size="md" dense :icon="avatartrform ? 'view_list' : 'wysiwyg'" color="secondary" @click="toggletrform"/>
+            <q-tab name="tribus" label="Tribus" />
+          </q-tabs>
+        </div>
+      </q-toolbar>
+
     </q-header>
 
     <q-drawer v-model="menuouvert" :breakpoint="200" overlay elevated side="right" style="padding:0.5rem"><panel-menu></panel-menu></q-drawer>
@@ -115,11 +123,11 @@
       <rapport-synchro jailu></rapport-synchro>
     </q-dialog>
 
-    <q-dialog v-model="dialoguechat" full-height position="right">
+    <q-dialog v-model="dialoguechat" full-height position="left">
       <panel-chat/>
     </q-dialog>
 
-    <q-dialog v-model="dialogueselchat" full-height position="right">
+    <q-dialog v-model="dialogueselchat" full-height position="left">
       <panel-selchat/>
     </q-dialog>
 

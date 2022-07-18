@@ -2,8 +2,9 @@
   <q-card class="fs-md moyennelargeur">
     <div class="top bg-secondary text-white full-width">
       <q-toolbar class="q-px-xs">
-        <q-toolbar-title class="titre-lg full-width">Chat avec le Comptable</q-toolbar-title>
-        <q-btn dense flat size="md" icon="chevron_right" @click="fermerchat"/>
+        <q-btn dense flat size="md" icon="chevron_left" @click="fermerchat"/>
+        <q-toolbar-title class="titre-lg full-width text-right q-pr-sm">Chat avec le Comptable</q-toolbar-title>
+        <q-btn v-if="!estC()" dense color="warning" label="RAZ" icon="delete" @click="reset"/>
       </q-toolbar>
       <div class="q-px-xs row justify-between items-center">
         <div :class="'font-mono fs-lg ' + ['', 'text-warning', 'text-negative text-bold bg-yellow'][chat.st]">
@@ -17,6 +18,7 @@
 
     <div class="q-pa-sm scroll" style="max-height:100vh;">
       <div class="filler"></div>
+      <fiche-avatar :na-avatar="chat.na" contacts groupes compta/>
       <chat-item v-for="item in chat.items" :key="item.dh" :item="item"/>
     </div>
 
@@ -32,13 +34,15 @@ import { useStore } from 'vuex'
 import { computed } from 'vue'
 import NouveauChat from './NouveauChat.vue'
 import ChatItem from './ChatItem.vue'
+import FicheAvatar from './FicheAvatar.vue'
 import { dhcool } from '../app/util.mjs'
-import { LectureChat } from '../app/operations.mjs'
+import { LectureChat, ResetChat } from '../app/operations.mjs'
+import { data } from '../app/modele.mjs'
 
 export default ({
   name: 'PanelChat',
 
-  components: { NouveauChat, ChatItem },
+  components: { FicheAvatar, NouveauChat, ChatItem },
 
   data () {
     return {
@@ -47,6 +51,7 @@ export default ({
   },
 
   methods: {
+    estC () { return data.estComptable },
     dh (t) { return !t ? '(na)' : dhcool(new Date(t)) },
     fermernvchat () {
       this.nvchat = false
@@ -54,6 +59,9 @@ export default ({
     async fermerchat () {
       await new LectureChat().run(this.chat.id)
       this.dialoguechat = false
+    },
+    async reset () {
+      await new ResetChat().run(this.chat.na)
     }
   },
 
