@@ -1,5 +1,5 @@
 import { schemas, serial, deserial } from './schemas.mjs'
-import { crypt } from './crypto.mjs'
+import { crypt, tru8 } from './crypto.mjs'
 import { openIDB, closeIDB, debutSessionSync, saveSessionSync, getFichier } from './db.mjs'
 import { openWS, closeWS } from './ws.mjs'
 import {
@@ -369,7 +369,10 @@ export class Chat {
     this.luc = row.luc
     this.st = row.st
     if (data.estComptable) {
-      const [n, r, c] = deserial(await crypt.decrypterRSA(data.getCompte().cpriv(), row.nrc))
+      const x = data.getCompte()
+      const cpriv = x.cpriv()
+      tru8('Chat fromRow dec ' + x.id, cpriv)
+      const [n, r, c] = deserial(await crypt.decrypterRSA(cpriv, row.nrc))
       this.na = new NomAvatar(n, r)
       this.clec = c
     } else {
@@ -388,6 +391,7 @@ export class Chat {
 
   async reset (na) {
     const cle = crypt.random(32)
+    tru8('Reset cr clepuc', data.clepubc)
     const nrc = await crypt.crypterRSA(data.clepubc, serial([na.nom, na.rnd, cle]))
     const ck = await crypt.crypter(data.clek, cle)
     return [nrc, ck]
@@ -426,6 +430,7 @@ export class Selchat {
   // id dhde st na clec photo info stp nat
   async fromRow (row) {
     const cpriv = data.getCompte().cpriv()
+    tru8('Priv dec Comptable', cpriv)
     this.id = row.id
     this.dhde = row.dhde
     this.st = row.st
@@ -434,6 +439,7 @@ export class Selchat {
       this.na = new NomAvatar(n, r)
       this.clec = c
     } catch (e) {
+      console.log('ERREUR dec Selchat fromRow nrc')
       return this
     }
     const [photo, info] = row.cv ? deserial(await crypt.decrypter(this.na.rnd, row.cv)) : ['', '']
@@ -444,6 +450,7 @@ export class Selchat {
       const [nom, rnd] = deserial(await crypt.decrypterRSA(cpriv, row.nctpc))
       this.nat = new NomTribu(nom, rnd)
     } catch (e) {
+      console.log('ERREUR dec Selchat fromRow nctpc')
       return this
     }
     return this
@@ -653,7 +660,9 @@ export class Compte {
 
   // nctpc : [nom, rnd] d'une tribu crypté par la clé publique du Comptable
   async naTribu (nctpc) {
-    const x = deserial(await crypt.decrypterRSA(this.cpriv(), nctpc))
+    const kp = this.cpriv()
+    tru8('Priv dec nctpc ' + this.id, kp)
+    const x = deserial(await crypt.decrypterRSA(kp, nctpc))
     return new NomTribu(x[0], x[1])
   }
 
@@ -693,7 +702,9 @@ export class Compte {
     if (row.nctk) {
       let nr
       if (row.nctk.length === 256) {
-        nr = await crypt.decrypterRSA(this.cpriv(this.id), row.nctk)
+        const kp = this.cpriv(this.id)
+        tru8('Priv compte.fromRow nctk ' + this.id, kp)
+        nr = await crypt.decrypterRSA(kp, row.nctk)
         this.nctk = await crypter.crypter(this.k, nr)
       } else {
         nr = await crypt.decrypter(this.k, row.nctk)
@@ -776,7 +787,9 @@ export class Compte {
   async setTribu (nat, clepubc) {
     this.nat = nat
     const nc = serial([nat.nom, nat.rnd])
-    this.nctpc = nat ? await crypt.crypterRSA(data.clepubc || clepubc, nc) : null
+    const kp = data.clepubc || clepubc
+    tru8('Compte.setTribu cr nc clepubc', kp)
+    this.nctpc = nat ? await crypt.crypterRSA(kp, nc) : null
     this.nctk = nat ? await crypt.crypter(data.clek, nc) : null
     this.chkt = nat ? this.getChkt(nat) : 0
   }
@@ -1434,6 +1447,7 @@ export class Contact {
       d.parrain = parrain
       d.forfaits = forfaits
       d.clec = crypt.random(32)
+      tru8('Contact.nouveau cr nrc clepubc', data.clepubc)
       d.nrc = await crypt.crypterRSA(data.clepubc, serial([naf[0], naf[1], d.clec]))
       /*
       if (data.estComptable) {
@@ -1477,7 +1491,8 @@ export class Invitgr {
   async fromRow (row) {
     this.id = row.id
     this.ni = row.ni
-    const cpriv = data.getCompte().av(row.id).cpriv
+    const cpriv = data.getCompte().av(row.id).cpriv()
+    tru8('Invitgr.fromRow dec datap ' + this.id, cpriv)
     const x = deserial(await crypt.decrypterRSA(cpriv, row.datap))
     this.idg = crypt.hashBin(x[1]) + 2 // pour le traitement de régularisation (abonnement au groupe)
     this.datak = await crypt.crypter(data.clek, serial(x))
@@ -1485,6 +1500,7 @@ export class Invitgr {
   }
 
   async toRow (clepub) {
+    tru8('Invitgr.toRow cr data ' + this.id, clepub)
     const datap = await crypt.crypterRSA(clepub, serial(this.data))
     const r = { id: this.id, ni: this.ni, datap }
     return schemas.serialize('rowinvitgr', r)
@@ -1506,6 +1522,7 @@ export class Invitcp {
     this.id = row.id
     this.ni = row.ni
     const cpriv = data.getCompte().av(row.id).cpriv
+    tru8('Invitcp.fromRow dec datap ' + this.id, cpriv)
     const x = await crypt.decrypterRSA(cpriv, row.datap)
     this.idc = crypt.hashBin(x) + 1 // pour le traitement de régularisation (abonnement au groupe)
     this.datak = await crypt.crypter(data.clek, x)
@@ -1513,6 +1530,7 @@ export class Invitcp {
   }
 
   async toRow (id, ni, cc, clepub) {
+    tru8('Invitcp.toRow cr data ' + this.id, clepub)
     const datap = await crypt.crypterRSA(clepub, cc)
     const r = { id, ni, datap }
     return schemas.serialize('rowinvitcp', r)

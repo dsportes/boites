@@ -54,6 +54,19 @@ export default ({
       vligne2: ''
     }
   },
+  watch: {
+    ligne1 (ap) {
+      if (ap.length === 2) {
+        if (ap.charAt(0) === '*') {
+          const c = ap.charAt(1)
+          let s = ''
+          for (let i = 0; i < 16; i++) s += c
+          this.ligne1 = s
+          this.ligne2 = s
+        }
+      }
+    }
+  },
   methods: {
     selph (p) {
       this.ligne1 = p[0]

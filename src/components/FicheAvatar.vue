@@ -107,7 +107,7 @@ import EditeurMd from './EditeurMd.vue'
 import InfoTxt from './InfoTxt.vue'
 import NouveauCouple from './NouveauCouple.vue'
 import { Cv, data } from '../app/modele.mjs'
-import { copier, afficherdiagnostic } from '../app/util.mjs'
+import { copier, affichermessage } from '../app/util.mjs'
 import { GetCompta, GetTribuCompte, EstParrainTribu } from '../app/operations.mjs'
 
 export default ({
@@ -177,13 +177,13 @@ export default ({
         compta = await new GetCompta().run(id)
         if (!c.estComptable) {
           if (!c.stp) {
-            afficherdiagnostic('Seul un compte parrain peut accéder à la comptabilité des autres comptes (de la même tribu)')
+            affichermessage('Seul un compte parrain peut accéder à la comptabilité des autres comptes (de la même tribu)', true)
             return
           } else {
             const st = await new EstParrainTribu().run(id)
             if (st === 0) {
-              afficherdiagnostic('Cet avatar n`est pas de la même tribu.' +
-                'Impossible d\'accéder à sa comptabilité')
+              affichermessage('Cet avatar n`est pas de la même tribu.' +
+                'Impossible d\'accéder à sa comptabilité.', true)
               return
             }
           }
@@ -212,15 +212,15 @@ export default ({
         const compta = await new GetCompta().run(id)
         this.s.primaire = compta.t
         if (!compta.t) {
-          afficherdiagnostic('Cet avatar n`est pas l`avatar primaire de son compte.' +
-            'Impossible de savoir si son compte est parrain ou non et de quelle tribu')
+          affichermessage('Cet avatar n`est pas l`avatar primaire de son compte.' +
+            'Impossible de savoir si son compte est parrain ou non et de quelle tribu.', true)
           return
         }
         const [parrain, naTribu] = await new GetTribuCompte().run(id)
         this.s.parrain = parrain
         this.s.naTribu = naTribu
-        afficherdiagnostic(`${parrain ? 'Parrain' : 'N\'est pas parrain'}
-         - Tribu : ${naTribu.nom}`)
+        affichermessage(`${parrain ? 'Parrain' : 'N\'est pas parrain'}
+         - Tribu : ${naTribu.nom}`, true)
         return
       }
       if (c.id === id) {
@@ -239,19 +239,19 @@ export default ({
       */
       if (st === 0) {
         this.s.primaire = 0
-        afficherdiagnostic('Cet avatar n`est pas l`avatar primaire de son compte ou la création de son compte est en attente.' +
-          'Impossible de savoir si son compte est parrain ou non et de quelle tribu')
+        affichermessage('Cet avatar n`est pas l`avatar primaire de son compte ou la création de son compte est en attente.' +
+          'Impossible de savoir si son compte est parrain ou non et de quelle tribu', true)
         return
       }
       this.s.primaire = 1
       if (st === 1) {
-        afficherdiagnostic('Cet avatar n`est pas de la même tribu que la votre.' +
-          'Impossible de savoir si son compte est parrain ou non et de quelle tribu')
+        affichermessage('Cet avatar n`est pas de la même tribu que la votre.' +
+          'Impossible de savoir si son compte est parrain ou non et de quelle tribu', true)
         return
       }
       this.s.parrain = st === 3 ? 1 : 0
       this.s.naTribu = c.nat
-      afficherdiagnostic(`${st === 3 ? 'Parain' : 'N\'est pas parrain'} - Tribu : ${c.nat.nom}`)
+      affichermessage(`${st === 3 ? 'Parain' : 'N\'est pas parrain'} - Tribu : ${c.nat.nom}`, true)
     }
   },
 

@@ -8,7 +8,7 @@ import {
 import { Compte, Avatar, newObjet, pk, data, Prefs, Chat, Contact, Invitgr, Invitcp, Compta, Groupe, Membre, Cv, Couple, Tribu } from './modele.mjs'
 import { AppExc, EXBRK, EXPS, F_BRO, E_BRO, X_SRV, E_WS, t0n } from './api.mjs'
 
-import { crypt } from './crypto.mjs'
+import { crypt, tru8 } from './crypto.mjs'
 import { schemas, serial } from './schemas.mjs'
 
 const OUI = 1
@@ -923,6 +923,7 @@ export class OperationUI extends Operation {
   */
   async postCreation (ret, clepubc) {
     data.clepubc = clepubc || ret.clepubc
+    tru8('Pub Comptable data.clepubc', data.clepubc)
     const mapRows = this.deserialRowItems(ret.rowItems)
 
     const compte = await new Compte().fromRow(mapRows.compte)
@@ -1117,7 +1118,11 @@ export class CreationCompteComptable extends OperationUI {
 
       data.resetPhase012()
       this.BRK()
+
       const kpav = await crypt.genKeyPair()
+      tru8('Priv Comptable', kpav.privateKey)
+      tru8('Pub Comptable', kpav.publicKey)
+
       const nomAvatar = new NomAvatar('Comptable') // nouveau
 
       const compte = new Compte().nouveau(nomAvatar, kpav.privateKey)
@@ -1166,6 +1171,7 @@ export class ConnexionCompte extends OperationUI {
     const args = { sessionId: data.sessionId, pcbh: data.ps.pcbh, dpbh: data.ps.dpbh }
     const ret = this.tr(await post(this, 'm1', 'connexionCompte', args))
     data.clepubc = ret.clepubc
+    tru8('Pub Comptable data.clepubc', data.clepubc)
     const compte = new Compte()
     const prefs = new Prefs()
     const chat = ret.rowChat ? new Chat() : null
@@ -2528,7 +2534,7 @@ export class NouveauCouple extends OperationUI {
       const sid = crypt.idToSid(na1.id)
       const clepub = await get('m1', 'getclepub', { sessionId: data.sessionId, sid })
       if (!clepub) throw new AppExc(E_BRO, '23-Cle RSA publique d\'avatar non trouvé')
-
+      tru8('NouveauCouple getclepub ' + na1.id, clepub)
       const cc = crypt.random(32) // clé du couple
       const ni = crypt.hash(crypt.u8ToHex(cc) + '0')
       const ni1 = crypt.hash(crypt.u8ToHex(cc) + '1')
@@ -3379,6 +3385,7 @@ export class InviterGroupe extends OperationUI {
     try {
       const clepub = await get('m1', 'getclepub', { sessionId: data.sessionId, sid: m.namb.sid })
       if (!clepub) throw new AppExc(E_BRO, '23-Cle RSA publique d\'avatar non trouvé')
+      tru8('InviterGroupe getclepub ' + m.namb.id, clepub)
 
       const invitgr = new Invitgr()
       /*

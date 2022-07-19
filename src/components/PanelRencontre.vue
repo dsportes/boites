@@ -36,6 +36,7 @@ import NouvelleRencontre from './NouvelleRencontre.vue'
 import { Contact, Couple } from '../app/modele.mjs'
 import { deserial } from '../app/schemas.mjs'
 import { get, dlvDepassee, PhraseContact } from '../app/util.mjs'
+import { tru8 } from '../app/crypto.mjs'
 
 export default ({
   name: 'PanelRencontre',
@@ -88,9 +89,8 @@ export default ({
           this.nvrenc = true
         } else {
           try {
-            // eslint-disable-next-line no-unused-vars
             const [row, clepubc] = deserial(new Uint8Array(resp))
-            // data.clepubc = clepubc
+            tru8('Pub Comptable PanelRencontre clepubc', clepubc)
             const contact = await new Contact().fromRow(row)
             if (dlvDepassee(contact.dlv)) {
               this.diagnostic = 'Cette phrase de rencontre n\'est plus valide'

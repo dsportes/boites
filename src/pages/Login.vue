@@ -70,6 +70,7 @@ import { onBoot } from '../app/page.mjs'
 import { get, afficherdiagnostic, dlvDepassee, PhraseContact, NomContact } from '../app/util.mjs'
 import { deserial } from '../app/schemas.mjs'
 import { Contact, Couple } from '../app/modele.mjs'
+import { tru8 } from '../app/crypto.mjs'
 
 export default ({
   name: 'Login',
@@ -127,6 +128,7 @@ export default ({
             const [row, clepubc] = deserial(new Uint8Array(resp))
             this.clepubc = clepubc
             const contact = await new Contact().fromRow(row)
+            tru8('Login ph parr clepubc ' + contact.id, clepubc)
             if (dlvDepassee(contact.dlv)) {
               this.diagnostic = 'Cette phrase de parrainage n\'est plus valide'
               this.raz()
