@@ -24,7 +24,7 @@
 import { VueShowdown } from 'vue-showdown'
 import { useStore } from 'vuex'
 import { computed } from 'vue'
-import { dhcool } from '../app/util.mjs'
+import { dhcool, copier } from '../app/util.mjs'
 
 export default ({
   name: 'ChatItem',
@@ -50,7 +50,9 @@ export default ({
     }
   },
   methods: {
-    onref (nr) { console.log(nr[0]) }
+    onref (nr) {
+      copier(nr)
+    }
   },
   setup (props) {
     const $store = useStore()
