@@ -1,7 +1,7 @@
 import { NomAvatar, NomGroupe, store, post, get, affichermessage, cfg, sleep, affichererreur, appexc, difference, getJourJ, afficherdiagnostic, gzipT, putData, getData, NomTribu } from './util.mjs'
 import { remplacePage } from './page.mjs'
 import {
-  deleteIDB, idbSidCompte, supprLSCompte, commitRows, getCompte, getComptas, getPrefs, getCvs,
+  deleteIDB, supprLSCompte, commitRows, getComptas, getPrefs, getCvs,
   getAvatars, getGroupes, getCouples, getMembres, getSecrets, getChat,
   openIDB, enregLScompte, getVIdCvs, saveListeCvIds, gestionFichierSync, gestionFichierCnx
 } from './db.mjs'
@@ -928,6 +928,7 @@ export class OperationUI extends Operation {
 
     const compte = await new Compte().fromRow(mapRows.compte)
     data.estComptable = compte.estComptable
+    data.nombase = compte.nombase()
     compte.repAvatars()
     data.setCompte(compte)
 
@@ -1001,14 +1002,16 @@ export class OperationUI extends Operation {
     // création de la base IDB et chargement des rows compte avatar ...
     if (data.mode === 1) { // synchronisé : IL FAUT OUVRIR IDB (et écrire dedans)
       this.BRK()
-      enregLScompte(compte.sid)
-      await deleteIDB()
+      await deleteIDB() // normalement c'est inutile
       try {
         await openIDB()
       } catch (e) {
-        await deleteIDB(true)
+        await deleteIDB()
         throw e
       }
+      const lsk = this.org + '-' + compte.dpbh
+      localStorage.setItem(lsk, compte.nombase())
+
       await saveListeCvIds(nv > vcv ? nv : vcv, lst)
       await commitRows({ lmaj, lsuppr })
       await data.debutConnexion()
@@ -1566,51 +1569,45 @@ export class ConnexionCompte extends OperationUI {
     }
   }
 
-  async phase0 (razdb) { // compte / prefs : abonnement à compte
+  async phase0 (compte, db, trig) { // compte / prefs : abonnement à compte
     let prefs = null
     let chat = null
-    // En mode avion, vérifie que la phrase secrète a bien une propriété en localstorage donnant le nom de la base
+
     if (data.mode === 3) {
-      if (!idbSidCompte()) {
-        throw new AppExc(F_BRO, 'Compte non enregistré localement : aucune session synchronisée ne s\'est préalablement exécutée sur ce poste avec cette phrase secrète. Erreur dans la saisie de la ligne 1 de la phrase ?')
-      }
-      await openIDB()
-      this.compte = await getCompte()
-      if (!this.compte || (this.compte.pcbh !== data.ps.pcbh)) {
-        throw new AppExc(F_BRO, 'Compte non enregistré localement : aucune session synchronisée ne s\'est préalablement exécutée sur ce poste avec cette phrase secrète. Erreur dans la saisie de la ligne 2 de la phrase ?')
-      }
-      data.setCompte(this.compte)
+      this.compte = compte
+      data.clek = this.compte.k
+      data.nombase = this.compte.nombase()
+      data.ouvertureDB(db)
       prefs = await getPrefs()
       chat = await getChat()
-      data.estComptable = false
-    }
-
-    if (data.mode === 1 || data.mode === 2) {
+    } else {
+      // data.mode === 1 || data.mode === 2
       const [compteSrv, prefsSrv, chatSrv] = await this.chargerCP()
       // est sorti en exception si non authentifié
       if (data.ps.pcbh !== compteSrv.pcbh) throw EXPS // Changement de phrase secrète
       this.compte = compteSrv
-      data.estComptable = this.compte.estComptable
-      if (data.estComptable) {
-        data.mode = 2
-        data.modeInitial = 2
-      }
+      data.nombase = this.compte.nombase()
       prefs = prefsSrv
       chat = chatSrv
       if (data.mode === 1) {
-        enregLScompte(compteSrv.sid)
-        if (razdb) {
-          await deleteIDB()
-          await sleep(100)
-          console.log('RAZ db')
+        if (db) {
+          data.ouvertureDB(db)
+        } else {
+          // TODO : gérer le trigramme trig en localStorage
+          await openIDB()
         }
-        await openIDB()
         this.buf.putIDB(this.compte)
         this.buf.putIDB(prefs)
         if (chat) this.buf.putIDB(chat)
       }
     }
 
+    data.nombase = this.compte.nombase()
+    data.estComptable = this.compte.estComptable
+    if (data.estComptable) {
+      data.mode = 2
+      data.modeInitial = 2
+    }
     data.setCompte(this.compte)
     data.setPrefs(prefs)
     if (chat) data.setChat(chat)
@@ -1620,7 +1617,59 @@ export class ConnexionCompte extends OperationUI {
     data.setSyncItem('01', 1, 'Compte et comptabilité')
   }
 
-  async run (ps, razdb) {
+  async run (compte, db, trig) {
+    try {
+      this.buf = new OpBuf()
+      this.dh = 0
+      /*
+      Le compte n'est connu qu'en mode avion et dans ce cas la base a déjà été ouverte
+      En mode synchronisé la base sera ouverte en phase 0 quand le compte sera connu
+      */
+      await data.connexion(true)
+
+      for (let nb = 0; nb < 10; nb++) {
+        if (nb >= 5) throw new AppExc(E_BRO, 'Plus de 5 tentatives de connexions. Bug ou incident temporaire. Ré-essayer un peu plus tard')
+        data.resetPhase012()
+        data.repertoire.raz()
+        await this.phase0(compte, db, trig) // obtention du compte / prefs
+        if (!await this.phase1()) continue // obtention des avatars du compte
+        if (!await this.phase2()) continue // obtention des groupes et contacts des avatars du compte
+        break
+      }
+      this.BRK()
+      /* YES ! on a tous les objets maîtres compte / avatar / groupe / couple) à jour, abonnés et signés */
+
+      /* Récupération des membres et secrets */
+      await this.phase3()
+
+      /* Phase 4 : récupération des CVs et s'y abonner
+      Recalcul de tousAx en tenant compte des disparus
+      */
+      await this.syncCVs()
+
+      /* Phase 5 : récupération des invitations aux groupes / couples
+      Elles seront de facto traitées en synchronisation quand un avatar reviendra avec un lgrk / lcck étendu
+      */
+      if (data.netok) await this.getInvitGrs(this.compte)
+      if (data.netok) await this.getInvitCps(this.compte)
+
+      // Finalisation en une seule fois, commit en IDB
+      if (data.dbok && data.netok) await this.buf.commitIDB()
+      if (data.mode === 1) {
+        const lsk = data.org + '-' + this.compte.dpbh
+        localStorage.setItem(lsk, this.compte.nombase())
+      }
+      if (data.mode === 1 || data.mode === 3) await this.buf.gestionFichierCnx()
+      await data.finConnexion(this.dh)
+      console.log('Connexion compte : ' + data.getCompte().id)
+      this.finOK()
+      remplacePage('Compte')
+    } catch (e) {
+      await this.finKO(e)
+    }
+  }
+
+  async run1 (ps, razdb) {
     try {
       this.buf = new OpBuf()
       this.dh = 0

@@ -61,7 +61,7 @@
 </template>
 
 <script>
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, onMounted } from 'vue'
 import { useStore } from 'vuex'
 import { ConnexionCompte, CreationCompteComptable } from '../app/operations'
 import PhraseSecrete from '../components/PhraseSecrete.vue'
@@ -69,8 +69,10 @@ import AcceptParrain from '../components/AcceptParrain.vue'
 import { onBoot } from '../app/page.mjs'
 import { get, afficherdiagnostic, dlvDepassee, PhraseContact, NomContact } from '../app/util.mjs'
 import { deserial } from '../app/schemas.mjs'
-import { Contact, Couple } from '../app/modele.mjs'
+import { Contact, Couple, data } from '../app/modele.mjs'
+import { openIDB, getCompte, deleteIDB } from '../app/db.mjs'
 import { tru8 } from '../app/crypto.mjs'
+import { AppExc } from '../app/api.mjs'
 
 export default ({
   name: 'Login',
@@ -102,7 +104,7 @@ export default ({
       this.dialcp = false
       this.phrasepar = false
     },
-    connecter (ps) {
+    connecter1 (ps) {
       if (ps) {
         if (this.mode === 3) {
           new ConnexionCompte().run(ps)
@@ -112,6 +114,73 @@ export default ({
         }
       }
     },
+
+    async connecter (ps) {
+      if (!ps) return
+      data.ps = ps
+      ps.razDebutFin()
+      const lsk = this.org + '-' + ps.dpbh
+      const nb = localStorage.getItem(lsk)
+      data.nombase = nb || null
+      data.db = null
+      if (this.mode === 3) {
+        await this.connexion3(ps)
+      } else {
+        if (this.mode === 1 && data.nombase && this.razdb) await deleteIDB()
+        let db = null
+        if (this.mode === 1 && data.nombase) {
+          let dbok = false
+          try {
+            db = await openIDB()
+            const compte = await getCompte()
+            if (compte && compte.pcbh === data.ps.pcbh && compte.nombase() === data.nombase) dbok = true
+          } catch (e) { }
+          if (!dbok) {
+            await deleteIDB()
+            db = null
+          }
+        }
+        // aller chercher le trigramme
+        const trig = db ? '' : await this.getTrig()
+        await new ConnexionCompte().run(null, db, trig)
+      }
+    },
+
+    async connexion3 () {
+      let db
+      if (!data.nombase) {
+        const msg1 = `La base locale du compte n'a pas été trouvée:
+aucune session synchronisée ne s'est préalablement exécutée sur ce poste avec cette phrase secrète.
+Erreur dans la saisie de la ligne 1 de la phrase ?`
+        afficherdiagnostic(msg1)
+        return
+      }
+      try {
+        db = await openIDB()
+      } catch (e) {
+        const msg2 = `La base locale est absente ou corrompue.<br>
+Code erreur: ${e.message}<br>
+Choisir le mode synchronisé ou incognito.`
+        afficherdiagnostic(msg2)
+        return
+      }
+      try {
+        const compte = await getCompte()
+        if (!compte || (compte.pcbh !== data.ps.pcbh)) throw new AppExc('X', 'Enregistrement compte non trouvé / incorrect')
+        await new ConnexionCompte().run(compte, db)
+      } catch (e) {
+        const msg3 = `Base corrompue: les données du compte n'y ont pas été trouvées.<br>
+Code erreur: ${e.message}<br>
+Choisir le mode synchronisé ou incognito.`
+        afficherdiagnostic(msg3)
+        await deleteIDB()
+      }
+    },
+
+    async getTrig () {
+      return 'AAA'
+    },
+
     crypterphrase () {
       if (!this.phrase) return
       this.encours = true
@@ -121,7 +190,7 @@ export default ({
         this.encours = false
         const resp = await get('m1', 'getContact', { phch: pc.phch })
         if (!resp || !resp.length) {
-          this.diagnostic = 'Cette phrase de parrainage est introuvable'
+          afficherdiagnostic('Cette phrase de parrainage est introuvable')
           this.raz()
         } else {
           try {
@@ -130,7 +199,7 @@ export default ({
             const contact = await new Contact().fromRow(row)
             tru8('Login ph parr clepubc ' + contact.id, clepubc)
             if (dlvDepassee(contact.dlv)) {
-              this.diagnostic = 'Cette phrase de parrainage n\'est plus valide'
+              afficherdiagnostic('Cette phrase de parrainage n\'est plus valide')
               this.raz()
               return
             }
@@ -140,7 +209,7 @@ export default ({
             const naf = new NomContact('fake', this.datactc.cc)
             const resp2 = await get('m1', 'getCouple', { id: naf.id })
             if (!resp2) {
-              this.diagnostic = 'Pas de parrainage en attente avec cette phrase'
+              afficherdiagnostic('Pas de parrainage en attente avec cette phrase')
               this.raz()
               return
             }
@@ -167,6 +236,10 @@ export default ({
     const hr = window.location.href
     const q666 = ref(false)
     const razdb = ref(false)
+    const org = computed({
+      get: () => $store.state.ui.org,
+      set: (val) => $store.commit('ui/majorg', val)
+    })
     const mode = computed({
       get: () => $store.state.ui.mode,
       set: (val) => $store.commit('ui/majmode', val)
@@ -183,20 +256,21 @@ export default ({
       get: () => $store.state.ui.infomode,
       set: (val) => $store.commit('ui/majdialoguecreationcompte', val)
     })
-    const diagnostic = computed({
-      get: () => $store.state.ui.diagnostic,
-      set: (val) => $store.commit('ui/majdiagnostic', val)
-    })
     watch(razdb, (ap, av) => {
       if (ap === true && ap !== av) {
         afficherdiagnostic('<b>Attention:</b> la base locale sera effacée et rechargée totalement.' +
         '<BR>Ceci peut alonger <b>significativement</b> la durée d\'initialisation (comme le mode <i>incognito</i>).')
       }
     })
+
+    onMounted(() => {
+      mode.value = 0
+    })
+
     return {
       q666,
       razdb,
-      diagnostic,
+      org,
       mode,
       infomode,
       dialoguecreationcompte

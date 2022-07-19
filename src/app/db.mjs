@@ -1,7 +1,7 @@
 /* eslint-disable func-call-spacing */
 import Dexie from 'dexie'
 import { Avatar, Compte, Prefs, Compta, Couple, Groupe, Membre, Secret, ListeCvIds, SessionSync, data, Cv } from './modele.mjs'
-import { store, Sid, difference, dhstring, get, getData, afficherdiagnostic } from './util.mjs'
+import { store, Sid, difference, dhstring, get, getData, afficherdiagnostic, sleep } from './util.mjs'
 import { schemas } from './schemas.mjs'
 import { crypt } from './crypto.mjs'
 import { AppExc, E_DB, E_BRO, t0n } from './api.mjs'
@@ -26,6 +26,10 @@ const STORES = {
 
 const TABLES = []
 for (const x in STORES) TABLES.push(x)
+
+export async function listeDatabases () {
+  return await Dexie.getDatabaseNames()
+}
 
 function EX1 (e) {
   return new AppExc(E_DB, 'Ouverture de la base locale impossible', e.message + (e.stack ? '\n' + e.stack : ''))
@@ -59,7 +63,7 @@ export function nombase () {
   return idc ? store().state.ui.org + '-' + idc : null
 }
 
-export async function openIDB () {
+export async function openIDB1 () {
   // eslint-disable-next-line no-unused-vars
   const d = data
   if (data.db) return
@@ -74,6 +78,18 @@ export async function openIDB () {
   }
 }
 
+export async function openIDB () {
+  try {
+    const db = new Dexie(data.nombase, { autoOpen: true })
+    db.version(2).stores(STORES)
+    await db.open()
+    data.ouvertureDB(db)
+    return db
+  } catch (e) {
+    throw data.setErDB(EX1(e))
+  }
+}
+
 export function closeIDB () {
   if (data.db && data.db.isOpen()) {
     try { data.db.close() } catch (e) {}
@@ -81,13 +97,26 @@ export function closeIDB () {
   data.fermetureDB()
 }
 
-export async function deleteIDB (lsKey) {
+export async function deleteIDB1 (lsKey) {
   try {
     if (lsKey) {
       localStorage.removeItem(store().state.ui.org + '-' + data.ps.dpbh)
     }
     const nb = nombase()
     if (nb) await Dexie.delete(nb)
+  } catch (e) {
+    console.log(e.toString())
+  }
+}
+
+export async function deleteIDB (lsKey) {
+  try {
+    if (lsKey) {
+      localStorage.removeItem(store().state.ui.org + '-' + data.ps.dpbh)
+    }
+    await Dexie.delete(data.nombase)
+    await sleep(100)
+    console.log('RAZ db')
   } catch (e) {
     console.log(e.toString())
   }

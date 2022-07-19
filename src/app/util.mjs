@@ -729,6 +729,11 @@ export class Phrase {
     this.debut = debut
     this.fin = fin
   }
+
+  razDebutFin () {
+    this.debut = ''
+    this.fin = ''
+  }
 }
 
 export class PhraseContact {

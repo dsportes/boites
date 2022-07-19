@@ -111,6 +111,8 @@ class Session {
   get modeInitial () { return store().state.ui.modeinitial }
   set modeInitial (val) { store().commit('ui/majmodeinitial', val) }
 
+  get org () { return store().state.ui.org }
+
   // 0: net pas ouvert, 1:net OK, 2: net KO
   get statutnet () { return store().state.ui.statutnet }
   set statutnet (val) { store().commit('ui/majstatutnet', val) }
@@ -131,7 +133,7 @@ class Session {
   get sessionId () { return store().state.ui.sessionid }
   set sessionId (val) { store().commit('ui/majsessionid', val) }
 
-  async connexion (sansidb) { // Depuis l'opération de connexion
+  async connexion (sansidb) { // sansidb : depuis l'opération de connexion
     this.statutsession = 1
     this.raz()
     store().commit('db/raz')
@@ -223,9 +225,10 @@ class Session {
     store().commit('db/raz')
   }
 
-  raz (init) { // init : l'objet data (Session) est créé à un moment où le store vuex n'est pas prêt
+  raz (init, sansidb) { // init : l'objet data (Session) est créé à un moment où le store vuex n'est pas prêt
     this.db = null // IDB quand elle est ouverte
     this.nombase = null
+    this.clek = null // clé K du compte authentifié
     this.erDB = 0 // 0:OK 1:IDB en erreur NON traitée 2:IDB en erreur traitée
     this.exIDB = null // exception sur IDB
     this.ws = null // WebSocket quand il est ouvert
@@ -242,7 +245,6 @@ class Session {
     this.ws = null // websocket de la session
     this.opWS = null // opération WS en cours
     this.opUI = null // opération UI en cours
-    this.clek = null // clé K du compte authentifié
     this.estComptable = false
     this.clepubc = null
     this.pjPerdues = [] // PJ accessibles en mode avion qui n'ont pas pu être récupérées et NE SONT PLUS ACCESSIBLES en avion
@@ -621,6 +623,10 @@ export class Compte {
   get primaire () { return data.getAvatar(this.id) }
 
   get naprim () { return this.mac[this.sid].na }
+
+  nombase () {
+    return data.org + '-' + crypt.u8ToB64(crypt.sha256(this.k), true)
+  }
 
   estAc (id) {
     const sid = crypt.idToSid(id)
