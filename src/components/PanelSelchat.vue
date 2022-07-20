@@ -13,6 +13,10 @@
           label="Quels statuts ?" emit-value map-options/>
         <q-btn class="q-ml-lg" dense size="md" icon="search" color="primary" @click="select"/>
       </div>
+      <div class="row justify-between items-center">
+        <q-btn class="q-ml-sm" dense color="primary" size="md" no-caps label="Chat du dernier compte copié" @click="selectId"/>
+        <q-input class="q-mr-sm" dense label="Filtre par nom" v-model="filtre"/>
+      </div>
     </div>
 
     <div class="q-py-sm scroll" style="max-height:100vh;">
@@ -44,7 +48,7 @@
 <script>
 import { useStore } from 'vuex'
 import { computed, ref } from 'vue'
-import { dhcool, aujhier, cfg } from '../app/util.mjs'
+import { dhcool, aujhier, cfg, afficherdiagnostic } from '../app/util.mjs'
 import { SelectChat, GetChat } from '../app/operations.mjs'
 import FicheAvatar from './FicheAvatar.vue'
 
@@ -70,13 +74,19 @@ export default ({
 
   data () {
     return {
+      filtre: '',
       cpt: null,
       dhoptions,
       stoptions,
       fdh: 0,
       st: 0,
+      blst: [],
       lst: [] // id dhde st na clec photo info stp nat
     }
+  },
+
+  watch: {
+    filtre () { this.filtrer() }
   },
 
   methods: {
@@ -90,6 +100,24 @@ export default ({
       console.log(cv.cv[1])
     },
 
+    filtrer (no) {
+      if (no || !this.filtre) { this.lst = this.blst; return }
+      this.lst = []
+      this.blst.forEach(c => {
+        if (c.na.nom.startsWith(this.filtre)) this.lst.push(c)
+      })
+    },
+
+    async selectId () {
+      const na = this.$store.state.ui.clipboard
+      if (!na) {
+        afficherdiagnostic('Rien n\'avait été copié. Recherche impossible.')
+        return
+      }
+      this.blst = await new SelectChat().run(0, 0, na.id)
+      this.filtrer(true)
+    },
+
     async select () {
       this.pf = false
       const [auj, hier] = aujhier()
@@ -101,7 +129,8 @@ export default ({
       } else if (this.fdh > 2 && this.fdh < 31) {
         dhde = auj.getTime() - (86400000 * this.fdh)
       }
-      this.lst = await new SelectChat().run(dhde, this.st)
+      this.blst = await new SelectChat().run(dhde, this.st, 0)
+      this.filtrer()
     },
 
     async ouvrirchat (c) {
@@ -146,7 +175,7 @@ export default ({
 
 <style lang="sass" scoped>
 @import '../css/app.sass'
-$haut: 5.5rem
+$haut: 7.5rem
 .top
   position: absolute
   top: 0

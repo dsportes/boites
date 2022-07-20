@@ -1765,18 +1765,19 @@ export class NouveauChat extends OperationUI {
 Sélection de chats
 args:
 - sessionId
-- id
 - dhde
 - st
+- id : Si présent, par convention la liste ne contient que le seul
+chat ayant cet id sans tenir compte des autres critères
 */
 export class SelectChat extends OperationUI {
   constructor () {
     super('Sélection de chats', OUI, SELONMODE)
   }
 
-  async run (dhde, st) {
+  async run (dhde, st, id) {
     try {
-      const args = { sessionId: data.sessionId, dhde, st }
+      const args = { sessionId: data.sessionId, dhde, st, id }
       const ret = await post(this, 'm1', 'selectChat', args)
       let liste
       if (ret.rowItems.length) {
