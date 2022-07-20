@@ -206,6 +206,22 @@
       </q-card>
     </q-dialog>
 
+    <q-dialog v-model="dialoguetrig">
+      <q-card class="petitelargeur">
+        <q-card-section>
+          <div class="titre-md ful-width text-center q-mb-sm">Donner un code à 3 lettres (a-z) pour vous aider à repérer
+            votre base locale si vous êtes amené à supprimer les bases inutiles
+            et encombrantes dans votre navigateur.</div>
+          <q-input v-model="trigramme" dense label="Trigramme" :rules="trigrules">
+            <template v-slot:hint>3 lettres (a-z)</template>
+          </q-input>
+        </q-card-section>
+        <q-card-actions>
+          <q-btn dense flat color="primary" label="OK" icon="check" v-close-popup @click="validertrigramme"/>
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
     <q-dialog v-model="aundiagnostic">
       <q-card>
         <q-card-section class="q-pa-md diag"><div v-html="diagnostic"></div></q-card-section>
@@ -269,6 +285,10 @@ import { cfg, dhcool } from '../app/util.mjs'
 import { remplacePage, onBoot } from '../app/page.mjs'
 import { reconnexion } from '../app/operations.mjs'
 
+const trigrules = [
+  val => val.search(/[^a-zA-Z]+/) === -1 || 'Seulement 3 lettres de \'a\' à \'z\'',
+  val => val.length === 3 || 'Exactement 3 lettres'
+]
 export default {
   name: 'MainLayout',
 
@@ -284,6 +304,8 @@ export default {
     return {
       idbs: ['~assets/database_gris.svg', '~assets/database_vert.svg', '~assets/database_rouge.svg'],
       console: console,
+      trigrules: trigrules,
+      trigramme: '',
       menugauche1: false,
       menugauche4: false
     }
@@ -318,7 +340,12 @@ export default {
 
     dh (t) { return !t ? '(na)' : dhcool(new Date(t)) },
 
-    stop () { data.stopOp() }
+    stop () { data.stopOp() },
+
+    validertrigramme () {
+      const resolve = this.$store.state.ui.trigramme
+      if (resolve) resolve(this.trigramme)
+    }
   },
 
   setup () {
@@ -476,6 +503,11 @@ export default {
       set: (val) => $store.commit('ui/majdialoguesynchro', val)
     })
 
+    const dialoguetrig = computed({
+      get: () => $store.state.ui.dialoguetrig,
+      set: (val) => $store.commit('ui/majdialoguetrig', val)
+    })
+
     function msgdegrade () {
       return 'Suite à un incident réseau ou d\'accès à la base locale, le mode a été dégradé de "' +
       MODES[data.modeInitial] + '" à "' + MODES[data.mode] + '".'
@@ -510,6 +542,7 @@ export default {
       coupledialobj,
       membredial,
       membredialobj,
+      dialoguetrig,
 
       compte,
       prefs,

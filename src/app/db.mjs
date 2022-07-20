@@ -43,41 +43,6 @@ function go () {
   if (data.erDB) throw data.exIDB
 }
 
-export function idbSidCompte () {
-  const k = store().state.ui.org + '-' + data.ps.dpbh
-  return localStorage.getItem(k)
-}
-
-export function enregLScompte (sid) {
-  const k = store().state.ui.org + '-' + data.ps.dpbh
-  localStorage.setItem(k, sid)
-}
-
-export function supprLSCompte (dpbh) {
-  const k = store().state.ui.org + '-' + dpbh
-  return localStorage.removeItem(k)
-}
-
-export function nombase () {
-  const idc = idbSidCompte()
-  return idc ? store().state.ui.org + '-' + idc : null
-}
-
-export async function openIDB1 () {
-  // eslint-disable-next-line no-unused-vars
-  const d = data
-  if (data.db) return
-  try {
-    data.nombase = nombase()
-    const db = new Dexie(data.nombase, { autoOpen: true })
-    db.version(2).stores(STORES)
-    await db.open()
-    data.ouvertureDB(db)
-  } catch (e) {
-    throw data.setErDB(EX1(e))
-  }
-}
-
 export async function openIDB () {
   try {
     const db = new Dexie(data.nombase, { autoOpen: true })
@@ -95,18 +60,6 @@ export function closeIDB () {
     try { data.db.close() } catch (e) {}
   }
   data.fermetureDB()
-}
-
-export async function deleteIDB1 (lsKey) {
-  try {
-    if (lsKey) {
-      localStorage.removeItem(store().state.ui.org + '-' + data.ps.dpbh)
-    }
-    const nb = nombase()
-    if (nb) await Dexie.delete(nb)
-  } catch (e) {
-    console.log(e.toString())
-  }
 }
 
 export async function deleteIDB (lsKey) {

@@ -77,6 +77,9 @@ export function majdialoguedlselection (state, val) { state.dialoguedlselection 
 export function majerreur (state, err) { state.erreur = err }
 export function majdialogueerreur (state, val) { state.dialogueerreur = val }
 
+export function majtrigramme (state, trig) { state.trigramme = trig }
+export function majdialoguetrig (state, val) { state.dialoguetrig = val }
+
 export function majtabavatar (state, val) { state.tabavatar = val }
 export function majtabsecret (state, val) { state.tabsecret = val }
 

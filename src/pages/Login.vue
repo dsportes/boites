@@ -104,16 +104,6 @@ export default ({
       this.dialcp = false
       this.phrasepar = false
     },
-    connecter1 (ps) {
-      if (ps) {
-        if (this.mode === 3) {
-          new ConnexionCompte().run(ps)
-        } else {
-          new ConnexionCompte().run(ps, this.razdb)
-          this.razdb = false
-        }
-      }
-    },
 
     async connecter (ps) {
       if (!ps) return
@@ -140,9 +130,7 @@ export default ({
             db = null
           }
         }
-        // aller chercher le trigramme
-        const trig = db ? '' : await this.getTrig()
-        await new ConnexionCompte().run(null, db, trig)
+        await new ConnexionCompte().run(null, db)
       }
     },
 
@@ -175,10 +163,6 @@ Choisir le mode synchronisé ou incognito.`
         afficherdiagnostic(msg3)
         await deleteIDB()
       }
-    },
-
-    async getTrig () {
-      return 'AAA'
     },
 
     crypterphrase () {

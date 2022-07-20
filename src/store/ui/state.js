@@ -2,6 +2,8 @@ export default function () {
   return {
     erreur: { code: -4, message: 'néant', conseil: 'néant', stack: null },
     dialogueerreur: false,
+    dialoguetrig: false,
+    trigramme: null,
 
     message: null,
     messageto: null,

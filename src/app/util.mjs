@@ -281,6 +281,13 @@ export function affichererreur (appexc, options, conseil) {
   })
 }
 
+export function getTrigramme () {
+  return new Promise((resolve) => {
+    $store.commit('ui/majtrigramme', resolve)
+    $store.commit('ui/majdialoguetrig', true)
+  })
+}
+
 export function affichermessage (texte, important) {
   $store.dispatch('ui/affichermessage', { texte, important })
 }

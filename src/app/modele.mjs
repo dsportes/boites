@@ -625,7 +625,7 @@ export class Compte {
   get naprim () { return this.mac[this.sid].na }
 
   nombase () {
-    return data.org + '-' + crypt.u8ToB64(crypt.sha256(this.k), true)
+    return '$$' + data.org + '-' + crypt.u8ToB64(crypt.sha256(this.k), true)
   }
 
   estAc (id) {

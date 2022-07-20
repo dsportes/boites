@@ -1,15 +1,15 @@
-import { NomAvatar, NomGroupe, store, post, get, affichermessage, cfg, sleep, affichererreur, appexc, difference, getJourJ, afficherdiagnostic, gzipT, putData, getData, NomTribu } from './util.mjs'
+import { NomAvatar, NomGroupe, store, post, get, affichermessage, cfg, sleep, affichererreur, appexc, difference, getJourJ, afficherdiagnostic, gzipT, putData, getData, NomTribu, getTrigramme } from './util.mjs'
 import { remplacePage } from './page.mjs'
 import {
-  deleteIDB, supprLSCompte, commitRows, getComptas, getPrefs, getCvs,
+  deleteIDB, commitRows, getComptas, getPrefs, getCvs,
   getAvatars, getGroupes, getCouples, getMembres, getSecrets, getChat,
-  openIDB, enregLScompte, getVIdCvs, saveListeCvIds, gestionFichierSync, gestionFichierCnx
+  openIDB, getVIdCvs, saveListeCvIds, gestionFichierSync, gestionFichierCnx
 } from './db.mjs'
 import { Compte, Avatar, newObjet, pk, data, Prefs, Chat, Contact, Invitgr, Invitcp, Compta, Groupe, Membre, Cv, Couple, Tribu } from './modele.mjs'
 import { AppExc, EXBRK, EXPS, F_BRO, E_BRO, X_SRV, E_WS, t0n } from './api.mjs'
 
 import { crypt, tru8 } from './crypto.mjs'
-import { schemas, serial } from './schemas.mjs'
+import { deserial, schemas, serial } from './schemas.mjs'
 
 const OUI = 1
 const NON = 0
@@ -917,6 +917,23 @@ export class OperationUI extends Operation {
     this.majopencours(this)
   }
 
+  setTrigramme (nombase, org, trig) {
+    const x = localStorage.getItem('$$trigrammes')
+    const trigs = x ? deserial(crypt.b64ToU8(x)) : {}
+    if (trig) {
+      trigs[nombase] = [org, trig]
+    } else delete trigs[nombase]
+    localStorage.setItem('$$trigrammes', crypt.u8ToB64(serial(trigs), true))
+  }
+
+  getOrgTrig (nombase) {
+    const x = localStorage.getItem('$$trigrammes')
+    if (!x) return ['', '']
+    const trigs = deserial(crypt.b64ToU8(x))
+    const ot = trigs[nombase]
+    return ot || ['', '']
+  }
+
   /*
   1) Après création du compte comptable
   2) Après acceptation d'un parrainage (compte est celui créé)
@@ -1009,8 +1026,11 @@ export class OperationUI extends Operation {
         await deleteIDB()
         throw e
       }
-      const lsk = this.org + '-' + compte.dpbh
-      localStorage.setItem(lsk, compte.nombase())
+      const lsk = data.org + '-' + compte.dpbh
+      localStorage.setItem(lsk, data.nombase)
+      const trig = await getTrigramme()
+      this.setTrigramme(data.nombase, data.org, trig)
+      console.log(this.getOrgTrig(data.nombase))
 
       await saveListeCvIds(nv > vcv ? nv : vcv, lst)
       await commitRows({ lmaj, lsuppr })
@@ -1569,7 +1589,7 @@ export class ConnexionCompte extends OperationUI {
     }
   }
 
-  async phase0 (compte, db, trig) { // compte / prefs : abonnement à compte
+  async phase0 (compte, db) { // compte / prefs : abonnement à compte
     let prefs = null
     let chat = null
 
@@ -1593,7 +1613,6 @@ export class ConnexionCompte extends OperationUI {
         if (db) {
           data.ouvertureDB(db)
         } else {
-          // TODO : gérer le trigramme trig en localStorage
           await openIDB()
         }
         this.buf.putIDB(this.compte)
@@ -1617,7 +1636,7 @@ export class ConnexionCompte extends OperationUI {
     data.setSyncItem('01', 1, 'Compte et comptabilité')
   }
 
-  async run (compte, db, trig) {
+  async run (compte, db) {
     try {
       this.buf = new OpBuf()
       this.dh = 0
@@ -1631,7 +1650,7 @@ export class ConnexionCompte extends OperationUI {
         if (nb >= 5) throw new AppExc(E_BRO, 'Plus de 5 tentatives de connexions. Bug ou incident temporaire. Ré-essayer un peu plus tard')
         data.resetPhase012()
         data.repertoire.raz()
-        await this.phase0(compte, db, trig) // obtention du compte / prefs
+        await this.phase0(compte, db) // obtention du compte / prefs
         if (!await this.phase1()) continue // obtention des avatars du compte
         if (!await this.phase2()) continue // obtention des groupes et contacts des avatars du compte
         break
@@ -1657,53 +1676,15 @@ export class ConnexionCompte extends OperationUI {
       if (data.dbok && data.netok) await this.buf.commitIDB()
       if (data.mode === 1) {
         const lsk = data.org + '-' + this.compte.dpbh
-        localStorage.setItem(lsk, this.compte.nombase())
+        const nb = this.compte.nombase()
+        localStorage.setItem(lsk, nb)
+        if (!db) {
+          // SYNC, pas de db détectée au login => première connexion ici
+          const trig = await getTrigramme()
+          this.setTrigramme(nb, data.org, trig)
+          console.log(this.getOrgTrig(nb))
+        }
       }
-      if (data.mode === 1 || data.mode === 3) await this.buf.gestionFichierCnx()
-      await data.finConnexion(this.dh)
-      console.log('Connexion compte : ' + data.getCompte().id)
-      this.finOK()
-      remplacePage('Compte')
-    } catch (e) {
-      await this.finKO(e)
-    }
-  }
-
-  async run1 (ps, razdb) {
-    try {
-      this.buf = new OpBuf()
-      this.dh = 0
-      data.ps = ps
-      await data.connexion(true) // sans IDB, compte encore inconnu
-
-      for (let nb = 0; nb < 10; nb++) {
-        if (nb >= 5) throw new AppExc(E_BRO, 'Plus de 5 tentatives de connexions. Bug ou incident temporaire. Ré-essayer un peu plus tard')
-        data.resetPhase012()
-        data.repertoire.raz()
-        await this.phase0(razdb) // obtention du compte / prefs
-        if (!await this.phase1()) continue // obtention des avatars du compte
-        if (!await this.phase2()) continue // obtention des groupes et contacts des avatars du compte
-        break
-      }
-      this.BRK()
-      /* YES ! on a tous les objets maîtres compte / avatar / groupe / couple) à jour, abonnés et signés */
-
-      /* Récupération des membres et secrets */
-      await this.phase3()
-
-      /* Phase 4 : récupération des CVs et s'y abonner
-      Recalcul de tousAx en tenant compte des disparus
-      */
-      await this.syncCVs()
-
-      /* Phase 5 : récupération des invitations aux groupes / couples
-      Elles seront de facto traitées en synchronisation quand un avatar reviendra avec un lgrk / lcck étendu
-      */
-      if (data.netok) await this.getInvitGrs(this.compte)
-      if (data.netok) await this.getInvitCps(this.compte)
-
-      // Finalisation en une seule fois, commit en IDB
-      if (data.dbok && data.netok) await this.buf.commitIDB()
       if (data.mode === 1 || data.mode === 3) await this.buf.gestionFichierCnx()
       await data.finConnexion(this.dh)
       console.log('Connexion compte : ' + data.getCompte().id)
@@ -1732,16 +1713,20 @@ export class ChangementPS extends OperationUI {
   async run (ps) {
     try {
       const c = data.getCompte()
-      const dpbh = c.dpbh
+      const avdpbh = c.dpbh // AVANT changement
       const kx = await c.nouvKx(ps)
       const args = { sessionId: data.sessionId, id: c.id, dpbh: ps.dpbh, pcbh: ps.pcbh, kx }
       const ret = await post(this, 'm1', 'changementPS', args)
       data.ps = ps
       const r = await this.compileToObject(this.deserialRowItems(ret.rowItems))
       data.setCompte(r.compte)
+      const apdpbh = r.dpbh
       if (data.mode === 1) {
-        supprLSCompte(dpbh)
-        enregLScompte(c.sid)
+        let lsk = data.org + '-' + avdpbh
+        localStorage.removeItem(lsk)
+        const nb = this.compte.nombase()
+        lsk = data.org + '-' + apdpbh
+        localStorage.setItem(lsk, nb)
       }
       this.finOK()
     } catch (e) {
@@ -1798,17 +1783,17 @@ export class SelectChat extends OperationUI {
         const r = await this.compileToObject(this.deserialRowItems(ret.rowItems))
         liste = Object.values(r.selchat)
       } else liste = []
-      const l2 = []
+      const l2 = new Set()
       const liste2 = []
       liste.forEach(c => {
         if (c.na) {
           data.repertoire.setNa(c.na)
           const cv = data.getCv(c.id)
-          if (!cv) l2.push(c.id)
+          if (!cv) l2.add(c.id)
           liste2.push(c)
         }
       })
-      if (l2.length) await new GetCVs().run(l2)
+      if (l2.size) await new GetCVs().run(l2)
       liste2.sort((a, b) => a.dhde < b.dhde ? 1 : (a.dhde < b.dhde ? -1 : 0))
       this.finOK()
       return liste2
@@ -2014,7 +1999,6 @@ export class GetCVs extends OperationUI {
 
   async run (l2) { // set des ids des CV manquantes
     try {
-      const l2 = new Set()
       const res = []
       if (l2.size) {
         const args = { sessionId: data.sessionId, v: 0, l1: [], l2: Array.from(l2) }
