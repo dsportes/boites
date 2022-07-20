@@ -1,7 +1,9 @@
 <template>
   <q-btn dense no-caps>
     <q-icon v-if="!noicon" left size="sm" color="warning" name="warning" />
-    <div class="font-mono fs-md">{{label}}</div>
+    <div class="font-mono fs-md">{{label}}
+      <span v-if="suffixe" class="fs-sm q-ml-xs">{{suffixe}}</span>
+    </div>
     <q-popup-proxy transition-show="flip-up" transition-hide="flip-down">
       <q-banner inline-actions dense rounded>
         <q-icon size="sm" name="lightbulb" color="warning" />
@@ -17,7 +19,7 @@
 <script>
 export default ({
   name: 'InfoTxt',
-  props: { label: String, info: String, noicon: Boolean }
+  props: { label: String, suffixe: String, info: String, noicon: Boolean }
 })
 </script>
 

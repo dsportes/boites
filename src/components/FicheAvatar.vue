@@ -7,7 +7,8 @@
     <div class="col q-pl-sm">
       <div class="row items-center">
         <div class="col-auto">
-          <info-txt :class="s.primaire ? 'bord2p' :'bord2'" :label="s.na.nom" noicon :info="s.na.nom + ' ID:' + s.na.id"/>
+          <info-txt :class="s.primaire ? 'bord2p' :'bord2'" :label="s.na.nom"
+            :suffixe="s.na.sfx" noicon :info="s.na.nom + ' ID:' + s.na.id"/>
           <span v-if="s.primaire" class="q-ml-sm">Compte</span>
           <span v-if="s.parrain" class="q-ml-sm text-bold text-warning">PARRAIN</span>
           <q-btn v-if="s.naTribu" class="q-ml-sm" :label="s.naTribu.nom" dense no-caps color="primary" @click.stop="ouvrirtribu"/>
