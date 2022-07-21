@@ -3,6 +3,7 @@
       <q-card class="moyennelargeur fs-md">
         <q-card-section>
           <div class="titre-lg text-center">Crytographie</div>
+          <!--q-btn flat label="Test trig" color="primary" @click="testtrig" /-->
           <q-btn flat label="Test de crypto" color="primary" @click="testcrypto" />
           <bouton-help page="page1"/>
         </q-card-section>
@@ -32,7 +33,7 @@ import { computed } from 'vue'
 import { crypt } from '../app/crypto.mjs'
 import PhraseSecrete from '../components/PhraseSecrete.vue'
 import BoutonHelp from '../components/BoutonHelp.vue'
-import { post, testEcho } from '../app/util.mjs'
+import { post, testEcho, getTrigramme } from '../app/util.mjs'
 
 export default ({
   name: 'DialogueCrypto',
@@ -60,6 +61,10 @@ export default ({
     async testcrypto () {
       await crypt.test1()
       await crypt.test2()
+    },
+    async testtrig () {
+      const t = await getTrigramme()
+      console.log(t)
     },
     async test2 () {
       try {

@@ -212,7 +212,7 @@
           <div class="titre-md ful-width text-center q-mb-sm">Donner un code à 3 lettres (a-z) pour vous aider à repérer
             votre base locale si vous êtes amené à supprimer les bases inutiles
             et encombrantes dans votre navigateur.</div>
-          <q-input v-model="trigramme" dense label="Trigramme" :rules="trigrules">
+          <q-input v-model="trigramme" dense label="Trigramme" :rules="trigrules" @keydown.enter.prevent="validertrigramme">
             <template v-slot:hint>3 lettres (a-z)</template>
           </q-input>
         </q-card-section>
@@ -258,7 +258,7 @@
 
 <script>
 import { useQuasar } from 'quasar'
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useStore } from 'vuex'
 import DialogueCreationCompte from '../components/DialogueCreationCompte.vue'
 import DialogueInfoMode from '../components/DialogueInfoMode.vue'
@@ -305,7 +305,6 @@ export default {
       idbs: ['~assets/database_gris.svg', '~assets/database_vert.svg', '~assets/database_rouge.svg'],
       console: console,
       trigrules: trigrules,
-      trigramme: '',
       menugauche1: false,
       menugauche4: false
     }
@@ -343,6 +342,9 @@ export default {
     stop () { data.stopOp() },
 
     validertrigramme () {
+      const t = this.trigramme
+      if (t.length !== 3 || t.search(/[^a-zA-Z]+/) !== -1) return
+      this.dialoguetrig = false
       const resolve = this.$store.state.ui.trigramme
       if (resolve) resolve(this.trigramme)
     }
@@ -353,6 +355,7 @@ export default {
     $q.dark.set(true)
     onBoot()
     const phdef = cfg().avatar
+    const trigramme = ref('')
 
     const $store = useStore()
     const sessionok = computed(() => $store.state.ui.sessionok)
@@ -513,7 +516,12 @@ export default {
       MODES[data.modeInitial] + '" à "' + MODES[data.mode] + '".'
     }
 
+    watch(() => dialoguetrig.value, (ap, av) => {
+      if (ap) trigramme.value = ''
+    })
+
     return {
+      trigramme,
       org,
       orgicon,
       orglabel,

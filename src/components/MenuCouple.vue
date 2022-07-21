@@ -44,6 +44,10 @@
       <q-item v-if="sec" clickable v-close-popup @click="nouveausecret">
         <q-item-section>Nouveau secret du contact</q-item-section>
       </q-item>
+      <q-separator v-if="estCP" />
+      <q-item v-if="estCP" clickable v-close-popup @click="gererforfaits">
+        <q-item-section>Augmenter / réduire les forfaits</q-item-section>
+      </q-item>
     </q-list>
   </q-menu>
 
@@ -125,12 +129,13 @@
 <script>
 import { computed, toRef } from 'vue'
 import { useStore } from 'vuex'
-import { cfg, edvol } from '../app/util.mjs'
-import { AccepterCouple, DeclinerCouple, ProlongerParrainage, SupprimerCouple, SuspendreCouple, ReactiverCouple } from '../app/operations.mjs'
+import { cfg, edvol, affichermessage } from '../app/util.mjs'
+import { GetCompta, GetTribuCompte, EstParrainTribu, AccepterCouple, DeclinerCouple, ProlongerParrainage, SupprimerCouple, SuspendreCouple, ReactiverCouple } from '../app/operations.mjs'
 import { useQuasar } from 'quasar'
 import ChoixForfaits from './ChoixForfaits.vue'
 import EditeurMd from './EditeurMd.vue'
 import { UNITEV1, UNITEV2 } from '../app/api.mjs'
+import { data } from '../app/modele.mjs'
 
 export default ({
   name: 'MenuCouple',
@@ -145,7 +150,8 @@ export default ({
     supp () { const x = this.c || this.couple; return (x.stp < 4 && x.avc === 0) || x.stp === 5 },
     ppc () { const x = this.c || this.couple; return x.stp === 1 && x.orig === 0 && x.avc === 1 },
     prlp () { const x = this.c || this.couple; return x.stp === 1 && x.orig === 1 },
-    prlr () { const x = this.c || this.couple; return x.stp === 1 && x.orig === 2 }
+    prlr () { const x = this.c || this.couple; return x.stp === 1 && x.orig === 2 },
+    estCP () { return this.compte.estComptable || this.compte.estParrain }
   },
 
   data () {
@@ -169,6 +175,49 @@ export default ({
 
     liste () {
       this.avatarcpform = false
+    },
+
+    async gererforfaits () {
+      if (this.c) this.couple = this.c
+      const na = this.couple.naE
+      let tribu
+      const compta = await new GetCompta().run(na.id)
+      let estpar = false
+      if (!compta.t) {
+        affichermessage('Cet avatar n`est pas l`avatar primaire de son compte ou la création de son compte est en attente.' +
+          'Impossible de connaître sa tribu et de gérer ses forfaits', true)
+        return
+      }
+      if (this.compte.estComptable) {
+        const [parrain, naTribu] = await new GetTribuCompte().run(na.id)
+        estpar = parrain
+        tribu = data.getTribu(naTribu.id)
+      } else {
+        const st = await new EstParrainTribu().run(na.id)
+        /*
+        0 - id n'est pas primaire
+        1 - id est primaire pas de la même tribu
+        2 - id est primaire et de la même tribu
+        3 - id est parrain de la même tribu
+        */
+        if (st === 0) {
+          affichermessage('Cet avatar n`est pas l`avatar primaire de son compte ou la création de son compte est en attente.' +
+            'Impossible de connaître sa tribu et de gérer ses forfaits', true)
+          return
+        }
+        if (st === 1) {
+          affichermessage('Cet avatar n`est pas de la même tribu que la votre.' +
+            'Impossible de gérer ses forfaits', true)
+          return
+        }
+        estpar = st === 3
+        tribu = this.tribu
+      }
+      this.ouvrirgestionforfaits(na, compta, tribu, estpar)
+    },
+
+    ouvrirgestionforfaits (na, compta, tribu, estpar) {
+      console.log(na.nom, compta.id, tribu.na.nom, estpar)
     },
 
     voirsecrets () {
@@ -211,6 +260,8 @@ export default ({
     const $q = useQuasar()
     const c = toRef(props, 'c')
     const avatar = computed(() => { return $store.state.db.avatar })
+    const compte = computed(() => { return $store.state.db.compte })
+    const tribu = computed(() => { return $store.state.db.tribu })
 
     const tabavatar = computed({
       get: () => $store.state.ui.tabavatar,
@@ -318,6 +369,8 @@ export default ({
       supprimer,
       couple,
       avatar,
+      compte,
+      tribu,
       avatarcpform,
       evtfiltresecrets,
       tabavatar

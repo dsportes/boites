@@ -2792,7 +2792,7 @@ export class AcceptationParrainage extends OperationUI {
       const rowAvatar = await avatar.toRow()
 
       const compta = new Compta()
-      compta.nouveau(avatar.id, arg.estpar ? 1 : 2)
+      compta.nouveau(avatar.id, 1)
       compta.compteurs.setF1(datactc.forfaits[0])
       compta.compteurs.setF2(datactc.forfaits[1])
       const rowCompta = await compta.toRow()
