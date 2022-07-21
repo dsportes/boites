@@ -962,6 +962,14 @@ export class OperationUI extends Operation {
       data.setChat(chat)
     }
 
+    if (mapRows.tribu) {
+      const x = Object.values(mapRows.tribu)
+      const tribu = await new Tribu().fromRow(x[0])
+      tribu.na = compte.nat
+      await tribu.fromRow2()
+      store().commit('db/majtribu', tribu)
+    }
+
     const xa = Object.values(mapRows.avatar)
     const avatar = await new Avatar().fromRow(xa[0])
     avatar.repGroupes()
@@ -2768,9 +2776,12 @@ export class AcceptationParrainage extends OperationUI {
       const compte = new Compte().nouveau(couple.naI, kpav.privateKey)
       // nouveau() enregistre la clé K dans data.clek !!!
       await compte.setTribu(nat, arg.clepubc)
-      const chkt = compte.chkt
-      const nctc = await crypt.crypter(rnd, serial(datactc.nct))
-      if (arg.estpar) compte.stp = 1
+      let chkt = 0, ncpart = null
+      if (arg.estpar) {
+        compte.stp = 1
+        chkt = compte.chkt
+        ncpart = await crypt.crypter(rnd, serial([compte.naprim.nom, compte.naprim.rnd]))
+      }
       const rowCompte = await compte.toRow()
 
       const prefs = new Prefs().nouveau(compte.id)
@@ -2803,8 +2814,8 @@ export class AcceptationParrainage extends OperationUI {
         idt: nat.id, // id de la tribu de A1
         f1: datactc.forfaits[0],
         f2: datactc.forfaits[1],
-        chkt,
-        nctc,
+        chkt, // clé d'accès à mncpt dans la table des parrains de la tribu, si le compte est parrain
+        ncpart, // nom complet du compte s'il est parrain, crypté par la clé de la tribu
         ardc,
         estPar: arg.estpar,
         sec: arg.max[0] !== 0, // le filleul accède aux secrets du couple

@@ -218,8 +218,9 @@ export default ({
       const l2 = new Set()
       x.forEach(nr => {
         const na = new NomAvatarObj(nr[0], nr[1])
-        this.naps.push(na)
+        data.repertoire.setNa(na)
         if (!data.getCv(na.id)) l2.add(na.id)
+        this.naps.push(na)
       })
       if (l2.size) await new GetCVs().run(l2) // chargement des Cv éventuellement manquantes (parrains inconnus)
       this.tribdial = true

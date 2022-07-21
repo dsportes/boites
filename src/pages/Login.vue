@@ -97,6 +97,7 @@ export default ({
   methods: {
     async creercc (ps) {
       if (!ps) return
+      this.mode = 2
       await new CreationCompteComptable().run(ps)
       this.ps = null
     },

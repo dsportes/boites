@@ -17,7 +17,7 @@
         <slot name="statut" class="col-auto text-right">
         </slot>
         <q-btn v-if="!noMenu" class="q-ml-sm col-auto" dense size="md" color="primary" icon="more_horiz">
-          <q-menu transition-show="scale" transition-hide="scale">
+          <q-menu transition-show="scale" transition-hide="scale" v-model="menuouv">
             <div :class="' menu column fs-md font-mono'">
               <div class="item row items-center" v-close-popup @click="copierna">
                 <q-icon class="col-auto q-ml-sm" size="md" name="content_copy"/>
@@ -27,10 +27,6 @@
               <div v-if="cvEditable" class="item row items-center" v-close-popup @click="ouvrircv">
                 <q-icon class="col-auto q-ml-sm" size="md" name="mode_edit"/>
                 <span class="col">Éditer la carte de visite</span>
-              </div>
-              <div class="item row items-center" v-close-popup @click="parraintribu">
-                <q-icon class="col-auto" size="md" name="question_mark"/>
-                <q-item-section>En savoir plus ...</q-item-section>
               </div>
               <q-separator v-if="compta"/>
               <div v-if="compta" class="item row items-center" v-close-popup @click="ouvrircompta">
@@ -134,7 +130,14 @@ export default ({
       couple: null,
       groupe: null,
       membre: null,
-      naint: null
+      naint: null,
+      menuouv: false
+    }
+  },
+
+  watch: {
+    menuouv (ap, av) {
+      if (ap) this.parraintribu()
     }
   },
 
