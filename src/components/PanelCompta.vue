@@ -1,10 +1,10 @@
 <template>
-  <q-card class="moyennelargeur q-pa-sm">
-    <q-toolbar class="bg-secondary text-white">
+  <q-card>
+    <q-toolbar v-if="close" class="bg-secondary text-white">
       <q-toolbar-title class="titre-lg full-width text-right">Comptabilité de {{cpt.av.na.nom}}</q-toolbar-title>
       <q-btn dense flat size="md" icon="chevron_right" @click="fermercompta"/>
     </q-toolbar>
-    <div class="fullwidth">
+    <div>
       <div class="row items-start">
         <div class="col-5 text-right text-italic">Jour de calcul</div>
         <div class="col-7 font-mono fs-md text-center">{{cpt.x.j}}</div>

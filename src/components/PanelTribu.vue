@@ -23,7 +23,7 @@
     <editeur-md :texte="state.t.info" v-model="info" @ok="changerInfo"
       label-ok="Valider" editable modetxt style="height:8rem"/>
 
-    <div class="q-mt-md titre-lg">Volumes déjà attribuées aux comptes de la tribu</div>
+    <div class="q-mt-md titre-lg">Volumes déjà attribués aux comptes de la tribu</div>
     <div>
       <span class=q-mx-md>V1: {{ed1(state.t.f1)}}</span>
       <span>V2: {{ed2(state.t.f2)}}</span>

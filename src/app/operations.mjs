@@ -1913,7 +1913,7 @@ export class GetTribuCompte extends OperationUI {
     try {
       const args = { sessionId: data.sessionId, id }
       const ret = await post(this, 'm1', 'getTribuCompte', args)
-      const naTribu = await data.getCompte().naTribu(ret.nctpc)
+      const naTribu = ret.nctpc ? await data.getCompte().naTribu(ret.nctpc) : null
       this.finOK()
       return [ret.parrain, naTribu]
     } catch (e) {

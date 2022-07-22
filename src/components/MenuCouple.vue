@@ -1,10 +1,10 @@
 <template>
   <q-menu transition-show="scale" transition-hide="scale">
     <q-list dense style="min-width: 10rem">
-      <q-item v-if="!depuisDetail" clickable v-close-popup @click="detail">
+      <q-item v-if="optionDetail" clickable v-close-popup @click="detail">
         <q-item-section>Détail et édition du contact</q-item-section>
       </q-item>
-      <q-item v-if="depuisDetail" clickable v-close-popup @click="liste">
+      <q-item v-if="optionListe" clickable v-close-popup @click="liste">
         <q-item-section>Liste des contacts</q-item-section>
       </q-item>
       <q-separator />
@@ -125,6 +125,10 @@
     </q-card>
   </q-dialog>
 
+  <q-dialog v-model="ouvrirgf" full-height>
+    <gerer-forfaits :compta="comptaloc" :tribu="tribuloc" :na="naloc"
+      :estpar="estparloc" :close="fermergf"/>
+  </q-dialog>
 </template>
 <script>
 import { computed, toRef } from 'vue'
@@ -133,14 +137,15 @@ import { cfg, edvol, affichermessage } from '../app/util.mjs'
 import { GetCompta, GetTribuCompte, EstParrainTribu, AccepterCouple, DeclinerCouple, ProlongerParrainage, SupprimerCouple, SuspendreCouple, ReactiverCouple } from '../app/operations.mjs'
 import { useQuasar } from 'quasar'
 import ChoixForfaits from './ChoixForfaits.vue'
+import GererForfaits from './GererForfaits.vue'
 import EditeurMd from './EditeurMd.vue'
 import { UNITEV1, UNITEV2 } from '../app/api.mjs'
 import { data } from '../app/modele.mjs'
 
 export default ({
   name: 'MenuCouple',
-  components: { ChoixForfaits, EditeurMd },
-  props: { c: Object, depuisDetail: Boolean },
+  components: { ChoixForfaits, EditeurMd, GererForfaits },
+  props: { c: Object, optionDetail: Boolean, optionListe: Boolean },
   computed: {
     nom () { const x = this.c || this.couple; return x.nomEd },
     sec () { const x = this.c || this.couple; return x.stp === 4 && x.stI === 1 },
@@ -161,7 +166,12 @@ export default ({
       reactacc: false,
       max: [1, 1],
       ard: '',
-      edvol: edvol
+      edvol: edvol,
+      naloc: null,
+      comptaloc: null,
+      tribuloc: null,
+      estparloc: false,
+      ouvrirgf: false
     }
   },
 
@@ -190,7 +200,7 @@ export default ({
       }
       if (this.compte.estComptable) {
         const [parrain, naTribu] = await new GetTribuCompte().run(na.id)
-        estpar = parrain
+        estpar = parrain !== 0
         tribu = data.getTribu(naTribu.id)
       } else {
         const st = await new EstParrainTribu().run(na.id)
@@ -217,7 +227,12 @@ export default ({
     },
 
     ouvrirgestionforfaits (na, compta, tribu, estpar) {
-      console.log(na.nom, compta.id, tribu.na.nom, estpar)
+      this.naloc = na; this.comptaloc = compta; this.tribuloc = tribu; this.estparloc = estpar
+      this.ouvrirgf = true
+    },
+
+    fermergf () {
+      this.ouvrirgf = false
     },
 
     voirsecrets () {

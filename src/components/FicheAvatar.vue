@@ -18,7 +18,7 @@
         </slot>
         <q-btn v-if="!noMenu" class="q-ml-sm col-auto" dense size="md" color="primary" icon="more_horiz">
           <q-menu transition-show="scale" transition-hide="scale" v-model="menuouv">
-            <div :class="' menu column fs-md font-mono'">
+            <div :class="' menu column fs-md'">
               <div class="item row items-center" v-close-popup @click="copierna">
                 <q-icon class="col-auto q-ml-sm" size="md" name="content_copy"/>
                 <span class="col">Copier</span>
@@ -103,6 +103,7 @@ import ShowHtml from './ShowHtml.vue'
 import EditeurMd from './EditeurMd.vue'
 import InfoTxt from './InfoTxt.vue'
 import NouveauCouple from './NouveauCouple.vue'
+import { IDCOMPTABLE } from '../app/api.mjs'
 import { Cv, data } from '../app/modele.mjs'
 import { copier, affichermessage } from '../app/util.mjs'
 import { GetCompta, GetTribuCompte, EstParrainTribu } from '../app/operations.mjs'
@@ -220,11 +221,16 @@ export default ({
             'Impossible de savoir si son compte est parrain ou non et de quelle tribu.', true)
           return
         }
-        const [parrain, naTribu] = await new GetTribuCompte().run(id)
-        this.s.parrain = parrain
-        this.s.naTribu = naTribu
-        affichermessage(`${parrain ? 'Parrain' : 'N\'est pas parrain'}
-         - Tribu : ${naTribu.nom}`, true)
+        if (id === IDCOMPTABLE) {
+          this.s.parrain = true
+          this.s.naTribu = null
+        } else {
+          const [parrain, naTribu] = await new GetTribuCompte().run(id)
+          this.s.parrain = parrain
+          this.s.naTribu = naTribu
+          affichermessage(`${parrain ? 'Parrain' : 'N\'est pas parrain'}
+          - Tribu : ${naTribu.nom}`, true)
+        }
         return
       }
       if (c.id === id) {

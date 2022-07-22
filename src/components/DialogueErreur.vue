@@ -1,27 +1,27 @@
 <template>
-    <q-dialog v-model="dialogueerreur" persistent>
-      <q-card class="q-ma-xs moyennelargeur">
-        <q-card-section>
-          <div class="titre-5">{{labels['x'+erreur.code]}}</div>
-        </q-card-section>
-        <q-card-section>
-          <div class="msg">{{erreur.message}}</div>
-        </q-card-section>
-        <q-card-section v-if="erreur.conseil != null">
-          <div class="msg">{{erreur.conseil}}</div>
-        </q-card-section>
-        <q-card-actions align="right">
-          <q-btn v-for="(item, index) in erreur.options" :key="index" flat :label="item.label" :color="item.color"
-          @click="fermererreur(item.code)" />
-        </q-card-actions>
-        <q-card-section class="q-pt-none">
-          <div v-if="erreur.stack">
-            Stack <q-toggle v-model="errstack"/>
-            <q-input v-if="errstack" type="textarea" autogrow v-model="erreur.stack" class="q-pa-xs stackclass font-mono"/>
-          </div>
-        </q-card-section>
-      </q-card>
-    </q-dialog>
+  <q-dialog v-model="dialogueerreur" persistent>
+    <q-card class="q-ma-xs moyennelargeur">
+      <q-card-section>
+        <div class="titre-5">{{labels['x'+erreur.code]}}</div>
+      </q-card-section>
+      <q-card-section>
+        <div class="msg">{{erreur.message}}</div>
+      </q-card-section>
+      <q-card-section v-if="erreur.conseil != null">
+        <div class="msg">{{erreur.conseil}}</div>
+      </q-card-section>
+      <q-card-actions align="right">
+        <q-btn v-for="(item, index) in erreur.options" :key="index" flat :label="item.label" :color="item.color"
+        @click="fermererreur(item.code)" />
+      </q-card-actions>
+      <q-card-section class="q-pt-none">
+        <div v-if="erreur.stack">
+          Stack <q-toggle v-model="errstack"/>
+          <q-input v-if="errstack" type="textarea" autogrow v-model="erreur.stack" class="q-pa-xs stackclass font-mono"/>
+        </div>
+      </q-card-section>
+    </q-card>
+  </q-dialog>
 </template>
 
 <script>

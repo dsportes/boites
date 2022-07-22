@@ -129,7 +129,10 @@
           <titre-banner class-titre="titre-md" :titre="s.c.nomEd"
             :titre2="s.c.nomEd + ' [' + s.c.nomEs + '#' + s.c.na.sfx + ']'" :id-objet="s.c.id"/>
         </q-toolbar-title>
-        <q-btn class="chl" dense flat size="md" icon="chevron_right" @click="fermerctc"/>
+        <q-btn size="md" color="white" icon="menu" flat dense>
+          <menu-couple :c="s.c"/>
+        </q-btn>
+        <q-btn class="chl q-ml-sm" dense flat size="md" icon="chevron_right" @click="fermerctc"/>
       </q-toolbar>
     </div>
 
@@ -145,7 +148,7 @@
             :titre2="s.c.nomEd + ' [' + s.c.nomEs + '#' + s.c.na.sfx + ']'" :id-objet="s.c.id"/>
         </q-toolbar-title>
         <q-btn size="md" color="white" icon="menu" flat dense>
-          <menu-couple :c="s.c" depuis-detail/>
+          <menu-couple :c="s.c" option-liste/>
         </q-btn>
       </q-toolbar>
     </q-page-sticky>

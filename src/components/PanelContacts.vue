@@ -1,5 +1,5 @@
 <template>
-<q-card class="fs-md moyennelargeur">
+<q-card v-if="sessionok" class="fs-md moyennelargeur">
   <div class="top bg-secondary text-white full-width">
     <q-toolbar class="q-px-xs">
       <q-btn dense size="md" icon="chevron_left" @click="panelcontacts=false"/>
@@ -53,7 +53,6 @@ export default ({
 
   data () {
     return {
-      nvcouple: false,
       avatars: [],
       nomavatar: '',
       ax: null
@@ -75,7 +74,9 @@ export default ({
     const $store = useStore()
     const opt = ref('c')
     const txt = ref('')
+    const nvcouple = ref(false)
     const detaildial = ref(false)
+    const sessionok = computed(() => $store.state.ui.sessionok)
     const panelcontacts = computed({
       get: () => $store.state.ui.panelcontacts,
       set: (val) => $store.commit('ui/majpanelcontacts', val)
@@ -136,11 +137,16 @@ export default ({
         detaildial.value = false
       }
     })
+    watch(() => sessionok.value, (ap, av) => {
+      nvcouple.value = false
+    })
 
     init1()
     filtre()
 
     return {
+      sessionok,
+      nvcouple,
       panelcontacts,
       opt,
       txt,

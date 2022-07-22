@@ -23,7 +23,7 @@
         </div>
 
         <q-btn class="col-auto btnmenu" size="md" color="white" icon="menu" flat dense>
-          <menu-couple :c="c" />
+          <menu-couple :c="c" option-detail/>
         </q-btn>
       </div>
     </div>
