@@ -31,6 +31,8 @@
         <div class="col-4 font-mono fs-md text-center">{{ed(cpt.x.v2) + (m ? ' ' + ed(cpt.x.v2c) : '')}}</div>
         <div class="col-3 font-mono fs-md text-center">{{ed(cpt.x.v2m)}}</div>
       </div>
+
+      <div class="titre-lg q-mt-md">Historique</div>
       <div class="row items-start">
         <div class="col-5 text-right text-italic">Moy. journalière de transfert dans le mois</div>
         <div class="col-7 font-mono fs-md text-center">{{ed(cpt.x.trm)}}</div>
@@ -59,6 +61,7 @@
         <div class="col-1 font-mono fs-md text-center">{{ed(cpt.x.tr[12])}}</div>
         <div class="col-1 font-mono fs-md text-center">{{ed(cpt.x.tr[13])}}</div>
       </div>
+
     </div>
   </q-card>
 </template>

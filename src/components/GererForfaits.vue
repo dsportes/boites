@@ -5,68 +5,119 @@
         <q-btn dense flat size="md" icon="close" @click="fermergf"/>
         <q-toolbar-title class="titre-lg full-width text-right q-mr-sm">Gestion des Forfaits</q-toolbar-title>
       </q-toolbar>
-      <fiche-avatar :na-avatar="na"/>
     </div>
 
     <div class="q-pa-sm scroll" style="max-height:100vh;">
       <div class="filler"></div>
-      <q-expansion-item header-class="bg-secondary text-white titre-md" :label="'À propos de la tribu ' + s.t.na.nom">
+      <fiche-avatar :na-avatar="na"/>
+      <q-btn flat dense color="primary" label="voir sa comptabilité" @click="comptadial=true"/>
 
-        <show-html v-if="s.t.info" class="height-4" :texte="s.t.info"/>
-        <div v-else class="text-italic texte-center">(Pas de commentaires)</div>
+      <div class="q-mt-md bg-secondary text-white titre-md" :label="'Compteurs de la tribu ' + s.t.na.nom"/>
 
-        <div class="q-mt-md titre-md">Volumes déjà attribués aux {{s.t.nbc}} compte(s)</div>
-        <div class="row items-center">
-          <div class="col-3">V1 (textes)</div>
-          <div class="col-3 text-center font-mono">{{pc1a}}</div>
-          <div class="col-3 text-center font-mono">{{s.t.f1}}</div>
-          <div class="col-3 text-center font-mono">{{ed1(s.t.f1)}}</div>
-        </div>
-        <div class="row items-center">
-          <div class="col-3">V2 (fichiers)</div>
-          <div class="col-3 text-center font-mono">{{pc2a}}</div>
-          <div class="col-3 text-center font-mono">{{s.t.f2}}</div>
-          <div class="col-3 text-center font-mono">{{ed1(s.t.f2)}}</div>
-        </div>
-        <div class="q-mt-md titre-md">Réserves attribuables</div>
-        <div class="row items-center">
-          <div class="col-3">V1 (textes)</div>
-          <div class="col-3 text-center font-mono">{{pc1r}}</div>
-          <div class="col-3 text-center font-mono">{{s.t.r1}}</div>
-          <div class="col-3 text-center font-mono">{{ed1(s.t.r1)}}</div>
-        </div>
-        <div class="row items-center">
-          <div class="col-3">V2 (fichiers)</div>
-          <div class="col-3 text-center font-mono">{{pc2r}}</div>
-          <div class="col-3 text-center font-mono">{{s.t.r2}}</div>
-          <div class="col-3 text-center font-mono">{{ed1(s.t.r2)}}</div>
-        </div>
-      </q-expansion-item>
+      <show-html v-if="s.t.info" class="height-4" :texte="s.t.info"/>
+      <div v-else class="text-italic texte-center">(Pas de commentaires)</div>
 
-      <q-expansion-item class="q-mt-sm" header-class="bg-secondary text-white titre-md" :label="'Comptabilité de ' + na.nom">
-        <panel-compta :cpt="s.cobj"/>
-      </q-expansion-item>
+      <div class="q-mt-md titre-md">Forfaits déjà attribués aux comptes ({{s.t.nbc}}) / total alloué à la tribu</div>
+
+      <div class="row items-center">
+        <div :class="cl1">V1 (textes)</div>
+        <div class="col-3 text-center font-mono">{{f1f}}</div>
+        <div class="col-3 text-center font-mono">{{ed1(f1f)}}</div>
+        <div class="col-3 text-center font-mono">
+          <q-knob v-if="dis1" readonly  show-value font-size="0.7rem" v-model="pc1a" size="30px" :thickness="0.22" color="warning" track-color="grey-3">{{pc1a}}%</q-knob>
+        </div>
+      </div>
+      <div class="row items-center">
+        <div :class="cl2">V2 (fichiers)</div>
+        <div class="col-3 text-center font-mono">{{f2f}}</div>
+        <div class="col-3 text-center font-mono">{{ed1(f2f)}}</div>
+        <div class="col-3 text-center font-mono">
+          <q-knob v-if="dis2" readonly  show-value font-size="0.7rem" v-model="pc2a" size="30px" :thickness="0.22" color="warning" track-color="grey-3">{{pc2a}}%</q-knob>
+        </div>
+      </div>
+      <div class="q-mt-md titre-md">Réserves attribuables / total alloué à la tribu</div>
+      <div class="row items-center">
+        <div :class="cl1">V1 (textes)</div>
+        <div class="col-3 text-center font-mono">{{r1f}}</div>
+        <div class="col-3 text-center font-mono">{{ed1(r1f)}}</div>
+        <div class="col-3 text-center font-mono">
+          <q-knob v-if="dis1" readonly  show-value font-size="0.7rem" v-model="pc1r" size="30px" :thickness="0.22" color="warning" track-color="grey-3">{{pc1r}}%</q-knob>
+        </div>
+      </div>
+      <div class="row items-center">
+        <div :class="cl2">V2 (fichiers)</div>
+        <div class="col-3 text-center font-mono">{{r2f}}</div>
+        <div class="col-3 text-center font-mono">{{ed2(r2f)}}</div>
+        <div class="col-3 text-center font-mono">
+          <q-knob v-if="dis2" readonly  show-value font-size="0.7rem" v-model="pc2r" size="30px" :thickness="0.22" color="warning" track-color="grey-3">{{pc2r}}%</q-knob>
+        </div>
+      </div>
+      <div class="q-mt-md titre-md">Forfaits du compte / total alloué à la tribu</div>
+      <div class="row items-center">
+        <div :class="cl1">V1 (textes)</div>
+        <div class="col-3 text-center font-mono">{{a1}}</div>
+        <div class="col-3 text-center font-mono">{{ed1(a1)}}</div>
+        <div class="col-3 text-center font-mono">
+          <q-knob v-if="dis1" readonly  show-value font-size="0.7rem" v-model="ct1" size="30px" :thickness="0.22" color="warning" track-color="grey-3">{{ct1}}%</q-knob>
+        </div>
+      </div>
+      <div class="row items-center">
+        <div :class="cl2">V2 (fichiers)</div>
+        <div class="col-3 text-center font-mono">{{a2}}</div>
+        <div class="col-3 text-center font-mono">{{ed1(a2)}}</div>
+        <div class="col-3 text-center font-mono">
+          <q-knob v-if="dis2" readonly  show-value font-size="0.7rem" v-model="ct2" size="30px" :thickness="0.22" color="warning" track-color="grey-3">{{ct2}}%</q-knob>
+        </div>
+      </div>
+      <div class="q-mt-md titre-md">Volumes actuellement utilisés du compte / ses forfaits</div>
+      <div class="row items-center">
+        <div :class="cl1">V1 (textes)</div>
+        <div class="col-3 text-center font-mono"></div>
+        <div class="col-3 text-center font-mono">{{ed1(this.s.cobj.x.v1c)}}</div>
+        <div class="col-3 text-center font-mono">
+          <q-knob v-if="dis1" readonly  show-value font-size="0.7rem" v-model="vf1" size="30px" :thickness="0.22" color="warning" track-color="grey-3">{{vf1}}%</q-knob>
+        </div>
+      </div>
+      <div class="row items-center">
+        <div :class="cl2">V2 (fichiers)</div>
+        <div class="col-3 text-center font-mono"></div>
+        <div class="col-3 text-center font-mono">{{ed1(this.s.cobj.x.v2c)}}</div>
+        <div class="col-3 text-center font-mono">
+          <q-knob v-if="dis2" readonly  show-value font-size="0.7rem" v-model="vf2" size="30px" :thickness="0.22" color="warning" track-color="grey-3">{{vf2}}%</q-knob>
+        </div>
+      </div>
 
       <div class="row q-mt-lg items-center">
-        <span class="col-auto titre-md">Augmentation (+) ou réduction (-) du forfait pour V1 :</span>
-        <q-input v-model.number="dv1" filled dense type="number" style="max-width: 5rem"/>
+        <span class="col-auto titre-md q-mr-xs">Augmenter (+) / réduire (-) le forfait V1</span>
+        <q-input v-model.number="dv1" filled dense type="number" style="max-width: 4rem"/>
+        <span class="q-ml-xs text-bold font-mono fs-md">{{b1}}</span>
+        <span class="q-ml-xs text-bold font-mono fs-md">{{codeDe(b1)}}</span>
       </div>
       <div v-if="e1" class="fs-md text-bold bg-yellow text-negative full-width">{{e1}}</div>
+      <div v-if="r1" class="fs-md text-bold bg-yellow text-negative full-width">{{r1}}</div>
       <div v-if="w1" class="fs-md text-bold text-warning full-width">{{w1}}</div>
 
       <div class="row q-mt-sm items-center">
-        <span class="col-auto titre-md">Augmentation (+) ou réduction (-) du forfait pour V2 :</span>
-        <q-input class="col-auto" v-model.number="dv2" filled dense type="number" style="max-width: 5rem"/>
+        <span class="col-auto titre-md q-mr-xs">Augmenter (+) / réduire (-) le forfait V2</span>
+        <q-input class="col-auto" v-model.number="dv2" filled dense type="number" style="max-width: 4rem"/>
+        <span class="q-ml-xs text-bold font-mono fs-md">{{b2}}</span>
+        <span class="q-ml-xs text-bold font-mono fs-md">{{codeDe(b2)}}</span>
       </div>
       <div v-if="e2" class="fs-md text-bold bg-yellow text-negative full-width">{{e2}}</div>
+      <div v-if="r2" class="fs-md text-bold bg-yellow text-negative full-width">{{r2}}</div>
       <div v-if="w2" class="fs-md text-bold text-warning full-width">{{w2}}</div>
       <div v-if="wg" class="fs-md text-bold text-warning full-width">{{wg}}</div>
 
       <q-card-actions>
-        <q-btn dense flat color="primary" :disable="dis" label="Annuler" @click="reset"/>
-        <q-btn dense flat color="warning" :disable="dis" label="Valider" @click="valider"/>
+        <q-btn dense color="primary" label="Annuler" @click="reset"/>
+        <q-btn dense color="warning" :disable="dis" label="Valider" @click="valider"/>
       </q-card-actions>
     </div>
+
+    <q-dialog v-if="sessionok" v-model="comptadial" full-height position="right">
+      <panel-compta :cpt="s.cobj" :close="fermercompta"/>
+    </q-dialog>
+
   </q-card>
 </template>
 
@@ -74,77 +125,81 @@
 import { useStore } from 'vuex'
 import { computed, toRef, watch, reactive } from 'vue'
 import FicheAvatar from './FicheAvatar.vue'
-import PanelCompta from './PanelCompta.vue'
 import ShowHtml from './ShowHtml.vue'
-import { edvol } from '../app/util.mjs'
+import PanelCompta from './PanelCompta.vue'
+import { edvol, cfg } from '../app/util.mjs'
 import { UNITEV1, UNITEV2 } from '../app/api.mjs'
 // import { LectureChat, ResetChat } from '../app/operations.mjs'
-// import { data } from '../app/modele.mjs'
 
 export default ({
   name: 'GererForfaits',
 
-  components: { FicheAvatar, PanelCompta, ShowHtml },
+  components: { FicheAvatar, ShowHtml, PanelCompta },
 
   props: { compta: Object, tribu: Object, estpar: Boolean, na: Object, close: Function },
 
   computed: {
-    pc1a () { return Math.round((this.s.t.f1 * 100) / (this.s.t.f1 + this.s.t.r1)) + '%' },
-    pc2a () { return Math.round((this.s.t.f2 * 100) / (this.s.t.f2 + this.s.t.r2)) + '%' },
-    pc1r () { return Math.round((this.s.t.r1 * 100) / (this.s.t.f1 + this.s.t.r1)) + '%' },
-    pc2r () { return Math.round((this.s.t.r2 * 100) / (this.s.t.f2 + this.s.t.r2)) + '%' },
+    cl1 () { return this.dv1 ? 'col-3 bordw' : 'col-3 bordn' },
+    cl2 () { return this.dv2 ? 'col-3 bordw' : 'col-3 bordn' },
+    f1f () { return this.s.t.f1 + this.dv1 },
+    f2f () { return this.s.t.f2 + this.dv2 },
+    r1f () { return this.s.t.r1 - this.dv1 },
+    r2f () { return this.s.t.r2 - this.dv2 },
+    tt1 () { return this.s.t.f1 + this.s.t.r1 },
+    tt2 () { return this.s.t.f2 + this.s.t.r2 },
+    ct1 () { return Math.round(100 * this.a1 / this.tt1) },
+    ct2 () { return Math.round(100 * this.a2 / this.tt2) },
+    vf1 () { return Math.round(100 * this.s.cobj.x.v1c / this.f1f) },
+    vf2 () { return Math.round(100 * this.s.cobj.x.v2c / this.f2f) },
+    pc1a () { return Math.round((this.f1f * 100) / this.tt1) },
+    pc2a () { return Math.round((this.f2f * 100) / this.tt2) },
+    pc1r () { return Math.round((this.r1f * 100) / this.tt1) },
+    pc2r () { return Math.round((this.r2f * 100) / this.tt2) },
     // eslint-disable-next-line no-unneeded-ternary
-    dis () { return this.e1 || this.e2 || (!this.dv1 && !this.dv2) ? true : false }
+    dis () { return this.e1 || this.e2 || this.r1 || this.r2 || (!this.dv1 && !this.dv2) ? true : false },
+    // eslint-disable-next-line no-unneeded-ternary
+    dis1 () { return this.e1 || this.r1 ? false : true },
+    // eslint-disable-next-line no-unneeded-ternary
+    dis2 () { return this.e2 || this.r2 ? false : true },
+    a1 () { return this.s.cobj.x.f1 + this.s.cobj.x.s1 + this.dv1 },
+    a2 () { return this.s.cobj.x.f2 + this.s.cobj.x.s2 + this.dv2 },
+    b1 () { return this.s.cobj.x.f1 + this.dv1 },
+    b2 () { return this.s.cobj.x.f2 + this.dv2 },
+    y1 () { return this.a1 < 1 },
+    y2 () { return this.a2 < 0 },
+    z1 () { return this.dv1 > this.s.t.r1 },
+    z2 () { return this.dv2 > this.s.t.r2 },
+    e1 () { return !this.y1 ? '' : 'L\'allocation résultante ne peut pas être inférieure à 1' },
+    e2 () { return !this.y2 ? '' : 'L\'allocation résultante ne peut pas être inférieure à 0' },
+    r1 () { return !this.z1 ? '' : 'L\'allocation supplémentaire ne peut pas être supérieure à la réserve' },
+    r2 () { return !this.z2 ? '' : 'L\'allocation supplémentaire ne peut pas être supérieure à la réserve' },
+    min1 () { return Math.ceil(this.s.cobj.x.v1c / UNITEV1) },
+    min2 () { return Math.ceil(this.s.cobj.x.v2c / UNITEV2) },
+    w1 () { return this.e1 || this.r1 || this.a1 >= this.min1 ? '' : 'L\'allocation résultante ne couvre pas le volume déjà utilisé' },
+    w2 () { return this.e2 || !this.r2 || this.a2 >= this.min2 ? '' : 'L\'allocation résultante ne couvre pas le volume déjà utilisé' },
+    wg () { return this.w1 || this.w2 ? 'Le compte ne pourra plus ni créer de secrets ni augmenter le volume de ceux existants' : '' }
   },
 
   watch: {
-    dv1 (ap, av) { this.check1() },
-    dv2 (ap, av) { this.check2() }
   },
 
   data () {
     return {
-      dv1: 0, dv2: 0, e1: '', e2: '', w1: '', w2: '', wg: ''
+      dv1: 0,
+      dv2: 0,
+      comptadial: false
     }
   },
 
   methods: {
+    fermercompta () { this.comptadial = false },
     estC () { return this.compte.estComptable },
+    ed0 (f) { return edvol(f) },
     ed1 (f) { return edvol(f * UNITEV1) },
     ed2 (f) { return edvol(f * UNITEV2) },
     fermergf () { if (this.close) this.close() },
-    check1 () {
-      const c = this.s.cobj.x
-      const t = this.s.t
-      this.e1 = ''; this.w1 = ''; this.wg = ''
-      const a1 = c.f1 + this.dv1
-      const y1 = a1 < 1
-      const z1 = this.dv1 > t.r1
-      if (y1) this.e1 = `L'allocation résultante ${a1} ne peut pas être inférieure à 1`
-      if (!y1 && z1) this.e1 = `L'allocation supplémentaire de ${this.dv1} ne peut pas être supérieure à la réserve ${t.r1}`
-      if (!this.e1) {
-        const min1 = Math.ceil(c.v1c / UNITEV1)
-        this.w1 = a1 >= min1 ? '' : `L'allocation résultante ${a1} ne couvre pas le volume déjà utilisé ${min1}`
-      }
-      this.wg = !this.w1 && !this.w2 ? '' : 'Le compte ne pourra plus ni créer de secrets ni augmenter le volume de ceux existants'
-    },
-    check2 () {
-      const c = this.s.cobj.x
-      const t = this.s.t
-      this.e2 = ''; this.w2 = ''; this.wg = ''
-      const a2 = c.f2 + this.dv2
-      const y2 = a2 < 0
-      const z2 = this.dv2 > t.r2
-      if (y2) this.e2 = `L'allocation résultante ${a2} ne peut pas être inférieure à 0`
-      if (!y2 && z2) this.e2 = `L'allocation supplémentaire de ${this.dv2} ne peut pas être supérieure à la réserve ${t.r2}`
-      if (!this.e2) {
-        const min2 = Math.ceil(c.v2c / UNITEV2)
-        this.w2 = a2 >= min2 ? '' : `L'allocation résultante ${a2} est ne couvre pas le volume déjà utilisé ${min2}`
-      }
-      this.wg = !this.w1 && !this.w2 ? '' : 'Le compte ne pourra plus ni créer de secrets ni augmenter le volume de ceux existants'
-    },
     valider () {
-      console.log(this.dv1, this.dv2)
+      console.log(this.b1, this.b2)
       // Appel de l'op. Au retour : this.init(compta, tribu) // les objets retournés
       this.reset()
     },
@@ -155,6 +210,12 @@ export default ({
   },
 
   setup (props) {
+    const lf = cfg().forfaits
+    const codes = {}
+    for (const code in lf) codes[lf[code]] = code
+
+    function codeDe (v) { return codes[v] || '' }
+
     const $store = useStore()
     const close = toRef(props, 'close')
     const compta = toRef(props, 'compta')
@@ -187,6 +248,8 @@ export default ({
     })
 
     return {
+      codeDe,
+      sessionok,
       compte,
       init,
       s
@@ -198,7 +261,7 @@ export default ({
 <style lang="sass" scoped>
 @import '../css/app.sass'
 @import '../css/input.sass'
-$haut: 6.5rem
+$haut: 2.5rem
 .top
   position: absolute
   top: 0
@@ -214,4 +277,8 @@ $haut: 6.5rem
   min-height: 0 !important
 .q-card > div
   box-shadow: inherit !important
+.bordn
+  border-bottom: 2px solid transparent
+.bordw
+  border-bottom: 2px solid $warning
 </style>
