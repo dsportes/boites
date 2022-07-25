@@ -1997,6 +1997,41 @@ export class InforesTribu extends OperationUI {
 }
 
 /******************************************************
+Gérer les forfait réserves d'une tribu / compte
+args:
+  - sessionId
+  - idt : id de la tribu
+  - idc : id du compte à gérer
+  - f1t, f2t : forfaits de la tribu avant l'opération
+  - f1c, f2c : forfaits du compte avant l'opération
+  - dv1, dv2 : variation des forfaits
+Retour: result
+  - ok : si false, situation de concurrence de mise à jour
+  - rowItems : compta, tribu
+*/
+export class GererFprfaits extends OperationUI {
+  constructor () {
+    super('Mise à jour des forfaits d\'un compte', OUI, SELONMODE)
+  }
+
+  async run (args) {
+    try {
+      args.sessionId = data.sessionId
+      const ret = await post(this, 'm1', 'gererForfaits', args)
+      const r = await this.compileToObject(this.deserialRowItems(ret.rowItems))
+      const tribu = r.tribu ? r.tribu[args.idt] : null
+      const compta = r.compta ? r.compta[args.idc] : null
+      if (data.estComptable) {
+        if (tribu) data.setTribus([tribu])
+      }
+      this.finOK()
+    } catch (e) {
+      await this.finKO(e)
+    }
+  }
+}
+
+/******************************************************
 Retourne une map des CV demandées:
 - soit obtenues localement (déjà abonné)
 - soit après demande au serveur (avec abonnement)
