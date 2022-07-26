@@ -1,6 +1,6 @@
 /* eslint-disable func-call-spacing */
 import Dexie from 'dexie'
-import { Avatar, Compte, Prefs, Compta, Couple, Groupe, Membre, Secret, ListeCvIds, SessionSync, data, Cv } from './modele.mjs'
+import { Avatar, Compte, Prefs, Tribu, Compta, Couple, Groupe, Membre, Secret, ListeCvIds, SessionSync, data, Cv } from './modele.mjs'
 import { store, Sid, difference, dhstring, get, getData, afficherdiagnostic, sleep } from './util.mjs'
 import { schemas } from './schemas.mjs'
 import { crypt } from './crypto.mjs'
@@ -12,6 +12,7 @@ const STORES = {
   compte: 'id',
   compta: 'id',
   prefs: 'id',
+  tribu: 'id',
   chat: 'id',
   avatar: 'id',
   couple: 'id',
@@ -142,6 +143,20 @@ export async function getChat () {
   try {
     const idb = await data.db.chat.get('1')
     return idb ? new Prefs().fromIdb(await crypt.decrypter(data.clek, idb.data)) : null
+  } catch (e) {
+    throw data.setErDB(EX2(e))
+  }
+}
+
+export async function getTribus () {
+  go()
+  try {
+    const r = {}
+    await data.db.tribu.each(async (idb) => {
+      const x = new Tribu().fromIdb(await crypt.decrypter(data.clek, idb.data))
+      r[x.id] = x
+    })
+    return r
   } catch (e) {
     throw data.setErDB(EX2(e))
   }

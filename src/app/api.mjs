@@ -47,6 +47,15 @@ export const MC = {
   ATRAITER: 245
 }
 
+/* Cas particulier de 'tribu':
+Pour LE compte comptable, il n'y a pas de 'tribu' attaché au compte, MAIS toutes les tribus sont en store/db.
+Pour les comptes normaux, il y a une seule tribu attachée au compte et elle est stockée en IDB, et c'est la seule qui est en store/db.
+- vis à vis de IDB, c'est toujours un singleton ("la" tribu d'un compte).
+- vis à vis de store/db : c'est un singleton pour tous les comptes, SAUF pour le comptable.
+Donc on considère que 'tribu' N'EST PAS un singleton, et que dans le cas des comptes normaux et IDB
+il faut fournir son id (disponible dans compte.
+*/
+
 export const t0n = new Set(['compte', 'prefs', 'chat']) // singletons
 export const t1n = new Set(['tribu', 'avatar', 'compta', 'couple', 'groupe', 'fetat', 'avsecret', 'selchat']) // clé à 1 niveau
 export const t2n = new Set(['membre', 'secret']) // clé à 2 niveaux

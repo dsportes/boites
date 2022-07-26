@@ -258,6 +258,7 @@ class Session {
 
   /* Getters / Setters ****************************************/
   getTribu (id) { return store().getters['db/tribu'](id) }
+  setTribu (tribu) { store().commit('db/majtribu', tribu) }
   setTribus (lobj) { store().commit('db/setObjets', lobj) }
 
   getCompte () { return store().state.db.compte }
@@ -497,6 +498,12 @@ export class Gcvol {
   - `dh` : date-heure de dernier changement du statut de blocage.
 - `vsh`
 */
+
+schemas.forSchema({
+  name: 'idbTribu',
+  cols: ['id', 'v', 'nbc', 'f1', 'f2', 'r1', 'r2', 'na', 'mncp', 'info', 'st', 'txt', 'dh', 'vsh']
+})
+
 export class Tribu {
   get table () { return 'tribu' }
   get sid () { return crypt.idToSid(this.id) }
@@ -512,11 +519,15 @@ export class Tribu {
     this.id = row.id
     this.v = row.v
     if (data.estComptable) {
+      // Le comptable peut décrypter le na de TOUTE tribu (il a été crypté par sa clé K)
       const [x, info] = deserial(await crypt.decrypter(data.clek, row.datak))
       this.na = new NomTribu(x[0], x[1])
       this.info = info || ''
     } else {
-      this.na = null
+      /* Un compte normal n'a le droit d'accèder qu'à SA tribu.
+      Son na est disponible dans le compte et a forcément été décrypté avant.
+      */
+      this.na = data.getCompte().nat
       this.info = ''
     }
     this.nbc = row.nbc
@@ -525,25 +536,27 @@ export class Tribu {
     this.r1 = row.r1
     this.r2 = row.r2
 
-    this.mx = (row.mncpt ? deserial(row.mncpt) : null) || {}
-    this.datat = row.datat
-    if (data.estComptable) await this.fromRow2()
-    return this
-  }
-
-  async fromRow2 () {
-    if (!this.mx) return
+    const mx = (row.mncpt ? deserial(row.mncpt) : null) || {}
     this.mncp = {}
-    for (const chkt in this.mx) {
-      const nr = await crypt.decrypter(this.clet, this.mx[chkt])
+    for (const chkt in mx) {
+      const nr = await crypt.decrypter(this.clet, mx[chkt])
       this.mncp[chkt] = deserial(nr)
     }
-    const [st, txt, dh] = !this.datat ? [0, '', 0] : deserial(await crypt.decrypter(this.na.rnd, this.datat))
+    const [st, txt, dh] = !row.datat ? [0, '', 0] : deserial(await crypt.decrypter(this.clet, row.datat))
     this.st = st
     this.txt = txt
     this.dh = dh
-    delete this.mx
-    delete this.datat
+    return this
+  }
+
+  fromIdb (idb) {
+    schemas.deserialize('idbTribu', idb, this)
+    return this
+  }
+
+  get toIdb () {
+    const r = { ...this }
+    return schemas.serialize('idbTribu', r)
   }
 
   nouvelle (nom, info, r1, r2) {

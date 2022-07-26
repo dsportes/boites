@@ -1,7 +1,7 @@
 import { NomAvatar, NomGroupe, store, post, get, affichermessage, cfg, sleep, affichererreur, appexc, difference, getJourJ, afficherdiagnostic, gzipT, putData, getData, NomTribu, getTrigramme } from './util.mjs'
 import { remplacePage } from './page.mjs'
 import {
-  deleteIDB, commitRows, getComptas, getPrefs, getCvs,
+  deleteIDB, commitRows, getComptas, getPrefs, getTribus, getCvs,
   getAvatars, getGroupes, getCouples, getMembres, getSecrets, getChat,
   openIDB, getVIdCvs, saveListeCvIds, gestionFichierSync, gestionFichierCnx
 } from './db.mjs'
@@ -40,6 +40,7 @@ class OpBuf {
     this.compte = null
     this.prefs = null
     this.compta = null
+    this.tribu = null
     this.lcvs = []
     this.mapSec = {} // pour traitement final des fichiers locaux
   }
@@ -51,6 +52,7 @@ class OpBuf {
   setCompte (obj) { this.compte = obj }
   setCompta (obj) { this.compta = obj }
   setPrefs (obj) { this.prefs = obj }
+  setTribu (obj) { this.tribu = obj }
   setChat (obj) { this.chat = obj }
   setCv (obj) { this.lcvs.push(obj) }
   setObj (obj) {
@@ -67,6 +69,7 @@ class OpBuf {
     if (this.compta) data.setCompta(this.compta)
     if (this.prefs) data.setPrefs(this.prefs)
     if (this.chat) data.setChat(this.chat)
+    if (this.tribu) data.setTribu(this.tribu)
     if (this.lobj.length) data.setObjets(this.lobj)
     if (this.lcvs.length) data.setCvs(this.lcvs)
   }
@@ -148,13 +151,6 @@ export class Operation {
           if (!av || av.v < row.v) {
             const obj = newObjet(table)
             await obj.fromRow(row)
-            if (table === 'tribu' && this.buf) {
-              const c = this.buf.getCompte()
-              if (c.nat) { // PAS Comptable (pour lui fromRow2 a déjà été fait)
-                obj.na = c.nat
-                await obj.fromRow2()
-              }
-            }
             e[pk] = obj
           }
         }
@@ -358,17 +354,12 @@ export class Operation {
   }
 
   async chargerTribu (nat) {
-    // obtient la (nouvelle) tribu du compte, s'y abonne et la stocke en tribu courant
+    // obtient LA (nouvelle) tribu du compte, s'y abonne et la stocke en tribu courante
     const args = { sessionId: data.sessionId, id: nat.id }
     const ret = await post(this, 'm1', 'chargerTribus', args)
     if (ret.rowItems.length) {
       const r = await this.compileToObject(this.deserialRowItems(ret.rowItems))
-      const tribu = r.tribu[nat.id]
-      if (tribu) {
-        tribu.na = nat
-        await tribu.fromRow2()
-        store().commit('db/majtribu', tribu)
-      }
+      return r.tribu[nat.id]
     }
   }
 
@@ -623,8 +614,9 @@ export class Operation {
         this.buf.setCompte(obj)
         this.buf.putIDB(obj)
         if (obj.nat && a.nat.nom !== obj.nat.nom) {
-          // changement de tribu (sauf pour Comptable)
-          this.chargerTribu(obj.nat)
+          // changement de tribu (PAS pour Comptable, qui n'a PAS de tribu)
+          const tribu = this.chargerTribu(obj.nat)
+          if (tribu) this.buf.setTribu(tribu)
         }
       }
     }
@@ -710,7 +702,11 @@ export class Operation {
         const obj = mapObj.tribu[pk]
         const a = data.getTribu(obj.id)
         if (!a || obj.v > a.v) {
-          this.buf.setObj(obj)
+          if (data.estComptable) {
+            this.buf.setObj(obj) // Pour le comptable toutes les tribus peuvent être mises à jour
+          } else {
+            this.buf.setTribu(obj) // Pour un compte normal il n'y a qua sa tribu qui peut être mise à jour (courante)
+          }
         }
       }
     }
@@ -962,12 +958,10 @@ export class OperationUI extends Operation {
       data.setChat(chat)
     }
 
-    if (mapRows.tribu) {
+    if (mapRows.tribu && !data.estComptable) {
       const x = Object.values(mapRows.tribu)
       const tribu = await new Tribu().fromRow(x[0])
-      tribu.na = compte.nat
-      await tribu.fromRow2()
-      store().commit('db/majtribu', tribu)
+      data.setTribu(tribu)
     }
 
     const xa = Object.values(mapRows.avatar)
@@ -1195,7 +1189,7 @@ export class ConnexionCompte extends OperationUI {
 
   excActions () { return { d: deconnexion, x: deconnexion, r: reconnexion, default: null } }
 
-  /* Obtention de compte / prefs / chat / tribu depuis le serveur (si plus récents que ceux connus localement)
+  /* Obtention de compte / prefs / chat / / tribu depuis le serveur
   RAZ des abonnements et abonnement au compte
   */
   async chargerCP () {
@@ -1214,8 +1208,12 @@ export class ConnexionCompte extends OperationUI {
     data.setCompte(compte)
     await prefs.fromRow(schemas.deserialize('rowprefs', ret.rowPrefs.serial))
     if (chat) await chat.fromRow(schemas.deserialize('rowchat', ret.rowChat.serial))
-    if (compte.nat) await this.chargerTribu(compte.nat)
-    return [compte, prefs, chat]
+    let tribu = null
+    if (compte.nat) {
+      const r = await this.chargerTribus()
+      tribu = r[compte.nat.id]
+    }
+    return [compte, prefs, chat, tribu]
   }
 
   /* Recharge depuis le serveur les avatars du compte, abonnement aux avatars */
@@ -1589,34 +1587,44 @@ export class ConnexionCompte extends OperationUI {
     const ret = this.tr(await post(this, 'm1', 'chargerTribus', { sessionId: data.sessionId }))
     if (ret.rowItems.length) {
       const r = await this.compileToObject(this.deserialRowItems(ret.rowItems))
-      if (r.tribu) {
-        const l = []
-        for (const pk in r.tribu) l.push(r.tribu[pk])
-        data.setTribus(l)
-      }
+      return r.tribu || {}
     }
+    return {}
   }
 
   async phase0 (compte, db) { // compte / prefs : abonnement à compte
     let prefs = null
     let chat = null
+    let tribu = null
 
     if (data.mode === 3) {
       this.compte = compte
+      data.setCompte(this.compte)
       data.clek = this.compte.k
       data.nombase = this.compte.nombase()
+      data.estComptable = false
       data.ouvertureDB(db)
       prefs = await getPrefs()
       chat = await getChat()
+      const r = await getTribus()
+      tribu = r[this.compte.nat.id]
     } else {
       // data.mode === 1 || data.mode === 2
-      const [compteSrv, prefsSrv, chatSrv] = await this.chargerCP()
+      const [compteSrv, prefsSrv, chatSrv, tribuSrv] = await this.chargerCP()
       // est sorti en exception si non authentifié
       if (data.ps.pcbh !== compteSrv.pcbh) throw EXPS // Changement de phrase secrète
       this.compte = compteSrv
-      data.nombase = this.compte.nombase()
+      data.setCompte(this.compte)
+      data.estComptable = this.compte.estComptable
+      if (data.estComptable) {
+        data.mode = 2
+        data.modeInitial = 2
+      } else {
+        data.nombase = data.estComptable ? null : this.compte.nombase()
+      }
       prefs = prefsSrv
       chat = chatSrv
+      tribu = tribuSrv
       if (data.mode === 1) {
         if (db) {
           data.ouvertureDB(db)
@@ -1626,20 +1634,21 @@ export class ConnexionCompte extends OperationUI {
         this.buf.putIDB(this.compte)
         this.buf.putIDB(prefs)
         if (chat) this.buf.putIDB(chat)
+        if (tribu) this.buf.putIDB(tribu)
       }
     }
 
-    data.nombase = this.compte.nombase()
-    data.estComptable = this.compte.estComptable
-    if (data.estComptable) {
-      data.mode = 2
-      data.modeInitial = 2
-    }
-    data.setCompte(this.compte)
+    this.compte.repAvatars()
     data.setPrefs(prefs)
     if (chat) data.setChat(chat)
-    this.compte.repAvatars()
-    if (data.estComptable) await this.chargerTribus()
+    if (data.estComptable) {
+      const r = await this.chargerTribus()
+      const l = []
+      for (const pk in r) l.push(r[pk])
+      data.setTribus(l)
+    } else {
+      if (tribu) data.setTribu(tribu)
+    }
     this.sessionSync = await data.debutConnexion()
     data.setSyncItem('01', 1, 'Compte et comptabilité')
   }
@@ -1648,6 +1657,8 @@ export class ConnexionCompte extends OperationUI {
     try {
       this.buf = new OpBuf()
       this.dh = 0
+      // eslint-disable-next-line no-unused-vars
+      const mydata = data
       /*
       Le compte n'est connu qu'en mode avion et dans ce cas la base a déjà été ouverte
       En mode synchronisé la base sera ouverte en phase 0 quand le compte sera connu
@@ -2009,7 +2020,7 @@ Retour: result
   - ok : si false, situation de concurrence de mise à jour
   - rowItems : compta, tribu
 */
-export class GererFprfaits extends OperationUI {
+export class GererForfaits extends OperationUI {
   constructor () {
     super('Mise à jour des forfaits d\'un compte', OUI, SELONMODE)
   }
@@ -2021,10 +2032,8 @@ export class GererFprfaits extends OperationUI {
       const r = await this.compileToObject(this.deserialRowItems(ret.rowItems))
       const tribu = r.tribu ? r.tribu[args.idt] : null
       const compta = r.compta ? r.compta[args.idc] : null
-      if (data.estComptable) {
-        if (tribu) data.setTribus([tribu])
-      }
       this.finOK()
+      return [ret.ok, tribu, compta]
     } catch (e) {
       await this.finKO(e)
     }
