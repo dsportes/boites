@@ -148,7 +148,7 @@ import { UNITEV1, UNITEV2 } from '../app/api.mjs'
 import { GererForfaits } from '../app/operations.mjs'
 
 const msg = `Une opération identique a été lancée en parrallèle depuis une autre session.
-Les donées d'après lesquelles vos mises à jour ont été établies ne sont plus pertinentes.
+Les données d'après lesquelles vos mises à jour ont été établies ne sont plus pertinentes.
 Recommencer vos attributions`
 
 export default ({
@@ -198,9 +198,6 @@ export default ({
     wg () { return this.w1 || this.w2 ? 'L\'avatar primaire du compte ne pourra plus ni créer de secrets ni augmenter le volume de ceux existants' : '' }
   },
 
-  watch: {
-  },
-
   data () {
     return {
       dv1: 0,
@@ -220,7 +217,7 @@ export default ({
     ed0 (f) { return edvol(f) },
     ed1 (f) { return edvol(f * UNITEV1) },
     ed2 (f) { return edvol(f * UNITEV2) },
-    fermergf () { if (this.close) this.close() },
+
     async valider () {
       const args = {
         idt: this.s.t.id,
@@ -282,6 +279,7 @@ export default ({
     })
 
     return {
+      fermergf,
       codeDe,
       sessionok,
       compte,
