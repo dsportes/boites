@@ -7,7 +7,7 @@ export const crypt = { pbkfd, sha256, random, crypter, decrypter, cryptersoft, d
 function u8ToHex (u8) { return [...u8].map(b => b.toString(16).padStart(2, '0')).join('') }
 function u8ToHexS (u8) { return [...u8].map(b => b.toString(16).padStart(2, '0')).join(' ') }
 
-const TRACEU8 = true
+const TRACEU8 = false
 
 export function tru8 (info, u8) {
   if (!TRACEU8 || !u8) return

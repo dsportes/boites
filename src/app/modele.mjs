@@ -257,7 +257,7 @@ class Session {
   setSyncItem (k, st, label) { store().commit('ui/setsyncitem', { k, st, label }) }
 
   /* Getters / Setters ****************************************/
-  getTribu (id) { return store().getters['db/tribu'](id) }
+  getTribu (id) { return data.estComptable ? store().getters['db/tribu'](id) : store().state.db.tribu }
   setTribu (tribu) { store().commit('db/majtribu', tribu) }
   setTribus (lobj) { store().commit('db/setObjets', lobj) }
 

@@ -143,9 +143,13 @@ import FicheAvatar from './FicheAvatar.vue'
 import ShowHtml from './ShowHtml.vue'
 import PanelCompta from './PanelCompta.vue'
 import InfoTxt from './InfoTxt.vue'
-import { edvol, cfg } from '../app/util.mjs'
+import { edvol, cfg, afficherdiagnostic } from '../app/util.mjs'
 import { UNITEV1, UNITEV2 } from '../app/api.mjs'
-// import { LectureChat, ResetChat } from '../app/operations.mjs'
+import { GererForfaits } from '../app/operations.mjs'
+
+const msg = `Une opération identique a été lancée en parrallèle depuis une autre session.
+Les donées d'après lesquelles vos mises à jour ont été établies ne sont plus pertinentes.
+Recommencer vos attributions`
 
 export default ({
   name: 'GererForfaits',
@@ -217,10 +221,21 @@ export default ({
     ed1 (f) { return edvol(f * UNITEV1) },
     ed2 (f) { return edvol(f * UNITEV2) },
     fermergf () { if (this.close) this.close() },
-    valider () {
-      console.log(this.dv1, this.dv2)
-      // Appel de l'op. Au retour : this.init(compta, tribu) // les objets retournés
+    async valider () {
+      const args = {
+        idt: this.s.t.id,
+        idc: this.na.id,
+        f1t: this.s.t.f1,
+        f2t: this.s.t.f2,
+        f1c: this.s.cobj.x.f1,
+        f2c: this.s.cobj.x.f2,
+        dv1: this.dv1,
+        dv2: this.dv2
+      }
+      const [ok, tribu, compta] = await new GererForfaits().run(args)
+      this.init(compta, tribu)
       this.reset()
+      if (!ok) afficherdiagnostic(msg)
     },
     reset () {
       this.dv1 = 0

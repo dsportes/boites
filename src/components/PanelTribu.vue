@@ -19,10 +19,13 @@
       </q-card>
     </q-dialog>
 
+    <div v-if="state.t">
     <div class="titre-md q-mt-md">Commentaires / informations</div>
     <editeur-md :texte="state.t.info" v-model="info" @ok="changerInfo"
       label-ok="Valider" editable modetxt style="height:8rem"/>
+    </div>
 
+    <div v-if="state.t">
     <div class="q-mt-md titre-lg">Volumes déjà attribués aux comptes de la tribu</div>
     <div>
       <span class=q-mx-md>V1: {{ed1(state.t.f1)}}</span>
@@ -31,6 +34,7 @@
     <div class="q-mt-md titre-lg">Réserves restantes de volumes à attribuer</div>
     <choix-forfaits v-model="reserves" @valider="changerRes" label-valider="Changer"
       :max="99999" :f1="state.t.r1" :f2="state.t.r2"/>
+    </div>
 
   <q-dialog v-if="sessionok" v-model="nvpar" persistent class="moyennelargeur">
     <nouveau-parrainage :close="fermerParrain" :tribu="tribu"/>
@@ -66,11 +70,12 @@
   </q-card>
 </template>
 <script>
-import { computed, reactive, watch } from 'vue'
+import { computed, reactive, watch, onMounted } from 'vue'
 import { useStore } from 'vuex'
 import { UNITEV1, UNITEV2 } from '../app/api.mjs'
 import { edvol, NomAvatar } from '../app/util.mjs'
-import { InforesTribu } from '../app/operations.mjs'
+import { data } from '../app/modele.mjs'
+import { InforesTribu, GetCVs } from '../app/operations.mjs'
 import ChoixForfaits from './ChoixForfaits.vue'
 import EditeurMd from './EditeurMd.vue'
 import TitreBanner from './TitreBanner.vue'
@@ -130,20 +135,28 @@ export default ({
       lp: []
     })
 
-    function initState () {
+    async function initState () {
       const t = tribu.value
       state.t = t
       const x = t && t.mncp ? Object.values(t.mncp) : []
       state.lp = []
-      x.forEach(y => state.lp.push(new NomAvatar(y[0], y[1])))
+      x.forEach(y => {
+        const na = new NomAvatar(y[0], y[1])
+        state.lp.push(na)
+        data.repertoire.setNa(na)
+      })
+      const l2 = new Set(state.lp)
+      if (l2.size) await new GetCVs().run(l2.size)
     }
 
-    watch(() => tribu.value, (ap, av) => {
+    watch(() => tribu.value, async (ap, av) => {
       if (!sessionok.value) return
-      initState()
+      await initState()
     })
 
-    initState()
+    onMounted(async () => {
+      await initState()
+    })
 
     return {
       tribu,
