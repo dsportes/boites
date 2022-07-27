@@ -106,14 +106,14 @@ import NouveauCouple from './NouveauCouple.vue'
 import { IDCOMPTABLE } from '../app/api.mjs'
 import { Cv, data } from '../app/modele.mjs'
 import { copier, affichermessage } from '../app/util.mjs'
-import { GetCompta, GetTribuCompte, EstParrainTribu } from '../app/operations.mjs'
+import { GetCompta, GetTribuCompte, EstParrainTribu, MajCv } from '../app/operations.mjs'
 
 export default ({
   name: 'FicheAvatar',
 
   props: {
     naAvatar: Object, // na de l'avatar
-    cvEditable: Boolean, // Si true la cv est editable et est reçue sur @cv-changee
+    cvEditable: Boolean, // Si true la cv est editable
     compta: Boolean, // Si true, option de menu de la compta
     idx: Number,
     noMenu: Boolean, // Si true le bouton menu (et le menu) n'apparaissent pas
@@ -148,10 +148,10 @@ export default ({
     ouvrircv () { if (this.cvEditable) this.cvloc = true; else this.cvdetail = true },
     closecv () { this.cvloc = false },
 
-    cvchangee (res) {
+    async cvchangee (res) {
       if (res && this.naAvatar) {
         const cv = new Cv().init(this.naAvatar.id, res.ph, res.info)
-        this.$emit('cv-changee', cv)
+        await new MajCv().run(cv)
       }
     },
 
@@ -176,7 +176,7 @@ export default ({
       const id = this.s.na.id
       const c = this.compte
       let compta = null
-      if (c.id === id) {
+      if (c.estAc(id)) {
         compta = data.getCompta(id)
       } else {
         compta = await new GetCompta().run(id)

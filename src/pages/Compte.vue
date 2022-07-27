@@ -35,11 +35,14 @@
     <q-separator/>
     <div class="row justify-start items-center q-my-sm">
       <q-btn size="md" icon="add" label="Nouvel avatar" color="primary" no-caps dense @click="ouvrirnv"/>
-      <q-btn class="q-ml-sm" size="md" icon="manage_accounts" no-caps label="Changer la phrase secrète" color="warning" dense @click="ouvrirchgps"/>
+      <q-btn v-if="state.lst.length > 1" class="q-ml-sm" size="md" icon="manage_accounts" no-caps
+        label="Répartir les forfaits entre les avatars" color="primary" dense @click="ouvrirrf"/>
+      <q-btn class="q-ml-sm" size="md" icon="manage_accounts" no-caps
+        label="Changer la phrase secrète" color="warning" dense @click="ouvrirchgps"/>
     </div>
     <div v-for="(x, idx) in state.lst" :key="x.av.id">
       <q-card class="q-ma-sm moyennelargeur zone">
-        <fiche-avatar :na-avatar="x.av.na" :idx="idx" cv-editable compta actions @cv-changee="cvchangee">
+        <fiche-avatar :na-avatar="x.av.na" :idx="idx" cv-editable compta actions>
           <template v-slot:actions>
             <q-btn dense color="warning" size="md"
               icon="open_in_new" label="Vers page" @click="toAvatar(x.av)"/>
@@ -101,6 +104,10 @@
     <nouveau-parrainage :close="fermerParrain" />
   </q-dialog>
 
+  <q-dialog v-if="sessionok" v-model="repfor" persistent full-height class="moyennelargeur">
+    <repartir-forfait :close="fermerrf" />
+  </q-dialog>
+
   <q-dialog v-if="sessionok" v-model="phraserenc">
     <panel-rencontre :close="fermerpr"/>
   </q-dialog>
@@ -150,7 +157,7 @@
 </template>
 
 <script>
-import { PrefCompte, CreationAvatar, MajCv, ChangementPS, GetCVs } from '../app/operations.mjs'
+import { PrefCompte, CreationAvatar, ChangementPS, GetCVs } from '../app/operations.mjs'
 import { computed, ref, reactive, watch } from 'vue'
 import { useStore } from 'vuex'
 import { onBoot, remplacePage } from '../app/page.mjs'
@@ -165,6 +172,7 @@ import PanelCompta from '../components/PanelCompta.vue'
 import PhraseSecrete from '../components/PhraseSecrete.vue'
 import FicheAvatar from '../components/FicheAvatar.vue'
 import TabTribus from '../components/TabTribus.vue'
+import RepartirForfait from '../components/RepartirForfait.vue'
 import { Motscles, afficherdiagnostic, edvol, dhstring, NomAvatar as NomAvatarObj } from '../app/util.mjs'
 import { crypt } from '../app/crypto.mjs'
 import { data } from '../app/modele.mjs'
@@ -173,11 +181,12 @@ import { UNITEV1, UNITEV2, Compteurs } from '../app/api.mjs'
 
 export default ({
   name: 'Compte',
-  components: { TabTribus, FicheAvatar, PhraseSecrete, PanelCompta, ShowHtml, EditeurMd, MotsCles, NomAvatar, ChoixForfaits, NouveauParrainage, PanelRencontre },
+  components: { RepartirForfait, TabTribus, FicheAvatar, PhraseSecrete, PanelCompta, ShowHtml, EditeurMd, MotsCles, NomAvatar, ChoixForfaits, NouveauParrainage, PanelRencontre },
   data () {
     return {
       nomav: '',
       chgps: false,
+      repfor: false,
       ps: null,
       forfaits: [1, 1],
       mxff: [0, 0],
@@ -206,6 +215,8 @@ export default ({
     fermerParrain () { this.nvpar = false },
     ouvrirpr (av) { this.avatar = av; this.phraserenc = true },
     fermerpr () { this.phraserenc = false },
+    ouvrirrf () { this.repfor = true },
+    fermerrf () { this.repfor = false },
     ouvrirtabtribus () { this.tabtribus = true },
     fermertabtribus () { this.tabtribus = false },
     async ouvrirtribu () {
@@ -254,10 +265,6 @@ export default ({
       this.memoed.undo()
       const datak = await crypt.crypter(data.clek, serial(m))
       await new PrefCompte().run('mp', datak)
-    },
-
-    async cvchangee (cv) {
-      await new MajCv().run(cv)
     },
 
     ouvrirchgps () {
