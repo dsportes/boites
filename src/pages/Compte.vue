@@ -33,7 +33,7 @@
     </div>
 
     <q-separator/>
-    <div class="row justify-start items-center q-my-sm">
+    <div class="row justify-center items-center q-my-sm q-gutter-xs">
       <q-btn size="md" icon="add" label="Nouvel avatar" color="primary" no-caps dense @click="ouvrirnv"/>
       <q-btn v-if="state.lst.length > 1" class="q-ml-sm" size="md" icon="manage_accounts" no-caps
         label="Répartir les forfaits entre les avatars" color="primary" dense @click="ouvrirrf"/>
@@ -104,7 +104,7 @@
     <nouveau-parrainage :close="fermerParrain" />
   </q-dialog>
 
-  <q-dialog v-if="sessionok" v-model="repfor" persistent full-height class="moyennelargeur">
+  <q-dialog v-if="sessionok" v-model="repfor" persistent full-height>
     <repartir-forfait :close="fermerrf" />
   </q-dialog>
 
