@@ -11,7 +11,7 @@
       <div class="filler"></div>
 
       <div class="titre-lg text-center full-width">V1 - textes des secrets
-        <q-btn class="q-ml-md" dense icon="undo" color="primary" @click="undo1"/>
+        <q-btn class="q-ml-md" dense icon="undo" :disable="!t.chg1" color="primary" @click="undo1"/>
       </div>
 
       <div class="row">
@@ -63,7 +63,7 @@
       <q-separator/>
 
       <div class="titre-lg text-center full-width">V2 - fichiers attachés aux secrets
-        <q-btn class="q-ml-md" dense icon="undo" color="primary" @click="undo2"/>
+        <q-btn class="q-ml-md" dense icon="undo" :disable="!t.chg2" color="primary" @click="undo2"/>
       </div>
 
       <div class="row">
@@ -113,8 +113,8 @@
       </div>
 
       <q-card-actions align="right">
-        <q-btn dense color="primary" label="Annuler" @click="reset"/>
-        <q-btn dense color="warning" label="Valider" @click="valider"/>
+        <q-btn dense color="primary" :disable="!t.chg1 && !t.chg2" label="Annuler" @click="reset"/>
+        <q-btn dense color="warning" :disable="!t.chg1 && !t.chg2" label="Valider" @click="valider"/>
       </q-card-actions>
     </div>
 
@@ -142,7 +142,7 @@ import { data } from '../app/modele.mjs'
 
 const msg = `Une opération identique a été lancée en parrallèle depuis une autre session.
 Les données d'après lesquelles vos mises à jour ont été établies ne sont plus pertinentes.
-Recommencer vos attributions`
+Recommencer votre répartition.`
 
 const msg2 = 'Le volume occupé excède le forfait. Création de secrets et extensions des secrets existants impossible.'
 
@@ -171,10 +171,16 @@ export default ({
     ouvrirfa (na) { this.na = na; this.fav = true },
 
     async valider () {
-      const ok = await new RepartirForfait().run()
-      this.init()
-      this.reset()
+      const map = {}
+      for (const nom in this.s) {
+        const x = this.s[nom]
+        if (x.f1 !== x.f1n || x.f2 !== x.f2n) {
+          map[x.na.id] = { f1: x.f1, f2: x.f2, f1n: x.f1n, f2n: x.f2n, t: x.t }
+        }
+      }
+      const ok = await new RepartirForfait().run(map)
       if (!ok) afficherdiagnostic(msg)
+      this.fermerrf()
     }
   },
 
@@ -198,10 +204,11 @@ export default ({
     const compte = computed(() => $store.state.db.compte)
     const comptas = computed(() => $store.state.db.compta)
 
-    const t = reactive({ a: {}, tf1: 0, tf2: 0, tv1: 0, tv2: 0, lst: [], nprim: '' })
+    const t = reactive({ chg1: false, chg2: false, tf1: 0, tf2: 0, tv1: 0, tv2: 0, lst: [], nprim: '' })
     const s = reactive({ })
 
     function init () {
+      if (!sessionok.value) return
       const nas = compte.value.avatarNas()
       const lst = []
       t.tf1 = 0; t.tf2 = 0; t.tv1 = 0; t.tv2 = 0
@@ -215,15 +222,16 @@ export default ({
           f2: c.f2,
           f1n: c.f1,
           f2n: c.f2,
-          v1: Math.floor(c.f1 * UNITEV1 * 0.92),
-          v2: Math.floor(c.f1 * UNITEV2 * 0.32)
-          // v1: c.v1,
-          // v2: c.v2
+          t: compta.t,
+          // v1: Math.floor(c.f1 * UNITEV1 * 0.92),
+          // v2: Math.floor(c.f1 * UNITEV2 * 0.32)
+          v1: c.v1,
+          v2: c.v2
         }
         t.tf1 += x.f1; t.tf2 += x.f2; t.tv1 += x.v1; t.tv2 += x.v2
         lst.push(x.nom)
         s[x.nom] = x
-        if (compta.t) t.nprim = x.nom
+        if (x.t) t.nprim = x.nom
       })
       lst.sort((a, b) => (a.nom === t.nprim || a.nom < b.nom) ? -1 : (a.nom !== t.nprim || a.nom > b.nom ? 1 : 0))
       lst.forEach(nom => {
@@ -243,6 +251,8 @@ export default ({
     }
 
     function maj () {
+      t.chg1 = false
+      t.chg2 = false
       t.lst.forEach(nom => {
         const x = { ...s[nom] }
         x.pcf1 = t.tf1 ? Math.round(x.f1n * 100 / t.tf1) : 0
@@ -250,10 +260,13 @@ export default ({
         x.pcv1f = x.f1n ? Math.ceil(x.v1 * 100 / (x.f1n * UNITEV1)) : (x.v1 ? 100 : 0)
         x.pcv2f = x.f2n ? Math.ceil(x.v2 * 100 / (x.f2n * UNITEV2)) : (x.v2 ? 100 : 0)
         s[nom] = x
+        if (x.f1 !== x.f1n) t.chg1 = true
+        if (x.f2 !== x.f2n) t.chg2 = true
       })
     }
 
     function undo1 () {
+      t.chg1 = false
       t.lst.forEach(nom => {
         const x = { ...s[nom] }
         x.f1n = x.f1
@@ -263,6 +276,7 @@ export default ({
     }
 
     function undo2 () {
+      t.chg2 = false
       t.lst.forEach(nom => {
         const x = { ...s[nom] }
         x.f2n = x.f2

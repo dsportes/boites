@@ -2041,32 +2041,28 @@ export class GererForfaits extends OperationUI {
 }
 
 /******************************************************
-Réprtir les forfait entre les avatars d'un compte
+Répartir les forfait entre les avatars d'un compte
 args:
   - sessionId
-  - idt : id de la tribu
-  - idc : id du compte à gérer
-  - f1t, f2t : forfaits de la tribu avant l'opération
-  - f1c, f2c : forfaits du compte avant l'opération
-  - dv1, dv2 : variation des forfaits
+  - map avec une entrée par avatar dont les forfaits changent
+    - clé: id
+    - valeur:
+      - f1 f2 f1n f2n valeurs du forfait avant et après
+      - t : 0:secondaire, 1:primaire (pour gérer s1 s2)
 Retour: result
   - ok : si false, situation de concurrence de mise à jour
-  - rowItems : compta, tribu
 */
 export class RepartirForfait extends OperationUI {
   constructor () {
-    super('Mise à jour des forfaits d\'un compte', OUI, SELONMODE)
+    super('Répartotion des forfaits des avatars d\'un compte', OUI, SELONMODE)
   }
 
-  async run (args) {
+  async run (map) {
     try {
-      args.sessionId = data.sessionId
-      const ret = await post(this, 'm1', 'gererForfaits', args)
-      const r = await this.compileToObject(this.deserialRowItems(ret.rowItems))
-      const tribu = r.tribu ? r.tribu[args.idt] : null
-      const compta = r.compta ? r.compta[args.idc] : null
+      const args = { sessionId: data.sessionId, map }
+      const ret = await post(this, 'm1', 'repartirForfait', args)
       this.finOK()
-      return [ret.ok, tribu, compta]
+      return ret.ok
     } catch (e) {
       await this.finKO(e)
     }
