@@ -2007,6 +2007,62 @@ export class InforesTribu extends OperationUI {
   }
 }
 
+/* Changer un compte de tribu ***********************************
+args: -Comptable seulement-
+  - sessionId
+  - Compte
+    - idc: id du compte
+    - stp: 1: parrain dans la nouvelle tribu
+    - chkta: hash de (sid compte @ sid tribu antérieure)
+    - chkt: hash de (sid compte @ sid nouvelle tribu)
+    - nctk: nom complet de la tribu crypté par la clé publique de idc
+    - nctpc: nom complet de la tribu crypté par la clé publique du comptable
+  - Tribu antérieure
+    - idta: id de l'ancienne tribu
+  - Tribu nouvelle
+    - idtn: id de la nouvelle tribu
+    - nrc: si le compte y est parrain, [nom, rnd] du compte crypté par la clé t de la tribu
+Retour:
+  - ok: true si OK (sinon la nouvelle tribu n'a pas assez d'espace pour accueillir le compte transféré)
+  - rowItems: si OK de ancienne tribu, nouvelle tribu, compte
+Remarque: fc1 et fc2 du compte sont tirés de sa compta: f1+s1 et f2+s2
+Contrainte: dans la nouvelle tribu: r1 >= fc1 et r2 >= fc2
+*/
+
+export class ChangerTribu extends OperationUI {
+  constructor () {
+    super('Changer un compte de tribu', OUI, SELONMODE)
+  }
+
+  async run (at, nt, c, stp) { // tribu antérieure, nouvelle tribu, compte, stp=1 parrain de la nouvelle tribu
+    try {
+      const clepub = await get('m1', 'getclepub', { sessionId: data.sessionId, sid: c.sid })
+      if (!clepub) throw new AppExc(E_BRO, '23-Cle RSA publique d\'avatar non trouvé')
+      const nct = serial([nt.na.nom, nt.na.rnd])
+      const nctk = await crypt.crypterRSA(clepub, nct)
+      const nctpc = await crypt.crypterRSA(data.clepubC, nct)
+      const nrc = await crypt.crypter(nt.clet, serial([c.naprim.nom, c.naprim.rnd]))
+      const args = {
+        sessionId: data.sessionId,
+        idc: c.id,
+        stp,
+        chkta: at.chkta,
+        chkt: c.getChkt(nt.na),
+        nctk,
+        nctpc,
+        idta: at.id,
+        idtn: nt.id,
+        nrc
+      }
+      const ret = await post(this, 'm1', 'changerTribu', args)
+      this.finOK()
+      return ret.ok
+    } catch (e) {
+      await this.finKO(e)
+    }
+  }
+}
+
 /******************************************************
 Gérer les forfait réserves d'une tribu / compte
 args:

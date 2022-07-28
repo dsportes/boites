@@ -2,6 +2,12 @@
   <q-card v-if="sessionok && tribu" class="q-pa-xs full-height full-width fs-md column">
     <div v-if="close" class="filler"/>
 
+    <div class="q-mb-md row justify-around">
+      <q-btn dense color="secondary" label="Parrainer un nouveau compte" size="md"
+        text-color="white" @click="nvpar = true"/>
+      <q-btn dense color="secondary" label="Transférer un compte" size="md"
+        text-color="white" @click="transf = true"/>
+    </div>
     <div v-if="state.t">
       <div class="row justify-between">
         <div class="titre-md">{{state.t.nbc}} compte(s) - {{state.lp.length}} parrain(s)</div>
@@ -40,6 +46,10 @@
     <nouveau-parrainage :close="fermerParrain" :tribu="tribu"/>
   </q-dialog>
 
+  <q-dialog v-if="sessionok" v-model="transf" persistent class="moyennelargeur">
+    <changer-tribu :close="fermerTransf" :tribu="tribu"/>
+  </q-dialog>
+
   <div v-if="close" class="top full-width">
     <q-toolbar v-if="close" class="bg-primary text-white">
       <q-toolbar-title>
@@ -62,8 +72,6 @@
         <titre-banner v-if="state.t" class-titre="titre-md" :titre="state.t.nom"
           :titre2="state.t.nom" :id-objet="state.t.id"/>
       </q-toolbar-title>
-      <q-btn dense color="secondary" label="Parrainer un nouveau compte" size="md"
-        text-color="white" @click="nvpar = true"/>
     </q-toolbar>
 
   </q-page-sticky>
@@ -81,11 +89,12 @@ import EditeurMd from './EditeurMd.vue'
 import TitreBanner from './TitreBanner.vue'
 import FicheAvatar from './FicheAvatar.vue'
 import NouveauParrainage from './NouveauParrainage.vue'
+import ChangerTribu from './ChangerTribu.vue'
 
 export default ({
   name: 'PanelTribu',
 
-  components: { FicheAvatar, TitreBanner, ChoixForfaits, NouveauParrainage, EditeurMd },
+  components: { ChangerTribu, FicheAvatar, TitreBanner, ChoixForfaits, NouveauParrainage, EditeurMd },
 
   props: { suivant: Function, precedent: Function, index: Number, sur: Number, close: Function },
 
@@ -96,6 +105,7 @@ export default ({
     return {
       nvpar: false,
       ouvlp: false,
+      transf: false,
       info: '',
       reserves: [0, 0]
     }
@@ -109,6 +119,7 @@ export default ({
     ed2 (f) { return edvol(f * UNITEV2) },
     ed3 (f) { return edvol(f) },
     fermerParrain () { this.nvpar = false },
+    fermerTransf () { this.transf = false },
     fermertribu () { if (this.close) this.close() },
     async changerInfo (info) {
       await new InforesTribu().run(this.tribu, info, null)
