@@ -159,8 +159,7 @@ export default ({
 
     ouvrirtribu () {
       if (this.s.naTribu) {
-        this.tribu = data.getTribu(this.s.naTribu.id)
-        this.tribudial = true
+        this.tribudialobj = data.getTribu(this.s.naTribu.id)
       }
     },
 
@@ -273,9 +272,9 @@ export default ({
       get: () => $store.state.db.tribu,
       set: (val) => $store.commit('db/majtribu', val)
     })
-    const tribudial = computed({
-      get: () => $store.state.ui.tribudial,
-      set: (val) => $store.commit('ui/majtribudial', val)
+    const tribudialobj = computed({
+      get: () => $store.state.ui.tribudialobj,
+      set: (val) => $store.commit('ui/majtribudialobj', val)
     })
     const comptadialobj = computed({
       get: () => $store.state.ui.comptadialobj,
@@ -385,7 +384,7 @@ export default ({
     return {
       compte,
       tribu,
-      tribudial,
+      tribudialobj,
       comptadialobj,
       coupledialobj,
       membredialobj,

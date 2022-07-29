@@ -133,7 +133,7 @@
 
     <q-dialog v-model="tribudial" full-height position="right">
       <div class="moyennelargeur">
-        <panel-tribu :close="fermertribu" />
+        <panel-tribu :tribu="tribudialobj" :close="fermertribu" />
       </div>
     </q-dialog>
 
@@ -324,7 +324,7 @@ export default {
     togglescform () { this.avatarscform = !this.avatarscform },
     toggletrform () { this.avatartrform = !this.avatartrform },
 
-    fermertribu () { this.tribudial = false },
+    fermertribu () { this.tribudialobj = null },
     fermercouple () { this.coupledialobj = null },
     fermermembre () { this.membredialobj = null },
     fermercompta () { this.comptadialobj = null },
@@ -463,12 +463,13 @@ export default {
       get: () => $store.state.ui.avatartrform,
       set: (val) => $store.commit('ui/majavatartrform', val)
     })
+    const tribudial = computed(() => $store.state.ui.tribudial)
     const comptadial = computed(() => $store.state.ui.comptadial)
     const coupledial = computed(() => $store.state.ui.coupledial)
     const membredial = computed(() => $store.state.ui.membredial)
-    const tribudial = computed({
-      get: () => $store.state.ui.tribudial,
-      set: (val) => $store.commit('ui/majtribudial', val)
+    const tribudialobj = computed({
+      get: () => $store.state.ui.tribudialobj,
+      set: (val) => $store.commit('ui/majtribudialobj', val)
     })
     const comptadialobj = computed({
       get: () => $store.state.ui.comptadialobj,
@@ -544,6 +545,7 @@ export default {
       avatartrform,
 
       tribudial,
+      tribudialobj,
       comptadial,
       comptadialobj,
       coupledial,

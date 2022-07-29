@@ -9,7 +9,6 @@ import {
 import { remplacePage } from './page.mjs'
 import { UNITEV1, UNITEV2, IDCOMPTABLE, Compteurs } from './api.mjs'
 import { DownloadFichier } from './operations.mjs'
-import { crypter } from './webcrypto.mjs'
 
 export const MODES = ['inconnu', 'synchronisé', 'incognito', 'avion', 'visio']
 
@@ -598,6 +597,14 @@ export class Tribu {
     }
     return mncpt
   }
+
+  static getChktDeId (idc, nat) {
+    return crypt.hash(crypt.idToSid(idc) + '@' + nat.sid)
+  }
+
+  getChktDeId (id) {
+    return crypt.hash(crypt.idToSid(id) + '@' + this.na.sid)
+  }
 }
 
 /** Compte **********************************/
@@ -724,7 +731,7 @@ export class Compte {
         const kp = this.cpriv(this.id)
         tru8('Priv compte.fromRow nctk ' + this.id, kp)
         nr = await crypt.decrypterRSA(kp, row.nctk)
-        this.nctk = await crypter.crypter(this.k, nr)
+        this.nctk = await crypt.crypter(this.k, nr)
       } else {
         nr = await crypt.decrypter(this.k, row.nctk)
         this.nctk = row.nctk

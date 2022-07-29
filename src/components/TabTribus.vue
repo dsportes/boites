@@ -6,9 +6,11 @@
     Aucune tribu ne correspond au critère de recherche</div>
 
   <panel-tribu v-if="avatartrform && state.lst && state.lst.length"
+    :tribu="tribu"
     :suivant="state.idx < state.lst.length - 1 ? suiv : null"
     :precedent="state.idx > 0 ? prec : null"
-    :index="state.idx" :sur="state.lst.length"/>
+    :index="state.idx"
+    :sur="state.lst.length"/>
 
   <div v-if="!avatartrform && state.lst && state.lst.length">
     <div v-for="(i, idx) in state.lst" :key="i.t.id"
@@ -245,6 +247,7 @@ export default ({
 
     return {
       sessionok,
+      tribu,
       opt,
       txt,
       bloquee,

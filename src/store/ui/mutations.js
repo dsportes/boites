@@ -19,7 +19,7 @@ export function razdialogues (state) {
   majdialoguetestping(state, false)
   majdialoguecreationcompte(state, false)
   majdialoguedlselection(state, false)
-  majtribudial(state, false)
+  majtribudialobj(state, null)
   majcomptadialobj(state, null)
   majcoupledialobj(state, null)
   majmembredialobj(state, null)
@@ -105,7 +105,9 @@ export function majclipboard (state, val) { state.clipboard = val }
 
 export function majetapefichier (state, val) { state.etapefichier = val }
 
-export function majtribudial (state, val) { state.tribudial = val }
+export function majtribudialobj (state, val) {
+  state.tribudialobj = val; state.tribudial = val === null ? false : true
+}
 export function majcomptadialobj (state, val) {
   state.comptadialobj = val; state.comptadial = val === null ? false : true
 }

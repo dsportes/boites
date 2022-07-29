@@ -2,10 +2,10 @@
   <q-card v-if="sessionok && tribu" class="q-pa-xs full-height full-width fs-md column">
     <div v-if="close" class="filler"/>
 
-    <div class="q-mb-md row justify-around">
+    <div class="q-mb-md row justify-around q-gutter-xs">
       <q-btn dense color="secondary" label="Parrainer un nouveau compte" size="md"
         text-color="white" @click="nvpar = true"/>
-      <q-btn dense color="secondary" label="Transférer un compte" size="md"
+      <q-btn dense color="secondary" label="Transférer un compte et/ou changer son statut parrain" size="md"
         text-color="white" @click="transf = true"/>
     </div>
     <div v-if="state.t">
@@ -21,7 +21,7 @@
           <q-toolbar-title class="titre-lg">Parrains de la tribu</q-toolbar-title>
           <q-btn dense flat size="md" icon="chevron_right" @click="ouvlp=false"/>
         </q-toolbar>
-        <fiche-avatar v-for="nap in state.lp" :key="nap.id" :na-avatar="nap" contacts groupes />
+        <fiche-avatar v-for="nap in state.lp" :key="nap.id" :na-avatar="nap" contacts groupes compta />
       </q-card>
     </q-dialog>
 
@@ -78,7 +78,7 @@
   </q-card>
 </template>
 <script>
-import { computed, reactive, watch, onMounted } from 'vue'
+import { computed, reactive, watch, toRef, onMounted } from 'vue'
 import { useStore } from 'vuex'
 import { UNITEV1, UNITEV2 } from '../app/api.mjs'
 import { edvol, NomAvatar } from '../app/util.mjs'
@@ -96,7 +96,7 @@ export default ({
 
   components: { ChangerTribu, FicheAvatar, TitreBanner, ChoixForfaits, NouveauParrainage, EditeurMd },
 
-  props: { suivant: Function, precedent: Function, index: Number, sur: Number, close: Function },
+  props: { suivant: Function, precedent: Function, index: Number, sur: Number, close: Function, tribu: Object },
 
   computed: {
   },
@@ -130,12 +130,9 @@ export default ({
   },
 
   setup (props) {
+    const tribu = toRef(props, 'tribu')
     const $store = useStore()
     const sessionok = computed(() => { return $store.state.ui.sessionok })
-    const tribu = computed({ // tribu courante
-      get: () => $store.state.db.tribu,
-      set: (val) => $store.commit('db/majtribu', val)
-    })
     const avatartrform = computed({
       get: () => $store.state.ui.avatartrform,
       set: (val) => $store.commit('ui/majavatartrform', val)
@@ -170,7 +167,6 @@ export default ({
     })
 
     return {
-      tribu,
       sessionok,
       avatartrform,
       state

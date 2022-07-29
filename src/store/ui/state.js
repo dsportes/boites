@@ -20,6 +20,7 @@ export default function () {
     dialogueEXPS: false,
 
     tribudial: false,
+    tribudialobj: null,
     comptadial: false,
     comptadialobj: null,
     coupledial: false,

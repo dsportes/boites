@@ -1905,17 +1905,16 @@ export class GetCompta extends OperationUI {
   }
 }
 
+/***********************************
+Get parrain / tribu d'uncompte, pour le comptable seulement
+args:
+- sessionId
+- id : id du compte
+Retourne:
+result.parrain : 1 si parrain
+result.nctpc : nom complet `[nom, rnd]` de la tribu cryptée par la clé publique du comptable.
+*/
 export class GetTribuCompte extends OperationUI {
-  /***********************************
-  Get parrain / tribu d'uncompte, pour le comptable seulement
-  args:
-  - sessionId
-  - id : id du compte
-  Retourne:
-  result.parrain : 1 si parrain
-  result.nctpc : nom complet `[nom, rnd]` de la tribu cryptée par la clé publique du comptable.
-  */
-
   constructor () {
     super('Obtention du nom de la tribu d\'un compte', OUI, SELONMODE)
   }
@@ -1933,21 +1932,20 @@ export class GetTribuCompte extends OperationUI {
   }
 }
 
+/***********************************
+Est parrain de ma tribu ?
+args:
+- sessionId
+- id : id du compte testé
+- chkt: du compte testeur
+Retourne:
+result.statut :
+0 - id n'est pas primaire
+1 - id est primaire pas de la même tribu
+2 - id est primaire et de la même tribu
+3 - id est parrain de la même tribu
+*/
 export class EstParrainTribu extends OperationUI {
-  /***********************************
-  Est parrain de ma tribu ?
-  args:
-  - sessionId
-  - id : id du compte testé
-  - chkt: du compte testeur
-  Retourne:
-  result.statut :
-  0 - id n'est pas primaire
-  1 - id est primaire pas de la même tribu
-  2 - id est primaire et de la même tribu
-  3 - id est parrain de la même tribu
-  */
-
   constructor () {
     super('Test si un compte est de la même tribu', OUI, SELONMODE)
   }
@@ -2008,6 +2006,7 @@ export class InforesTribu extends OperationUI {
 }
 
 /* Changer un compte de tribu ***********************************
+Si args.idta est 0, c'est juste le changement de statut parrain qui est opéré
 args: -Comptable seulement-
   - sessionId
   - Compte
@@ -2034,23 +2033,25 @@ export class ChangerTribu extends OperationUI {
     super('Changer un compte de tribu', OUI, SELONMODE)
   }
 
-  async run (at, nt, c, stp) { // tribu antérieure, nouvelle tribu, compte, stp=1 parrain de la nouvelle tribu
+  async run (nata, nt, nac, stp) {
+    // na tribu antérieure, nouvelle tribu, na avatar primaire compte, stp=1 parrain de la nouvelle tribu
     try {
-      const clepub = await get('m1', 'getclepub', { sessionId: data.sessionId, sid: c.sid })
+      const clepub = await get('m1', 'getclepub', { sessionId: data.sessionId, sid: nac.sid })
       if (!clepub) throw new AppExc(E_BRO, '23-Cle RSA publique d\'avatar non trouvé')
       const nct = serial([nt.na.nom, nt.na.rnd])
-      const nctk = await crypt.crypterRSA(clepub, nct)
-      const nctpc = await crypt.crypterRSA(data.clepubC, nct)
-      const nrc = await crypt.crypter(nt.clet, serial([c.naprim.nom, c.naprim.rnd]))
+      const nctk = nata ? await crypt.crypterRSA(clepub, nct) : null
+      tru8('clepubc dans changerTribu ' + data.clepubc)
+      const nctpc = nata ? await crypt.crypterRSA(data.clepubc, nct) : null
+      const nrc = await crypt.crypter(nt.clet, serial([nac.nom, nac.rnd]))
       const args = {
         sessionId: data.sessionId,
-        idc: c.id,
+        idc: nac.id,
         stp,
-        chkta: at.chkta,
-        chkt: c.getChkt(nt.na),
+        chkta: nata ? Tribu.getChktDeId(nac.id, nata) : 0,
+        chkt: nt.getChktDeId(nac.id),
         nctk,
         nctpc,
-        idta: at.id,
+        idta: nata ? nata.id : 0,
         idtn: nt.id,
         nrc
       }
