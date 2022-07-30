@@ -611,7 +611,7 @@ export class Tribu {
 
 schemas.forSchema({
   name: 'idbCompte',
-  cols: ['id', 'v', 'dpbh', 'pcbh', 'k', 'stp', 'nctk', 'nctpc', 'chkt', 'nat', 'mac', 'vsh']
+  cols: ['id', 'v', 'dpbh', 'pcbh', 'k', 'stp', 'nctk', 'nctpc', 'chkt', 'nat', 'mac', 'nomdb', 'vsh']
 })
 /*
 - `id` : id de l'avatar primaire du compte.
@@ -644,8 +644,12 @@ export class Compte {
 
   get naprim () { return this.mac[this.sid].na }
 
-  nombase () {
-    return '$$' + data.org + '-' + crypt.u8ToB64(crypt.sha256(this.k), true)
+  async getNombase () {
+    if (!this.nomdb) {
+      const x = await crypt.pbkfd(this.k)
+      this.nomdb = '$$' + data.org + '-' + crypt.u8ToB64(x, true)
+    }
+    return this.nomdb
   }
 
   estAc (id) {

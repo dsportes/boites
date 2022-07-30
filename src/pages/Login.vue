@@ -124,7 +124,10 @@ export default ({
           try {
             db = await openIDB()
             const compte = await getCompte()
-            if (compte && compte.pcbh === data.ps.pcbh && compte.nombase() === data.nombase) dbok = true
+            if (compte && compte.pcbh === data.ps.pcbh) {
+              const nb = await compte.getNombase()
+              if (nb === data.nombase) dbok = true
+            }
           } catch (e) { }
           if (!dbok) {
             await deleteIDB()

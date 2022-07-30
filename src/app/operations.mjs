@@ -941,7 +941,7 @@ export class OperationUI extends Operation {
 
     const compte = await new Compte().fromRow(mapRows.compte)
     data.estComptable = compte.estComptable
-    data.nombase = compte.nombase()
+    data.nombase = await compte.getNombase()
     compte.repAvatars()
     data.setCompte(compte)
 
@@ -1601,7 +1601,7 @@ export class ConnexionCompte extends OperationUI {
       this.compte = compte
       data.setCompte(this.compte)
       data.clek = this.compte.k
-      data.nombase = this.compte.nombase()
+      data.nombase = await this.compte.getNombase()
       data.estComptable = false
       data.ouvertureDB(db)
       prefs = await getPrefs()
@@ -1620,7 +1620,7 @@ export class ConnexionCompte extends OperationUI {
         data.mode = 2
         data.modeInitial = 2
       } else {
-        data.nombase = data.estComptable ? null : this.compte.nombase()
+        data.nombase = data.estComptable ? null : await this.compte.getNombase()
       }
       prefs = prefsSrv
       chat = chatSrv
@@ -1695,7 +1695,7 @@ export class ConnexionCompte extends OperationUI {
       if (data.dbok && data.netok) await this.buf.commitIDB()
       if (data.mode === 1) {
         const lsk = data.org + '-' + this.compte.dpbh
-        const nb = this.compte.nombase()
+        const nb = await this.compte.getNombase()
         localStorage.setItem(lsk, nb)
         if (!db) {
           // SYNC, pas de db détectée au login => première connexion ici
@@ -1743,7 +1743,7 @@ export class ChangementPS extends OperationUI {
       if (data.mode === 1) {
         let lsk = data.org + '-' + avdpbh
         localStorage.removeItem(lsk)
-        const nb = this.compte.nombase()
+        const nb = await r.compte.getNombase()
         lsk = data.org + '-' + apdpbh
         localStorage.setItem(lsk, nb)
       }
