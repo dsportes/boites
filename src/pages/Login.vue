@@ -23,6 +23,12 @@
         <q-checkbox v-else v-model="razdb" dense size="xs" color="grey-5"
           class="bg1 text-italic text-grey-7 q-ml-sm q-mb-sm" label="Ré-initialiser complètement la base locale"/>
       </div>
+      <div v-if="debug===2" class="q-gutter-md q-ma-sm">
+        <q-radio dense v-model="blocage" :val="0" label="Aucun" />
+        <q-radio dense v-model="blocage" :val="1" label="Niveau 1" />
+        <q-radio dense v-model="blocage" :val="2" label="Niveau 2" />
+        <q-radio dense v-model="blocage" :val="3" label="Niveau 3" />
+      </div>
     </q-card>
 
     <div v-if="!q666 && (mode === 1 || mode === 2)" class="q-mt-lg petitelargeur column items-start">
@@ -67,7 +73,7 @@ import { ConnexionCompte, CreationCompteComptable } from '../app/operations'
 import PhraseSecrete from '../components/PhraseSecrete.vue'
 import AcceptParrain from '../components/AcceptParrain.vue'
 import { onBoot } from '../app/page.mjs'
-import { get, afficherdiagnostic, dlvDepassee, PhraseContact, NomContact } from '../app/util.mjs'
+import { cfg, get, afficherdiagnostic, dlvDepassee, PhraseContact, NomContact } from '../app/util.mjs'
 import { deserial } from '../app/schemas.mjs'
 import { Contact, Couple, data } from '../app/modele.mjs'
 import { openIDB, getCompte, deleteIDB } from '../app/db.mjs'
@@ -219,6 +225,9 @@ Choisir le mode synchronisé ou incognito.`
   },
 
   setup () {
+    const debug = ref(0)
+    debug.value = cfg().debug
+
     const $store = useStore()
     onBoot()
     const hr = window.location.href
@@ -231,6 +240,10 @@ Choisir le mode synchronisé ou incognito.`
     const mode = computed({
       get: () => $store.state.ui.mode,
       set: (val) => $store.commit('ui/majmode', val)
+    })
+    const blocage = computed({
+      get: () => $store.state.ui.blocage,
+      set: (val) => $store.commit('ui/majblocage', val)
     })
     if (hr.endsWith('?666')) {
       q666.value = true
@@ -256,10 +269,12 @@ Choisir le mode synchronisé ou incognito.`
     })
 
     return {
+      debug,
       q666,
       razdb,
       org,
       mode,
+      blocage,
       infomode,
       dialoguecreationcompte
     }

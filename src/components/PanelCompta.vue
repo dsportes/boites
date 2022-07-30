@@ -1,5 +1,5 @@
 <template>
-  <q-card>
+  <q-card class="moyennelargeur">
     <q-toolbar v-if="close" class="bg-secondary text-white">
       <q-toolbar-title class="titre-lg full-width text-right">Comptabilité de {{cpt.av.na.nom}}</q-toolbar-title>
       <q-btn dense flat size="md" icon="chevron_right" @click="fermercompta"/>

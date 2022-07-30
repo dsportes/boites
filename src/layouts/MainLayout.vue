@@ -10,9 +10,12 @@
             </span>
           </span>
           <span v-if="sessionok">
+            <q-btn v-if="blocage===1" class="q-pa-xs" dense icon="notification_important" color="warning" @click="infoblocage=true"/>
+            <q-btn v-if="blocage===2" class="q-pa-xs" dense icon="lock_open" color="warning" @click="infoblocage=true"/>
+            <q-btn v-if="blocage===3" class="q-pa-xs" dense icon="lock_outline" color="negative" @click="infoblocage=true"/>
             <q-btn :class="page!=='Avatar' ? 'disabled' : ''" flat dense size="md"
               icon="home" no-caps label="Compte" @click="tocompte"/>
-            <titre-banner class-titre="titre-md" :titre="prefs.titre" :id-objet="compte.id"/>
+            <titre-banner class-titre="titre-md" :titre="compte.naprim.nom" :titre2="compte.apropos" :id-objet="compte.id"/>
           </span>
         </q-toolbar-title>
 
@@ -21,11 +24,11 @@
         </q-btn>
 
         <div class="cursor-pointer q-px-xs" @click="infoidb = true">
-          <q-avatar v-if="!sessionok || mode === 0 || mode === 2" size="sm">
+          <q-avatar v-if="mode === 2 || mode === 0 || !sessionok" size="sm">
             <img src="~assets/database_gris.svg">
           </q-avatar>
           <div v-else>
-            <q-avatar v-if="sessionok && (mode == 1 || mode == 3) && statutidb != 0" size="sm">
+            <q-avatar v-if="(mode === 1 || mode === 3) && statutidb === 1 && sessionok" size="sm">
               <img src="~assets/database_vert.svg">
             </q-avatar>
             <q-avatar v-else square size="sm">
@@ -35,8 +38,8 @@
         </div>
 
         <div class="cursor-pointer q-px-xs" @click="inforeseau = true">
-           <q-icon size="sm" name="sync_alt" :color="['grey-4','green','warning'][statutnet]" />
-         </div>
+          <q-icon size="sm" name="sync_alt" :color="['grey-4','green','warning'][statutnet]" />
+        </div>
 
         <div class="cursor-pointer q-px-xs" @click="infomode = true">
           <q-avatar size="sm" :color="sessionok && mode !== 0 && mode !== modeInitial ? 'warning' : 'primary'">
@@ -249,6 +252,7 @@
     <dialogue-test-ping></dialogue-test-ping>
     <dialogue-info-mode></dialogue-info-mode>
     <dialogue-info-reseau></dialogue-info-reseau>
+    <dialogue-info-blocage></dialogue-info-blocage>
     <dialogue-info-idb></dialogue-info-idb>
     <dialogue-creation-compte></dialogue-creation-compte>
 
@@ -264,6 +268,7 @@ import DialogueCreationCompte from '../components/DialogueCreationCompte.vue'
 import DialogueInfoMode from '../components/DialogueInfoMode.vue'
 import DialogueInfoReseau from '../components/DialogueInfoReseau.vue'
 import DialogueInfoIdb from '../components/DialogueInfoIdb.vue'
+import DialogueInfoBlocage from '../components/DialogueInfoBlocage.vue'
 import DialogueTestPing from '../components/DialogueTestPing.vue'
 import PanelMenu from '../components/PanelMenu.vue'
 import DialogueErreur from '../components/DialogueErreur.vue'
@@ -293,7 +298,7 @@ export default {
   name: 'MainLayout',
 
   components: {
-    PanelTribu, PanelCompta, PanelCouple, PanelMembre, PanelSelchat, PanelChat, FichiersAvion, TitreBanner, InfoIco, RapportSynchro, PanelMenu, PanelContacts, DialogueErreur, DialogueCrypto, DialogueCreationCompte, DialogueTestPing, DialogueInfoMode, DialogueInfoReseau, DialogueInfoIdb, DialogueHelp
+    DialogueInfoBlocage, PanelTribu, PanelCompta, PanelCouple, PanelMembre, PanelSelchat, PanelChat, FichiersAvion, TitreBanner, InfoIco, RapportSynchro, PanelMenu, PanelContacts, DialogueErreur, DialogueCrypto, DialogueCreationCompte, DialogueTestPing, DialogueInfoMode, DialogueInfoReseau, DialogueInfoIdb, DialogueHelp
   },
 
   computed: {
@@ -369,6 +374,7 @@ export default {
 
     const mode = computed(() => $store.state.ui.mode)
     const modeInitial = computed(() => $store.state.ui.modeinitial)
+    const blocage = computed(() => $store.state.ui.blocage)
     const page = computed(() => $store.state.ui.page)
 
     const compte = computed(() => $store.state.db.compte)
@@ -398,6 +404,10 @@ export default {
     const infoidb = computed({
       get: () => $store.state.ui.infoidb,
       set: (val) => $store.commit('ui/majinfoidb', val)
+    })
+    const infoblocage = computed({
+      get: () => $store.state.ui.infoblocage,
+      set: (val) => $store.commit('ui/majinfoblocage', val)
     })
     const confirmerdrc = computed({
       get: () => $store.state.ui.confirmerdrc,
@@ -529,6 +539,7 @@ export default {
       orglabelclass,
       mode,
       modeInitial,
+      blocage,
       page,
       dlattente,
       dlechecs,
@@ -568,6 +579,7 @@ export default {
       infomode,
       inforeseau,
       infoidb,
+      infoblocage,
       dialoguechat,
       dialogueselchat,
       dialogueexps,

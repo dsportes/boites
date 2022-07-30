@@ -16,6 +16,7 @@ export default function () {
     infomode: false,
     inforeseau: false,
     infoidb: false,
+    infoblocage: false,
 
     dialogueEXPS: false,
 
@@ -43,6 +44,7 @@ export default function () {
 
     mode: 0, // 0:inconnu, 1:synchronise, 2:incognito, 3:avion, 4:visio
     modeinitial: 0,
+    blocage: 0, // 0: pas bloqué, 1: notification de blocage imminent, 2: restriction sur l'écriture des secrets, 3: bloqué
 
     org: null,
 

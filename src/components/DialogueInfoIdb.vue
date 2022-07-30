@@ -8,7 +8,7 @@
           <q-avatar size="md">
             <img src="~assets/database_gris.svg">
           </q-avatar>
-          <span :class="mode == 2 || mode == 0 || !sessionok ? 'text-bold text-primary' : ''">
+          <span :class="mode === 2 || mode === 0 || !sessionok ? 'text-bold text-primary' : ''">
             Il n'y a pas d'accès à la base locale avant connexion à un compte ou en mode incognito
           </span>
         </q-card-section>
@@ -16,7 +16,7 @@
           <q-avatar size="md">
             <img src="~assets/database_vert.svg">
           </q-avatar>
-          <span :class="(mode == 1 || mode == 3) && statutidb == 0 && !sessionok ? 'text-bold text-primary' : ''">
+          <span :class="(mode === 1 || mode === 3) && statutidb === 1 && sessionok ? 'text-bold text-primary' : ''">
               La base locale est accessible : un compte est connecté en mode synchronisé ou avion
           </span>
         </q-card-section>
@@ -24,16 +24,14 @@
           <q-avatar square size="md">
             <img src="~assets/database_rouge.svg" class="bord">
           </q-avatar>
-          <span :class="(mode == 1 || mode == 3) && statutidb != 0 && sessionok ? 'text-bold text-primary' : ''">
+          <span :class="(mode === 1 || mode === 3) && statutidb === 2 && sessionok ? 'text-bold text-primary' : ''">
               Erreur d'accès à la base locale (corrompue ? détruite ?). Un compte est connecté en mode synchronisé ou avion.
               Les opérations de mise à jour sont interdites jusqu'à une reconnexion réussie.
           </span>
         </q-card-section>
-        <q-card-actions align="left">
         <q-card-actions  align="left">
           <q-btn v-if="(mode === 1 || mode === 2)" dense size="md" color="primary"
             icon="logout" label="Tests d'accès à la base et au serveur" @click="dialoguetestping = true" v-close-popup/>
-        </q-card-actions>
         </q-card-actions>
         <q-card-actions align="right">
           <q-btn flat label="J'ai lu" color="primary" v-close-popup />
@@ -44,7 +42,7 @@
 
 <script>
 import { useStore } from 'vuex'
-import { computed } from 'vue'
+import { computed /*, onMounted */ } from 'vue'
 
 export default ({
   name: 'DialogueInfoIdb',
@@ -70,6 +68,8 @@ export default ({
       get: () => $store.state.ui.dialoguetestping,
       set: (val) => $store.commit('ui/majdialoguetestping', val)
     })
+
+    // onMounted(() => { console.log('Infoidb ', mode.value, statutidb.value, sessionok.value) })
 
     return {
       mode,

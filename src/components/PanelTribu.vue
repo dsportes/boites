@@ -2,7 +2,7 @@
   <q-card v-if="sessionok && tribu" class="q-pa-xs full-height full-width fs-md column">
     <div v-if="close" class="filler"/>
 
-    <div class="q-mb-md row justify-around q-gutter-xs">
+    <div v-if="estComptable" class="q-mb-md row justify-around q-gutter-xs">
       <q-btn dense color="secondary" label="Parrainer un nouveau compte" size="md"
         text-color="white" @click="nvpar = true"/>
       <q-btn dense color="secondary" label="Transférer un compte et/ou changer son statut parrain" size="md"
@@ -28,7 +28,7 @@
     <div v-if="state.t">
     <div class="titre-md q-mt-md">Commentaires / informations</div>
     <editeur-md :texte="state.t.info" v-model="info" @ok="changerInfo"
-      label-ok="Valider" editable modetxt style="height:8rem"/>
+      label-ok="Valider" :editable="estComptable" :modetxt="estComptable" style="height:8rem"/>
     </div>
 
     <div v-if="state.t">
@@ -38,8 +38,8 @@
       <span>V2: {{ed2(state.t.f2)}}</span>
     </div>
     <div class="q-mt-md titre-lg">Réserves restantes de volumes à attribuer</div>
-    <choix-forfaits v-model="reserves" @valider="changerRes" label-valider="Changer"
-      :max="99999" :f1="state.t.r1" :f2="state.t.r2"/>
+    <choix-forfaits v-model="reserves" @valider="changerRes" :label-valider="estComptable ? 'Changer' : ''"
+      :max="99999" :f1="state.t.r1" :f2="state.t.r2" :lecture="!estComptable" />
     </div>
 
   <q-dialog v-if="sessionok" v-model="nvpar" persistent class="moyennelargeur">
@@ -78,7 +78,7 @@
   </q-card>
 </template>
 <script>
-import { computed, reactive, watch, toRef, onMounted } from 'vue'
+import { computed, reactive, watch, toRef, onMounted, ref } from 'vue'
 import { useStore } from 'vuex'
 import { UNITEV1, UNITEV2 } from '../app/api.mjs'
 import { edvol, NomAvatar } from '../app/util.mjs'
@@ -131,6 +131,7 @@ export default ({
 
   setup (props) {
     const tribu = toRef(props, 'tribu')
+    const estComptable = ref(false)
     const $store = useStore()
     const sessionok = computed(() => { return $store.state.ui.sessionok })
     const avatartrform = computed({
@@ -144,6 +145,7 @@ export default ({
     })
 
     async function initState () {
+      estComptable.value = data.estComptable
       const t = tribu.value
       state.t = t
       const x = t && t.mncp ? Object.values(t.mncp) : []
@@ -168,6 +170,7 @@ export default ({
 
     return {
       sessionok,
+      estComptable,
       avatartrform,
       state
     }

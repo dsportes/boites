@@ -8,6 +8,7 @@ export function razdialogues (state) {
   majinfomode(state, false)
   majinforeseau(state, false)
   majinfoidb(state, false)
+  majinfoblocage(state, false)
   razmessage(state)
   razdiagnostic(state)
   majopencours(state, null)
@@ -45,6 +46,7 @@ export function majconfirmerdrc (state, val) { state.confirmerdrc = val }
 export function majinfomode (state, val) { state.infomode = val }
 export function majinforeseau (state, val) { state.inforeseau = val }
 export function majinfoidb (state, val) { state.infoidb = val }
+export function majinfoblocage (state, val) { state.infoblocage = val }
 export function majdialoguechat (state, val) { state.dialoguechat = val }
 export function majdialogueselchat (state, val) { state.dialogueselchat = val }
 export function majdialogueEXPS (state, val) { state.dialogueEXPS = val }
@@ -53,6 +55,7 @@ export function majorg (state, val) { state.org = val }
 export function majpage (state, val) { state.page = val }
 export function majmode (state, val) { state.mode = val }
 export function majmodeinitial (state, val) { state.modeinitial = val }
+export function majblocage (state, val) { state.blocage = val }
 
 export function nouveaumessage (state, { texte, important }) {
   state.message = { texte: texte, important: important, n: nummessage++ }

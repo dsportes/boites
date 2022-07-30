@@ -644,6 +644,8 @@ export class Compte {
 
   get naprim () { return this.mac[this.sid].na }
 
+  get apropos () { return this.nat ? ('Tribu:' + this.nat.nom) : 'Comptable' }
+
   async getNombase () {
     if (!this.nomdb) {
       const x = await crypt.pbkfd(this.k)

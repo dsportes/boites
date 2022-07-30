@@ -809,16 +809,11 @@ export function nomCv (id, court) {
   return t1.length <= lg ? t1 : t1.substring(0, lg - 3) + '...'
 }
 
-/** NomAvatar **********************************/
-export class NomAvatar {
+/** NomAvatar / NomContact / NomGroupe / NomTribu **********************************/
+export class NomGenerique {
   constructor (nom, rnd) {
     this.nom = nom
     this.rnd = rnd || crypt.random(32)
-    this.id = nom !== 'Comptable' ? crypt.hashBin(this.rnd) : IDCOMPTABLE
-  }
-
-  clone () {
-    return new NomAvatar(this.nom, this.rnd)
   }
 
   get t () { return this.id % 4 }
@@ -860,10 +855,27 @@ export class NomAvatar {
   }
 }
 
-export class NomContact extends NomAvatar {
+export class NomAvatar extends NomGenerique {
   constructor (nom, rnd) {
     super(nom, rnd)
-    this.id += 1
+    this.id = nom !== 'Comptable' ? crypt.hashBin(this.rnd) : IDCOMPTABLE
+  }
+
+  get photoDef () {
+    if (this.disparu) return $cfg.disparu
+    const cv = data.getCv(this.id)
+    return !cv || !cv[0] ? $cfg.couple : cv[0]
+  }
+
+  clone () {
+    return new NomAvatar(this.nom, this.rnd)
+  }
+}
+
+export class NomContact extends NomGenerique {
+  constructor (nom, rnd) {
+    super(nom, rnd)
+    this.id = crypt.hashBin(this.rnd) + 1
   }
 
   get photoDef () {
@@ -877,10 +889,10 @@ export class NomContact extends NomAvatar {
   }
 }
 
-export class NomGroupe extends NomAvatar {
+export class NomGroupe extends NomGenerique {
   constructor (nom, rnd) {
     super(nom, rnd)
-    this.id += 2
+    this.id = crypt.hashBin(this.rnd) + 2
   }
 
   get photoDef () {
@@ -894,10 +906,10 @@ export class NomGroupe extends NomAvatar {
   }
 }
 
-export class NomTribu extends NomAvatar {
+export class NomTribu extends NomGenerique {
   constructor (nom, rnd) {
     super(nom, rnd)
-    this.id += 3
+    this.id = crypt.hashBin(this.rnd) + 3
   }
 
   clone () {
